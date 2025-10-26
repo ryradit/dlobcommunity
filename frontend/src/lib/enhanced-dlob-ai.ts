@@ -269,6 +269,16 @@ export class EnhancedDlobAIService {
     let contextUsed: string[] = [];
 
     try {
+      // Check for specific quick responses first
+      const quickResponse = this.getQuickResponse(userMessage);
+      if (quickResponse) {
+        return {
+          response: quickResponse,
+          success: true,
+          contextUsed: []
+        };
+      }
+
       // Initialize session
       const session = await this.initializeChatSession(user);
       
@@ -438,7 +448,7 @@ ATURAN PENTING:
 
 Pertanyaan user: "${userMessage}"
 
-Jawab dengan data yang akurat dan spesifik:`;
+PENTING: Jawab singkat, maksimal 2-3 kalimat. Jangan gunakan ** atau markdown. Berikan info spesifik dan akurat. SELALU akhiri dengan "Ada yang lain bisa saya bantu?"`;
   }
 
   /**
@@ -492,7 +502,7 @@ NOTE: User belum login. Sarankan untuk login/register untuk mendapat bantuan per
 
 Pertanyaan: "${userMessage}"
 
-Jawab dengan informasi yang akurat dan lengkap sesuai data di atas. Gunakan Bahasa Indonesia yang ramah dan informatif:`;
+PENTING: Jawab dengan singkat, jelas, dan to-the-point. Maksimal 2-3 kalimat. Jangan gunakan format ** atau markdown. Gunakan Bahasa Indonesia yang ramah dan kasual. SELALU akhiri dengan "Ada yang lain bisa saya bantu?"`;
   }
 
   /**
@@ -691,6 +701,29 @@ Jawab dengan informasi yang akurat dan lengkap sesuai data di atas. Gunakan Baha
     } else {
       return `Halo! 👋 Saya DLOB AI. Login dulu yuk untuk mendapat bantuan personal tentang tagihan, performa, dan kehadiran kamu! 🏸😊`;
     }
+  }
+
+  /**
+   * Get quick response for common questions
+   */
+  private getQuickResponse(message: string): string | null {
+    const lowerMessage = message.toLowerCase();
+
+    // Quick responses for common questions
+    if (lowerMessage.includes('cara join') || lowerMessage.includes('cara gabung') || 
+        lowerMessage.includes('bergabung') || lowerMessage.includes('daftar komunitas')) {
+      return "Untuk bergabung DLOB, datang aja Sabtu malam jam 20:00 ke GOR Wisma Harapan atau hubungi admin di +62 812-7073-7272 🏸\n\nAda yang lain bisa saya bantu?";
+    }
+
+    if (lowerMessage.includes('jadwal') || lowerMessage.includes('jam latihan')) {
+      return "Latihan DLOB setiap Sabtu malam 20:00-23:00 WIB di GOR Wisma Harapan, Tangerang 🏸\n\nAda yang lain bisa saya bantu?";
+    }
+
+    if (lowerMessage.includes('kontak admin') || lowerMessage.includes('hubungi admin')) {
+      return "Admin DLOB bisa dihubungi di +62 812-7073-7272 atau melalui Instagram @dlob.channel 📱\n\nAda yang lain bisa saya bantu?";
+    }
+
+    return null;
   }
 
   /**

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Trophy, Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
@@ -163,15 +164,19 @@ export default function RegisterPage() {
   const t = content[language as keyof typeof content];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
           <div className="flex items-center justify-center mb-4">
-            <div className="rounded-full bg-blue-600 p-3">
-              <Trophy className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="ml-3 text-3xl font-bold text-gray-900">DLOB</h1>
+            <Image
+              src="/dlob.png"
+              alt="DLOB"
+              width={80}
+              height={80}
+              className="rounded-full object-cover"
+              priority
+            />
           </div>
           {/* Language Switcher */}
           <div className="flex justify-center mb-4">
@@ -345,14 +350,29 @@ export default function RegisterPage() {
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
-                I agree to the{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-500">
-                  Terms of Service
-                </a>{' '}
-                and{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-500">
-                  Privacy Policy
-                </a>
+                {language === 'en' ? (
+                  <>
+                    I agree to the{' '}
+                    <Link href="/terms" className="text-blue-600 hover:text-blue-500 underline">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link href="/privacy" className="text-blue-600 hover:text-blue-500 underline">
+                      Privacy Policy
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    Saya setuju dengan{' '}
+                    <Link href="/terms" className="text-blue-600 hover:text-blue-500 underline">
+                      Syarat dan Ketentuan
+                    </Link>{' '}
+                    dan{' '}
+                    <Link href="/privacy" className="text-blue-600 hover:text-blue-500 underline">
+                      Kebijakan Privasi
+                    </Link>
+                  </>
+                )}
               </label>
             </div>
 
@@ -402,6 +422,24 @@ export default function RegisterPage() {
         </div>
 
 
+
+        {/* Legal Links */}
+        <div className="text-center space-y-2">
+          <div className="flex justify-center space-x-6 text-sm">
+            <Link
+              href="/terms"
+              className="text-gray-600 hover:text-blue-600 transition-colors"
+            >
+              {language === 'en' ? 'Terms of Service' : 'Syarat dan Ketentuan'}
+            </Link>
+            <Link
+              href="/privacy"
+              className="text-gray-600 hover:text-blue-600 transition-colors"
+            >
+              {language === 'en' ? 'Privacy Policy' : 'Kebijakan Privasi'}
+            </Link>
+          </div>
+        </div>
 
         {/* Back to Home */}
         <div className="text-center">

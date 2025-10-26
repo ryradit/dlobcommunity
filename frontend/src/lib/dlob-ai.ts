@@ -60,6 +60,7 @@ Gaya komunikasi:
 - Panggilan: "Kak" atau "teman"
 - Emoji yang sesuai: 🏸 🎾 💪 👋 😊
 - Responsif dan membantu
+- SELALU akhiri jawaban dengan "Ada yang lain bisa saya bantu?"
 - Jika tidak tahu jawabannya, jujur dan arahkan ke admin
 
 Topik yang bisa dibahas:
@@ -143,31 +144,31 @@ Jawab dalam Bahasa Indonesia dengan ramah dan informatif:`;
     }
     
     if (message.includes('join') || message.includes('gabung') || message.includes('daftar')) {
-      return "Untuk bergabung dengan komunitas DLOB, kak bisa klik tombol 'Gabung Komunitas' di halaman utama atau langsung ke halaman register. Setelah itu, kak bisa ikut latihan rutin setiap Sabtu malam! 🏸💪";
+      return "Untuk bergabung dengan komunitas DLOB, kak bisa klik tombol 'Gabung Komunitas' di halaman utama atau langsung ke halaman register. Setelah itu, kak bisa ikut latihan rutin setiap Sabtu malam! 🏸💪\n\nAda yang lain bisa saya bantu?";
     }
     
     if (message.includes('jadwal') || message.includes('latihan') || message.includes('main')) {
-      return "Latihan rutin DLOB dilakukan setiap Sabtu malam kak! Untuk jadwal lebih detail, bisa cek di dashboard member atau hubungi admin komunitas. 📅🏸";
+      return "Latihan rutin DLOB dilakukan setiap Sabtu malam kak! Untuk jadwal lebih detail, bisa cek di dashboard member atau hubungi admin komunitas. 📅🏸\n\nAda yang lain bisa saya bantu?";
     }
     
     if (message.includes('bayar') || message.includes('pembayaran') || message.includes('biaya')) {
-      return "DLOB punya sistem pembayaran otomatis yang memudahkan tracking kontribusi member. Kak bisa lihat detail pembayaran di menu Payments setelah login ke dashboard. 💰";
+      return "DLOB punya sistem pembayaran otomatis yang memudahkan tracking kontribusi member. Kak bisa lihat detail pembayaran di menu Payments setelah login ke dashboard. 💰\n\nAda yang lain bisa saya bantu?";
     }
     
     if (message.includes('fitur') || message.includes('platform') || message.includes('teknologi')) {
-      return "Platform DLOB punya fitur keren seperti: tracking kehadiran otomatis, manajemen pembayaran, analytics performa, galeri video, dan dashboard member/admin yang lengkap! 🚀";
+      return "Platform DLOB punya fitur keren seperti: tracking kehadiran otomatis, manajemen pembayaran, analytics performa, galeri video, dan dashboard member/admin yang lengkap! 🚀\n\nAda yang lain bisa saya bantu?";
     }
     
     if (message.includes('badminton') || message.includes('tips') || message.includes('teknik')) {
-      return "Badminton adalah olahraga yang asyik! Di DLOB kita fokus pada pengembangan skill dan komunitas yang solid. Yuk gabung latihan rutin untuk improve teknik bareng-bareng! 🏸🎯";
+      return "Badminton adalah olahraga yang asyik! Di DLOB kita fokus pada pengembangan skill dan komunitas yang solid. Yuk gabung latihan rutin untuk improve teknik bareng-bareng! 🏸🎯\n\nAda yang lain bisa saya bantu?";
     }
     
     if (message.includes('galeri') || message.includes('video') || message.includes('foto')) {
-      return "DLOB punya galeri keren yang terintegrasi dengan YouTube channel! Kak bisa lihat highlight pertandingan dan sesi latihan di menu Gallery. 📹🏸";
+      return "DLOB punya galeri keren yang terintegrasi dengan YouTube channel! Kak bisa lihat highlight pertandingan dan sesi latihan di menu Gallery. 📹🏸\n\nAda yang lain bisa saya bantu?";
     }
     
     if (message.includes('admin') || message.includes('kontak') || message.includes('bantuan')) {
-      return "Kalau ada pertanyaan lebih lanjut, kak bisa hubungi admin DLOB melalui halaman Contact atau langsung chat di grup komunitas. Admin siap membantu! 📞👥";
+      return "Kalau ada pertanyaan lebih lanjut, kak bisa hubungi admin DLOB melalui halaman Contact atau langsung chat di grup komunitas. Admin siap membantu! 📞👥\n\nAda yang lain bisa saya bantu?";
     }
     
     // Default response

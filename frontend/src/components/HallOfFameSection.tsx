@@ -61,7 +61,8 @@ const hallOfFameMembers: Member[] = [
   { id: 42, name: 'Northon', photo: '/images/members/northon.jpg' },
   { id: 43, name: 'Agung', photo: '/images/members/agung.jpg' },
   { id: 44, name: 'Wisnu', photo: '/images/members/wisnu.jpg' },
-  { id: 45, name: 'Ilham', photo: '/images/members/ilham.jpg' }
+  { id: 45, name: 'Ilham', photo: '/images/members/ilham.jpg' },
+  { id: 46, name: 'Bayu', photo: '/images/members/bayu.jpg' }
 ];
 
 export default function HallOfFameSection({ showAll = false, className = '' }: HallOfFameSectionProps) {

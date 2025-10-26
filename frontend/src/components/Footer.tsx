@@ -109,6 +109,19 @@ export default function Footer() {
               </a>
             </div>
             
+            {/* Legal Links */}
+            <div className="mt-4">
+              <h6 className="text-sm font-semibold mb-3 text-white">Legal</h6>
+              <div className="space-y-2 text-sm">
+                <a href="/terms" className="block text-gray-400 hover:text-blue-400 transition-colors">
+                  Terms of Service
+                </a>
+                <a href="/privacy" className="block text-gray-400 hover:text-blue-400 transition-colors">
+                  Privacy Policy
+                </a>
+              </div>
+            </div>
+            
             {/* Interactive Map */}
             <div className="mt-4 p-3 bg-gray-800 rounded-lg">
               <div className="flex items-center space-x-2 mb-2">
@@ -133,9 +146,18 @@ export default function Footer() {
 
         {/* Bottom Section */}
         <div className="border-t border-gray-800 pt-6">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+          <div className="flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0">
             <div className="text-sm text-gray-400">
               <p>&copy; 2025 DLOB Community. All rights reserved.</p>
+              <div className="flex items-center space-x-4 mt-2">
+                <a href="/terms" className="hover:text-blue-400 transition-colors">
+                  Terms of Service
+                </a>
+                <span>|</span>
+                <a href="/privacy" className="hover:text-blue-400 transition-colors">
+                  Privacy Policy
+                </a>
+              </div>
             </div>
             <div className="flex items-center space-x-6 text-sm text-gray-400">
               <span>Powered by AI & Smart Technology</span>

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { Trophy, User, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
@@ -63,11 +64,15 @@ export default function Header({ currentPage = 'home', showAuth = false }: Heade
     <header className="bg-white border-b sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2 hover:opacity-80">
-            <div className="rounded-full bg-blue-600 p-2">
-              <Trophy className="h-6 w-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">DLOB</h1>
+          <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+            <Image
+              src="/dlob.png"
+              alt="DLOB"
+              width={56}
+              height={56}
+              className="rounded-full object-cover"
+              priority
+            />
           </Link>
           
           <nav className="hidden md:flex space-x-6">
