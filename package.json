@@ -1,0 +1,21 @@
+{
+  "name": "dlob-community-platform",
+  "version": "1.0.0",
+  "description": "DLOB Badminton Community Platform - Full-stack web application with AI features",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm start",
+    "lint": "cd frontend && npm run lint",
+    "backend:dev": "cd backend && npm run dev",
+    "backend:build": "cd backend && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryradit/dlobcommunity.git"
+  },
+  "keywords": ["badminton", "community", "ai", "nextjs", "typescript"],
+  "author": "Ryan Raditya",
+  "license": "MIT"
+}
