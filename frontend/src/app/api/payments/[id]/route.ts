@@ -66,7 +66,7 @@ export async function PUT(
           notes,
           updated_at: new Date().toISOString()
         })
-        .eq('id', params.id)
+        .eq('id', id)
         .select('*, member:member_id(name, email)')
         .single();
     } catch (sessionError) {
@@ -99,7 +99,7 @@ export async function PUT(
       let paymentsResult = await supabase
         .from('payments')
         .update(updateData)
-        .eq('id', params.id)
+        .eq('id', id)
         .select(`
           *,
           member:member_id(name, email)
@@ -112,7 +112,7 @@ export async function PUT(
         paymentsResult = await supabase
           .from('payments')
           .update(updateData)
-          .eq('id', params.id)
+          .eq('id', id)
           .select('*')
           .single();
       }
@@ -150,16 +150,17 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    console.log('🗑️ Deleting payment:', params.id);
+    console.log('🗑️ Deleting payment:', id);
 
     // Delete payment from database
     const { error } = await supabase
       .from('session_payments')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       console.error('❌ Database error:', error);
@@ -187,10 +188,11 @@ export async function DELETE(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    console.log('📊 Fetching payment details:', params.id);
+    console.log('📊 Fetching payment details:', id);
 
     // Get payment details
     const { data, error } = await supabase
@@ -200,7 +202,7 @@ export async function GET(
         member:member_id(name, email, phone),
         match:match_id(date, start_time)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (error) {
