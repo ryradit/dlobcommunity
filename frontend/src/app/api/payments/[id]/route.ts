@@ -13,26 +13,27 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    console.log('💳 Updating payment with ID:', params.id);
+    console.log('💳 Updating payment with ID:', id);
     
     // Validate UUID format
-    if (!params.id || params.id === 'undefined' || params.id === 'null') {
-      console.error('❌ Invalid payment ID:', params.id);
+    if (!id || id === 'undefined' || id === 'null') {
+      console.error('❌ Invalid payment ID:', id);
       return NextResponse.json(
-        { success: false, error: `Invalid payment ID: ${params.id}` },
+        { success: false, error: `Invalid payment ID: ${id}` },
         { status: 400 }
       );
     }
     
     // Basic UUID format check
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(params.id)) {
-      console.error('❌ Invalid UUID format:', params.id);
+    if (!uuidRegex.test(id)) {
+      console.error('❌ Invalid UUID format:', id);
       return NextResponse.json(
-        { success: false, error: `Invalid UUID format: ${params.id}` },
+        { success: false, error: `Invalid UUID format: ${id}` },
         { status: 400 }
       );
     }
