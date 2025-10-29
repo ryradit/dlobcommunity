@@ -13,11 +13,18 @@ export interface ChatMessage {
   sessionId?: string;
 }
 
+export interface MapData {
+  type: 'gmaps';
+  url: string;
+  embed: string;
+}
+
 export interface DlobAIResponse {
   response: string;
   success: boolean;
   error?: string;
   contextUsed?: string[];
+  map?: MapData;
 }
 
 export interface UserContext {
@@ -69,48 +76,86 @@ export class EnhancedDlobAIService {
     }
 
     try {
-      if (user) {
-        // Authenticated user session
-        const { data: session, error } = await this.supabaseClient
-          .from('chat_sessions')
-          .insert({
-            user_id: user.id,
-            session_token: `auth_${Date.now()}_${Math.random().toString(36).substring(2)}`,
-            is_authenticated: true,
-            user_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-            user_email: user.email
-          })
-          .select()
-          .single();
+      // Generate a session token and ID
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2);
+      const sessionId = `session_${timestamp}_${randomString}`;
+      const sessionToken = user 
+        ? `auth_${timestamp}_${randomString}`
+        : `anon_${timestamp}_${randomString}`;
 
-        if (error) throw error;
+      try {
+        if (user) {
+          // Try to create authenticated user session
+          const { data: session, error } = await this.supabaseClient
+            .from('chat_sessions')
+            .insert({
+              id: sessionId,
+              user_id: user.id,
+              session_token: sessionToken,
+              is_authenticated: true,
+              user_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+              user_email: user.email
+            })
+            .select()
+            .single();
 
+          if (!error && session) {
+            this.currentSession = {
+              id: session.id,
+              sessionToken: session.session_token,
+              isAuthenticated: true,
+              userName: session.user_name,
+              userEmail: session.user_email
+            };
+          } else {
+            // Fallback to memory session if DB fails
+            this.currentSession = {
+              id: sessionId,
+              sessionToken: sessionToken,
+              isAuthenticated: true,
+              userName: user.user_metadata?.full_name || user.email?.split('@')[0],
+              userEmail: user.email
+            };
+            console.warn('Using memory session due to DB error:', error);
+          }
+        } else {
+          // Try to create anonymous session
+          const { data: session, error } = await this.supabaseClient
+            .from('chat_sessions')
+            .insert({
+              id: sessionId,
+              session_token: sessionToken,
+              is_authenticated: false
+            })
+            .select()
+            .single();
+
+          if (!error && session) {
+            this.currentSession = {
+              id: session.id,
+              sessionToken: session.session_token,
+              isAuthenticated: false
+            };
+          } else {
+            // Fallback to memory session if DB fails
+            this.currentSession = {
+              id: sessionId,
+              sessionToken: sessionToken,
+              isAuthenticated: false
+            };
+            console.warn('Using memory session due to DB error:', error);
+          }
+        }
+      } catch (dbError) {
+        // Fallback to memory session for any other errors
+        console.warn('Using memory session due to error:', dbError);
         this.currentSession = {
-          id: session.id,
-          sessionToken: session.session_token,
-          isAuthenticated: true,
-          userName: session.user_name,
-          userEmail: session.user_email
-        };
-      } else {
-        // Anonymous user session
-        const sessionToken = `anon_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-        
-        const { data: session, error } = await this.supabaseClient
-          .from('chat_sessions')
-          .insert({
-            session_token: sessionToken,
-            is_authenticated: false
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        this.currentSession = {
-          id: session.id,
+          id: sessionId,
           sessionToken: sessionToken,
-          isAuthenticated: false
+          isAuthenticated: !!user,
+          userName: user?.user_metadata?.full_name || user?.email?.split('@')[0],
+          userEmail: user?.email
         };
       }
 
@@ -142,17 +187,63 @@ export class EnhancedDlobAIService {
 
       console.log('👤 Member data:', memberData, memberError);
 
-      // Try to refresh user context cache (might fail if functions don't exist)
+      // Get match data directly
+      let matchContext = null;
       try {
-        await this.supabaseClient.rpc('refresh_user_context_cache', { 
-          p_user_id: user.id 
-        });
-        console.log('✅ Context cache refreshed');
-      } catch (rpcError) {
-        console.warn('⚠️ RPC refresh failed (expected in demo mode):', rpcError);
+        // First get all matches where the member participated
+        const { data: matches, error: matchError } = await this.supabaseClient
+          .from('matches')
+          .select(`
+            *,
+            team_a:team_a_players(member_id),
+            team_b:team_b_players(member_id),
+            winner,
+            score_a,
+            score_b
+          `)
+          .or(`team_a_players.cs.{${memberData?.id}},team_b_players.cs.{${memberData?.id}}`);
+
+        if (!matchError && matches && matches.length > 0) {
+          // Calculate match statistics
+          const totalMatches = matches.length;
+          let wins = 0;
+          let losses = 0;
+          let lastMatchDate: string | null = null;
+          let lastMatchWon = false;
+
+          matches.forEach(match => {
+            const isTeamA = match.team_a.some((p: any) => p.member_id === memberData?.id);
+            const isTeamB = match.team_b.some((p: any) => p.member_id === memberData?.id);
+            const userTeam = isTeamA ? 'A' : 'B';
+            
+            if (!lastMatchDate || new Date(match.played_at) > new Date(lastMatchDate)) {
+              lastMatchDate = match.played_at;
+              lastMatchWon = (userTeam === 'A' && match.winner === 'A') || 
+                           (userTeam === 'B' && match.winner === 'B');
+            }
+
+            if ((userTeam === 'A' && match.winner === 'A') || 
+                (userTeam === 'B' && match.winner === 'B')) {
+              wins++;
+            } else {
+              losses++;
+            }
+          });
+
+          matchContext = {
+            total_matches: totalMatches,
+            wins: wins,
+            losses: losses,
+            win_rate: Math.round((wins / totalMatches) * 100),
+            last_match_date: lastMatchDate,
+            last_match_won: lastMatchWon
+          };
+        }
+      } catch (matchError) {
+        console.error('Error fetching match data:', matchError);
       }
 
-      // Get cached context data
+      // Get cached context data for other types
       const { data: contextCache, error: cacheError } = await this.supabaseClient
         .from('user_context_cache')
         .select('context_type, context_data')
@@ -194,18 +285,19 @@ export class EnhancedDlobAIService {
       const context: UserContext = {
         user,
         memberData,
-        paymentContext
+        paymentContext,
+        matchContext // Include the directly fetched match context
       };
 
-      // Parse cached context data if available
+      // Parse cached context data for other types if available
       contextCache?.forEach((cache: any) => {
         console.log('🏷️ Processing cache:', cache.context_type, cache.context_data);
         switch (cache.context_type) {
           case 'payments':
-            context.paymentContext = cache.context_data;
-            break;
-          case 'matches':
-            context.matchContext = cache.context_data;
+            // Only update if we don't have direct payment data
+            if (!context.paymentContext) {
+              context.paymentContext = cache.context_data;
+            }
             break;
           case 'attendance':
             context.attendanceContext = cache.context_data;
@@ -232,7 +324,8 @@ export class EnhancedDlobAIService {
     responseTime?: number
   ): Promise<void> {
     try {
-      await this.supabaseClient
+      // Try to save the message, but don't throw if it fails
+      const { error: messageError } = await this.supabaseClient
         .from('chat_messages')
         .insert({
           session_id: sessionId,
@@ -244,8 +337,13 @@ export class EnhancedDlobAIService {
           message_metadata: contextUsed ? { context_types: contextUsed } : null
         });
 
-      // Update session last message time and count
-      await this.supabaseClient
+      if (messageError) {
+        console.warn('Unable to save chat message:', messageError);
+        return; // Early return if message save fails
+      }
+
+      // Try to update session, but don't throw if it fails
+      const { error: sessionError } = await this.supabaseClient
         .from('chat_sessions')
         .update({
           last_message_at: new Date().toISOString(),
@@ -253,8 +351,12 @@ export class EnhancedDlobAIService {
         })
         .eq('id', sessionId);
 
+      if (sessionError) {
+        console.warn('Unable to update chat session:', sessionError);
+      }
     } catch (error) {
-      console.error('Error saving chat message:', error);
+      // Log error but don't throw - allow chat to continue even if saving fails
+      console.warn('Error in saveChatMessage:', error);
     }
   }
 
@@ -324,10 +426,22 @@ export class EnhancedDlobAIService {
       // Log analytics
       await this.logAnalytics(session.id, userMessage, true, false, responseTime, !!user);
 
+      // Check if response contains map placeholder
+      let map: MapData | undefined;
+      if (response.includes('#MAP_EMBED#')) {
+        map = {
+          type: 'gmaps',
+          url: 'https://maps.google.com/maps?q=GOR+Badminton+Wisma+Harapan+Tangerang',
+          embed: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.7482!2d106.6123!3d-6.1725!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f9f7b7e277d3%3A0x85d0!2sGOR+Badminton+Wisma+Harapan!5e0!3m2!1sen!2sid!4v1635475291424!5m2!1sen!2sid'
+        };
+        response = response.replace('#MAP_EMBED#', ''); // Remove placeholder
+      }
+
       return {
         response,
         success: true,
-        contextUsed
+        contextUsed,
+        map
       };
 
     } catch (error) {
@@ -359,9 +473,10 @@ export class EnhancedDlobAIService {
    */
   private buildPersonalizedPrompt(userMessage: string, userContext: UserContext): string {
     const { user, memberData, paymentContext, matchContext, attendanceContext } = userContext;
+    const mapsUrl = 'https://maps.google.com/maps?q=GOR+Badminton+Wisma+Harapan+Tangerang';
     
     let contextInfo = '';
-    let specificInstructions = '';
+    let specificInstructions = `\nPENTING! Untuk setiap pertanyaan tentang lokasi atau alamat, SELALU sertakan link Google Maps ini: ${mapsUrl}`;
     
     if (memberData) {
       contextInfo += `\nData User:
@@ -455,6 +570,8 @@ PENTING: Jawab singkat, maksimal 2-3 kalimat. Jangan gunakan ** atau markdown. B
    * Build general prompt for anonymous users
    */
   private buildGeneralPrompt(userMessage: string): string {
+    const mapsUrl = 'https://maps.google.com/maps?q=GOR+Badminton+Wisma+Harapan+Tangerang';
+    
     return `Kamu adalah DLOB AI, asisten virtual untuk komunitas badminton DLOB di Indonesia. 
       
 Identitas & Peran:
@@ -472,6 +589,10 @@ Tentang DLOB:
 - Komunitas dengan 45+ anggota aktif
 - Sistem pembayaran otomatis dan tracking performa
 - Dashboard anggota dan admin terintegrasi
+
+PENTING! Untuk setiap pertanyaan tentang lokasi atau alamat, SELALU sertakan peta dan link berikut:
+1. Embedded map: <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d31733.426831021552!2d106.581261!3d-6.1738!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69ffa7e2cd5549%3A0x15c214ab8b458bf3!2sGOR%20Badminton%20Wisma%20Harapan!5e0!3m2!1sen!2sid!4v1761674208140!5m2!1sen!2sid" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+2. Navigation link: ${mapsUrl}
 
 JADWAL & LOKASI:
 - Jadwal Rutin: Setiap Sabtu, 20:00 - 23:00 WIB
@@ -614,8 +735,15 @@ PENTING: Jawab dengan singkat, jelas, dan to-the-point. Maksimal 2-3 kalimat. Ja
     }
 
     // Location and venue queries
-    if (message.includes('lokasi') || message.includes('alamat') || message.includes('dimana') || message.includes('tempat') || message.includes('venue')) {
-      return `${greeting} Lokasi latihan DLOB:\n📍 GOR Badminton Wisma Harapan\n🏠 Jl. Wisma Lantana IV No.D07-No 49, RT.006/RW.011, Gembor, Kec. Periuk, Kota Tangerang, Banten 15133\n\nBisa cek maps di website untuk navigasi ya! 🗺️`;
+    if (message.includes('lokasi') || message.includes('alamat') || message.includes('dimana') || message.includes('tempat') || message.includes('venue') || message.includes('maps') || message.includes('gor')) {
+      const mapsUrl = 'https://maps.google.com/maps?q=GOR+Badminton+Wisma+Harapan+Tangerang';
+      const mapEmbed = '<iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d31733.426831021552!2d106.581261!3d-6.1738!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69ffa7e2cd5549%3A0x15c214ab8b458bf3!2sGOR%20Badminton%20Wisma%20Harapan!5e0!3m2!1sen!2sid!4v1761674208140!5m2!1sen!2sid" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
+      const mapData: MapData = {
+        type: 'gmaps',
+        url: mapsUrl,
+        embed: mapEmbed
+      };
+      return `${greeting} Lokasi latihan kita di GOR Badminton Wisma Harapan, Kak. Alamatnya di Jl. Wisma Lantana IV No.D07-No 49, RT.006/RW.011, Gembor, Kec. Periuk, Kota Tangerang, Banten 15133.\n\n🗺️ ${mapEmbed}\n\n🚗 Buka di Google Maps: ${mapsUrl}\n\nAda yang lain bisa saya bantu?`;
     }
 
     // Schedule queries
@@ -708,15 +836,22 @@ PENTING: Jawab dengan singkat, jelas, dan to-the-point. Maksimal 2-3 kalimat. Ja
    */
   private getQuickResponse(message: string): string | null {
     const lowerMessage = message.toLowerCase();
+    const mapsUrl = 'https://maps.google.com/maps?q=GOR+Badminton+Wisma+Harapan+Tangerang';
 
     // Quick responses for common questions
     if (lowerMessage.includes('cara join') || lowerMessage.includes('cara gabung') || 
         lowerMessage.includes('bergabung') || lowerMessage.includes('daftar komunitas')) {
-      return "Untuk bergabung DLOB, datang aja Sabtu malam jam 20:00 ke GOR Wisma Harapan atau hubungi admin di +62 812-7073-7272 🏸\n\nAda yang lain bisa saya bantu?";
+      return `Untuk bergabung DLOB, datang aja Sabtu malam jam 20:00 ke GOR Wisma Harapan atau hubungi admin di +62 812-7073-7272 🏸\n\n🗺️ Lokasi GOR: ${mapsUrl}\n\nAda yang lain bisa saya bantu?`;
     }
 
     if (lowerMessage.includes('jadwal') || lowerMessage.includes('jam latihan')) {
-      return "Latihan DLOB setiap Sabtu malam 20:00-23:00 WIB di GOR Wisma Harapan, Tangerang 🏸\n\nAda yang lain bisa saya bantu?";
+      return `Latihan DLOB setiap Sabtu malam 20:00-23:00 WIB di GOR Wisma Harapan, Tangerang 🏸\n\n🗺️ Lokasi GOR: ${mapsUrl}\n\nAda yang lain bisa saya bantu?`;
+    }
+
+    if (lowerMessage.includes('maps') || lowerMessage.includes('navigasi') || 
+        lowerMessage.includes('arah') || lowerMessage.includes('petunjuk jalan')) {
+      const mapEmbed = '<iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d31733.426831021552!2d106.581261!3d-6.1738!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69ffa7e2cd5549%3A0x15c214ab8b458bf3!2sGOR%20Badminton%20Wisma%20Harapan!5e0!3m2!1sen!2sid!4v1761674208140!5m2!1sen!2sid" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
+      return `Ini peta lokasi GOR Wisma Harapan:\n\n🗺️ ${mapEmbed}\n\n🚗 Buka navigasi di Google Maps: ${mapsUrl}\n\nAda yang lain bisa saya bantu?`;
     }
 
     if (lowerMessage.includes('kontak admin') || lowerMessage.includes('hubungi admin')) {
@@ -743,9 +878,9 @@ PENTING: Jawab dengan singkat, jelas, dan to-the-point. Maksimal 2-3 kalimat. Ja
       return [
         "Cara join komunitas DLOB",
         "Jadwal latihan badminton", 
+        "Dimana lokasi GOR?",
+        "Minta link Google Maps",
         "Info pembayaran",
-        "Fitur platform DLOB",
-        "Tips bermain badminton",
         "Kontak admin"
       ];
     }
