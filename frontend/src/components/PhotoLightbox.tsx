@@ -10,6 +10,7 @@ interface GalleryItem {
   title: string;
   description?: string;
   thumbnail: string;
+  thumbnailLink?: string;
   date: string;
   youtubeId?: string;
   youtubeUrl?: string;
@@ -106,37 +107,25 @@ export function PhotoLightbox({ isOpen, photo, onClose, filteredItems, onPhotoCh
               {/* Main image - initially hidden */}
               <img
                 key={photo.id} // Force re-render on photo change
-                src={photo.thumbnailLink}
+                src={photo.thumbnailLink || photo.imageLink || photo.webContentLink || photo.thumbnail}
                 alt={photo.title}
                 className="max-w-full max-h-full h-auto w-auto object-contain"
                 onLoad={() => {
-                  console.log('Image loaded successfully with thumbnailLink');
+                  console.log('Image loaded successfully');
                   setIsLoading(false);
                 }}
-                onError={() => {
-                  console.log('Thumbnail failed, trying imageLink');
-                  const img = document.createElement('img');
-                  img.src = photo.imageLink || '';
-                  img.onload = () => {
-                    console.log('imageLink loaded successfully');
-                    const mainImg = document.querySelector('[data-main-image]') as HTMLImageElement;
-                    if (mainImg) {
-                      mainImg.src = photo.imageLink || '';
-                      setIsLoading(false);
-                    }
-                  };
-                  img.onerror = () => {
-                    console.log('imageLink failed, trying webContentLink');
-                    if (photo.webContentLink) {
-                      const mainImg = document.querySelector('[data-main-image]') as HTMLImageElement;
-                      if (mainImg) {
-                        mainImg.src = photo.webContentLink;
-                        setIsLoading(false);
-                      }
-                    } else {
-                      setIsLoading(false);
-                    }
-                  };
+                onError={(e) => {
+                  console.log('Primary image source failed, trying fallback');
+                  const imgElement = e.target as HTMLImageElement;
+                  if (photo.imageLink && imgElement.src !== photo.imageLink) {
+                    imgElement.src = photo.imageLink;
+                  } else if (photo.webContentLink && imgElement.src !== photo.webContentLink) {
+                    imgElement.src = photo.webContentLink;
+                  } else if (photo.thumbnail && imgElement.src !== photo.thumbnail) {
+                    imgElement.src = photo.thumbnail;
+                  } else {
+                    setIsLoading(false);
+                  }
                 }}
                 data-main-image
                 style={{ 
@@ -157,7 +146,7 @@ export function PhotoLightbox({ isOpen, photo, onClose, filteredItems, onPhotoCh
             </div>
 
             {/* Info overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-linear-to-t from-black/80 to-transparent">
               <div className="flex justify-between items-center text-white">
                 <span className="font-medium truncate pr-4">{photo.title}</span>
                 {photo.drivePhotoUrl && (
