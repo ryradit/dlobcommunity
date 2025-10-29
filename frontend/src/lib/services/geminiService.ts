@@ -175,11 +175,32 @@ Respond ONLY with valid JSON in this exact format:
   }
 
   private buildChatPrompt(question: string, context?: any): string {
+    const foundingDate = new Date(2020, 5, 16); // June 16th, 2020
+    const today = new Date();
+    const thisYearAnniversary = new Date(today.getFullYear(), 5, 16);
+    
+    let years = today.getFullYear() - foundingDate.getFullYear();
+    if (today < thisYearAnniversary) {
+      years--;
+    }
+
     return `
 You are a helpful AI assistant for DLOB badminton community. Answer questions about badminton, the community, scheduling, payments, and general inquiries.
 
+Important Community Information:
+- DLOB was founded on June 16th, 2020
+- The community is currently ${years} years old
+- Next anniversary will be on June 16th, ${thisYearAnniversary.getFullYear()}, marking ${years + 1} years
+- Anniversary and birthday celebrations are held every June 16th
+
 Context: ${JSON.stringify(context || {})}
 Question: ${question}
+
+When asked about DLOB's age, birthday, or anniversary:
+1. Mention the founding date (June 16th, 2020)
+2. State the current age (${years} years)
+3. Mention the upcoming anniversary date
+4. Be enthusiastic and celebratory in tone
 
 Provide a helpful, friendly response. Keep it concise and relevant to badminton or community activities.
 `;

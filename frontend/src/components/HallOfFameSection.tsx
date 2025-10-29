@@ -74,6 +74,24 @@ const hallOfFameMembers: Member[] = [
 export default function HallOfFameSection({ showAll = false, className = '' }: HallOfFameSectionProps) {
   const displayMembers = showAll ? hallOfFameMembers : hallOfFameMembers.slice(0, 5);
 
+  // Calculate years since foundation
+  const calculateYears = () => {
+    const foundingDate = new Date(2020, 5, 16); // Month is 0-based, so 5 = June
+    const today = new Date();
+    const thisYearAnniversary = new Date(today.getFullYear(), 5, 16);
+    
+    let years = today.getFullYear() - foundingDate.getFullYear();
+    
+    // If we haven't reached June 16th this year, subtract one year
+    if (today < thisYearAnniversary) {
+      years--;
+    }
+    
+    return years;
+  };
+
+  const yearsActive = calculateYears();
+
   return (
     <div className={className}>
       {!showAll && (
@@ -163,7 +181,7 @@ export default function HallOfFameSection({ showAll = false, className = '' }: H
             <div className="text-sm text-gray-600 mt-1">Total Member</div>
           </div>
           <div className="text-center p-6 bg-green-50 rounded-xl">
-            <div className="text-2xl font-bold text-green-600">5+</div>
+            <div className="text-2xl font-bold text-green-600">{yearsActive}+</div>
             <div className="text-sm text-gray-600 mt-1">Tahun Berdiri</div>
           </div>
           <div className="text-center p-6 bg-purple-50 rounded-xl">
