@@ -57,12 +57,18 @@ const hallOfFameMembers: Member[] = [
   { id: 38, name: 'Atna', photo: '/images/members/atna.jpg' },
   { id: 39, name: 'Reyza', photo: '/images/members/reyza.jpg' },
   { id: 40, name: 'Gavin', photo: '/images/members/gavin.jpg' },
-  { id: 41, name: 'Glibert', photo: '/images/members/glibert.jpg' },
+  { id: 41, name: 'Gilbert', photo: '/images/members/gilbert.jpg' },
   { id: 42, name: 'Northon', photo: '/images/members/northon.jpg' },
   { id: 43, name: 'Agung', photo: '/images/members/agung.jpg' },
   { id: 44, name: 'Wisnu', photo: '/images/members/wisnu.jpg' },
   { id: 45, name: 'Ilham', photo: '/images/members/ilham.jpg' },
-  { id: 46, name: 'Bayu', photo: '/images/members/bayu.jpg' }
+  { id: 46, name: 'Bayu', photo: '/images/members/bayu.jpg' },
+  { id: 47, name: 'Yudha', photo: '/images/members/yudha.jpg' },
+  { id: 48, name: 'Yudi', photo: '/images/members/yudi.jpg' },
+  { id: 49, name: 'Daniel', photo: '/images/members/daniel.jpg' },
+  { id: 50, name: 'Lorenzo', photo: '/images/members/lorenzo.jpg' }
+    ,{ id: 51, name: 'Dyas', photo: '/images/members/dyas.jpg' }
+    ,{ id: 52, name: 'Anan', photo: '/images/members/anan.jpg' }
 ];
 
 export default function HallOfFameSection({ showAll = false, className = '' }: HallOfFameSectionProps) {
@@ -104,7 +110,12 @@ export default function HallOfFameSection({ showAll = false, className = '' }: H
                 src={member.photo}
                 alt={member.name}
                 name={member.name}
-                className="group-hover:scale-125 transition-transform duration-500 ease-out w-full h-full"
+                className={`group-hover:scale-125 transition-transform duration-500 ease-out w-full h-full
+                  ${member.name === 'Reyza' ? 'scale-85 -translate-y-2' : ''} 
+                  ${member.name === 'Northon' ? 'translate-y-2' : ''}
+                  ${member.name === 'Edi' ? 'scale-90 translate-y-2' : ''}
+                  ${member.name === 'Yaya' ? 'scale-80 -translate-y-13' : ''}
+                  ${member.name === 'Anthony' ? 'scale-80 translate-y-1' : ''}`}
               />
               
               {/* Gradient overlay */}

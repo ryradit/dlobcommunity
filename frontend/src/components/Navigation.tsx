@@ -59,7 +59,7 @@ export default function Navigation({ variant = 'member' }: NavigationProps) {
         <div className="flex justify-between h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
-            <Link href={variant === 'admin' ? '/admin' : '/dashboard'} className="flex items-center">
+            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
               <div className="rounded-full bg-blue-600 p-2">
                 <Trophy className="h-6 w-6 text-white" />
               </div>

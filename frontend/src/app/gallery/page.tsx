@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { Play, Camera, Video, Filter } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { youtubeService } from '@/lib/youtube';
+import { googleDriveService, DrivePhoto } from '@/lib/google-drive';
+import { PhotoLightbox } from '@/components/PhotoLightbox';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -55,6 +57,9 @@ interface GalleryItem {
   date: string;
   youtubeId?: string;
   youtubeUrl?: string;
+  drivePhotoUrl?: string;
+  imageLink?: string;
+  webContentLink?: string;
 }
 
 export default function GalleryPage() {
@@ -64,7 +69,9 @@ export default function GalleryPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'matches' | 'training' | 'community'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<GalleryItem | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<GalleryItem | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
   const text: Record<string, any> = {
     en: {
@@ -78,7 +85,8 @@ export default function GalleryPage() {
       noContent: 'No content available',
       videoFrom: 'Video from',
       photoFrom: 'Photo from',
-      watchOnYoutube: 'Watch on YouTube'
+      watchOnYoutube: 'Watch on YouTube',
+      viewFullSize: 'View Full Size'
     },
     id: {
       title: 'Galeri',
@@ -91,18 +99,24 @@ export default function GalleryPage() {
       noContent: 'Tidak ada konten tersedia',
       videoFrom: 'Video dari',
       photoFrom: 'Foto dari',
-      watchOnYoutube: 'Tonton di YouTube'
+      watchOnYoutube: 'Tonton di YouTube',
+      viewFullSize: 'Lihat Ukuran Penuh'
     }
   };
 
   useEffect(() => {
-    const loadYouTubeVideos = async () => {
+    const loadGalleryContent = async () => {
       try {
-        console.log('🚀 Starting YouTube video fetch...');
         setIsLoading(true);
         
-        const videos = await youtubeService.getChannelVideos(20);
+        // Fetch content in parallel
+        const [videos, trainingPhotos] = await Promise.all([
+          youtubeService.getChannelVideos(20),
+          googleDriveService.getTrainingPhotos()
+        ]);
+
         console.log(`📹 Fetched ${videos.length} videos from DLOB YouTube channel`);
+        console.log(`📸 Fetched ${trainingPhotos.length} training photos from Google Drive`);
 
         // Convert YouTube videos to gallery items with smart categorization
         const youtubeItems: GalleryItem[] = videos.map((video: YouTubeVideo) => {
@@ -134,6 +148,19 @@ export default function GalleryPage() {
           };
         });
 
+        // Convert Google Drive training photos to gallery items
+        const drivePhotoItems: GalleryItem[] = trainingPhotos.map((photo: DrivePhoto) => ({
+          id: `drive-${photo.id}`,
+          type: 'image' as const,
+          category: 'training',
+          title: photo.name,
+          thumbnail: photo.thumbnailLink,
+          date: photo.createdTime,
+          imageLink: photo.imageLink,
+          webContentLink: photo.webContentLink,
+          drivePhotoUrl: photo.webViewLink
+        }));
+
         // Static DLOB gallery items
         const staticItems: GalleryItem[] = [
           {
@@ -153,28 +180,10 @@ export default function GalleryPage() {
             description: 'Monthly welcoming ceremony for new DLOB community members',
             thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzBmNzIyMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNDAlIiBmb250LXNpemU9IjE2IiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RE1PQiBXZWxjb21lPC90ZXh0Pjx0ZXh0IHg9IjUwJSIgeT0iNjAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjYmJmN2QwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+TmV3IE1lbWJlciBDZXJlbW9ueTwvdGV4dD48L3N2Zz4=',
             date: '2024-10-05'
-          },
-          {
-            id: 'dlob-training-1',
-            type: 'image',
-            category: 'training',
-            title: 'Professional Training Workshop',
-            description: 'Weekly DLOB training session focusing on advanced techniques and strategies',
-            thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2ZmYmYwMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNDAlIiBmb250LXNpemU9IjE2IiBmaWxsPSIjMDAwMDAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RE1PQiBUcmFpbmluZzwvdGV4dD48dGV4dCB4PSI1MCUiIHk9IjYwJSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NjYwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkFkdmFuY2VkIFdvcmtzaG9wPC90ZXh0Pjwvc3ZnPg==',
-            date: '2024-09-28'
-          },
-          {
-            id: 'dlob-tournament-1',
-            type: 'image',
-            category: 'matches',
-            title: 'DLOB Monthly Tournament',
-            description: 'Competitive monthly tournament featuring the best players from DLOB community',
-            thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2RjMjYyNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNDAlIiBmb250LXNpemU9IjE2IiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RE1PQiBUb3VybmFtZW50PC90ZXh0Pjx0ZXh0IHg9IjUwJSIgeT0iNjAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjZmNhNWE1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+TW9udGhseSBDb21wZXRpdGlvbjwvdGV4dD48L3N2Zz4=',
-            date: '2024-09-15'
           }
         ];
 
-        const allItems = [...youtubeItems, ...staticItems];
+        const allItems = [...youtubeItems, ...drivePhotoItems, ...staticItems];
         console.log(`📋 Total gallery items: ${allItems.length}`);
         
         setGalleryItems(allItems);
@@ -211,7 +220,7 @@ export default function GalleryPage() {
       }
     };
 
-    loadYouTubeVideos();
+    loadGalleryContent();
   }, []);
 
   const filterItems = (category: 'all' | 'matches' | 'training' | 'community') => {
@@ -235,6 +244,22 @@ export default function GalleryPage() {
   const closeVideoModal = () => {
     setSelectedVideo(null);
     setIsVideoModalOpen(false);
+    // Restore background scrolling
+    document.body.style.overflow = 'unset';
+  };
+
+  const openPhotoModal = (item: GalleryItem) => {
+    if (item.type === 'image') {
+      setSelectedPhoto(item);
+      setIsPhotoModalOpen(true);
+      // Prevent background scrolling
+      document.body.style.overflow = 'hidden';
+    }
+  };
+
+  const closePhotoModal = () => {
+    setSelectedPhoto(null);
+    setIsPhotoModalOpen(false);
     // Restore background scrolling
     document.body.style.overflow = 'unset';
   };
@@ -324,10 +349,10 @@ export default function GalleryPage() {
                 className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer group"
                 onClick={() => {
                   if (item.type === 'video') {
-                    // Open video in modal player instead of redirecting to YouTube
                     openVideoModal(item);
+                  } else if (item.type === 'image') {
+                    openPhotoModal(item);
                   }
-                  // For images, you could add lightbox functionality here in the future
                 }}
               >
                 <div className="relative">
@@ -344,14 +369,15 @@ export default function GalleryPage() {
                     {/* Use regular img for YouTube videos */}
                     {item.type === 'video' ? (
                       <img
-                        src={item.thumbnail}
+                        src={item.thumbnail || item.imageLink || item.webContentLink || item.drivePhotoUrl}
                         alt={item.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           const target = e.currentTarget;
+                          const currentSrc = target.src;
                           
-                          // Try fallback thumbnail URLs if the first one fails
-                          if (item.youtubeId && !target.src.includes('data:image')) {
+                          if (item.type === 'video' && item.youtubeId) {
+                            // Handle YouTube video thumbnails
                             if (target.src.includes('maxresdefault')) {
                               target.src = `https://img.youtube.com/vi/${item.youtubeId}/hqdefault.jpg`;
                             } else if (target.src.includes('hqdefault')) {
@@ -359,8 +385,16 @@ export default function GalleryPage() {
                             } else if (target.src.includes('mqdefault')) {
                               target.src = `https://img.youtube.com/vi/${item.youtubeId}/default.jpg`;
                             } else {
-                              // Final fallback to placeholder
                               target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE4IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+VmlkZW8gVGh1bWJuYWlsPC90ZXh0Pjwvc3ZnPg==';
+                            }
+                          } else {
+                            // Try all available image URLs
+                            if (currentSrc === item.thumbnail && item.imageLink) {
+                              target.src = item.imageLink;
+                            } else if (currentSrc === item.imageLink && item.webContentLink) {
+                              target.src = item.webContentLink;
+                            } else if (currentSrc === item.webContentLink && item.drivePhotoUrl) {
+                              target.src = item.drivePhotoUrl;
                             }
                           }
                         }}
@@ -505,6 +539,17 @@ export default function GalleryPage() {
         </div>
       )}
       </div>
+
+      {/* Photo Lightbox */}
+      <PhotoLightbox 
+        isOpen={isPhotoModalOpen}
+        photo={selectedPhoto}
+        onClose={closePhotoModal}
+        filteredItems={filteredItems}
+        onPhotoChange={setSelectedPhoto}
+        language={language}
+        text={text}
+      />
       
       <Footer />
     </div>
