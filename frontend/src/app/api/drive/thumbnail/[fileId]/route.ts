@@ -4,8 +4,9 @@ import { NextRequest } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  context: { params: { fileId: string } }
+  context: { params: Promise<{ fileId: string }> }
 ) {
+  const { fileId } = await context.params;
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: {
@@ -17,7 +18,7 @@ export async function GET(
 
     const drive = google.drive({ version: 'v3', auth });
     const response = await drive.files.get({
-      fileId: context.params.fileId,
+      fileId: fileId,
       fields: 'thumbnailLink'
     });
     
