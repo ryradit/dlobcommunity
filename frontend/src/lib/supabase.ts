@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getSiteUrl } from './auth-utils';
 
 // Use environment variables with fallbacks for development
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -20,10 +21,17 @@ if (!hasValidCredentials) {
   console.info('🎭 Demo mode enabled. Set NEXT_PUBLIC_FORCE_DEMO_MODE=false to use real Supabase.');
 }
 
-// Create Supabase client with fallback values for demo mode
+// Create Supabase client with correct auth configuration
 export const supabase = createClient(
   supabaseUrl || 'https://demo.supabase.co', 
-  supabaseKey || 'demo-key'
+  supabaseKey || 'demo-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  }
 );
 
 // Export a flag to check if we're in demo mode

@@ -107,6 +107,9 @@ export default function Footer() {
               <a href="/gallery" className="block text-gray-400 hover:text-blue-400 transition-colors">
                 Gallery
               </a>
+              <a href="/store" className="block text-gray-400 hover:text-blue-400 transition-colors">
+                Store
+              </a>
             </div>
             
             {/* Legal Links */}

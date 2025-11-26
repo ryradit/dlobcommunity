@@ -344,11 +344,41 @@ export class AuthService {
         throw new Error('Google Sign-In not available in demo mode. Please use regular email/password login.');
       }
 
+      // Get the correct redirect URL for current environment
+      const redirectUrl = (() => {
+        // Production environment detection
+        if (typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          
+          // Check if we're on Vercel (production)
+          if (hostname.includes('.vercel.app') || hostname === 'dlobcommunity.vercel.app' || process.env.VERCEL_URL) {
+            return `${window.location.origin}/auth/callback`;
+          }
+          
+          // Custom production domain
+          if (process.env.NEXT_PUBLIC_SITE_URL) {
+            return `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+          }
+          
+          // Development fallback
+          return `${window.location.origin}/auth/callback`;
+        }
+        
+        // Server-side fallback
+        return 'http://localhost:3000/auth/callback';
+      })();
+
+      console.log('Google OAuth redirect URL:', redirectUrl);
+
       // Sign in with Google
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       });
 

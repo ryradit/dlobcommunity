@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage, LanguageSwitcher } from "@/hooks/useLanguage";
 
 interface HeaderProps {
-  currentPage?: 'home' | 'about' | 'contact' | 'gallery';
+  currentPage?: 'home' | 'about' | 'contact' | 'gallery' | 'store';
   showAuth?: boolean;
 }
 
@@ -23,7 +23,8 @@ export default function Header({ currentPage = 'home', showAuth = false }: Heade
         home: "Home",
         about: "About",
         contact: "Contact",
-        gallery: "Gallery"
+        gallery: "Gallery",
+        store: "Store"
       },
       auth: {
         login: "Login",
@@ -37,7 +38,8 @@ export default function Header({ currentPage = 'home', showAuth = false }: Heade
         home: "Beranda", 
         about: "Tentang",
         contact: "Kontak",
-        gallery: "Gallery"
+        gallery: "Gallery",
+        store: "Store"
       },
       auth: {
         login: "Masuk",
@@ -115,6 +117,16 @@ export default function Header({ currentPage = 'home', showAuth = false }: Heade
               }`}
             >
               {t.nav.gallery}
+            </Link>
+            <Link 
+              href="/store" 
+              className={`transition-colors ${
+                currentPage === 'store' 
+                  ? 'text-blue-600 font-medium' 
+                  : 'text-gray-600 hover:text-blue-600'
+              }`}
+            >
+              {t.nav.store}
             </Link>
           </nav>
           
