@@ -127,16 +127,6 @@ export default function Navigation({ variant = 'member' }: NavigationProps) {
                       Profile Settings
                     </Link>
 
-                    {/* AI Assistant (if available) */}
-                    <Link
-                      href="/ai"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      <BarChart3 className="h-4 w-4 mr-2" />
-                      AI Assistant
-                    </Link>
-
                     {/* Logout */}
                     <button
                       onClick={() => {

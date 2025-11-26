@@ -11,6 +11,14 @@ interface TrainingGalleryProps {
 export default function TrainingGallery({ photos, isLoading = false }: TrainingGalleryProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<DrivePhoto | null>(null);
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
@@ -26,14 +34,6 @@ export default function TrainingGallery({ photos, isLoading = false }: TrainingG
       </div>
     );
   }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
 
   return (
     <>

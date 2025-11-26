@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Play, Camera, Video, Filter } from 'lucide-react';
+import { Play, Camera, Video, Filter, User } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { youtubeService } from '@/lib/youtube';
 import { googleDriveService, DrivePhoto } from '@/lib/google-drive';
+import { FaceDetectionService } from '@/lib/services/face-detection';
 import { PhotoLightbox } from '@/components/PhotoLightbox';
+import FaceFilter from '@/components/FaceFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 

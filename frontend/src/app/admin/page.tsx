@@ -12,8 +12,10 @@ import {
   AlertCircle,
   CheckCircle,
   Settings,
-  BarChart3
+  BarChart3,
+  ScanLine
 } from 'lucide-react';
+import QuickMatchNoteUploader from './components/QuickMatchNoteUploader';
 import Navigation from '@/components/Navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { supabase } from '@/lib/supabase';
@@ -604,36 +606,37 @@ export default function AdminDashboard() {
           </div>
 
           {/* Recent Activities & Analytics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Recent Activities */}
-            <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activities</h3>
-            <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3">
-                  <div className="shrink-0">
-                    {getActivityIcon(activity.type, activity.status)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{activity.message}</p>
-                    <p className="text-xs text-gray-700 mt-1">{activity.timestamp}</p>
-                  </div>
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activities</h3>
+                <div className="space-y-4">
+                  {recentActivities.map((activity) => (
+                    <div key={activity.id} className="flex items-start space-x-3">
+                      <div className="shrink-0">
+                        {getActivityIcon(activity.type, activity.status)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900">{activity.message}</p>
+                        <p className="text-xs text-gray-700 mt-1">{activity.timestamp}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="mt-4 pt-4 border-t">
-              <Link
-                href="/admin/activities"
-                className="text-sm text-blue-600 hover:text-blue-500"
-              >
-                View all activities →
-              </Link>
-            </div>
-            </div>
+                <div className="mt-4 pt-4 border-t">
+                  <Link
+                    href="/admin/activities"
+                    className="text-sm text-blue-600 hover:text-blue-500"
+                  >
+                    View all activities →
+                  </Link>
+                </div>
+              </div>
 
-            {/* Quick Analytics */}
-            <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Analytics</h3>
+              {/* Quick Analytics */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Analytics</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-800">{stats.attendanceLabel} Attendance Rate</span>
@@ -691,16 +694,24 @@ export default function AdminDashboard() {
                   }}
                 ></div>
               </div>
+                </div>
+                <div className="mt-4 pt-4 border-t">
+                  <Link
+                    href="/admin/analytics"
+                    className="flex items-center text-sm text-blue-600 hover:text-blue-500"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-1" />
+                    View detailed analytics →
+                  </Link>
+                </div>
+              </div>
             </div>
-            <div className="mt-4 pt-4 border-t">
-              <Link
-                href="/admin/analytics"
-                className="flex items-center text-sm text-blue-600 hover:text-blue-500"
-              >
-                <BarChart3 className="h-4 w-4 mr-1" />
-                View detailed analytics →
-              </Link>
-            </div>
+
+            {/* Quick Match Note OCR - Right Column */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow">
+                <QuickMatchNoteUploader />
+              </div>
             </div>
           </div>
         </div>

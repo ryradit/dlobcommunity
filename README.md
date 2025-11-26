@@ -9,8 +9,9 @@
 - **Payment Management** - Automated fee calculations, payment tracking, and reminders
 - **Match Scheduling** - Smart match pairing, results tracking, and leaderboards
 - **Member Management** - Profile management, activity tracking, and statistics
+- **Photo Management** - Face detection and photo organization using Google Cloud Vision API
 
-### AI-Powered Features (Gemini Integration)
+### AI-Powered Features
 - **Payment Message Parsing** - Automatically parse and categorize payment messages
 - **Match Recommendations** - Fair team pairing based on performance history
 - **Performance Analysis** - Weekly summaries and improvement suggestions

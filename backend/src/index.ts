@@ -14,6 +14,7 @@ import matchRoutes from './routes/matches';
 import memberRoutes from './routes/members';
 import aiRoutes from './routes/ai';
 import adminRoutes from './routes/admin';
+import ocrRoutes from './routes/ocr.routes';
 
 dotenv.config();
 
@@ -44,6 +45,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/members', memberRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ocr', ocrRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
