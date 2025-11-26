@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { supabase, isDemoMode } from './supabase';
+import { getAuthCallbackUrl } from './auth-utils';
 
 export interface AuthUser {
   id: string;
@@ -344,30 +345,8 @@ export class AuthService {
         throw new Error('Google Sign-In not available in demo mode. Please use regular email/password login.');
       }
 
-      // Get the correct redirect URL for current environment
-      const redirectUrl = (() => {
-        // Production environment detection
-        if (typeof window !== 'undefined') {
-          const hostname = window.location.hostname;
-          
-          // Check if we're on Vercel (production)
-          if (hostname.includes('.vercel.app') || hostname === 'dlobcommunity.vercel.app' || process.env.VERCEL_URL) {
-            return `${window.location.origin}/auth/callback`;
-          }
-          
-          // Custom production domain
-          if (process.env.NEXT_PUBLIC_SITE_URL) {
-            return `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
-          }
-          
-          // Development fallback
-          return `${window.location.origin}/auth/callback`;
-        }
-        
-        // Server-side fallback
-        return 'http://localhost:3000/auth/callback';
-      })();
-
+      // Get the correct redirect URL using auth-utils
+      const redirectUrl = getAuthCallbackUrl();
       console.log('Google OAuth redirect URL:', redirectUrl);
 
       // Sign in with Google
