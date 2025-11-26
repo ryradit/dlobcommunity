@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ShoppingCart, Heart, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -57,7 +57,6 @@ export default function StorePage() {
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedSleeve, setSelectedSleeve] = useState('short'); // 'short' or 'long'
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [cart, setCart] = useState<string[]>([]);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   const selectedVariant = colorVariants.find(variant => variant.id === selectedColor) || colorVariants[0];
@@ -77,12 +76,6 @@ export default function StorePage() {
     { size: 'XXL', tinggi: 80, lebar: 62 },
     { size: '3XL', tinggi: 83, lebar: 65 }
   ];
-
-  const addToCart = (variantId: string) => {
-    if (!cart.includes(variantId)) {
-      setCart([...cart, variantId]);
-    }
-  };
 
   const getSizePrice = (size: string, sleeve: string = 'short') => {
     let basePrice;
@@ -442,32 +435,9 @@ export default function StorePage() {
               </p>
             </div>
 
-            {/* Add to Cart */}
+            {/* Utility Buttons */}
             <div className="space-y-4">
-              <button
-                onClick={() => addToCart(selectedColor)}
-                disabled={!selectedSize}
-                className={`w-full py-4 font-medium text-sm uppercase tracking-wide transition-colors ${
-                  selectedSize 
-                    ? cart.includes(selectedColor)
-                      ? 'bg-green-600 text-white'
-                      : 'bg-black text-white hover:bg-gray-800'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {cart.includes(selectedColor) 
-                  ? 'SUDAH DI KERANJANG' 
-                  : selectedSize 
-                    ? 'TAMBAH KE KERANJANG' 
-                    : 'PILIH UKURAN TERLEBIH DAHULU'
-                }
-              </button>
-              
-              <div className="flex gap-4 text-sm">
-                <button className="flex items-center gap-2 text-gray-800 hover:text-black transition-colors font-medium">
-                  <Heart className="h-4 w-4" />
-                  Tambah ke Wishlist
-                </button>
+              <div className="flex gap-4 text-sm justify-center">
                 <button 
                   onClick={() => setShowSizeGuide(!showSizeGuide)}
                   className="flex items-center gap-2 text-gray-800 hover:text-black transition-colors font-medium"
