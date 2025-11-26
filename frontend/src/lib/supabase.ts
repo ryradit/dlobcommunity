@@ -80,6 +80,46 @@ export interface Database {
           updated_at?: string;
         };
       };
+      pre_orders: {
+        Row: {
+          id: string;
+          nama: string;
+          ukuran: 'S' | 'M' | 'L' | 'XL' | 'XXL' | '3XL';
+          warna: 'biru' | 'pink' | 'kuning';
+          lengan: 'short' | 'long';
+          nama_punggung: string | null;
+          tanpa_nama_punggung: boolean;
+          harga: number;
+          status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nama: string;
+          ukuran: 'S' | 'M' | 'L' | 'XL' | 'XXL' | '3XL';
+          warna: 'biru' | 'pink' | 'kuning';
+          lengan?: 'short' | 'long';
+          nama_punggung?: string | null;
+          tanpa_nama_punggung?: boolean;
+          harga: number;
+          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          nama?: string;
+          ukuran?: 'S' | 'M' | 'L' | 'XL' | 'XXL' | '3XL';
+          warna?: 'biru' | 'pink' | 'kuning';
+          lengan?: 'short' | 'long';
+          nama_punggung?: string | null;
+          tanpa_nama_punggung?: boolean;
+          harga?: number;
+          status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+          updated_at?: string;
+        };
+      };
     };
   };
 }
