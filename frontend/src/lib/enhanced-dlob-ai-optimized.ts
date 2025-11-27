@@ -384,7 +384,7 @@ Jawab 1-2 kalimat, akhiri "Ada yang lain bisa saya bantu?"`;
       }
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Response timeout - coba lagi ya!');
       }
       throw error;
