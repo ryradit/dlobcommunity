@@ -1,0 +1,55 @@
+import { google } from 'googleapis';
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  try {
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_DRIVE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_DRIVE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+    });
+
+    const drive = google.drive({ version: 'v3', auth });
+    const folderId = process.env.NEXT_PUBLIC_GDRIVE_TRAINING_FOLDER_ID;
+
+    const response = await drive.files.list({
+      q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
+      fields: 'files(id, name, thumbnailLink, webViewLink, webContentLink, mimeType, createdTime)',
+      orderBy: 'createdTime desc',
+      pageSize: 100
+    });
+
+    // Process files with enhanced URLs and webContentLinks
+    const files = await Promise.all((response.data.files || []).map(async (file) => {
+      if (!file.id) return file;
+      
+      try {
+        const fileGet = await drive.files.get({
+          fileId: file.id,
+          fields: 'webContentLink'
+        });
+
+        return {
+          ...file,
+          webContentLink: fileGet.data.webContentLink || null,
+          thumbnailLink: file.thumbnailLink?.replace(/=s\d+/, '=s1600') || null,
+          imageLink: `https://lh3.googleusercontent.com/d/${file.id}`
+        };
+      } catch (error) {
+        console.error(`Error getting webContentLink for file ${file.id}:`, error);
+        return {
+          ...file,
+          thumbnailLink: file.thumbnailLink?.replace(/=s\d+/, '=s1600') || null,
+          imageLink: `https://lh3.googleusercontent.com/d/${file.id}`
+        };
+      }
+    }));
+
+    return NextResponse.json(files);
+  } catch (error) {
+    console.error('Error fetching training photos:', error);
+    return NextResponse.json({ error: 'Failed to fetch training photos' }, { status: 500 });
+  }
+}
