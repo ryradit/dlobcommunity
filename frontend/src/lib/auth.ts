@@ -345,34 +345,60 @@ export class AuthService {
         throw new Error('Google Sign-In not available in demo mode. Please use regular email/password login.');
       }
 
+      console.log('🚀 Starting Google OAuth flow...');
+      const startTime = performance.now();
+
       // Get the correct redirect URL using auth-utils
       const redirectUrl = getAuthCallbackUrl();
       console.log('Google OAuth redirect URL:', redirectUrl);
 
-      // Sign in with Google
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      // Optimized Google OAuth with timeout
+      const authPromise = supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent'
-          }
+            prompt: 'select_account', // Changed from 'consent' for faster flow
+            hd: null // Allow any Google domain
+          },
+          skipBrowserRedirect: false
         }
       });
 
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Google Sign-In timeout - please try again')), 10000)
+      );
+
+      const { data, error } = await Promise.race([authPromise, timeoutPromise]);
+
+      const endTime = performance.now();
+      console.log(`⚡ Google OAuth initiated in ${Math.round(endTime - startTime)}ms`);
+
       if (error) {
-        // Handle specific Google provider not enabled error
+        console.error('Google OAuth error:', error);
+        
+        // Handle specific error cases with user-friendly messages
         if (error.message.includes('provider is not enabled') || error.message.includes('Unsupported provider')) {
-          throw new Error('Google Sign-In is not yet configured. Please use email/password login or contact admin to enable Google authentication.');
+          throw new Error('Google Sign-In is not configured. Please use email/password login or contact admin.');
         }
-        throw new Error(error.message);
+        
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Google authentication failed. Please try again or use email/password login.');
+        }
+        
+        if (error.message.includes('timeout') || error.message.includes('Network')) {
+          throw new Error('Connection timeout. Please check your internet and try again.');
+        }
+        
+        throw new Error(`Authentication failed: ${error.message}`);
       }
 
-      // The actual user data will be available after redirect
+      console.log('✅ Google OAuth redirect initiated successfully');
       return data;
     } catch (error) {
-      console.error('Google login error:', error);
+      console.error('❌ Google login error:', error);
       throw error;
     }
   }

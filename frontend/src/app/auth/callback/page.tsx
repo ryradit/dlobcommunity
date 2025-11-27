@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { trackCallbackStart, trackCallbackComplete } from '@/lib/auth-performance';
 
 function AuthCallbackContent() {
   const router = useRouter();
@@ -12,6 +13,7 @@ function AuthCallbackContent() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        trackCallbackStart();
         console.log('Processing auth callback...');
         
         // Check for error in URL params first
@@ -40,58 +42,55 @@ function AuthCallbackContent() {
         }
 
         console.log('User authenticated:', sessionData.session.user.email);
-        // Check if user has a member profile
+        // Use upsert to handle both existing and new users efficiently
+        const displayName = sessionData.session.user.user_metadata?.full_name || 
+                          sessionData.session.user.user_metadata?.name || 
+                          sessionData.session.user.email?.split('@')[0] || 
+                          'New Member';
+
+        console.log('Upserting member profile for faster processing...');
+        
+        // Single database call using upsert - creates if not exists, updates if exists
         const { data: memberData, error: memberError } = await supabase
           .from('members')
+          .upsert({
+            id: sessionData.session.user.id,
+            email: sessionData.session.user.email,
+            name: displayName,
+            role: 'member', // Default role for new users
+            membership_type: 'regular',
+            join_date: new Date().toISOString().split('T')[0],
+            is_active: true,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          })
           .select('id, email, name, role, membership_type, is_active')
-          .eq('id', sessionData.session.user.id)
           .single();
 
-        if (memberError || !memberData) {
-          console.log('Creating new member profile...');
-          // Create member profile for new Google user
-          const displayName = sessionData.session.user.user_metadata?.full_name || 
-                            sessionData.session.user.user_metadata?.name || 
-                            sessionData.session.user.email?.split('@')[0] || 
-                            'New Member';
+        if (memberError) {
+          console.error('Failed to upsert member profile:', memberError);
+          router.push('/login?error=profile_upsert_failed');
+          return;
+        }
 
-          const { data: newMember, error: createError } = await supabase
-            .from('members')
-            .insert({
-              id: sessionData.session.user.id,
-              email: sessionData.session.user.email,
-              name: displayName,
-              role: 'member',
-              membership_type: 'regular',
-              join_date: new Date().toISOString().split('T')[0],
-              is_active: true
-            })
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('Failed to create member profile:', createError);
-            router.push('/login?error=profile_creation_failed');
-            return;
-          }
-          
-          console.log('New member created, redirecting to dashboard...');
-          router.replace('/dashboard');
-        } else if (!memberData.is_active) {
+        if (!memberData.is_active) {
           console.log('Account inactive');
           router.push('/login?error=account_inactive');
           return;
-        } else {
-          console.log(`Existing member found (${memberData.role}), redirecting...`);
-          // Redirect based on role
-          if (memberData.role === 'admin') {
-            router.replace('/admin');
-          } else {
-            router.replace('/dashboard');
-          }
         }
+
+        // Fast redirect based on role
+        console.log(`Member processed (${memberData.role}), redirecting...`);
+        const redirectPath = memberData.role === 'admin' ? '/admin' : '/dashboard';
+        
+        // Use replace to prevent back button issues and faster redirect
+        trackCallbackComplete();
+        window.location.replace(redirectPath);
       } catch (error) {
         console.error('Auth callback error:', error);
+        trackCallbackComplete(); // Track even on error for debugging
         router.push('/login?error=callback_error');
       } finally {
         setIsProcessing(false);

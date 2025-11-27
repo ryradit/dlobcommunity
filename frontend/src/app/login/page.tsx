@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { Trophy, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { isDemoMode } from '@/lib/supabase';
+import { trackGoogleOAuth } from '@/lib/auth-performance';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -70,12 +71,27 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
+    const startTime = performance.now();
+    console.log('🔄 Starting Google sign-in process...');
+
     try {
+      trackGoogleOAuth();
       await loginWithGoogle();
       // Redirect will be handled by the auth callback
+      const endTime = performance.now();
+      console.log(`⚡ Google sign-in completed in ${Math.round(endTime - startTime)}ms`);
     } catch (error: any) {
-      console.error('Google login error:', error);
-      setError(error.message || 'Google sign-in failed. Please try again.');
+      const endTime = performance.now();
+      console.error(`❌ Google sign-in failed after ${Math.round(endTime - startTime)}ms:`, error);
+      
+      // User-friendly error messages
+      if (error.message.includes('timeout')) {
+        setError('Sign-in is taking longer than usual. Please try again.');
+      } else if (error.message.includes('not configured')) {
+        setError('Google Sign-In is being set up. Please use email/password for now.');
+      } else {
+        setError(error.message || 'Google sign-in failed. Please try again.');
+      }
       setLoading(false);
     }
   };
