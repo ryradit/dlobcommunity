@@ -24,7 +24,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate color
+    // Validate color and convert to Indonesian names for database
+    const colorMapping: { [key: string]: string } = {
+      'blue': 'biru',
+      'pink': 'pink', 
+      'yellow': 'kuning'
+    };
+    
     const validColors = ['blue', 'pink', 'yellow'];
     if (!validColors.includes(warna)) {
       return NextResponse.json(
@@ -32,6 +38,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const warnaIndonesia = colorMapping[warna];
 
     // Calculate price based on size and sleeve
     const getSizePrice = (size: string, sleeve: string) => {
@@ -64,7 +72,7 @@ export async function POST(request: NextRequest) {
     const preOrderData = {
       nama,
       ukuran,
-      warna,
+      warna: warnaIndonesia,
       lengan,
       nama_punggung: tanpaNamaPunggung ? null : (namaPunggung || null),
       tanpa_nama_punggung: tanpaNamaPunggung || false,
@@ -92,8 +100,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Create service role client to bypass RLS for public inserts
-    const supabaseServiceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const supabaseServiceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseServiceUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables:', {
+        hasUrl: !!supabaseServiceUrl,
+        hasKey: !!supabaseServiceKey,
+        nodeEnv: process.env.NODE_ENV
+      });
+      return NextResponse.json(
+        { error: 'Server configuration error - missing database credentials' },
+        { status: 500 }
+      );
+    }
     
     const serviceSupabase = createClient(supabaseServiceUrl, supabaseServiceKey, {
       auth: {

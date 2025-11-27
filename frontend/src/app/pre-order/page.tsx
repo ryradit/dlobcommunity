@@ -113,15 +113,16 @@ export default function PreOrderPage() {
 
     setIsSubmitting(true);
 
+    const orderPayload = {
+      nama: formData.nama,
+      ukuran: formData.ukuran,
+      warna: formData.warna,
+      lengan: formData.lengan,
+      namaPunggung: formData.namaPunggung,
+      tanpaNamaPunggung: formData.tanpaNamaPunggung
+    };
+
     try {
-      const orderPayload = {
-        nama: formData.nama,
-        ukuran: formData.ukuran,
-        warna: formData.warna,
-        lengan: formData.lengan,
-        namaPunggung: formData.namaPunggung,
-        tanpaNamaPunggung: formData.tanpaNamaPunggung
-      };
 
       const response = await fetch('/api/pre-orders', {
         method: 'POST',
@@ -132,7 +133,17 @@ export default function PreOrderPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save pre-order');
+        let errorMessage = 'Failed to save pre-order';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+          console.error('API Error Details:', errorData);
+        } catch (parseError) {
+          console.error('Response parsing error:', parseError);
+          console.error('Response status:', response.status);
+          console.error('Response text:', await response.text());
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -149,7 +160,11 @@ export default function PreOrderPage() {
       
     } catch (error) {
       console.error('Error submitting pre-order:', error);
-      alert('Terjadi kesalahan saat menyimpan pre-order. Silakan coba lagi.');
+      console.error('Order payload was:', orderPayload);
+      
+      // Show more detailed error to user
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Terjadi kesalahan: ${errorMessage}\n\nSilakan coba lagi atau hubungi admin jika masalah berlanjut.`);
     } finally {
       setIsSubmitting(false);
     }
