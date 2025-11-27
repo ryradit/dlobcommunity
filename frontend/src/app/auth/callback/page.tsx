@@ -85,9 +85,12 @@ function AuthCallbackContent() {
         console.log(`Member processed (${memberData.role}), redirecting...`);
         const redirectPath = memberData.role === 'admin' ? '/admin' : '/dashboard';
         
-        // Use replace to prevent back button issues and faster redirect
+        // Wait a moment for auth state to propagate across tabs
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         trackCallbackComplete();
-        window.location.replace(redirectPath);
+        // Use router.push for proper Next.js navigation and state management
+        router.push(redirectPath);
       } catch (error) {
         console.error('Auth callback error:', error);
         trackCallbackComplete(); // Track even on error for debugging

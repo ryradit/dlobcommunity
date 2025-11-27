@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, isDemoMode } from '@/lib/supabase';
 import { AuthUser, AuthService } from '@/lib/auth';
+import { sessionSync } from '@/lib/session-sync';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -20,8 +21,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    
     // Get initial session
     const getInitialSession = async () => {
       try {
@@ -36,23 +41,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     getInitialSession();
 
+    // Start session sync manager for cross-tab synchronization
+    sessionSync.startPeriodicSync((syncedUser) => {
+      if (JSON.stringify(user) !== JSON.stringify(syncedUser)) {
+        console.log('🔄 Session synced from manager:', syncedUser?.email || 'signed out');
+        setUser(syncedUser);
+      }
+    });
+
+    // Cross-tab authentication synchronization
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'supabase.auth.token' || event.key?.includes('sb-')) {
+        console.log('🔄 Auth token changed in another tab, syncing...');
+        // Delay to ensure token is fully written
+        setTimeout(async () => {
+          try {
+            const currentUser = await AuthService.getCurrentUser();
+            setUser(currentUser);
+            console.log('✅ Auth state synced across tabs');
+          } catch (error) {
+            console.error('❌ Error syncing auth across tabs:', error);
+            setUser(null);
+          }
+        }, 100);
+      }
+    };
+
+    // Listen for auth changes in other tabs
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+    }
+
+    // Listen for focus events to check auth state when user returns to tab
+    const handleFocus = async () => {
+      if (sessionChecked) {
+        console.log('🎯 Tab focused, checking auth state...');
+        try {
+          const currentUser = await AuthService.getCurrentUser();
+          if ((user === null) !== (currentUser === null)) {
+            console.log('🔄 Auth state changed while away, updating...');
+            setUser(currentUser);
+          }
+        } catch (error) {
+          console.error('Error checking auth on focus:', error);
+        }
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleFocus);
+    }
+
     // Only listen for auth changes if not in demo mode
     if (!isDemoMode) {
       // Listen for auth changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
-          console.log('Auth state changed:', event);
+          console.log('🔐 Auth state changed:', event);
+          setSessionChecked(true);
           
           if (session?.user) {
             try {
               const currentUser = await AuthService.getCurrentUser();
               setUser(currentUser);
+              console.log('✅ User authenticated:', currentUser?.email);
             } catch (error) {
-              console.error('Error getting user after auth change:', error);
+              console.error('❌ Error getting user after auth change:', error);
               setUser(null);
             }
           } else {
             setUser(null);
+            console.log('🚪 User signed out');
           }
           
           setLoading(false);
@@ -61,6 +120,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return () => {
         subscription.unsubscribe();
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('storage', handleStorageChange);
+          window.removeEventListener('focus', handleFocus);
+        }
       };
     }
   }, []);

@@ -1,9 +1,26 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
-import EnhancedDlobChatbot from '@/components/EnhancedDlobChatbot';
-import URLCleaner from '@/components/URLCleaner';
+import dynamic from 'next/dynamic';
 import "./globals.css";
+
+// Import client-only components with no SSR to prevent hydration mismatches
+const EnhancedDlobChatbot = dynamic(() => import('@/components/EnhancedDlobChatbot'), {
+  ssr: false
+});
+
+const URLCleaner = dynamic(() => import('@/components/URLCleaner'), {
+  ssr: false
+});
+
+function ClientOnlyComponents() {
+  return (
+    <>
+      <URLCleaner />
+      <EnhancedDlobChatbot />
+    </>
+  );
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,9 +70,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <URLCleaner />
+          <ClientOnlyComponents />
           {children}
-          <EnhancedDlobChatbot />
         </AuthProvider>
       </body>
     </html>

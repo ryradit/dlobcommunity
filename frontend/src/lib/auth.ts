@@ -308,20 +308,50 @@ export class AuthService {
         return null;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      // Try to refresh session first to get latest state
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
       
+      // If refresh fails, try getting current session
+      if (sessionError || !session?.user) {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!currentSession?.user) {
+          return null;
+        }
+        
+        // Use current session if refresh failed
+        const session = currentSession;
+      }
+
       if (!session?.user) {
         return null;
       }
 
-      // Get user profile
-      const { data: memberData, error: memberError } = await supabase
-        .from('members')
-        .select('id, email, name, role, membership_type, is_active')
-        .eq('id', session.user.id)
-        .single();
+      // Get user profile with retry logic for cross-tab scenarios
+      let memberData = null;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (!memberData && retryCount < maxRetries) {
+        const { data, error: memberError } = await supabase
+          .from('members')
+          .select('id, email, name, role, membership_type, is_active')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (memberError) {
+          console.warn(`Member profile fetch attempt ${retryCount + 1} failed:`, memberError);
+          retryCount++;
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
+          }
+        } else {
+          memberData = data;
+        }
+      }
 
-      if (memberError || !memberData || !memberData.is_active) {
+      if (!memberData || !memberData.is_active) {
+        console.warn('Member profile not found or inactive');
         return null;
       }
 

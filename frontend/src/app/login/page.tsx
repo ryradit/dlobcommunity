@@ -15,12 +15,19 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [language, setLanguage] = useState(() => {
+  const [language, setLanguage] = useState('en');
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Initialize language after component mounts to avoid hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('dlob-language') || 'en';
+      const savedLanguage = localStorage.getItem('dlob-language');
+      if (savedLanguage) {
+        setLanguage(savedLanguage);
+      }
     }
-    return 'en';
-  });
+  }, []);
   
   const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
@@ -129,6 +136,15 @@ export default function LoginPage() {
   };
 
   const t = content[language as keyof typeof content];
+
+  // Prevent hydration mismatch by showing loading during initial mount
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-green-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
