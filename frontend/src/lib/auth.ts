@@ -359,8 +359,7 @@ export class AuthService {
           redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
-            prompt: 'select_account', // Changed from 'consent' for faster flow
-            hd: null // Allow any Google domain
+            prompt: 'select_account' // Changed from 'consent' for faster flow
           },
           skipBrowserRedirect: false
         }
