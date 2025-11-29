@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Play, Camera, Video, Filter, User } from 'lucide-react';
+import { Play, Camera, Video, Filter, User, Swords } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { youtubeService } from '@/lib/youtube';
 import { googleDriveService, DrivePhoto } from '@/lib/google-drive';
@@ -52,7 +52,7 @@ const Button = ({
 interface GalleryItem {
   id: string;
   type: 'image' | 'video';
-  category: 'all' | 'matches' | 'training' | 'community';
+  category: 'all' | 'matches' | 'training' | 'community' | 'sparring';
   title: string;
   description?: string;
   thumbnail: string;
@@ -68,7 +68,7 @@ export default function GalleryPage() {
   const { language } = useLanguage();
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<GalleryItem[]>([]);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'matches' | 'training' | 'community'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'matches' | 'training' | 'community' | 'sparring'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<GalleryItem | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<GalleryItem | null>(null);
@@ -83,6 +83,7 @@ export default function GalleryPage() {
       filterMatches: 'Matches',
       filterTraining: 'Training',
       filterCommunity: 'Community',
+      filterSparring: 'Sparring',
       loadingVideos: 'Loading videos from YouTube...',
       noContent: 'No content available',
       videoFrom: 'Video from',
@@ -97,6 +98,7 @@ export default function GalleryPage() {
       filterMatches: 'Pertandingan',
       filterTraining: 'Latihan',
       filterCommunity: 'Komunitas',
+      filterSparring: 'Sparring',
       loadingVideos: 'Memuat video dari YouTube...',
       noContent: 'Tidak ada konten tersedia',
       videoFrom: 'Video dari',
@@ -112,13 +114,15 @@ export default function GalleryPage() {
         setIsLoading(true);
         
         // Fetch content in parallel
-        const [videos, trainingPhotos] = await Promise.all([
+        const [videos, trainingPhotos, sparringPhotos] = await Promise.all([
           youtubeService.getChannelVideos(20),
-          googleDriveService.getTrainingPhotos()
+          googleDriveService.getTrainingPhotos(),
+          googleDriveService.getSparringPhotos()
         ]);
 
         console.log(`📹 Fetched ${videos.length} videos from DLOB YouTube channel`);
         console.log(`📸 Fetched ${trainingPhotos.length} training photos from Google Drive`);
+        console.log(`⚔️ Fetched ${sparringPhotos.length} sparring photos from Google Drive`);
 
         // Convert YouTube videos to gallery items with smart categorization
         const youtubeItems: GalleryItem[] = videos.map((video: YouTubeVideo) => {
@@ -163,6 +167,19 @@ export default function GalleryPage() {
           drivePhotoUrl: photo.webViewLink
         }));
 
+        // Convert Google Drive sparring photos to gallery items
+        const driveSparringItems: GalleryItem[] = sparringPhotos.map((photo: DrivePhoto) => ({
+          id: `sparring-${photo.id}`,
+          type: 'image' as const,
+          category: 'sparring',
+          title: photo.name,
+          thumbnail: photo.thumbnailLink,
+          date: photo.createdTime,
+          imageLink: photo.imageLink,
+          webContentLink: photo.webContentLink,
+          drivePhotoUrl: photo.webViewLink
+        }));
+
         // Static DLOB gallery items
         const staticItems: GalleryItem[] = [
           {
@@ -185,7 +202,7 @@ export default function GalleryPage() {
           }
         ];
 
-        const allItems = [...youtubeItems, ...drivePhotoItems, ...staticItems];
+        const allItems = [...youtubeItems, ...drivePhotoItems, ...driveSparringItems, ...staticItems];
         console.log(`📋 Total gallery items: ${allItems.length}`);
         
         setGalleryItems(allItems);
@@ -225,7 +242,7 @@ export default function GalleryPage() {
     loadGalleryContent();
   }, []);
 
-  const filterItems = (category: 'all' | 'matches' | 'training' | 'community') => {
+  const filterItems = (category: 'all' | 'matches' | 'training' | 'community' | 'sparring') => {
     setActiveFilter(category);
     if (category === 'all') {
       setFilteredItems(galleryItems);
@@ -325,6 +342,14 @@ export default function GalleryPage() {
           >
             <Camera className="h-4 w-4" />
             {text[language].filterCommunity}
+          </Button>
+          <Button
+            variant={activeFilter === 'sparring' ? 'default' : 'outline'}
+            onClick={() => filterItems('sparring')}
+            className="flex items-center gap-2"
+          >
+            <Swords className="h-4 w-4" />
+            {text[language].filterSparring}
           </Button>
             </div>
           </div>

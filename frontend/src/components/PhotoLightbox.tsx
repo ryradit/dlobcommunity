@@ -6,7 +6,7 @@ import Image from 'next/image';
 interface GalleryItem {
   id: string;
   type: 'image' | 'video';
-  category: 'all' | 'matches' | 'training' | 'community';
+  category: 'all' | 'matches' | 'training' | 'community' | 'sparring';
   title: string;
   description?: string;
   thumbnail: string;

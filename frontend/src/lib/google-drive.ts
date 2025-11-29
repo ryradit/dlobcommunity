@@ -43,6 +43,34 @@ class GoogleDriveService {
     }
   }
 
+  public async getSparringPhotos(): Promise<DrivePhoto[]> {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/sparring-photos`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch sparring photos');
+      }
+
+      const files = await response.json();
+      return files.map((file: any) => {
+        // Get high quality thumbnail by modifying the URL
+        const highQualityThumbnail = file.thumbnailLink?.replace(/=s\d+/, '=s1600') || null;
+
+        return {
+          id: file.id,
+          name: file.name,
+          thumbnailLink: highQualityThumbnail,
+          webViewLink: file.webViewLink,
+          webContentLink: `https://drive.google.com/uc?export=view&id=${file.id}`,
+          imageLink: `https://drive.google.com/thumbnail?id=${file.id}&sz=w1600`,
+          createdTime: file.createdTime
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching sparring photos:', error);
+      return [];
+    }
+  }
+
   public async getImageThumbnail(fileId: string): Promise<string | null> {
     try {
       const response = await fetch(`${this.API_BASE_URL}/thumbnail/${fileId}`);
