@@ -13,7 +13,13 @@ interface GallerySectionProps {
 
 export const GallerySection = React.forwardRef<HTMLDivElement, GallerySectionProps>(
   ({ title, subtitle, images, className }, ref) => {
-    const [currentIndex, setCurrentIndex] = React.useState(Math.floor(images.length / 2));
+    const [currentIndex, setCurrentIndex] = React.useState(0);
+
+    React.useEffect(() => {
+      if (images && images.length > 0) {
+        setCurrentIndex(Math.floor(images.length / 2));
+      }
+    }, [images]);
 
     const handleNext = React.useCallback(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
@@ -24,11 +30,18 @@ export const GallerySection = React.forwardRef<HTMLDivElement, GallerySectionPro
     };
     
     React.useEffect(() => {
+        if (!images || images.length === 0) return;
+        
         const timer = setInterval(() => {
             handleNext();
         }, 4000);
         return () => clearInterval(timer);
-    }, [handleNext]);
+    }, [handleNext, images]);
+
+    // Guard: Don't render if no images
+    if (!images || images.length === 0) {
+      return null;
+    }
 
     return (
       <div

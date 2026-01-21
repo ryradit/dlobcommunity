@@ -84,10 +84,10 @@ export default function Home() {
     const loadGalleryImages = async () => {
       try {
         const galleryPhotos = [
-          { src: '/images/potrait/IMG_1999.JPG', alt: 'Training Photo 1' },
-          { src: '/images/potrait/IMG_2039.JPG', alt: 'Training Photo 2' },
-          { src: '/images/potrait/IMG_2049.JPG', alt: 'Training Photo 3' },
-          { src: '/images/potrait/IMG_2129.JPG', alt: 'Training Photo 4' },
+          { src: '/images/potrait/IMG_1999.jpg', alt: 'Training Photo 1' },
+          { src: '/images/potrait/IMG_2039.jpg', alt: 'Training Photo 2' },
+          { src: '/images/potrait/IMG_2049.jpg', alt: 'Training Photo 3' },
+          { src: '/images/potrait/IMG_2129.jpg', alt: 'Training Photo 4' },
           { src: '/images/potrait/IMG_7627.JPG', alt: 'Training Photo 5' },
           { src: '/images/potrait/IMG_7635.JPG', alt: 'Training Photo 6' }
         ];
@@ -588,7 +588,7 @@ export default function Home() {
       <AboutSection language={language as 'en' | 'id'} />
 
       {/* Gallery Section */}
-      {!isLoadingGallery && galleryImages.length > 0 && (
+      {!isLoadingGallery && galleryImages && galleryImages.length > 0 && (
         <>
           <GallerySection
             title={language === 'en' ? 'Photo Gallery' : 'Galeri Foto'}
