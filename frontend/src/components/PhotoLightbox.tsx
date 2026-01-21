@@ -106,8 +106,8 @@ export function PhotoLightbox({ isOpen, photo, onClose, filteredItems, onPhotoCh
             <div className="relative">
               {/* Main image - initially hidden */}
               <img
-                key={photo.id} // Force re-render on photo change
-                src={photo.thumbnailLink || photo.imageLink || photo.webContentLink || photo.thumbnail}
+                key={photo.id}
+                src={photo.drivePhotoUrl || photo.webContentLink || photo.imageLink || photo.thumbnail}
                 alt={photo.title}
                 className="max-w-full max-h-full h-auto w-auto object-contain"
                 onLoad={() => {
@@ -115,17 +115,10 @@ export function PhotoLightbox({ isOpen, photo, onClose, filteredItems, onPhotoCh
                   setIsLoading(false);
                 }}
                 onError={(e) => {
-                  console.log('Primary image source failed, trying fallback');
+                  console.log('Image failed to load');
                   const imgElement = e.target as HTMLImageElement;
-                  if (photo.imageLink && imgElement.src !== photo.imageLink) {
-                    imgElement.src = photo.imageLink;
-                  } else if (photo.webContentLink && imgElement.src !== photo.webContentLink) {
-                    imgElement.src = photo.webContentLink;
-                  } else if (photo.thumbnail && imgElement.src !== photo.thumbnail) {
-                    imgElement.src = photo.thumbnail;
-                  } else {
-                    setIsLoading(false);
-                  }
+                  setIsLoading(false);
+                  imgElement.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzMwMzAzMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE4IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+SW1hZ2UgTm90IEF2YWlsYWJsZTwvdGV4dD48L3N2Zz4=';
                 }}
                 data-main-image
                 style={{ 
@@ -146,7 +139,7 @@ export function PhotoLightbox({ isOpen, photo, onClose, filteredItems, onPhotoCh
             </div>
 
             {/* Info overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-linear-to-t from-black/80 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 p-4" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)' }}>
               <div className="flex justify-between items-center text-white">
                 <span className="font-medium truncate pr-4">{photo.title}</span>
                 {photo.drivePhotoUrl && (
@@ -157,7 +150,7 @@ export function PhotoLightbox({ isOpen, photo, onClose, filteredItems, onPhotoCh
                     className="flex items-center gap-1 text-sm bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full transition-colors backdrop-blur-sm"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {text[language === 'en' ? 'en' : 'id'].viewFullSize}
+                    {typeof text === 'object' && text[language] && typeof text[language].viewFullSize === 'string' ? text[language].viewFullSize : 'View Full Size'}
                   </a>
                 )}
               </div>

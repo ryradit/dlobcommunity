@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Menu, X, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { useLanguage, LanguageSwitcher } from "@/hooks/useLanguage";
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface HeaderProps {
   currentPage?: 'home' | 'about' | 'contact' | 'gallery' | 'store' | 'artikel';
@@ -16,6 +18,7 @@ export default function Header({ currentPage = 'home', showAuth = false }: Heade
   const { language } = useLanguage();
   const { user, loading, logout } = showAuth ? useAuth() : { user: null, loading: false, logout: () => {} };
   const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const content = {
     en: {
@@ -82,7 +85,7 @@ export default function Header({ currentPage = 'home', showAuth = false }: Heade
             </div>
           </Link>
           
-          {/* Navigation */}
+          {/* Navigation - Desktop Only */}
           <nav className="hidden md:flex space-x-8">
             <Link 
               href="/" 
@@ -148,15 +151,16 @@ export default function Header({ currentPage = 'home', showAuth = false }: Heade
           
           {/* Right Section */}
           <div className="flex items-center space-x-4">
-            {/* Language Switcher */}
-            <LanguageSwitcher />
+            {/* Language Switcher - Desktop */}
+            <div className="hidden md:block">
+              <LanguageSwitcher />
+            </div>
 
-            {/* Authentication Menu - Only show if showAuth is true */}
+            {/* Authentication Menu - Desktop Only */}
             {showAuth && (
-              <>
+              <div className="hidden md:flex items-center space-x-3">
                 {user ? (
-                  // Authenticated user menu
-                  <div className="flex items-center space-x-3">
+                  <>
                     <Link
                       href={user.role === 'admin' ? "/admin" : "/dashboard"}
                       className="flex items-center px-4 py-2 text-sm text-white border border-gray-600 rounded-lg hover:bg-white/10"
@@ -171,10 +175,9 @@ export default function Header({ currentPage = 'home', showAuth = false }: Heade
                       <LogOut className="h-4 w-4 mr-1" />
                       {t.auth.logout}
                     </button>
-                  </div>
+                  </>
                 ) : (
-                  // Guest user menu - show even when loading
-                  <div className="flex items-center space-x-3">
+                  <>
                     <Link
                       href="/login"
                       className="px-4 py-2 text-sm text-gray-300 hover:text-white"
@@ -187,13 +190,158 @@ export default function Header({ currentPage = 'home', showAuth = false }: Heade
                     >
                       {t.auth.joinCommunity}
                     </Link>
-                  </div>
+                  </>
                 )}
-              </>
+              </div>
             )}
+
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <span className="sr-only">Toggle menu</span>
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6 text-white" />
+              ) : (
+                <Menu className="h-6 w-6 text-white" />
+              )}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Navigation Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ y: "-100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "-100%" }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 flex flex-col p-4 bg-black/95 md:hidden"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center">
+                <div className="bg-white rounded-full p-2">
+                  <Image
+                    src="/dlob.png"
+                    alt="DLOB"
+                    width={32}
+                    height={32}
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+              <button onClick={() => setMobileMenuOpen(false)}>
+                <X className="h-6 w-6 text-white" />
+              </button>
+            </div>
+
+            {/* Language Selector - Mobile */}
+            <div className="mb-6">
+              <LanguageSwitcher />
+            </div>
+
+            {/* Navigation Items */}
+            <nav className="flex flex-col space-y-4 mb-8 flex-1">
+              <Link 
+                href="/" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between text-lg text-white hover:text-gray-300 pb-4 border-b border-gray-800"
+              >
+                {t.nav.home}
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+              <Link 
+                href="/about" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between text-lg text-white hover:text-gray-300 pb-4 border-b border-gray-800"
+              >
+                {t.nav.about}
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+              <Link 
+                href="/gallery" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between text-lg text-white hover:text-gray-300 pb-4 border-b border-gray-800"
+              >
+                {t.nav.gallery}
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+              <Link 
+                href="/store" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between text-lg text-white hover:text-gray-300 pb-4 border-b border-gray-800"
+              >
+                {t.nav.store}
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+              <Link 
+                href="/artikel" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between text-lg text-white hover:text-gray-300 pb-4 border-b border-gray-800"
+              >
+                {t.nav.artikel}
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+              <Link 
+                href="/contact" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between text-lg text-white hover:text-gray-300 pb-4 border-b border-gray-800"
+              >
+                {t.nav.contact}
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+            </nav>
+
+            {/* Mobile Auth Buttons */}
+            {showAuth && (
+              <div className="flex flex-col gap-3">
+                {user ? (
+                  <>
+                    <Link
+                      href={user.role === 'admin' ? "/admin" : "/dashboard"}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center px-4 py-3 text-white border border-gray-600 rounded-lg hover:bg-white/10"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      {t.auth.dashboard}
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="flex items-center justify-center px-4 py-3 text-gray-300 border border-gray-600 rounded-lg hover:bg-white/10"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      {t.auth.logout}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="px-4 py-3 text-center text-white border border-gray-600 rounded-lg hover:bg-white/10"
+                    >
+                      {t.auth.login}
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="px-4 py-3 text-center bg-white text-black rounded-full font-medium hover:bg-white/90"
+                    >
+                      {t.auth.joinCommunity}
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

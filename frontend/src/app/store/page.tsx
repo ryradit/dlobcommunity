@@ -487,10 +487,14 @@ export default function StorePage() {
               ISI FORM PRE-ORDER
             </button>
           </div>
-          <p className="text-sm text-gray-700 font-medium mt-6">
-            📅 Batas pre-order: 15 Desember 2025<br/>
-            🚚 Estimasi pengiriman: Januari 2026
-          </p>
+          <div className="mt-6 space-y-2">
+            <p className="text-sm text-gray-600 font-medium">
+              📅 <span className="text-gray-800 font-semibold">Batas Pre-Order:</span> 15 Februari 2026
+            </p>
+            <p className="text-sm text-gray-600 font-medium">
+              🚚 <span className="text-gray-800 font-semibold">Estimasi Pengiriman:</span> Setelah Lebaran (tergantung kuota minimal order)
+            </p>
+          </div>
         </div>
       </div>
       

@@ -386,36 +386,26 @@ export default function GalleryPage() {
                     )}
                     
                     {/* Use regular img for YouTube videos */}
-                    {item.type === 'video' ? (
+                    {item.type === 'video' && item.youtubeId ? (
                       <img
-                        src={item.thumbnail || item.imageLink || item.webContentLink || item.drivePhotoUrl}
+                        src={`https://img.youtube.com/vi/${item.youtubeId}/hqdefault.jpg`}
                         alt={item.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          const target = e.currentTarget;
-                          const currentSrc = target.src;
-                          
-                          if (item.type === 'video' && item.youtubeId) {
-                            // Handle YouTube video thumbnails
-                            if (target.src.includes('maxresdefault')) {
-                              target.src = `https://img.youtube.com/vi/${item.youtubeId}/hqdefault.jpg`;
-                            } else if (target.src.includes('hqdefault')) {
-                              target.src = `https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`;
-                            } else if (target.src.includes('mqdefault')) {
-                              target.src = `https://img.youtube.com/vi/${item.youtubeId}/default.jpg`;
-                            } else {
-                              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzMwMzAzMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE4IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+VmlkZW8gVGh1bWJuYWlsPC90ZXh0Pjwvc3ZnPg==';
-                            }
-                          } else {
-                            // Try all available image URLs
-                            if (currentSrc === item.thumbnail && item.imageLink) {
-                              target.src = item.imageLink;
-                            } else if (currentSrc === item.imageLink && item.webContentLink) {
-                              target.src = item.webContentLink;
-                            } else if (currentSrc === item.webContentLink && item.drivePhotoUrl) {
-                              target.src = item.drivePhotoUrl;
-                            }
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (!target.src.includes('default.jpg')) {
+                            target.src = `https://img.youtube.com/vi/${item.youtubeId}/default.jpg`;
                           }
+                        }}
+                      />
+                    ) : item.type === 'image' ? (
+                      <img
+                        src={item.drivePhotoUrl || item.thumbnail}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzMwMzAzMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE4IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UGhvdG8gTm90IEF2YWlsYWJsZTwvdGV4dD48L3N2Zz4=';
                         }}
                       />
                     ) : (
