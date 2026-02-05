@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock, User, Chrome } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 const portraitImages = [
   'IMG_1999.jpg',
   'IMG_2035.jpg',
