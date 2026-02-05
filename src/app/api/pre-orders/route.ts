@@ -1,0 +1,255 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, isDemoMode } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+export async function POST(request: NextRequest) {
+  try {
+    // Parse request body with error handling
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
+    const { nama, ukuran, warna, lengan, namaPunggung, tanpaNamaPunggung } = body;
+
+    console.log('Pre-order request received:', { nama, ukuran, warna, lengan, tanpaNamaPunggung });
+
+    // Validation
+    if (!nama || !ukuran || !warna) {
+      return NextResponse.json(
+        { error: 'Missing required fields: nama, ukuran, warna' },
+        { status: 400 }
+      );
+    }
+
+    // Lengan defaults to 'short' if not provided
+    const sleeveType = lengan || 'short';
+
+    // Validate size
+    const validSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+    if (!validSizes.includes(ukuran)) {
+      return NextResponse.json(
+        { error: `Invalid size. Valid sizes are: ${validSizes.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate color and convert to Indonesian names for database
+    const colorMapping: { [key: string]: string } = {
+      'biru': 'biru',
+      'blue': 'biru',
+      'pink': 'pink',
+      'kuning': 'kuning',
+      'yellow': 'kuning'
+    };
+    
+    const validColors = Object.keys(colorMapping);
+    if (!validColors.includes(warna)) {
+      return NextResponse.json(
+        { error: `Invalid color. Valid colors are: ${validColors.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    const warnaIndonesia = colorMapping[warna];
+
+    // Calculate price based on size and sleeve
+    const getSizePrice = (size: string, sleeve: string): number => {
+      let basePrice: number;
+      switch (size) {
+        case 'XS':
+        case 'S':
+        case 'M':
+        case 'L':
+        case 'XL':
+          basePrice = 110000;
+          break;
+        case 'XXL':
+          basePrice = 120000;
+          break;
+        case '3XL':
+          basePrice = 130000;
+          break;
+        default:
+          basePrice = 110000;
+      }
+      
+      // Add long sleeve fee
+      const longSleeveFee = sleeve === 'long' ? 10000 : 0;
+      return basePrice + longSleeveFee;
+    };
+
+    const harga = getSizePrice(ukuran, sleeveType);
+
+    // Prepare data for insertion
+    const preOrderData = {
+      nama,
+      ukuran,
+      warna: warnaIndonesia,
+      lengan: sleeveType,
+      nama_punggung: tanpaNamaPunggung ? null : (namaPunggung || null),
+      tanpa_nama_punggung: tanpaNamaPunggung || false,
+      harga,
+      status: 'pending' as const
+    };
+
+    console.log('Pre-order data prepared:', preOrderData);
+
+    // Handle demo mode
+    if (isDemoMode) {
+      console.log('Demo mode: Pre-order data would be saved:', preOrderData);
+      
+      // Simulate database response
+      const mockResponse = {
+        id: `demo_${Date.now()}`,
+        ...preOrderData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      return NextResponse.json({
+        success: true,
+        data: mockResponse,
+        message: 'Pre-order berhasil disimpan (Demo Mode)'
+      }, { status: 201 });
+    }
+
+    // Create service role client to bypass RLS for public inserts
+    const supabaseServiceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseServiceUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables:', {
+        hasUrl: !!supabaseServiceUrl,
+        hasKey: !!supabaseServiceKey,
+        nodeEnv: process.env.NODE_ENV
+      });
+      return NextResponse.json(
+        { error: 'Server configuration error - missing database credentials' },
+        { status: 500 }
+      );
+    }
+    
+    const serviceSupabase = createClient(supabaseServiceUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    console.log('Attempting to insert into Supabase...');
+
+    // Insert into Supabase using service role to bypass RLS
+    const { data, error } = await serviceSupabase
+      .from('pre_orders')
+      .insert([preOrderData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      
+      // Check if it's a constraint violation
+      if (error.message && error.message.includes('check constraint')) {
+        return NextResponse.json(
+          { 
+            error: 'Invalid data format', 
+            details: 'One or more fields contain invalid values. Please check: ukuran (size), warna (color), lengan (sleeve type)'
+          },
+          { status: 400 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: 'Failed to save pre-order', details: error.message },
+        { status: 500 }
+      );
+    }
+
+    console.log('Pre-order successfully inserted:', data);
+
+    return NextResponse.json({
+      success: true,
+      data,
+      message: 'Pre-order berhasil disimpan'
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('Pre-order submission error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    return NextResponse.json(
+      { error: 'Internal server error', details: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const offset = parseInt(searchParams.get('offset') || '0');
+
+    if (isDemoMode) {
+      // Return mock data for demo mode
+      const mockOrders = [
+        {
+          id: 'demo_1',
+          nama: 'John Doe',
+          ukuran: 'L',
+          warna: 'biru',
+          nama_punggung: 'JOHN',
+          tanpa_nama_punggung: false,
+          harga: 110000,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+
+      return NextResponse.json({
+        success: true,
+        data: mockOrders,
+        count: mockOrders.length
+      });
+    }
+
+    const { data, error, count } = await supabase
+      .from('pre_orders')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch pre-orders', details: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: data || [],
+      count: count || 0
+    });
+
+  } catch (error) {
+    console.error('Pre-order fetch error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
