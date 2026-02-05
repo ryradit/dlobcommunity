@@ -2,11 +2,11 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, AuthProvider } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import DashboardSidebar from '@/components/DashboardSidebar';
 
-export default function AdminLayout({
+function AdminContent({
   children,
 }: {
   children: React.ReactNode;
@@ -92,5 +92,17 @@ export default function AdminLayout({
         {children}
       </main>
     </div>
+  );
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AuthProvider>
+      <AdminContent>{children}</AdminContent>
+    </AuthProvider>
   );
 }
