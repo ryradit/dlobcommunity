@@ -57,40 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Check session on mount and listen for auth changes
   useEffect(() => {
     let isMounted = true;
-    const abortController = new AbortController();
     
     const initializeAuth = async () => {
       try {
-        // Add a small delay to let Supabase client fully initialize
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        if (!isMounted) return;
-        
-        // Get current session with retry logic
-        let retries = 3;
-        let currentSession = null;
-        
-        while (retries > 0 && isMounted) {
-          try {
-            const { data: { session: sess }, error } = await supabase.auth.getSession();
-            if (error && error.name === 'AbortError') {
-              retries--;
-              if (retries > 0) {
-                await new Promise(resolve => setTimeout(resolve, 200));
-                continue;
-              }
-            }
-            currentSession = sess;
-            break;
-          } catch (err: any) {
-            if (err?.name === 'AbortError' && retries > 0) {
-              retries--;
-              await new Promise(resolve => setTimeout(resolve, 200));
-            } else {
-              throw err;
-            }
-          }
-        }
+        // Get current session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         if (currentSession && isMounted) {
           setSession(currentSession);
@@ -114,17 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser({...currentSession.user});
             }
           } catch (profileError: any) {
-            // Ignore abort errors
-            if (profileError?.name !== 'AbortError' && !abortController.signal.aborted) {
-              console.log('Profile not yet created, using auth data only');
-            }
+            console.log('Profile not yet created, using auth data only');
           }
         }
       } catch (error: any) {
-        // Only log non-abort errors
-        if (error?.name !== 'AbortError' && !abortController.signal.aborted) {
-          console.error('Error initializing auth:', error);
-        }
+        console.error('Error initializing auth:', error);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -164,10 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser({...newSession.user});
             }
           } catch (profileError: any) {
-            // Ignore abort errors
-            if (profileError?.name !== 'AbortError' && !abortController.signal.aborted) {
-              console.log('Profile not yet created, using auth data only');
-            }
+            console.log('Profile not yet created, using auth data only');
           }
         } else {
           setUser(null);
@@ -182,7 +144,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false;
-      abortController.abort();
       subscription?.unsubscribe();
       if (timeoutId) clearTimeout(timeoutId);
     };

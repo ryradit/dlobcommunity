@@ -44,8 +44,9 @@ function LoginForm() {
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
-    if (session && user && !loading) {
-      router.push('/dashboard');
+    if (!loading && session && user) {
+      // Use replace to avoid back button issues
+      router.replace('/dashboard');
     }
   }, [session, user, loading, router]);
 
