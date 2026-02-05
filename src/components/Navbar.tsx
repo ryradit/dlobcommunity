@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   const navLinks = [
     { href: '/beranda', label: 'Beranda' },
@@ -49,7 +49,9 @@ export default function Navbar() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            {user ? (
+            {loading ? (
+              <div className="w-20 h-9 bg-white/5 rounded-lg animate-pulse"></div>
+            ) : user ? (
               <Link
                 href="/dashboard"
                 className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-white/10 hover:bg-white/20 transition-colors"

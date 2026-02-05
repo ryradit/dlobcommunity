@@ -63,24 +63,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (currentSession) {
           setSession(currentSession);
-          
-          // Fetch profile data from profiles table and merge with user metadata
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentSession.user.id)
-            .single();
-          
-          // Merge profile data with user metadata
-          if (profile) {
-            currentSession.user.user_metadata = {
-              ...currentSession.user.user_metadata,
-              ...profile
-            };
-          }
-          
           setUser(currentSession.user);
           setSessionTimeout();
+          
+          // Fetch profile data from profiles table and merge with user metadata (non-blocking)
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', currentSession.user.id)
+              .single();
+            
+            // Merge profile data with user metadata
+            if (profile) {
+              currentSession.user.user_metadata = {
+                ...currentSession.user.user_metadata,
+                ...profile
+              };
+              setUser({...currentSession.user});
+            }
+          } catch (profileError) {
+            console.log('Profile not yet created, using auth data only');
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -98,23 +102,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(newSession);
         
         if (newSession) {
-          // Fetch profile data from profiles table and merge with user metadata
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', newSession.user.id)
-            .single();
-          
-          // Merge profile data with user metadata
-          if (profile) {
-            newSession.user.user_metadata = {
-              ...newSession.user.user_metadata,
-              ...profile
-            };
-          }
-          
           setUser(newSession.user);
           setSessionTimeout();
+          
+          // Fetch profile data from profiles table and merge with user metadata (non-blocking)
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', newSession.user.id)
+              .single();
+            
+            // Merge profile data with user metadata
+            if (profile) {
+              newSession.user.user_metadata = {
+                ...newSession.user.user_metadata,
+                ...profile
+              };
+              setUser({...newSession.user});
+            }
+          } catch (profileError) {
+            console.log('Profile not yet created, using auth data only');
+          }
         } else {
           setUser(null);
           if (timeoutId) clearTimeout(timeoutId);
