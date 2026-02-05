@@ -1,3 +1,4 @@
+import { createBrowserClient } from '@supabase/ssr';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -11,23 +12,15 @@ declare global {
 }
 
 function getSupabaseClient(): SupabaseClient {
-  // In browser, use global window object to ensure single instance across all chunks
+  // In browser, use SSR browser client for proper cookie-based PKCE flow
   if (typeof window !== 'undefined') {
     if (!window.__supabaseClient) {
-      window.__supabaseClient = createClient(supabaseUrl, supabaseKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          flowType: 'pkce',
-          storage: window.localStorage,
-        },
-      });
+      window.__supabaseClient = createBrowserClient(supabaseUrl, supabaseKey);
     }
     return window.__supabaseClient;
   }
   
-  // Server-side: create a new instance (won't have AbortError issues)
+  // Server-side: create a new instance
   return createClient(supabaseUrl, supabaseKey);
 }
 

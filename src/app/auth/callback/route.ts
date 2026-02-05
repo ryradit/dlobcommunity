@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
@@ -17,18 +17,25 @@ export async function GET(request: NextRequest) {
   // Handle authorization code flow (PKCE)
   if (code) {
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const cookieStore = await cookies();
       
-      // Create a new client for this request
-      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          flowType: 'pkce',
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          persistSession: true,
-        },
-      });
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return cookieStore.get(name)?.value;
+            },
+            set(name: string, value: string, options: CookieOptions) {
+              cookieStore.set({ name, value, ...options });
+            },
+            remove(name: string, options: CookieOptions) {
+              cookieStore.set({ name, value: '', ...options });
+            },
+          },
+        }
+      );
 
       const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
@@ -39,8 +46,8 @@ export async function GET(request: NextRequest) {
 
       if (data?.session) {
         // Session successfully created, redirect to dashboard
-        const response = NextResponse.redirect(new URL(next, request.url));
-        return response;
+        console.log('OAuth login successful, redirecting to:', next);
+        return NextResponse.redirect(new URL(next, request.url));
       }
     } catch (err) {
       console.error('Callback error:', err);
