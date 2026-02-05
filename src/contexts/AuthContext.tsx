@@ -56,12 +56,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check session on mount and listen for auth changes
   useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+    
     const initializeAuth = async () => {
       try {
         // Get current session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (currentSession) {
+        if (currentSession && isMounted) {
           setSession(currentSession);
           setUser(currentSession.user);
           setSessionTimeout();
@@ -75,21 +78,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .single();
             
             // Merge profile data with user metadata
-            if (profile) {
+            if (profile && isMounted) {
               currentSession.user.user_metadata = {
                 ...currentSession.user.user_metadata,
                 ...profile
               };
               setUser({...currentSession.user});
             }
-          } catch (profileError) {
-            console.log('Profile not yet created, using auth data only');
+          } catch (profileError: any) {
+            // Ignore abort errors
+            if (profileError?.name !== 'AbortError' && !abortController.signal.aborted) {
+              console.log('Profile not yet created, using auth data only');
+            }
           }
         }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
+      } catch (error: any) {
+        // Only log non-abort errors
+        if (error?.name !== 'AbortError' && !abortController.signal.aborted) {
+          console.error('Error initializing auth:', error);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -99,6 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log('Auth state changed:', event);
+        
+        if (!isMounted) return;
+        
         setSession(newSession);
         
         if (newSession) {
@@ -114,26 +128,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .single();
             
             // Merge profile data with user metadata
-            if (profile) {
+            if (profile && isMounted) {
               newSession.user.user_metadata = {
                 ...newSession.user.user_metadata,
                 ...profile
               };
               setUser({...newSession.user});
             }
-          } catch (profileError) {
-            console.log('Profile not yet created, using auth data only');
+          } catch (profileError: any) {
+            // Ignore abort errors
+            if (profileError?.name !== 'AbortError' && !abortController.signal.aborted) {
+              console.log('Profile not yet created, using auth data only');
+            }
           }
         } else {
           setUser(null);
           if (timeoutId) clearTimeout(timeoutId);
         }
         
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     );
 
     return () => {
+      isMounted = false;
+      abortController.abort();
       subscription?.unsubscribe();
       if (timeoutId) clearTimeout(timeoutId);
     };
