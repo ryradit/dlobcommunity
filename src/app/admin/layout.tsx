@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, AuthProvider } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -13,27 +13,52 @@ function AdminContent({
 }) {
   const router = useRouter();
   const { user, loading, session, logout } = useAuth();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [checkingRole, setCheckingRole] = useState(true);
 
   // Check if user is admin
   useEffect(() => {
     async function checkAdminRole() {
-      if (!loading && (!session || !user)) {
+      // Wait for auth to finish loading
+      if (loading) {
+        return;
+      }
+
+      // Redirect to login if no session
+      if (!session || !user) {
         router.push('/login');
         return;
       }
 
-      if (user) {
+      try {
         // Check user role from profiles table
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .single();
 
-        if (profile?.role !== 'admin') {
+        if (error) {
+          console.error('Error fetching profile:', error);
+          // If profile doesn't exist, user is not admin
+          setIsAdmin(false);
+          router.push('/dashboard');
+          return;
+        }
+
+        if (profile?.role === 'admin') {
+          setIsAdmin(true);
+        } else {
           // Redirect non-admin users to member dashboard
+          setIsAdmin(false);
           router.push('/dashboard');
         }
+      } catch (error) {
+        console.error('Error checking admin role:', error);
+        setIsAdmin(false);
+        router.push('/dashboard');
+      } finally {
+        setCheckingRole(false);
       }
     }
 
@@ -72,15 +97,20 @@ function AdminContent({
     };
   }, [session, logout, router]);
 
-  if (loading) {
+  // Show loading spinner while checking auth or role
+  if (loading || checkingRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white/60">Memverifikasi akses admin...</p>
+        </div>
       </div>
     );
   }
 
-  if (!session || !user) {
+  // Don't render anything if not authenticated or not admin
+  if (!session || !user || !isAdmin) {
     return null;
   }
 
