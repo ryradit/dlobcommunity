@@ -61,8 +61,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const initializeAuth = async () => {
       try {
-        // Get current session
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        // Add a small delay to let Supabase client fully initialize
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (!isMounted) return;
+        
+        // Get current session with retry logic
+        let retries = 3;
+        let currentSession = null;
+        
+        while (retries > 0 && isMounted) {
+          try {
+            const { data: { session: sess }, error } = await supabase.auth.getSession();
+            if (error && error.name === 'AbortError') {
+              retries--;
+              if (retries > 0) {
+                await new Promise(resolve => setTimeout(resolve, 200));
+                continue;
+              }
+            }
+            currentSession = sess;
+            break;
+          } catch (err: any) {
+            if (err?.name === 'AbortError' && retries > 0) {
+              retries--;
+              await new Promise(resolve => setTimeout(resolve, 200));
+            } else {
+              throw err;
+            }
+          }
+        }
         
         if (currentSession && isMounted) {
           setSession(currentSession);
