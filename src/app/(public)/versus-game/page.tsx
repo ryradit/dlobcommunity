@@ -329,38 +329,38 @@ Provide your prediction in this exact JSON format:
       {/* Close Button */}
       <button
         onClick={() => router.push('/beranda#gallery')}
-        className="absolute top-6 right-6 z-50 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full transition-all duration-300 group"
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 p-2 sm:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full transition-all duration-300 group"
       >
-        <X className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
+        <X className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
       </button>
 
-      <div className="relative z-10 container mx-auto px-4 py-8 min-h-screen">
+      <div className="relative z-10 container mx-auto px-2 sm:px-4 py-4 sm:py-8 min-h-screen">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-4 bg-white/5 px-8 py-4 rounded-2xl backdrop-blur-sm border border-white/10">
-            <Swords className="w-12 h-12 text-yellow-300/50 animate-bounce drop-shadow-lg" />
-            <h1 className="text-5xl md:text-7xl font-bold">
+        <div className="text-center mb-4 sm:mb-8">
+          <div className="inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3 mb-4 bg-white/5 px-4 sm:px-8 py-3 sm:py-4 rounded-2xl backdrop-blur-sm border border-white/10">
+            <Swords className="w-8 sm:w-12 h-8 sm:h-12 text-yellow-300/50 animate-bounce drop-shadow-lg" />
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold">
               <span className="bg-gradient-to-r from-yellow-300/60 via-yellow-400/60 to-amber-500/60 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(234,179,8,0.3)]">
                 PERTANDINGAN 2v2
               </span>
             </h1>
-            <Swords className="w-12 h-12 text-yellow-300/50 animate-bounce drop-shadow-lg" style={{ animationDelay: '0.2s' }} />
+            <Swords className="hidden sm:block w-12 h-12 text-yellow-300/50 animate-bounce drop-shadow-lg" style={{ animationDelay: '0.2s' }} />
           </div>
-          <p className="text-xl text-white/40 font-light drop-shadow-2xl bg-black/10 px-6 py-2 rounded-full backdrop-blur-sm border border-white/10">Arena Pertandingan Anggota DLOB</p>
-          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 shadow-lg">
-            <Brain className="w-5 h-5 text-yellow-400/60" />
-            <span className="text-white/50 text-sm font-semibold">Analisis Pertandingan Berbasis AI</span>
+          <p className="text-sm sm:text-xl text-white/40 font-light drop-shadow-2xl bg-black/10 px-4 sm:px-6 py-1.5 sm:py-2 rounded-full backdrop-blur-sm border border-white/10">Arena Pertandingan Anggota DLOB</p>
+          <div className="mt-3 sm:mt-4 inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 shadow-lg">
+            <Brain className="w-4 sm:w-5 h-4 sm:h-5 text-yellow-400/60" />
+            <span className="text-white/50 text-xs sm:text-sm font-semibold">Analisis Pertandingan Berbasis AI</span>
           </div>
         </div>
 
         {!teamA || !teamB ? (
           // Team Generation Screen
           <div className="max-w-2xl mx-auto">
-            <div className="bg-black/20 backdrop-blur-lg rounded-3xl border border-white/20 shadow-2xl p-12">
-              <div className="text-center space-y-6">
-                <Users className="w-24 h-24 text-yellow-300/50 mx-auto animate-pulse" />
-                <h2 className="text-3xl font-bold text-white/70 drop-shadow-lg">Siap Bertanding?</h2>
-                <p className="text-green-100/60 text-lg">
+            <div className="bg-black/20 backdrop-blur-lg rounded-3xl border border-white/20 shadow-2xl p-6 sm:p-12">
+              <div className="text-center space-y-4 sm:space-y-6">
+                <Users className="w-16 sm:w-24 h-16 sm:h-24 text-yellow-300/50 mx-auto animate-pulse" />
+                <h2 className="text-2xl sm:text-3xl font-bold text-white/70 drop-shadow-lg">Siap Bertanding?</h2>
+                <p className="text-green-100/60 text-base sm:text-lg">
                   AI akan memilih secara acak 4 anggota DLOB dan membuat dua tim seimbang untuk pertandingan ganda 2v2 yang seru!
                 </p>
                 <button
@@ -387,11 +387,11 @@ Provide your prediction in this exact JSON format:
           // Pre-Match Screen with Teams & AI Prediction
           <div className="space-y-6">
             {/* Teams Display - Pokemon Card Style */}
-            <div className="grid grid-cols-[1fr_auto_1fr] gap-8 max-w-7xl mx-auto items-start">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-8 max-w-7xl mx-auto items-start">
               {/* Team A - Left Side */}
               <div className="space-y-4 relative">
                 {teamA.players.map((player, idx) => (
-                  <div key={idx} className={idx === 0 ? "-ml-12 -mt-8" : idx === 1 ? "ml-8 mt-8" : ""}>
+                  <div key={idx} className={idx === 0 ? "md:-ml-12 md:-mt-8" : idx === 1 ? "md:ml-8 md:mt-8" : ""}>
                     <PokemonCard player={player} color="emerald" />
                   </div>
                 ))}
@@ -418,18 +418,18 @@ Provide your prediction in this exact JSON format:
               </div>
 
               {/* VS in Center - Small Text Only */}
-              <div className="flex flex-col items-center justify-center pt-32">
-                <Swords className="w-12 h-12 text-yellow-300/40 mb-2 animate-pulse" />
-                <p className="text-white/50 font-bold text-3xl drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">VS</p>
+              <div className="flex flex-col items-center justify-center pt-4 md:pt-32">
+                <Swords className="w-10 sm:w-12 h-10 sm:h-12 text-yellow-300/40 mb-2 animate-pulse" />
+                <p className="text-white/50 font-bold text-2xl sm:text-3xl drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">VS</p>
                 <button
                   onClick={startMatch}
-                  className="mt-8 px-6 py-3 bg-gradient-to-r from-yellow-400/30 to-orange-500/30 hover:from-yellow-500/40 hover:to-orange-600/40 text-white font-bold text-base rounded-xl transition-all duration-300 transform hover:scale-110 shadow-lg backdrop-blur-sm border border-yellow-300/20"
+                  className="mt-4 sm:mt-8 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-yellow-400/30 to-orange-500/30 hover:from-yellow-500/40 hover:to-orange-600/40 text-white font-bold text-sm sm:text-base rounded-xl transition-all duration-300 transform hover:scale-110 shadow-lg backdrop-blur-sm border border-yellow-300/20"
                 >
                   MULAI! ⚡
                 </button>
                 <button
                   onClick={resetGame}
-                  className="mt-3 px-4 py-2 bg-white/5 hover:bg-white/10 backdrop-blur-sm text-white/60 text-sm rounded-lg transition-all border border-white/10"
+                  className="mt-2 sm:mt-3 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/5 hover:bg-white/10 backdrop-blur-sm text-white/60 text-xs sm:text-sm rounded-lg transition-all border border-white/10"
                 >
                   Tim Baru
                 </button>
@@ -438,7 +438,7 @@ Provide your prediction in this exact JSON format:
               {/* Team B - Right Side */}
               <div className="space-y-4 relative">
                 {teamB.players.map((player, idx) => (
-                  <div key={idx} className={idx === 0 ? "-mr-12 -mt-8" : idx === 1 ? "mr-8 mt-8" : ""}>
+                  <div key={idx} className={idx === 0 ? "md:-mr-12 md:-mt-8" : idx === 1 ? "md:mr-8 md:mt-8" : ""}>
                     <PokemonCard player={player} color="teal" />
                   </div>
                 ))}
@@ -467,15 +467,15 @@ Provide your prediction in this exact JSON format:
           </div>
         ) : isPlaying ? (
           // Match In Progress
-          <div className="space-y-6 max-w-6xl mx-auto">
+          <div className="space-y-4 sm:space-y-6 max-w-6xl mx-auto">
             {/* Live Scores */}
-            <div className="grid md:grid-cols-3 gap-6 items-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6 items-center">
               <ScoreCard team={teamA} score={scores.teamA} color="purple" />
               
-              <div className="text-center">
-                <div className="bg-white/5 rounded-2xl p-6 shadow-xl border border-white/10 backdrop-blur-sm">
-                  <Swords className="w-16 h-16 text-yellow-300/40 mx-auto animate-spin" style={{ animationDuration: '3s' }} />
-                  <p className="text-white/50 font-bold text-xl mt-2">PERTANDINGAN LANGSUNG</p>
+              <div className="text-center order-first md:order-none">
+                <div className="bg-white/5 rounded-2xl p-3 sm:p-6 shadow-xl border border-white/10 backdrop-blur-sm">
+                  <Swords className="w-12 sm:w-16 h-12 sm:h-16 text-yellow-300/40 mx-auto animate-spin" style={{ animationDuration: '3s' }} />
+                  <p className="text-white/50 font-bold text-base sm:text-xl mt-2">PERTANDINGAN LANGSUNG</p>
                 </div>
               </div>
 
@@ -483,14 +483,14 @@ Provide your prediction in this exact JSON format:
             </div>
 
             {/* Live Commentary */}
-            <div className="bg-black/50 backdrop-blur-lg rounded-2xl border border-white/20 p-6 max-h-64 overflow-y-auto shadow-xl">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Target className="w-5 h-5 text-yellow-400" />
+            <div className="bg-black/50 backdrop-blur-lg rounded-2xl border border-white/20 p-3 sm:p-6 max-h-48 sm:max-h-64 overflow-y-auto shadow-xl">
+              <h3 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
+                <Target className="w-4 sm:w-5 h-4 sm:h-5 text-yellow-400" />
                 Komentar Langsung
               </h3>
               <div className="space-y-2">
                 {commentary.slice(-5).reverse().map((comment, idx) => (
-                  <div key={idx} className="text-green-100 text-sm animate-fade-in">
+                  <div key={idx} className="text-green-100 text-xs sm:text-sm animate-fade-in">
                     • {comment}
                   </div>
                 ))}
@@ -499,53 +499,53 @@ Provide your prediction in this exact JSON format:
           </div>
         ) : (
           // Winner Screen
-          <div className="space-y-8 max-w-4xl mx-auto">
-            <div className="bg-black/40 backdrop-blur-lg rounded-3xl border border-white/20 shadow-2xl p-12 text-center">
-              <div className="animate-bounce mb-6">
-                <Trophy className="w-32 h-32 text-yellow-400 mx-auto" />
+          <div className="space-y-4 sm:space-y-8 max-w-4xl mx-auto">
+            <div className="bg-black/40 backdrop-blur-lg rounded-3xl border border-white/20 shadow-2xl p-6 sm:p-12 text-center">
+              <div className="animate-bounce mb-4 sm:mb-6">
+                <Trophy className="w-20 sm:w-32 h-20 sm:h-32 text-yellow-400 mx-auto" />
               </div>
               
-              <h2 className="text-5xl font-bold text-white mb-4">
+              <h2 className="text-3xl sm:text-5xl font-bold text-white mb-3 sm:mb-4">
                 🎉 {winner?.name} MENANG! 🎉
               </h2>
               
-              <p className="text-3xl text-green-100 mb-8">
+              <p className="text-2xl sm:text-3xl text-green-100 mb-6 sm:mb-8">
                 Skor Akhir: {scores.teamA} - {scores.teamB}
               </p>
 
               {/* Winner Team Display */}
-              <div className="mb-8">
+              <div className="mb-6 sm:mb-8">
                 <TeamCard team={winner!} color={winner === teamA ? 'purple' : 'blue'} compact />
               </div>
 
               {/* AI Accuracy */}
               {aiPrediction && (
-                <div className={`mb-8 p-4 rounded-xl ${
+                <div className={`mb-6 sm:mb-8 p-3 sm:p-4 rounded-xl ${
                   aiPrediction.winner === winner?.name 
                     ? 'bg-green-500/20 border border-green-400/50' 
                     : 'bg-red-500/20 border border-red-400/50'
                 }`}>
-                  <p className="text-white font-semibold">
+                  <p className="text-white font-semibold text-sm sm:text-base">
                     {aiPrediction.winner === winner?.name 
                       ? '✅ Prediksi AI BENAR!' 
                       : '❌ Prediksi AI SALAH!'}
                   </p>
-                  <p className="text-sm text-green-100 mt-1">
+                  <p className="text-xs sm:text-sm text-green-100 mt-1">
                     AI memprediksi {aiPrediction.winner} dengan keyakinan {aiPrediction.confidence}%
                   </p>
                 </div>
               )}
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <button
                   onClick={resetGame}
-                  className="w-full py-4 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold text-lg rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg"
+                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold text-base sm:text-lg rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
                   Pertandingan Baru
                 </button>
                 <button
                   onClick={() => router.push('/beranda#gallery')}
-                  className="w-full py-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold text-lg rounded-2xl transition-all duration-300 transform hover:scale-105 border border-white/30"
+                  className="w-full py-3 sm:py-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold text-base sm:text-lg rounded-2xl transition-all duration-300 transform hover:scale-105 border border-white/30"
                 >
                   Kembali ke Galeri
                 </button>
@@ -597,21 +597,21 @@ function PokemonCard({ player, color }: { player: Member; color: 'emerald' | 'te
   const totalStats = Object.values(player.stats).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="group relative w-48 mx-auto">
+    <div className="group relative w-40 sm:w-48 mx-auto">
       {/* Pokemon Card - Portrait Mode */}
       <div className={`relative bg-gradient-to-br ${colors.gradient} rounded-xl p-0.5 shadow-2xl transform transition-all duration-300 hover:scale-105 hover:rotate-1`}>
-        <div className="bg-white rounded-lg p-2 h-full">
+        <div className="bg-white rounded-lg p-1.5 sm:p-2 h-full">
           {/* Header */}
-          <div className="flex items-center justify-between mb-1.5">
-            <h3 className="text-sm font-bold text-gray-800 truncate">{player.name}</h3>
+          <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+            <h3 className="text-xs sm:text-sm font-bold text-gray-800 truncate">{player.name}</h3>
             <div className="flex gap-0.5">
-              <div className={`w-4 h-4 rounded-full ${colors.energyBg} border border-yellow-600`}></div>
-              <div className={`w-4 h-4 rounded-full ${colors.energyBg} border border-yellow-600`}></div>
+              <div className={`w-3 sm:w-4 h-3 sm:h-4 rounded-full ${colors.energyBg} border border-yellow-600`}></div>
+              <div className={`w-3 sm:w-4 h-3 sm:h-4 rounded-full ${colors.energyBg} border border-yellow-600`}></div>
             </div>
           </div>
 
           {/* Image Container - Larger and focused on face */}
-          <div className={`relative h-52 bg-gradient-to-br ${colors.gradient} rounded-lg mb-2 overflow-hidden border-2 ${colors.border}`}>
+          <div className={`relative h-44 sm:h-52 bg-gradient-to-br ${colors.gradient} rounded-lg mb-1.5 sm:mb-2 overflow-hidden border-2 ${colors.border}`}>
             <Image
               src={player.image}
               alt={player.name}
@@ -624,25 +624,25 @@ function PokemonCard({ player, color }: { player: Member; color: 'emerald' | 'te
           </div>
 
           {/* Type/Category */}
-          <div className={`inline-block px-2 py-0.5 ${colors.statBg} text-white text-[10px] font-bold rounded-full mb-2`}>
+          <div className={`inline-block px-1.5 sm:px-2 py-0.5 ${colors.statBg} text-white text-[9px] sm:text-[10px] font-bold rounded-full mb-1.5 sm:mb-2`}>
             BADMINTON PLAYER
           </div>
 
           {/* Stats - Compact Grid */}
-          <div className="grid grid-cols-2 gap-1 text-[10px]">
-            <div className="flex items-center justify-between bg-gray-100 px-1.5 py-0.5 rounded">
+          <div className="grid grid-cols-2 gap-1 text-[9px] sm:text-[10px]">
+            <div className="flex items-center justify-between bg-gray-100 px-1 sm:px-1.5 py-0.5 rounded">
               <span className="font-semibold text-gray-600">POW</span>
               <span className="font-bold text-gray-800">{player.stats.power}</span>
             </div>
-            <div className="flex items-center justify-between bg-gray-100 px-1.5 py-0.5 rounded">
+            <div className="flex items-center justify-between bg-gray-100 px-1 sm:px-1.5 py-0.5 rounded">
               <span className="font-semibold text-gray-600">AGI</span>
               <span className="font-bold text-gray-800">{player.stats.agility}</span>
             </div>
-            <div className="flex items-center justify-between bg-gray-100 px-1.5 py-0.5 rounded">
+            <div className="flex items-center justify-between bg-gray-100 px-1 sm:px-1.5 py-0.5 rounded">
               <span className="font-semibold text-gray-600">TEC</span>
               <span className="font-bold text-gray-800">{player.stats.technique}</span>
             </div>
-            <div className="flex items-center justify-between bg-gray-100 px-1.5 py-0.5 rounded">
+            <div className="flex items-center justify-between bg-gray-100 px-1 sm:px-1.5 py-0.5 rounded">
               <span className="font-semibold text-gray-600">STA</span>
               <span className="font-bold text-gray-800">{player.stats.stamina}</span>
             </div>
@@ -687,13 +687,13 @@ function TeamCard({ team, color, compact = false }: { team: Team; color: 'purple
   const colors = colorClasses[color];
 
   return (
-    <div className={`bg-gradient-to-br ${colors.bg} backdrop-blur-lg rounded-2xl border-2 ${colors.border} p-6 transform hover:scale-105 transition-all duration-300 shadow-xl`}>
-      <h3 className="text-2xl font-bold text-white text-center mb-6">{team.name}</h3>
+    <div className={`bg-gradient-to-br ${colors.bg} backdrop-blur-lg rounded-2xl border-2 ${colors.border} p-3 sm:p-6 transform hover:scale-105 transition-all duration-300 shadow-xl`}>
+      <h3 className="text-xl sm:text-2xl font-bold text-white text-center mb-4 sm:mb-6">{team.name}</h3>
       
-      <div className={`space-y-3 ${compact ? 'max-w-sm mx-auto' : ''}`}>
+      <div className={`space-y-2 sm:space-y-3 ${compact ? 'max-w-sm mx-auto' : ''}`}>
         {team.players.map((player, idx) => (
-          <div key={idx} className={`flex items-center gap-4 p-3 rounded-xl ${colors.playerBg} border border-white/10`}>
-            <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-white/40 flex-shrink-0 bg-zinc-800">
+          <div key={idx} className={`flex items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-xl ${colors.playerBg} border border-white/10`}>
+            <div className="relative w-12 sm:w-16 h-12 sm:h-16 rounded-full overflow-hidden border-2 border-white/40 flex-shrink-0 bg-zinc-800">
               <Image
                 src={player.image}
                 alt={player.name}
@@ -703,10 +703,10 @@ function TeamCard({ team, color, compact = false }: { team: Team; color: 'purple
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-base font-bold text-white mb-1">{player.name}</h4>
+              <h4 className="text-sm sm:text-base font-bold text-white mb-1">{player.name}</h4>
               <div className="flex gap-1 flex-wrap">
                 {Object.entries(player.stats).map(([stat, value]) => (
-                  <span key={stat} className="text-xs text-white/80">
+                  <span key={stat} className="text-[10px] sm:text-xs text-white/80">
                     <span className="text-white/60">{stat}:</span> <span className="font-bold">{value}</span>
                   </span>
                 ))}
@@ -716,10 +716,10 @@ function TeamCard({ team, color, compact = false }: { team: Team; color: 'purple
         ))}
       </div>
       
-      <div className="mt-4 pt-4 border-t border-white/20 text-center">
+      <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/20 text-center">
         <div className="inline-flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-yellow-300" />
-          <span className="text-white font-bold text-lg">Total: {team.totalPower}</span>
+          <TrendingUp className="w-3 sm:w-4 h-3 sm:h-4 text-yellow-300" />
+          <span className="text-white font-bold text-base sm:text-lg">Total: {team.totalPower}</span>
         </div>
       </div>
     </div>
@@ -734,12 +734,12 @@ function ScoreCard({ team, score, color }: { team: Team; score: number; color: '
   };
 
   return (
-    <div className={`bg-gradient-to-br ${colorClasses[color]} backdrop-blur-lg rounded-2xl border-2 p-6 transform hover:scale-105 transition-transform shadow-xl`}>
-      <h3 className="text-xl font-bold text-white text-center mb-3">{team.name}</h3>
-      <div className="flex items-center justify-center gap-3 mb-4">
+    <div className={`bg-gradient-to-br ${colorClasses[color]} backdrop-blur-lg rounded-2xl border-2 p-3 sm:p-6 transform hover:scale-105 transition-transform shadow-xl`}>
+      <h3 className="text-base sm:text-xl font-bold text-white text-center mb-2 sm:mb-3">{team.name}</h3>
+      <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
         {team.players.map((player, idx) => (
           <div key={idx} className="text-center">
-            <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-white/60 bg-zinc-800 mb-1">
+            <div className="relative w-10 sm:w-14 h-10 sm:h-14 rounded-full overflow-hidden border-2 border-white/60 bg-zinc-800 mb-1">
               <Image
                 src={player.image}
                 alt={player.name}
@@ -748,11 +748,11 @@ function ScoreCard({ team, score, color }: { team: Team; score: number; color: '
                 unoptimized
               />
             </div>
-            <p className="text-xs text-white/80">{player.name}</p>
+            <p className="text-[10px] sm:text-xs text-white/80">{player.name}</p>
           </div>
         ))}
       </div>
-      <p className="text-6xl font-bold text-white text-center">{score}</p>
+      <p className="text-4xl sm:text-6xl font-bold text-white text-center">{score}</p>
     </div>
   );
 }
