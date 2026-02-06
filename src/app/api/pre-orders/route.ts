@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isDemoMode } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
@@ -101,25 +101,6 @@ export async function POST(request: NextRequest) {
 
     console.log('Pre-order data prepared:', preOrderData);
 
-    // Handle demo mode
-    if (isDemoMode) {
-      console.log('Demo mode: Pre-order data would be saved:', preOrderData);
-      
-      // Simulate database response
-      const mockResponse = {
-        id: `demo_${Date.now()}`,
-        ...preOrderData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      return NextResponse.json({
-        success: true,
-        data: mockResponse,
-        message: 'Pre-order berhasil disimpan (Demo Mode)'
-      }, { status: 201 });
-    }
-
     // Create service role client to bypass RLS for public inserts
     const supabaseServiceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -200,30 +181,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '10');
     const offset = parseInt(searchParams.get('offset') || '0');
-
-    if (isDemoMode) {
-      // Return mock data for demo mode
-      const mockOrders = [
-        {
-          id: 'demo_1',
-          nama: 'John Doe',
-          ukuran: 'L',
-          warna: 'biru',
-          nama_punggung: 'JOHN',
-          tanpa_nama_punggung: false,
-          harga: 110000,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-
-      return NextResponse.json({
-        success: true,
-        data: mockOrders,
-        count: mockOrders.length
-      });
-    }
 
     const { data, error, count } = await supabase
       .from('pre_orders')

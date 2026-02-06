@@ -20,6 +20,9 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (data: Record<string, any>) => Promise<void>;
+  uploadAvatar: (file: File) => Promise<{ avatarUrl: string }>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -226,8 +229,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace('/login');
   };
 
+  // Update user profile
+  const updateProfile = async (data: Record<string, any>) => {
+    if (!user) throw new Error('No user logged in');
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update(data)
+      .eq('id', user.id);
+      
+    if (error) throw error;
+    
+    // Refresh user metadata
+    await refreshUser();
+  };
+
+  // Upload avatar
+  const uploadAvatar = async (file: File): Promise<{ avatarUrl: string }> => {
+    if (!user) throw new Error('No user logged in');
+    
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    const avatarUrl = data.publicUrl;
+
+    // Update profile with new avatar URL
+    await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', user.id);
+
+    // Update auth metadata
+    await supabase.auth.updateUser({
+      data: { avatar_url: avatarUrl }
+    });
+
+    await refreshUser();
+
+    return { avatarUrl };
+  };
+
+  // Refresh user data
+  const refreshUser = async () => {
+    const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+    if (refreshedUser) {
+      setUser(refreshedUser);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, role, isAdmin, isMember, viewAs, loading, switchView, signUp, signIn, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, isAdmin, isMember, viewAs, loading, switchView, signUp, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

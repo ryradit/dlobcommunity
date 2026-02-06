@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function Header() {
   };
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
   };
 
   const dashboardLink = isAdmin ? '/admin' : '/dashboard';
