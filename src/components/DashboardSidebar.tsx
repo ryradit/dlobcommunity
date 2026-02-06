@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, User, Users, Shield, Sparkles } from 'lucide-react';
 import Image from 'next/image';
+import ViewSwitcher from './ViewSwitcher';
 
 interface DashboardSidebarProps {
   isAdmin?: boolean;
@@ -134,6 +135,11 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
             {isAdmin ? <Shield className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
             {isAdmin ? 'Admin Panel' : 'Member Dashboard'}
           </div>
+        </div>
+
+        {/* View Switcher for Admins */}
+        <div className="px-4 pb-3">
+          <ViewSwitcher />
         </div>
 
         {/* Profile Card */}

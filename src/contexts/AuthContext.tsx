@@ -10,6 +10,9 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   avatarUpdateTrigger: number;
+  viewAs: 'admin' | 'member';
+  isAdmin: boolean;
+  switchView: (view: 'admin' | 'member') => void;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -38,6 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatarUpdateTrigger, setAvatarUpdateTrigger] = useState(0);
+  const [viewAs, setViewAs] = useState<'admin' | 'member'>('member');
+  const [isAdmin, setIsAdmin] = useState(false);
   let timeoutId: NodeJS.Timeout | null = null;
 
   // Set session timeout
@@ -83,6 +88,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 ...profile
               };
               setUser({...currentSession.user});
+              
+              // Check if user is admin and restore view preference
+              if (profile.role === 'admin') {
+                setIsAdmin(true);
+                const savedView = localStorage.getItem('adminViewAs') as 'admin' | 'member' | null;
+                setViewAs(savedView || 'admin');
+              } else {
+                setIsAdmin(false);
+                setViewAs('member');
+              }
             }
           } catch (profileError: any) {
             console.log('Profile not yet created, using auth data only');
@@ -413,8 +428,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const switchView = (view: 'admin' | 'member') => {
+    if (!isAdmin) {
+      console.warn('Only admins can switch views');
+      return;
+    }
+    setViewAs(view);
+    localStorage.setItem('adminViewAs', view);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, avatarUpdateTrigger, signUp, signIn, signInWithGoogle, logout, refreshUser, updateProfile, uploadAvatar }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      avatarUpdateTrigger, 
+      viewAs, 
+      isAdmin, 
+      switchView,
+      signUp, 
+      signIn, 
+      signInWithGoogle, 
+      logout, 
+      refreshUser, 
+      updateProfile, 
+      uploadAvatar 
+    }}>
       {children}
     </AuthContext.Provider>
   );

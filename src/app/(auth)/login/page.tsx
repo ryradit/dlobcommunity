@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { Mail, Lock, Chrome } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -72,10 +73,26 @@ function LoginForm() {
 
     try {
       await signIn(email, password);
-      router.push('/dashboard');
+      
+      // Fetch user profile to check role
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (profile?.role === 'admin') {
+          router.replace('/admin');
+        } else {
+          router.replace('/dashboard');
+        }
+      } else {
+        router.replace('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'Gagal masuk. Cek email dan password Anda.');
-    } finally {
       setIsLoading(false);
     }
   };

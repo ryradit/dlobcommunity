@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, AuthProvider } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 import DashboardSidebar from '@/components/DashboardSidebar';
 
 function AdminContent({
@@ -12,13 +11,14 @@ function AdminContent({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, loading, session, logout } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [checkingRole, setCheckingRole] = useState(true);
+  const { user, loading, session, logout, isAdmin, viewAs } = useAuth();
+  const [checkingAccess, setCheckingAccess] = useState(true);
 
-  // Check if user is admin
+  // Check if user has admin access and is viewing as admin
   useEffect(() => {
-    async function checkAdminRole() {
+    let isMounted = true;
+    
+    async function checkAccess() {
       // Wait for auth to finish loading
       if (loading) {
         return;
@@ -26,44 +26,31 @@ function AdminContent({
 
       // Redirect to login if no session
       if (!session || !user) {
-        router.push('/login');
+        if (isMounted) {
+          router.push('/login');
+        }
         return;
       }
 
-      try {
-        // Check user role from profiles table
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching profile:', error);
-          // If profile doesn't exist, user is not admin
-          setIsAdmin(false);
-          router.push('/dashboard');
-          return;
-        }
-
-        if (profile?.role === 'admin') {
-          setIsAdmin(true);
-        } else {
-          // Redirect non-admin users to member dashboard
-          setIsAdmin(false);
+      // If not admin or viewing as member, redirect to member dashboard
+      if (!isAdmin || viewAs === 'member') {
+        if (isMounted) {
           router.push('/dashboard');
         }
-      } catch (error) {
-        console.error('Error checking admin role:', error);
-        setIsAdmin(false);
-        router.push('/dashboard');
-      } finally {
-        setCheckingRole(false);
+        return;
+      }
+
+      if (isMounted) {
+        setCheckingAccess(false);
       }
     }
 
-    checkAdminRole();
-  }, [user, session, loading, router]);
+    checkAccess();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user, session, loading, isAdmin, viewAs, router]);
 
   // Handle inactivity timeout
   useEffect(() => {
@@ -97,20 +84,20 @@ function AdminContent({
     };
   }, [session, logout, router]);
 
-  // Show loading spinner while checking auth or role
-  if (loading || checkingRole) {
+  // Show loading while checking access
+  if (loading || checkingAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white/60">Memverifikasi akses admin...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-zinc-400">Memverifikasi akses admin...</p>
         </div>
       </div>
     );
   }
 
-  // Don't render anything if not authenticated or not admin
-  if (!session || !user || !isAdmin) {
+  // Don't render admin panel if not admin or viewing as member
+  if (!isAdmin || viewAs === 'member') {
     return null;
   }
 

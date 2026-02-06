@@ -16,36 +16,40 @@ function DashboardContent({
 
   // Redirect to appropriate dashboard based on role
   useEffect(() => {
+    let isMounted = true;
+    
     async function checkRole() {
       // Wait for loading to complete
       if (loading) return;
       
       // Only redirect to login if we're sure there's no session
       if (!session || !user) {
-        // Double-check session before redirecting
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (!currentSession) {
-          router.push('/login');
+        try {
+          // Double-check session before redirecting
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          if (!isMounted) return;
+          
+          if (!currentSession) {
+            router.push('/login');
+          }
+        } catch (error: any) {
+          if (!isMounted) return;
+          if (error?.name !== 'AbortError') {
+            console.error('Error checking session:', error);
+          }
         }
         return;
       }
 
-      if (user) {
-        // Check user role from profiles table
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (profile?.role === 'admin') {
-          // Redirect admin users to admin dashboard
-          router.push('/admin');
-        }
-      }
+      // No need to check admin role here - admins are redirected by callback
+      // This avoids race conditions and glitching between dashboards
     }
 
     checkRole();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [user, session, loading, router]);
 
   // Handle inactivity timeout

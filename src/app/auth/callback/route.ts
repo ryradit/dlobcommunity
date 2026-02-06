@@ -45,9 +45,22 @@ export async function GET(request: NextRequest) {
       }
 
       if (data?.session) {
-        // Session successfully created, redirect to dashboard
-        console.log('OAuth login successful, redirecting to:', next);
-        return NextResponse.redirect(new URL(next, request.url));
+        // Check user role to redirect appropriately
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.session.user.id)
+            .single();
+
+          const redirectPath = profile?.role === 'admin' ? '/admin' : '/dashboard';
+          console.log('OAuth login successful, user role:', profile?.role, 'redirecting to:', redirectPath);
+          return NextResponse.redirect(new URL(redirectPath, request.url));
+        } catch (roleError) {
+          // If role check fails, default to dashboard
+          console.log('Could not check role, defaulting to dashboard');
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
       }
     } catch (err) {
       console.error('Callback error:', err);
