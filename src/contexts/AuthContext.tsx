@@ -63,10 +63,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
     
+    // Failsafe: ensure loading doesn't stay true forever
+    const loadingTimeout = setTimeout(() => {
+      if (isMounted) {
+        console.warn('⏰ [Auth] Loading timeout reached, forcing loading = false');
+        setLoading(false);
+      }
+    }, 10000); // 10 seconds max
+    
     const initializeAuth = async () => {
       try {
         // Get current session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        console.log('🔐 [Auth Init] Session check:', !!currentSession);
         
         if (currentSession && isMounted) {
           setSession(currentSession);
@@ -121,7 +131,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error initializing auth:', error);
       } finally {
         if (isMounted) {
+          console.log('✅ [Auth Init] Setting loading = false');
           setLoading(false);
+          clearTimeout(loadingTimeout);
         }
       }
     };
