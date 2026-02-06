@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { usePathname } from 'next/navigation';
 import { Users, Zap, TrendingUp, Calendar, Shield } from 'lucide-react';
 
 interface AdminStats {
@@ -15,6 +16,7 @@ interface AdminStats {
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [stats, setStats] = useState<AdminStats>({
     totalMembers: 0,
     totalAdmins: 0,
@@ -26,6 +28,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     async function fetchAdminStats() {
+      setLoading(true);
       try {
         // Fetch total members count
         const { count: membersCount } = await supabase
@@ -65,7 +68,7 @@ export default function AdminDashboardPage() {
     }
 
     fetchAdminStats();
-  }, []);
+  }, [pathname]);
 
   const statsDisplay = [
     {
@@ -101,7 +104,7 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <Shield className="w-8 h-8 text-red-400" />

@@ -1,53 +1,48 @@
 'use client';
 
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
 
-function AdminLayoutContent({ children }: { children: React.ReactNode }) {
-  const { user, role, loading } = useAuth();
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { user, isAdmin, viewAs, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  console.log('🔒 [Admin Layout] State:', { loading, hasUser: !!user, isAdmin, viewAs });
 
   useEffect(() => {
+    console.log('🔒 [Admin Layout] Effect triggered:', { loading, hasUser: !!user, isAdmin, viewAs });
     if (!loading) {
       if (!user) {
+        console.log('❌ No user, redirecting to login');
         router.replace('/login');
-      } else if (role !== 'admin') {
+      } else if (!isAdmin) {
+        console.log('❌ Not admin, redirecting to dashboard');
         router.replace('/dashboard');
+      } else if (viewAs === 'member') {
+        console.log('🔄 Admin viewing as member, redirecting to dashboard');
+        router.replace('/dashboard');
+      } else {
+        console.log('✅ Admin access granted');
       }
     }
-  }, [user, role, loading, router]);
+  }, [user, isAdmin, viewAs, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4 text-white">Memverifikasi akses admin...</p>
-        </div>
-      </div>
-    );
-  }
+  console.log('🔒 [Admin Layout] Rendering check - user:', !!user, 'isAdmin:', isAdmin, 'viewAs:', viewAs);
 
-  if (!user || role !== 'admin') {
+  // Only show null briefly during initial load with no user - avoid showing loading screen on refresh
+  if (!loading && (!user || !isAdmin || viewAs === 'member')) {
     return null;
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">
-      <DashboardSidebar />
-      <div className="flex-1 ml-0 md:ml-64">
+    <div className="flex min-h-screen bg-zinc-950">
+      <DashboardSidebar isAdmin={true} />
+      <div className="flex-1 bg-zinc-950" key={`admin-${pathname}`}>
         {children}
       </div>
     </div>
-  );
-}
-
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthProvider>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </AuthProvider>
   );
 }

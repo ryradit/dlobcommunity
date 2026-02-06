@@ -1,7 +1,3 @@
-'use client';
-
-import { AuthProvider } from '@/contexts/AuthContext';
-
 export const dynamic = 'force-dynamic';
 
 export default function AuthLayout({
@@ -9,5 +5,5 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return children;
 }

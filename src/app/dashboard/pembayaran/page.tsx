@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
 import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle } from 'lucide-react';
 
 interface MatchMember {
@@ -39,6 +40,7 @@ interface Membership {
 
 export default function PembayaranPage() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [myMatches, setMyMatches] = useState<MatchMember[]>([]);
   const [allMatches, setAllMatches] = useState<MatchMember[]>([]);
   const [myMembership, setMyMembership] = useState<Membership | null>(null);
@@ -60,7 +62,7 @@ export default function PembayaranPage() {
 
   useEffect(() => {
     fetchPaymentData();
-  }, [user]);
+  }, [user, pathname]);
 
   async function fetchPaymentData() {
     if (!user) return;
@@ -366,7 +368,7 @@ export default function PembayaranPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 lg:p-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
@@ -375,7 +377,7 @@ export default function PembayaranPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
 import { TrendingUp, Users, Trophy, Edit, Save, X } from 'lucide-react';
 
 interface Match {
@@ -31,6 +32,7 @@ interface MatchMember {
 
 export default function AdminAnalitikPage() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchMembers, setMatchMembers] = useState<Record<string, MatchMember[]>>({});
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -47,7 +49,7 @@ export default function AdminAnalitikPage() {
 
   useEffect(() => {
     fetchMatches();
-  }, []);
+  }, [pathname]);
 
   async function fetchMatches() {
     try {
@@ -133,7 +135,7 @@ export default function AdminAnalitikPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="min-h-screen bg-zinc-950 p-4 lg:p-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
@@ -142,7 +144,7 @@ export default function AdminAnalitikPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Analitik Pertandingan</h1>

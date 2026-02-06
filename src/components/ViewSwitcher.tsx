@@ -5,20 +5,15 @@ import { useRouter } from 'next/navigation';
 import { Shield, User } from 'lucide-react';
 
 export default function ViewSwitcher() {
-  const { isAdmin, viewAs, switchView } = useAuth();
+  const { isAdmin, isMember, viewAs, switchView } = useAuth();
   const router = useRouter();
 
-  console.log('🔀 [ViewSwitcher] Render - isAdmin:', isAdmin, 'viewAs:', viewAs);
-
-  if (!isAdmin) {
-    console.log('🔀 [ViewSwitcher] Not rendering - user is not admin');
+  if (!isAdmin || !isMember) {
     return null;
   }
 
   const handleSwitch = (view: 'admin' | 'member') => {
-    console.log('🔀 [ViewSwitcher] Switching view to:', view);
     switchView(view);
-    // Navigate to the appropriate dashboard
     if (view === 'admin') {
       router.push('/admin');
     } else {
@@ -27,29 +22,31 @@ export default function ViewSwitcher() {
   };
 
   return (
-    <div className="flex items-center gap-2 p-2 bg-zinc-800/50 rounded-lg border border-zinc-700">
-      <button
-        onClick={() => handleSwitch('admin')}
-        className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-          viewAs === 'admin'
-            ? 'bg-purple-600 text-white'
-            : 'text-zinc-400 hover:text-white hover:bg-zinc-700'
-        }`}
-      >
-        <Shield size={16} />
-        Admin
-      </button>
-      <button
-        onClick={() => handleSwitch('member')}
-        className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-          viewAs === 'member'
-            ? 'bg-blue-600 text-white'
-            : 'text-zinc-400 hover:text-white hover:bg-zinc-700'
-        }`}
-      >
-        <User size={16} />
-        Member
-      </button>
+    <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-2">
+      <div className="flex gap-1">
+        <button
+          onClick={() => handleSwitch('admin')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-all ${
+            viewAs === 'admin'
+              ? 'bg-purple-600 text-white shadow-md'
+              : 'text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800'
+          }`}
+        >
+          <Shield className="w-3.5 h-3.5" />
+          Admin
+        </button>
+        <button
+          onClick={() => handleSwitch('member')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-all ${
+            viewAs === 'member'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800'
+          }`}
+        >
+          <User className="w-3.5 h-3.5" />
+          Member
+        </button>
+      </div>
     </div>
   );
 }

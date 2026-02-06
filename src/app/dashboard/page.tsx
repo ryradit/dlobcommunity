@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { usePathname } from 'next/navigation';
 import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock } from 'lucide-react';
 
 interface MatchMember {
@@ -36,6 +37,7 @@ interface Membership {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [myMatches, setMyMatches] = useState<MatchMember[]>([]);
   const [myMembership, setMyMembership] = useState<Membership | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,7 @@ export default function DashboardPage() {
     async function fetchUserData() {
       if (!user) return;
 
+      setLoading(true);
       try {
         // Get user profile to get full name
         const { data: profile } = await supabase
@@ -98,7 +101,7 @@ export default function DashboardPage() {
     }
 
     fetchUserData();
-  }, [user]);
+  }, [user, pathname]);
 
   // Calculate stats
   const totalPending = myMatches
@@ -144,7 +147,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">
           Selamat datang kembali, {memberName || user?.email?.split('@')[0] || 'User'}!

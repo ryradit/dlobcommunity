@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { usePathname } from 'next/navigation';
 import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram } from 'lucide-react';
 import Image from 'next/image';
 
@@ -23,6 +24,7 @@ interface Member {
 }
 
 export default function AdminMembersPage() {
+  const pathname = usePathname();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,7 +36,7 @@ export default function AdminMembersPage() {
 
   useEffect(() => {
     fetchMembers();
-  }, []);
+  }, [pathname]);
 
   async function fetchMembers() {
     try {
@@ -146,7 +148,7 @@ export default function AdminMembersPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Kelola Anggota</h1>
         <p className="text-sm sm:text-base text-zinc-400">Kelola semua anggota komunitas badminton.</p>

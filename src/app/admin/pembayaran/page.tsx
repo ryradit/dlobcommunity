@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
 import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save } from 'lucide-react';
 
 interface Match {
@@ -47,6 +48,7 @@ interface Membership {
 
 export default function AdminPembayaranPage() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchMembers, setMatchMembers] = useState<Record<string, MatchMember[]>>({});
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -94,7 +96,7 @@ export default function AdminPembayaranPage() {
       await fetchAllMembers();
     };
     loadData();
-  }, []);
+  }, [pathname]);
 
   async function fetchMatches() {
     try {
@@ -642,14 +644,14 @@ export default function AdminPembayaranPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-black">
+      <div className="flex items-center justify-center min-h-screen bg-zinc-950">
         <div className="text-white">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-zinc-950 text-white py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 sm:mb-8">

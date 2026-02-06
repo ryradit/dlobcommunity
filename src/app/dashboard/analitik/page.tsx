@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
 import { Trophy, Target, TrendingUp, Award, Calendar, Users, Filter, X, Flame, BarChart3, UserCheck, Crown, Sparkles, TrendingDown, AlertCircle, Brain, Info } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
@@ -98,6 +99,7 @@ interface MatchPrediction {
 
 export default function AnalitikPage() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [stats, setStats] = useState<MatchStats>({
     totalMatches: 0,
     totalWins: 0,
@@ -136,7 +138,7 @@ export default function AnalitikPage() {
     if (user) {
       fetchMatchStats();
     }
-  }, [user]);
+  }, [user, pathname]);
 
   useEffect(() => {
     applyFilters();
@@ -483,7 +485,7 @@ export default function AnalitikPage() {
   const hasActiveFilters = dateRange.start || dateRange.end || selectedPartner;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>

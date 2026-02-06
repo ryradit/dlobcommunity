@@ -38,7 +38,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
       <div className="max-w-md w-full space-y-8 bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl">
         <div>
           <h2 className="text-center text-3xl font-bold text-white">
@@ -46,7 +46,7 @@ export default function LoginPage() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-300">
             Belum punya akun?{' '}
-            <Link href="/register" className="font-medium text-purple-300 hover:text-purple-200">
+            <Link href="/register" className="font-medium text-blue-400 hover:text-blue-300">
               Daftar sekarang
             </Link>
           </p>
@@ -94,7 +94,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg disabled:opacity-50 transition-colors"
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50 transition-colors"
           >
             {loading ? 'Masuk...' : 'Masuk'}
           </button>

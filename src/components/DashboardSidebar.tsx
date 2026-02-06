@@ -15,16 +15,16 @@ interface DashboardSidebarProps {
 export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const { logout, user, avatarUpdateTrigger } = useAuth();
+  const { signOut, user } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState<string>('');
 
-  // Update avatar URL with cache-busting when user data changes OR when avatarUpdateTrigger changes
+  // Update avatar URL with cache-busting when user data changes
   useEffect(() => {
     if (user?.user_metadata?.avatar_url) {
-      const baseUrl = user.user_metadata.avatar_url.split('?')[0]; // Remove existing query params
+      const baseUrl = user.user_metadata.avatar_url.split('?')[0];
       setAvatarUrl(`${baseUrl}?t=${Date.now()}`);
     }
-  }, [user?.user_metadata?.avatar_url, avatarUpdateTrigger]);
+  }, [user?.user_metadata?.avatar_url]);
 
   const adminMenuItems = [
     {
@@ -108,51 +108,36 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen w-80 sm:w-72 bg-zinc-950 border-r border-white/10 transition-transform duration-300 z-50 lg:relative lg:translate-x-0 lg:z-auto flex flex-col overflow-hidden ${
+        className={`fixed left-0 top-0 h-screen w-72 bg-zinc-950 border-r border-white/10 transition-transform duration-300 z-50 lg:relative lg:translate-x-0 lg:z-auto flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Header Section with Logo & Panel Info */}
-        <div className="p-6 border-b border-white/10">
-          <div className="flex justify-center mb-4">
-            <div className="relative w-24 h-24">
+        {/* Header Section with Logo */}
+        <div className="p-4 border-b border-white/10 shrink-0">
+          <div className="flex justify-center">
+            <div className="relative w-16 h-16">
               <Image
                 src="/dlob.png"
                 alt="DLOB"
-                width={96}
-                height={96}
+                width={64}
+                height={64}
                 className="object-contain brightness-0 invert"
               />
             </div>
           </div>
-          
-          {/* Panel Badge */}
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium w-full justify-center ${
-            isAdmin 
-              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
-              : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-          }`}>
-            {isAdmin ? <Shield className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
-            {isAdmin ? 'Admin Panel' : 'Member Dashboard'}
-          </div>
-        </div>
-
-        {/* View Switcher for Admins */}
-        <div className="px-4 pb-3">
-          <ViewSwitcher />
         </div>
 
         {/* Profile Card */}
-        <div className="p-4">
-          <div className="bg-gradient-to-br from-zinc-900 to-zinc-900/50 border border-white/10 rounded-xl p-4 shadow-lg">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl flex-shrink-0 shadow-lg">
+        <div className="p-4 shrink-0">
+          <div className="bg-gradient-to-br from-zinc-900 to-zinc-900/50 border border-white/10 rounded-xl p-3.5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-11 h-11 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
                     alt="Profile"
-                    width={56}
-                    height={56}
+                    width={44}
+                    height={44}
                     className="w-full h-full object-cover"
                     key={avatarUrl}
                     unoptimized
@@ -162,10 +147,10 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white mb-0.5 truncate">
+                <p className="text-sm font-semibold text-white mb-1 truncate">
                   {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
                 </p>
-                <p className="text-xs text-zinc-400 truncate leading-tight">
+                <p className="text-xs text-zinc-400 truncate">
                   {user?.email}
                 </p>
               </div>
@@ -174,16 +159,21 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
             <Link
               href="/dashboard/settings"
               onClick={() => setIsOpen(false)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 active:bg-white/20 text-white transition-all text-sm font-medium border border-white/10 hover:border-white/20"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white transition-all text-xs font-medium border border-white/10"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-3.5 h-3.5" />
               Edit Profil
             </Link>
           </div>
         </div>
 
+        {/* View Switcher for dual-role users */}
+        <div className="px-4 pb-3 shrink-0">
+          <ViewSwitcher />
+        </div>
+
         {/* Navigation Menu */}
-        <nav className="px-4 space-y-1 flex-1 overflow-y-auto">
+        <nav className="px-4 space-y-1.5 flex-1 overflow-y-auto pb-4">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -193,36 +183,36 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium ${
+                className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-sm font-medium whitespace-nowrap ${
                   active
-                    ? 'bg-white text-zinc-950 shadow-lg'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
                     : 'text-zinc-300 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
-                <span>{item.label}</span>
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-white/10 space-y-2">
+        <div className="p-4 border-t border-white/10 space-y-2 shrink-0">
           <Link
             href="/"
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-zinc-300 hover:bg-white/10 hover:text-white transition-colors text-sm font-medium"
           >
-            <Home className="w-5 h-5" />
-            <span className="font-medium">Kembali ke Beranda</span>
+            <Home className="w-4.5 h-4.5 flex-shrink-0" />
+            <span>Kembali ke Beranda</span>
           </Link>
 
           <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors border border-red-500/20 hover:border-red-500/30"
+            onClick={signOut}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors border border-red-500/20 text-sm font-medium"
           >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Keluar</span>
+            <LogOut className="w-4.5 h-4.5 flex-shrink-0" />
+            <span>Keluar</span>
           </button>
         </div>
       </aside>

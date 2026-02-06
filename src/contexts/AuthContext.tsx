@@ -11,7 +11,11 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   role: UserRole;
+  isAdmin: boolean;
+  isMember: boolean;
+  viewAs: 'admin' | 'member';
   loading: boolean;
+  switchView: (view: 'admin' | 'member') => void;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -24,6 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole>('member');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isMember, setIsMember] = useState(true);
+  const [viewAs, setViewAs] = useState<'admin' | 'member'>('member');
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -36,30 +43,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
       
-      return profile?.role === 'admin' ? 'admin' : 'member';
+      const userRole = profile?.role === 'admin' ? 'admin' : 'member';
+      
+      // Set flags for dual role support
+      if (userRole === 'admin') {
+        setIsAdmin(true);
+        setIsMember(true); // Admins can access both
+      } else {
+        setIsAdmin(false);
+        setIsMember(true);
+      }
+      
+      return userRole;
     } catch (error) {
-      console.error('Error fetching role:', error);
+      setIsAdmin(false);
+      setIsMember(true);
       return 'member';
     }
   };
 
+  // Switch view for dual-role users
+  const switchView = (view: 'admin' | 'member') => {
+    setViewAs(view);
+    localStorage.setItem('viewAs', view);
+  };
+
   // Initialize auth state
   useEffect(() => {
+    let mounted = true;
+    
+    // Force loading to false after 5 seconds max
+    const loadingTimeout = setTimeout(() => {
+      if (mounted) {
+        console.warn('Auth loading timeout - forcing complete');
+        setLoading(false);
+      }
+    }, 5000);
+
     const initAuth = async () => {
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('🔐 Starting auth initialization...');
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        if (error) {
+          console.error('❌ Auth session error:', error);
+          throw error;
+        }
         
-        if (currentSession?.user) {
-          const userRole = await fetchUserRole(currentSession.user.id);
-          setRole(userRole);
+        console.log('📝 Session:', currentSession ? 'Found' : 'None');
+        
+        if (mounted) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (currentSession?.user) {
+            console.log('👤 Fetching role for:', currentSession.user.email);
+            const userRole = await fetchUserRole(currentSession.user.id);
+            console.log('✅ Role:', userRole, 'isAdmin:', isAdmin, 'isMember:', isMember);
+            setRole(userRole);
+            
+            // Restore saved view preference for dual-role users
+            if (userRole === 'admin') {
+              const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
+              setViewAs(savedView || 'admin');
+            } else {
+              setViewAs('member');
+            }
+          }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('❌ Auth initialization error:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          clearTimeout(loadingTimeout);
+          console.log('✅ Auth initialization complete');
+          setLoading(false);
+        }
       }
     };
 
@@ -67,20 +126,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        const userRole = await fetchUserRole(currentSession.user.id);
-        setRole(userRole);
-      } else {
-        setRole('member');
+      if (mounted) {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (currentSession?.user) {
+          const userRole = await fetchUserRole(currentSession.user.id);
+          setRole(userRole);
+          
+          // Restore saved view
+          if (userRole === 'admin') {
+            const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
+            setViewAs(savedView || 'admin');
+          } else {
+            setViewAs('member');
+          }
+        } else {
+          setRole('member');
+          setIsAdmin(false);
+          setIsMember(true);
+          setViewAs('member');
+        }
+        
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -154,7 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signUp, signIn, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, isAdmin, isMember, viewAs, loading, switchView, signUp, signIn, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -167,4 +240,4 @@ export function useAuth() {
   }
   return context;
 }
-    
+

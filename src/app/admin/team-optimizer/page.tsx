@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { usePathname } from 'next/navigation';
 import { Users, Sparkles, TrendingUp, Target, Zap, Flame, Droplet, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface PlayerStat {
@@ -44,6 +45,7 @@ interface OptimizationResult {
 
 export default function TeamOptimizerPage() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
@@ -54,7 +56,7 @@ export default function TeamOptimizerPage() {
 
   useEffect(() => {
     fetchPlayerStats();
-  }, []);
+  }, [pathname]);
 
   async function fetchPlayerStats() {
     setLoading(true);
@@ -224,7 +226,7 @@ export default function TeamOptimizerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6">
+    <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">

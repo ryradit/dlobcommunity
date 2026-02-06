@@ -59,7 +59,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 py-12">
       <div className="max-w-md w-full space-y-8 bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl">
         <div>
           <h2 className="text-center text-3xl font-bold text-white">
@@ -67,7 +67,7 @@ export default function RegisterPage() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-300">
             Sudah punya akun?{' '}
-            <Link href="/login" className="font-medium text-purple-300 hover:text-purple-200">
+            <Link href="/login" className="font-medium text-blue-400 hover:text-blue-300">
               Masuk sekarang
             </Link>
           </p>
@@ -150,7 +150,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg disabled:opacity-50 transition-colors"
+              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50 transition-colors"
             >
               {loading ? 'Mendaftar...' : 'Daftar'}
             </button>
