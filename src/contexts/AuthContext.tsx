@@ -73,13 +73,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(currentSession.user);
           setSessionTimeout();
           
+          console.log('🔐 Auth initialized - User:', currentSession.user.email);
+          
           // Fetch profile data from profiles table and merge with user metadata (non-blocking)
           try {
-            const { data: profile } = await supabase
+            console.log('🔍 Fetching profile for user:', currentSession.user.id);
+            const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', currentSession.user.id)
               .single();
+            
+            console.log('📋 Profile fetch result:', { profile, error: profileError });
             
             // Merge profile data with user metadata
             if (profile && isMounted) {
@@ -91,16 +96,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               
               // Check if user is admin and restore view preference
               if (profile.role === 'admin') {
+                console.log('👑 User is ADMIN - role:', profile.role);
                 setIsAdmin(true);
                 const savedView = localStorage.getItem('adminViewAs') as 'admin' | 'member' | null;
+                console.log('💾 Saved view preference:', savedView);
                 setViewAs(savedView || 'admin');
               } else {
+                console.log('👤 User is MEMBER - role:', profile.role);
                 setIsAdmin(false);
                 setViewAs('member');
               }
+            } else if (!profile) {
+              console.warn('⚠️ No profile found for user');
+              setIsAdmin(false);
+              setViewAs('member');
             }
           } catch (profileError: any) {
-            console.log('Profile not yet created, using auth data only');
+            console.error('❌ Profile fetch error:', profileError);
+            setIsAdmin(false);
+            setViewAs('member');
           }
         }
       } catch (error: any) {
@@ -117,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Subscribe to auth changes (handles implicit flow from hash)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth state changed:', event);
+        console.log('🔄 Auth state changed:', event, newSession ? 'Session exists' : 'No session');
         
         if (!isMounted) return;
         
@@ -129,11 +143,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // Fetch profile data from profiles table and merge with user metadata (non-blocking)
           try {
-            const { data: profile } = await supabase
+            console.log('🔍 [onAuthStateChange] Fetching profile for user:', newSession.user.id);
+            const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', newSession.user.id)
               .single();
+            
+            console.log('📋 [onAuthStateChange] Profile fetch result:', { profile, error: profileError });
             
             // Merge profile data with user metadata
             if (profile && isMounted) {
@@ -142,12 +159,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 ...profile
               };
               setUser({...newSession.user});
+              
+              // Check if user is admin
+              if (profile.role === 'admin') {
+                console.log('👑 [onAuthStateChange] User is ADMIN');
+                setIsAdmin(true);
+                const savedView = localStorage.getItem('adminViewAs') as 'admin' | 'member' | null;
+                setViewAs(savedView || 'admin');
+              } else {
+                console.log('👤 [onAuthStateChange] User is MEMBER');
+                setIsAdmin(false);
+                setViewAs('member');
+              }
+            } else if (!profile) {
+              console.warn('⚠️ [onAuthStateChange] No profile found');
+              setIsAdmin(false);
+              setViewAs('member');
             }
           } catch (profileError: any) {
-            console.log('Profile not yet created, using auth data only');
+            console.error('❌ [onAuthStateChange] Profile fetch error:', profileError);
+            setIsAdmin(false);
+            setViewAs('member');
           }
         } else {
           setUser(null);
+          setIsAdmin(false);
+          setViewAs('member');
           if (timeoutId) clearTimeout(timeoutId);
         }
         

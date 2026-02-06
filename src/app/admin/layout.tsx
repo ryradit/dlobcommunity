@@ -19,13 +19,17 @@ function AdminContent({
     let isMounted = true;
     
     async function checkAccess() {
+      console.log('🔒 [Admin Layout] Checking access - loading:', loading, 'session:', !!session, 'user:', !!user, 'isAdmin:', isAdmin, 'viewAs:', viewAs);
+      
       // Wait for auth to finish loading
       if (loading) {
+        console.log('⏳ [Admin Layout] Auth still loading...');
         return;
       }
 
       // Redirect to login if no session
       if (!session || !user) {
+        console.log('❌ [Admin Layout] No session/user - redirecting to /login');
         if (isMounted) {
           router.push('/login');
         }
@@ -33,13 +37,23 @@ function AdminContent({
       }
 
       // If not admin or viewing as member, redirect to member dashboard
-      if (!isAdmin || viewAs === 'member') {
+      if (!isAdmin) {
+        console.log('🚫 [Admin Layout] User is NOT admin - redirecting to /dashboard');
+        if (isMounted) {
+          router.push('/dashboard');
+        }
+        return;
+      }
+      
+      if (viewAs === 'member') {
+        console.log('👤 [Admin Layout] Admin viewing as member - redirecting to /dashboard');
         if (isMounted) {
           router.push('/dashboard');
         }
         return;
       }
 
+      console.log('✅ [Admin Layout] Access granted - isAdmin:', isAdmin, 'viewAs:', viewAs);
       if (isMounted) {
         setCheckingAccess(false);
       }

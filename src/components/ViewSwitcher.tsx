@@ -8,9 +8,15 @@ export default function ViewSwitcher() {
   const { isAdmin, viewAs, switchView } = useAuth();
   const router = useRouter();
 
-  if (!isAdmin) return null;
+  console.log('🔀 [ViewSwitcher] Render - isAdmin:', isAdmin, 'viewAs:', viewAs);
+
+  if (!isAdmin) {
+    console.log('🔀 [ViewSwitcher] Not rendering - user is not admin');
+    return null;
+  }
 
   const handleSwitch = (view: 'admin' | 'member') => {
+    console.log('🔀 [ViewSwitcher] Switching view to:', view);
     switchView(view);
     // Navigate to the appropriate dashboard
     if (view === 'admin') {
