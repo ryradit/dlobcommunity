@@ -73,10 +73,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const initializeAuth = async () => {
       try {
-        // Get current session
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('🔐 [Auth Init] Starting session check...');
         
-        console.log('🔐 [Auth Init] Session check:', !!currentSession);
+        // Get current session with retry logic for AbortError
+        let currentSession = null;
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries && !currentSession) {
+          try {
+            const { data: { session: fetchedSession }, error } = await supabase.auth.getSession();
+            
+            if (error) {
+              if (error.name === 'AbortError' && retryCount < maxRetries - 1) {
+                console.warn(`⚠️ [Auth Init] AbortError on attempt ${retryCount + 1}, retrying...`);
+                retryCount++;
+                await new Promise(resolve => setTimeout(resolve, 500 * retryCount)); // Exponential backoff
+                continue;
+              }
+              throw error;
+            }
+            
+            currentSession = fetchedSession;
+            break;
+          } catch (err: any) {
+            if (err.name === 'AbortError' && retryCount < maxRetries - 1) {
+              console.warn(`⚠️ [Auth Init] AbortError on attempt ${retryCount + 1}, retrying...`);
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+            } else {
+              throw err;
+            }
+          }
+        }
+        
+        console.log('🔐 [Auth Init] Session check result:', !!currentSession);
         
         if (currentSession && isMounted) {
           setSession(currentSession);
@@ -128,7 +159,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (error: any) {
-        console.error('Error initializing auth:', error);
+        if (error.name === 'AbortError') {
+          console.error('❌ [Auth Init] AbortError after retries - auth initialization failed');
+        } else {
+          console.error('❌ [Auth Init] Error initializing auth:', error);
+        }
+        // Don't throw - allow app to continue with no session
       } finally {
         if (isMounted) {
           console.log('✅ [Auth Init] Setting loading = false');
