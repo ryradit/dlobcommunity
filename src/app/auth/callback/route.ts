@@ -54,11 +54,9 @@ export async function GET(request: NextRequest) {
             .single();
 
           const redirectPath = profile?.role === 'admin' ? '/admin' : '/dashboard';
-          console.log('OAuth login successful, user role:', profile?.role, 'redirecting to:', redirectPath);
           return NextResponse.redirect(new URL(redirectPath, request.url));
         } catch (roleError) {
           // If role check fails, default to dashboard
-          console.log('Could not check role, defaulting to dashboard');
           return NextResponse.redirect(new URL('/dashboard', request.url));
         }
       }

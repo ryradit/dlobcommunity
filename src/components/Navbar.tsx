@@ -2,22 +2,12 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, loading } = useAuth();
-
-  // Debug logging for production
-  useEffect(() => {
-    console.log('🔷 [Navbar] Auth state:', { 
-      loading, 
-      hasUser: !!user, 
-      userEmail: user?.email,
-      userMetadata: user?.user_metadata 
-    });
-  }, [loading, user]);
 
   const navLinks = [
     { href: '/beranda', label: 'Beranda' },
