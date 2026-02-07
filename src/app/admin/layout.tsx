@@ -10,30 +10,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
 
-  console.log('🔒 [Admin Layout] State:', { loading, hasUser: !!user, isAdmin, viewAs });
-
   useEffect(() => {
-    console.log('🔒 [Admin Layout] Effect triggered:', { loading, hasUser: !!user, isAdmin, viewAs });
+    // Only redirect if loading is complete and user is definitely not authorized
     if (!loading) {
       if (!user) {
-        console.log('❌ No user, redirecting to login');
         router.replace('/login');
       } else if (!isAdmin) {
-        console.log('❌ Not admin, redirecting to dashboard');
         router.replace('/dashboard');
       } else if (viewAs === 'member') {
-        console.log('🔄 Admin viewing as member, redirecting to dashboard');
         router.replace('/dashboard');
-      } else {
-        console.log('✅ Admin access granted');
       }
     }
   }, [user, isAdmin, viewAs, loading, router]);
 
-  console.log('🔒 [Admin Layout] Rendering check - user:', !!user, 'isAdmin:', isAdmin, 'viewAs:', viewAs);
+  // Show content immediately if user exists, only block if no user and loading complete
+  if (!loading && !user) {
+    return null;
+  }
 
-  // Only show null briefly during initial load with no user - avoid showing loading screen on refresh
-  if (!loading && (!user || !isAdmin || viewAs === 'member')) {
+  if (!loading && (!isAdmin || viewAs === 'member')) {
     return null;
   }
 

@@ -36,7 +36,7 @@ interface Membership {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const pathname = usePathname();
   const [myMatches, setMyMatches] = useState<MatchMember[]>([]);
   const [myMembership, setMyMembership] = useState<Membership | null>(null);
@@ -45,7 +45,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function fetchUserData() {
-      if (!user) return;
+      // Wait for auth to complete before fetching
+      if (authLoading) return;
+      
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       setLoading(true);
       try {
@@ -101,7 +107,7 @@ export default function DashboardPage() {
     }
 
     fetchUserData();
-  }, [user, pathname]);
+  }, [user, authLoading, pathname]);
 
   // Calculate stats
   const totalPending = myMatches

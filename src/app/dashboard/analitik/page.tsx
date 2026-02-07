@@ -98,7 +98,7 @@ interface MatchPrediction {
 }
 
 export default function AnalitikPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const pathname = usePathname();
   const [stats, setStats] = useState<MatchStats>({
     totalMatches: 0,
@@ -135,10 +135,10 @@ export default function AnalitikPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       fetchMatchStats();
     }
-  }, [user, pathname]);
+  }, [user, authLoading, pathname]);
 
   useEffect(() => {
     applyFilters();

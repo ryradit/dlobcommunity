@@ -39,7 +39,7 @@ interface Membership {
 }
 
 export default function PembayaranPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const pathname = usePathname();
   const [myMatches, setMyMatches] = useState<MatchMember[]>([]);
   const [allMatches, setAllMatches] = useState<MatchMember[]>([]);
@@ -62,10 +62,13 @@ export default function PembayaranPage() {
 
   useEffect(() => {
     fetchPaymentData();
-  }, [user, pathname]);
+  }, [user, authLoading, pathname]);
 
   async function fetchPaymentData() {
-    if (!user) return;
+    if (authLoading || !user) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data: profile } = await supabase

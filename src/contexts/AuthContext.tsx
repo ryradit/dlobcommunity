@@ -35,16 +35,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isMember, setIsMember] = useState(true);
   const [viewAs, setViewAs] = useState<'admin' | 'member'>('member');
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const router = useRouter();
 
   // Fetch user profile and role
   const fetchUserRole = async (userId: string): Promise<UserRole> => {
     try {
-      const { data: profile } = await supabase
+      // Add timeout for role fetch to prevent hanging
+      const rolePromise = supabase
         .from('profiles')
         .select('role')
         .eq('id', userId)
         .single();
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Role fetch timeout')), 8000)
+      );
+
+      const { data: profile } = await Promise.race([rolePromise, timeoutPromise]) as any;
       
       const userRole = profile?.role === 'admin' ? 'admin' : 'member';
       
@@ -59,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       return userRole;
     } catch (error) {
+      console.error('Error fetching user role:', error);
       setIsAdmin(false);
       setIsMember(true);
       return 'member';
@@ -71,87 +80,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('viewAs', view);
   };
 
-  // Initialize auth state
+  // Initialize auth state - ONLY run once on mount
   useEffect(() => {
     let mounted = true;
     
-    // Force loading to false after 5 seconds max
-    const loadingTimeout = setTimeout(() => {
-      if (mounted) {
-        console.warn('Auth loading timeout - forcing complete');
-        setLoading(false);
-      }
-    }, 5000);
-
     const initAuth = async () => {
       try {
-        console.log('🔐 Starting auth initialization...');
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error('❌ Auth session error:', error);
-          throw error;
-        }
-        
-        console.log('📝 Session:', currentSession ? 'Found' : 'None');
-        
-        if (mounted) {
+        if (mounted && currentSession?.user) {
           setSession(currentSession);
-          setUser(currentSession?.user ?? null);
+          setUser(currentSession.user);
           
-          if (currentSession?.user) {
-            console.log('👤 Fetching role for:', currentSession.user.email);
-            const userRole = await fetchUserRole(currentSession.user.id);
-            console.log('✅ Role:', userRole, 'isAdmin:', isAdmin, 'isMember:', isMember);
-            setRole(userRole);
-            
-            // Restore saved view preference for dual-role users
-            if (userRole === 'admin') {
-              const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
-              setViewAs(savedView || 'admin');
-            } else {
-              setViewAs('member');
-            }
-          }
-        }
-      } catch (error) {
-        console.error('❌ Auth initialization error:', error);
-      } finally {
-        if (mounted) {
-          clearTimeout(loadingTimeout);
-          console.log('✅ Auth initialization complete');
-          setLoading(false);
-        }
-      }
-    };
-
-    initAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (mounted) {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        if (currentSession?.user) {
+          // Fetch role quickly
           const userRole = await fetchUserRole(currentSession.user.id);
           setRole(userRole);
           
-          // Restore saved view
+          // Restore view preference
           if (userRole === 'admin') {
             const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
             setViewAs(savedView || 'admin');
           } else {
             setViewAs('member');
           }
-        } else {
-          setRole('member');
-          setIsAdmin(false);
-          setIsMember(true);
-          setViewAs('member');
         }
-        
-        setLoading(false);
+      } catch (error) {
+        console.error('Auth init error:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          setInitialLoad(false);
+        }
+      }
+    };
+
+    initAuth();
+
+    // Listen for auth changes (login/logout only)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      // Only handle sign in and sign out events
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        if (mounted) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (currentSession?.user) {
+            const userRole = await fetchUserRole(currentSession.user.id);
+            setRole(userRole);
+            
+            if (userRole === 'admin') {
+              const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
+              setViewAs(savedView || 'admin');
+            } else {
+              setViewAs('member');
+            }
+          } else {
+            setRole('member');
+            setIsAdmin(false);
+            setIsMember(true);
+            setViewAs('member');
+          }
+        }
       }
     });
 
