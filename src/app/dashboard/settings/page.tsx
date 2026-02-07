@@ -83,10 +83,11 @@ export default function SettingsPage() {
         setMessage({ type: 'error', text: 'Gagal mengupload foto' });
         setTimeout(() => setMessage(null), 5000);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Avatar upload error:', error);
-      setMessage({ type: 'error', text: 'Gagal mengupload foto profil' });
-      setTimeout(() => setMessage(null), 5000);
+      const errorMessage = error?.message || 'Gagal mengupload foto profil';
+      setMessage({ type: 'error', text: errorMessage });
+      setTimeout(() => setMessage(null), 7000);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {

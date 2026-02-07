@@ -23,8 +23,10 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
     if (user?.user_metadata?.avatar_url) {
       const baseUrl = user.user_metadata.avatar_url.split('?')[0];
       setAvatarUrl(`${baseUrl}?t=${Date.now()}`);
+    } else {
+      setAvatarUrl(''); // Clear avatar if none exists
     }
-  }, [user?.user_metadata?.avatar_url]);
+  }, [user?.user_metadata?.avatar_url, user?.id]); // Also watch user id to ensure refresh on user change
 
   const adminMenuItems = [
     {
@@ -122,6 +124,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
                 width={64}
                 height={64}
                 className="object-contain brightness-0 invert"
+                style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%' }}
               />
             </div>
           </div>
@@ -139,6 +142,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
                     width={44}
                     height={44}
                     className="w-full h-full object-cover"
+                    style={{ width: '100%', height: '100%' }}
                     key={avatarUrl}
                     unoptimized
                   />
@@ -157,7 +161,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
             </div>
 
             <Link
-              href="/dashboard/settings"
+              href={isAdmin ? "/admin/settings" : "/dashboard/settings"}
               onClick={() => setIsOpen(false)}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white transition-all text-xs font-medium border border-white/10"
             >

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { usePathname } from 'next/navigation';
-import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram } from 'lucide-react';
+import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown } from 'lucide-react';
 import Image from 'next/image';
 
 interface Member {
@@ -21,6 +21,7 @@ interface Member {
   achievements?: string;
   partner_preferences?: string;
   instagram_url?: string;
+  has_membership?: boolean;
 }
 
 export default function AdminMembersPage() {
@@ -50,20 +51,49 @@ export default function AdminMembersPage() {
         // Fetch auth users to get metadata (including avatar_url)
         const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
         
+        // Fetch active memberships for current month
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth() + 1;
+        const currentYear = currentDate.getFullYear();
+        
+        const { data: membershipsData } = await supabase
+          .from('memberships')
+          .select('member_name, payment_status')
+          .eq('month', currentMonth)
+          .eq('year', currentYear)
+          .eq('payment_status', 'paid');
+        
+        // Create a Set of member names with active membership
+        const membershipNames = new Set(
+          membershipsData?.map(m => m.member_name.toLowerCase()) || []
+        );
+        
         if (!authError && users) {
-          // Merge auth metadata with profiles data
+          // Merge auth metadata with profiles data and membership status
           const mergedData = profilesData.map(profile => {
             const authUser = users.find(u => u.id === profile.id);
+            const fullName = profile.full_name || authUser?.user_metadata?.full_name || '';
+            const hasMembership = membershipNames.has(fullName.toLowerCase());
+            
             return {
               ...profile,
               avatar_url: profile.avatar_url || authUser?.user_metadata?.avatar_url,
-              full_name: profile.full_name || authUser?.user_metadata?.full_name,
+              full_name: fullName,
               phone: profile.phone || authUser?.user_metadata?.phone,
+              has_membership: hasMembership,
             };
           });
           setMembers(mergedData);
         } else {
-          setMembers(profilesData);
+          // Just merge membership status with profiles
+          const mergedData = profilesData.map(profile => {
+            const hasMembership = membershipNames.has((profile.full_name || '').toLowerCase());
+            return {
+              ...profile,
+              has_membership: hasMembership,
+            };
+          });
+          setMembers(mergedData);
         }
       }
     } catch (error) {
@@ -273,19 +303,29 @@ export default function AdminMembersPage() {
                       </div>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        {member.role === 'admin' ? (
-                          <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 flex-shrink-0" />
-                        ) : (
-                          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0" />
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          {member.role === 'admin' ? (
+                            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 flex-shrink-0" />
+                          ) : (
+                            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0" />
+                          )}
+                          <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold ${
+                            member.role === 'admin' 
+                              ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                              : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          }`}>
+                            {member.role === 'admin' ? 'Admin' : 'Member'}
+                          </span>
+                        </div>
+                        {member.has_membership && (
+                          <div className="flex items-center gap-1 sm:gap-1.5">
+                            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
+                            <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                              Membership
+                            </span>
+                          </div>
                         )}
-                        <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold ${
-                          member.role === 'admin' 
-                            ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                        }`}>
-                          {member.role === 'admin' ? 'Admin' : 'Member'}
-                        </span>
                       </div>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">

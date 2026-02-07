@@ -23,6 +23,7 @@ interface AuthContextType {
   updateProfile: (data: Record<string, any>) => Promise<void>;
   uploadAvatar: (file: File) => Promise<{ avatarUrl: string }>;
   refreshUser: () => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,24 +36,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isMember, setIsMember] = useState(true);
   const [viewAs, setViewAs] = useState<'admin' | 'member'>('member');
   const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
   const router = useRouter();
 
-  // Fetch user profile and role
+  // Sync avatar from profiles table to user metadata
+  const syncAvatarFromProfile = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', userId)
+        .single();
+
+      if (profile?.avatar_url) {
+        // Get fresh user data
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        
+        // If avatar in profile differs from user metadata, sync it
+        if (currentUser && currentUser.user_metadata?.avatar_url !== profile.avatar_url) {
+          const { data: { user: updatedUser }, error } = await supabase.auth.updateUser({
+            data: { avatar_url: profile.avatar_url }
+          });
+          
+          if (!error && updatedUser) {
+            setUser(updatedUser);
+          }
+        } else if (currentUser) {
+          // Even if same, ensure user state is updated
+          setUser(currentUser);
+        }
+      } else {
+        // No avatar in profile, but still update user to ensure state is fresh
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          setUser(currentUser);
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing avatar:', error);
+    }
+  };
+
+  // Fetch user profile and role (non-blocking)
   const fetchUserRole = async (userId: string): Promise<UserRole> => {
     try {
-      // Add timeout for role fetch to prevent hanging
-      const rolePromise = supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', userId)
         .single();
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Role fetch timeout')), 8000)
-      );
-
-      const { data: profile } = await Promise.race([rolePromise, timeoutPromise]) as any;
       
       const userRole = profile?.role === 'admin' ? 'admin' : 'member';
       
@@ -88,28 +119,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (mounted && currentSession?.user) {
+        if (mounted) {
           setSession(currentSession);
-          setUser(currentSession.user);
+          setUser(currentSession?.user ?? null);
           
-          // Fetch role quickly
-          const userRole = await fetchUserRole(currentSession.user.id);
-          setRole(userRole);
-          
-          // Restore view preference
-          if (userRole === 'admin') {
-            const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
-            setViewAs(savedView || 'admin');
+          // Fetch role and sync avatar in background (non-blocking)
+          if (currentSession?.user) {
+            // Sync avatar first (await to ensure it completes)
+            await syncAvatarFromProfile(currentSession.user.id);
+            
+            // Set loading to false after avatar sync
+            setLoading(false);
+            
+            // Then fetch role
+            fetchUserRole(currentSession.user.id).then((userRole) => {
+              if (mounted) {
+                setRole(userRole);
+                
+                // Restore view preference
+                if (userRole === 'admin') {
+                  const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
+                  setViewAs(savedView || 'admin');
+                } else {
+                  setViewAs('member');
+                }
+              }
+            });
           } else {
-            setViewAs('member');
+            // Set loading to false if no user
+            setLoading(false);
           }
         }
       } catch (error) {
         console.error('Auth init error:', error);
-      } finally {
         if (mounted) {
           setLoading(false);
-          setInitialLoad(false);
         }
       }
     };
@@ -125,15 +169,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(currentSession?.user ?? null);
           
           if (currentSession?.user) {
-            const userRole = await fetchUserRole(currentSession.user.id);
-            setRole(userRole);
+            // Sync avatar first (await to ensure completion)
+            await syncAvatarFromProfile(currentSession.user.id);
             
-            if (userRole === 'admin') {
-              const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
-              setViewAs(savedView || 'admin');
-            } else {
-              setViewAs('member');
-            }
+            // Fetch role in background (non-blocking)
+            fetchUserRole(currentSession.user.id).then((userRole) => {
+              if (mounted) {
+                setRole(userRole);
+                
+                if (userRole === 'admin') {
+                  const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
+                  setViewAs(savedView || 'admin');
+                } else {
+                  setViewAs('member');
+                }
+              }
+            });
           } else {
             setRole('member');
             setIsAdmin(false);
@@ -215,7 +266,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setSession(null);
     setRole('member');
-    router.replace('/login');
+    setIsAdmin(false);
+    setIsMember(true);
+    setViewAs('member');
+    localStorage.removeItem('viewAs');
+    router.push('/login');
+    window.location.href = '/login';
   };
 
   // Update user profile
@@ -237,48 +293,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const uploadAvatar = async (file: File): Promise<{ avatarUrl: string }> => {
     if (!user) throw new Error('No user logged in');
     
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = fileName; // Just the filename, bucket name is already 'profiles'
 
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file, { upsert: true });
 
-    if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Avatar upload error:', uploadError);
+        
+        // Provide helpful error messages
+        if (uploadError.message.includes('Bucket not found')) {
+          throw new Error('Storage bucket belum disetup. Silakan hubungi administrator untuk menjalankan supabase-storage-setup.sql');
+        }
+        
+        throw uploadError;
+      }
 
-    const { data } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
+      const { data } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
 
-    const avatarUrl = data.publicUrl;
+      const avatarUrl = data.publicUrl;
 
-    // Update profile with new avatar URL
-    await supabase
-      .from('profiles')
-      .update({ avatar_url: avatarUrl })
-      .eq('id', user.id);
+      // Update profile with new avatar URL
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user.id);
 
-    // Update auth metadata
-    await supabase.auth.updateUser({
-      data: { avatar_url: avatarUrl }
-    });
+      // Update auth metadata
+      await supabase.auth.updateUser({
+        data: { avatar_url: avatarUrl }
+      });
 
-    await refreshUser();
+      // Refresh user to get updated metadata
+      const { data: { user: updatedUser } } = await supabase.auth.getUser();
+      if (updatedUser) {
+        setUser(updatedUser);
+      }
 
-    return { avatarUrl };
+      return { avatarUrl };
+    } catch (error: any) {
+      console.error('Avatar upload error:', error);
+      throw error;
+    }
   };
 
   // Refresh user data
   const refreshUser = async () => {
-    const { data: { user: refreshedUser } } = await supabase.auth.getUser();
-    if (refreshedUser) {
-      setUser(refreshedUser);
+    try {
+      const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+      if (refreshedUser) {
+        // Also sync avatar from profile
+        await syncAvatarFromProfile(refreshedUser.id);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
+  };
+
+  // Update password
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      throw error;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, isAdmin, isMember, viewAs, loading, switchView, signUp, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, refreshUser }}>
+    <AuthContext.Provider value={{ user, session, role, isAdmin, isMember, viewAs, loading, switchView, signUp, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, refreshUser, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
