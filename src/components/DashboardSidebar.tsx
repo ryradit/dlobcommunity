@@ -14,9 +14,22 @@ interface DashboardSidebarProps {
 
 export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const pathname = usePathname();
   const { signOut, user } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState<string>('');
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
+    }
+  };
 
   // Update avatar URL with cache-busting when user data changes
   useEffect(() => {
@@ -212,7 +225,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
           </Link>
 
           <button
-            onClick={signOut}
+            onClick={() => setShowLogoutModal(true)}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors border border-red-500/20 text-sm font-medium"
           >
             <LogOut className="w-4.5 h-4.5 flex-shrink-0" />
@@ -220,6 +233,49 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
           </button>
         </div>
       </aside>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                <LogOut className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Konfirmasi Keluar</h3>
+                <p className="text-sm text-zinc-400">Apakah Anda yakin ingin keluar?</p>
+              </div>
+            </div>
+            <p className="text-zinc-300 text-sm">
+              Anda akan keluar dari akun dan kembali ke halaman beranda.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                disabled={isLoggingOut}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoggingOut ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Keluar...</span>
+                  </>
+                ) : (
+                  'Ya, Keluar'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

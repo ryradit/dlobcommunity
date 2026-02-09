@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { user, signOut } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -32,6 +33,8 @@ export default function Header() {
 
   const handleLogout = async () => {
     await signOut();
+    setShowLogoutModal(false);
+    setMobileMenuOpen(false);
   };
 
   const dashboardLink = isAdmin ? '/admin' : '/dashboard';
@@ -81,7 +84,7 @@ export default function Header() {
                   Dashboard
                 </Link>
                 <button
-                  onClick={handleLogout}
+                  onClick={() => setShowLogoutModal(true)}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 >
                   Logout
@@ -141,8 +144,7 @@ export default function Header() {
                   </Link>
                   <button
                     onClick={() => {
-                      handleLogout();
-                      setMobileMenuOpen(false);
+                      setShowLogoutModal(true);
                     }}
                     className="w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors text-left"
                   >
@@ -171,6 +173,42 @@ export default function Header() {
           </div>
         )}
       </nav>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Konfirmasi Keluar</h3>
+                <p className="text-sm text-gray-600">Apakah Anda yakin ingin keluar?</p>
+              </div>
+            </div>
+            <p className="text-gray-700 text-sm">
+              Anda akan keluar dari akun dan kembali ke halaman beranda.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors font-semibold"
+              >
+                Ya, Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

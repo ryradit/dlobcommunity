@@ -262,16 +262,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign out
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setRole('member');
-    setIsAdmin(false);
-    setIsMember(true);
-    setViewAs('member');
-    localStorage.removeItem('viewAs');
-    router.push('/login');
-    window.location.href = '/login';
+    try {
+      // Sign out from Supabase first (with timeout)
+      const signOutPromise = supabase.auth.signOut();
+      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 3000));
+      await Promise.race([signOutPromise, timeoutPromise]);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      // Always clear state and redirect regardless of Supabase response
+      setUser(null);
+      setSession(null);
+      setRole('member');
+      setIsAdmin(false);
+      setIsMember(true);
+      setViewAs('member');
+      localStorage.removeItem('viewAs');
+      
+      // Force immediate redirect
+      window.location.href = '/login';
+    }
   };
 
   // Update user profile

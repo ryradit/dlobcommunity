@@ -46,206 +46,257 @@ export default function AdminDashboardPage() {
   const [mostActivePlayers, setMostActivePlayers] = useState<{ id: string; name: string; matches: number }[]>([]);
 
   useEffect(() => {
+    let mounted = true;
+
     async function fetchAdminStats() {
+      if (!mounted) return;
+      
       setLoading(true);
       try {
-        // Fetch total members count
-        const { count: membersCount } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('role', 'member');
+        // Fetch stats with individual error handling
+        let membersCount = 0, adminsCount = 0, activeUsersCount = 0, totalUsersCount = 0;
 
-        // Fetch total admins count
-        const { count: adminsCount } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('role', 'admin');
+        try {
+          const { count } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'member');
+          membersCount = count || 0;
+        } catch (err) {
+          console.error('Error fetching members count:', err);
+        }
 
-        // Fetch active users count
-        const { count: activeUsersCount } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true);
+        try {
+          const { count } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'admin');
+          adminsCount = count || 0;
+        } catch (err) {
+          console.error('Error fetching admins count:', err);
+        }
 
-        // Fetch total users
-        const { count: totalUsersCount } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
+        try {
+          const { count } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_active', true);
+          activeUsersCount = count || 0;
+        } catch (err) {
+          console.error('Error fetching active users count:', err);
+        }
 
-        setStats({
-          totalMembers: membersCount || 0,
-          totalAdmins: adminsCount || 0,
-          activeProjects: activeUsersCount || 0,
-          pendingApprovals: 0,
-          events: totalUsersCount || 0,
-        });
+        try {
+          const { count } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true });
+          totalUsersCount = count || 0;
+        } catch (err) {
+          console.error('Error fetching total users count:', err);
+        }
 
-        // Fetch recent activities
-        const { data: recentProfiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, created_at, updated_at')
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        const activityList: ActivityItem[] = [];
-        if (recentProfiles) {
-          recentProfiles.forEach((profile) => {
-            // Registration activity
-            activityList.push({
-              id: `reg-${profile.id}`,
-              type: 'registration',
-              user: profile.full_name || 'Pengguna Baru',
-              timestamp: profile.created_at,
-              icon: UserPlus,
-              color: 'text-blue-400',
-            });
-
-            // Update activity (if updated_at is different from created_at)
-            if (profile.updated_at && profile.updated_at !== profile.created_at) {
-              const updatedDate = new Date(profile.updated_at);
-              const createdDate = new Date(profile.created_at);
-              if (updatedDate.getTime() - createdDate.getTime() > 1000) {
-                activityList.push({
-                  id: `upd-${profile.id}`,
-                  type: 'update',
-                  user: profile.full_name || 'Pengguna',
-                  timestamp: profile.updated_at,
-                  icon: Edit,
-                  color: 'text-purple-400',
-                });
-              }
-            }
+        if (mounted) {
+          setStats({
+            totalMembers: membersCount,
+            totalAdmins: adminsCount,
+            activeProjects: activeUsersCount,
+            pendingApprovals: 0,
+            events: totalUsersCount,
           });
         }
 
-        // Sort by timestamp and take top 8
-        activityList.sort((a, b) => 
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-        setActivities(activityList.slice(0, 8));
+        // Fetch recent activities with error handling
+        try {
+          const { data: recentProfiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, created_at, updated_at')
+            .order('created_at', { ascending: false })
+            .limit(10);
 
-        // Fetch real match data and calculate win/loss streaks
-        const { data: matchesData } = await supabase
-          .from('matches')
-          .select('*')
-          .order('match_date', { ascending: false });
-
-        const playerStreaks: { [key: string]: { name: string; currentStreak: number; type: 'win' | 'loss' } } = {};
-
-        if (matchesData && matchesData.length > 0) {
-          // Group matches by player
-          const playerMatches: { [key: string]: any[] } = {};
-
-          matchesData.forEach((match) => {
-            const players = [
-              match.team1_player1,
-              match.team1_player2,
-              match.team2_player1,
-              match.team2_player2,
-            ];
-
-            players.forEach((playerName) => {
-              if (!playerName) return;
-              
-              if (!playerMatches[playerName]) {
-                playerMatches[playerName] = [];
-              }
-
-              const isTeam1 = playerName === match.team1_player1 || playerName === match.team1_player2;
-              const isWinner = (isTeam1 && match.winner === 'team1') || (!isTeam1 && match.winner === 'team2');
-
-              playerMatches[playerName].push({
-                date: match.match_date || match.created_at,
-                isWinner,
+          const activityList: ActivityItem[] = [];
+          if (recentProfiles) {
+            recentProfiles.forEach((profile) => {
+              // Registration activity
+              activityList.push({
+                id: `reg-${profile.id}`,
+                type: 'registration',
+                user: profile.full_name || 'Pengguna Baru',
+                timestamp: profile.created_at,
+                icon: UserPlus,
+                color: 'text-blue-400',
               });
-            });
-          });
 
-          // Calculate current streak for each player
-          Object.keys(playerMatches).forEach((playerName) => {
-            const matches = playerMatches[playerName].sort((a, b) => 
-              new Date(b.date).getTime() - new Date(a.date).getTime()
-            );
-
-            if (matches.length > 0) {
-              let currentStreak = 1;
-              const latestResult = matches[0].isWinner;
-
-              for (let i = 1; i < matches.length; i++) {
-                if (matches[i].isWinner === latestResult) {
-                  currentStreak++;
-                } else {
-                  break;
+              // Update activity (if updated_at is different from created_at)
+              if (profile.updated_at && profile.updated_at !== profile.created_at) {
+                const updatedDate = new Date(profile.updated_at);
+                const createdDate = new Date(profile.created_at);
+                if (updatedDate.getTime() - createdDate.getTime() > 1000) {
+                  activityList.push({
+                    id: `upd-${profile.id}`,
+                    type: 'update',
+                    user: profile.full_name || 'Pengguna',
+                    timestamp: profile.updated_at,
+                    icon: Edit,
+                    color: 'text-purple-400',
+                  });
                 }
               }
-
-              playerStreaks[playerName] = {
-                name: playerName,
-                currentStreak,
-                type: latestResult ? 'win' : 'loss',
-              };
-            }
-          });
-        }
-
-        // Convert to array and sort
-        const performers: PerformanceMember[] = Object.values(playerStreaks).map((player, index) => ({
-          id: `${player.type}-${index}`,
-          name: player.name,
-          streak: player.currentStreak,
-          type: player.type,
-        }));
-
-        // Sort: wins first (highest to lowest), then losses (highest to lowest)
-        performers.sort((a, b) => {
-          if (a.type === b.type) {
-            return b.streak - a.streak;
-          }
-          return a.type === 'win' ? -1 : 1;
-        });
-
-        setTopPerformers(performers.slice(0, 5));
-
-        // Calculate most active players (most matches played)
-        const playerMatchCount: { [key: string]: number } = {};
-        if (matchesData && matchesData.length > 0) {
-          matchesData.forEach((match) => {
-            const players = [
-              match.team1_player1,
-              match.team1_player2,
-              match.team2_player1,
-              match.team2_player2,
-            ];
-
-            players.forEach((playerName) => {
-              if (!playerName) return;
-              playerMatchCount[playerName] = (playerMatchCount[playerName] || 0) + 1;
             });
-          });
+          }
+
+          // Sort by timestamp and take top 8
+          activityList.sort((a, b) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+          
+          if (mounted) {
+            setActivities(activityList.slice(0, 8));
+          }
+        } catch (err) {
+          console.error('Error fetching activities:', err);
+          if (mounted) {
+            setActivities([]);
+          }
         }
 
-        const activePlayers = Object.entries(playerMatchCount)
-          .map(([name, matches], index) => ({
-            id: `active-${index}`,
-            name,
-            matches,
-          }))
-          .sort((a, b) => b.matches - a.matches)
-          .slice(0, 5);
+        // Fetch real match data and calculate win/loss streaks with error handling
+        try {
+          const { data: matchesData } = await supabase
+            .from('matches')
+            .select('*')
+            .order('match_date', { ascending: false });
 
-        setMostActivePlayers(activePlayers);
+          const playerStreaks: { [key: string]: { name: string; currentStreak: number; type: 'win' | 'loss' } } = {};
+
+          if (matchesData && matchesData.length > 0) {
+            // Group matches by player
+            const playerMatches: { [key: string]: any[] } = {};
+
+            matchesData.forEach((match) => {
+              const players = [
+                match.team1_player1,
+                match.team1_player2,
+                match.team2_player1,
+                match.team2_player2,
+              ];
+
+              players.forEach((playerName) => {
+                if (!playerName) return;
+                
+                if (!playerMatches[playerName]) {
+                  playerMatches[playerName] = [];
+                }
+
+                const isTeam1 = playerName === match.team1_player1 || playerName === match.team1_player2;
+                const isWinner = (isTeam1 && match.winner === 'team1') || (!isTeam1 && match.winner === 'team2');
+
+                playerMatches[playerName].push({
+                  date: match.match_date || match.created_at,
+                  isWinner,
+                });
+              });
+            });
+
+            // Calculate current streak for each player
+            Object.keys(playerMatches).forEach((playerName) => {
+              const matches = playerMatches[playerName].sort((a, b) => 
+                new Date(b.date).getTime() - new Date(a.date).getTime()
+              );
+
+              if (matches.length > 0) {
+                let currentStreak = 1;
+                const latestResult = matches[0].isWinner;
+
+                for (let i = 1; i < matches.length; i++) {
+                  if (matches[i].isWinner === latestResult) {
+                    currentStreak++;
+                  } else {
+                    break;
+                  }
+                }
+
+                playerStreaks[playerName] = {
+                  name: playerName,
+                  currentStreak,
+                  type: latestResult ? 'win' : 'loss',
+                };
+              }
+            });
+          }
+
+          // Convert to array and sort
+          const performers: PerformanceMember[] = Object.values(playerStreaks).map((player, index) => ({
+            id: `${player.type}-${index}`,
+            name: player.name,
+            streak: player.currentStreak,
+            type: player.type,
+          }));
+
+          // Sort: wins first (highest to lowest), then losses (highest to lowest)
+          performers.sort((a, b) => {
+            if (a.type === b.type) {
+              return b.streak - a.streak;
+            }
+            return a.type === 'win' ? -1 : 1;
+          });
+
+          if (mounted) {
+            setTopPerformers(performers.slice(0, 5));
+          }
+
+          // Calculate most active players (most matches played)
+          const playerMatchCount: { [key: string]: number } = {};
+          if (matchesData && matchesData.length > 0) {
+            matchesData.forEach((match) => {
+              const players = [
+                match.team1_player1,
+                match.team1_player2,
+                match.team2_player1,
+                match.team2_player2,
+              ];
+
+              players.forEach((playerName) => {
+                if (!playerName) return;
+                playerMatchCount[playerName] = (playerMatchCount[playerName] || 0) + 1;
+              });
+            });
+          }
+
+          const activePlayers = Object.entries(playerMatchCount)
+            .map(([name, matches], index) => ({
+              id: `active-${index}`,
+              name,
+              matches,
+            }))
+            .sort((a, b) => b.matches - a.matches)
+            .slice(0, 5);
+
+          if (mounted) {
+            setMostActivePlayers(activePlayers);
+          }
+        } catch (err) {
+          console.error('Error fetching performance data:', err);
+          if (mounted) {
+            setTopPerformers([]);
+            setMostActivePlayers([]);
+          }
+        }
 
       } catch (error) {
-        console.error('Error fetching admin stats:', error);
+        console.error('Error in fetchAdminStats:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
-    // Only fetch when on the main admin page
-    if (pathname === '/admin') {
-      fetchAdminStats();
-    }
+    // Fetch data when component mounts or pathname changes
+    fetchAdminStats();
+
+    return () => {
+      mounted = false;
+    };
   }, [pathname]);
 
   const statsDisplay = [
