@@ -47,7 +47,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function fetchUserData() {
-      // Start fetching immediately, don't wait for auth
+      // Show loading immediately
       if (!user) {
         setLoading(false);
         return;

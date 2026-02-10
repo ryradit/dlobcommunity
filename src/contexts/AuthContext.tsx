@@ -155,6 +155,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initAuth();
+    
+    // Fallback: ensure loading becomes false after 2 seconds max
+    const fallbackTimer = setTimeout(() => {
+      if (mounted) {
+        setLoading(false);
+      }
+    }, 2000);
 
     // Listen for storage events (cross-tab/window auth sync)
     const handleStorageChange = (e: StorageEvent) => {
@@ -194,8 +201,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(currentSession?.user ?? null);
           
           if (currentSession?.user) {
-            // Sync avatar first (await to ensure completion)
-            await syncAvatarFromProfile(currentSession.user.id);
+            // Background tasks - don't await, let them complete asynchronously
+            syncAvatarFromProfile(currentSession.user.id);
             
             // Fetch role in background (non-blocking)
             fetchUserRole(currentSession.user.id).then((userRole) => {
@@ -224,7 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === 'USER_UPDATED') {
         if (mounted && currentSession?.user) {
           setUser(currentSession.user);
-          await syncAvatarFromProfile(currentSession.user.id);
+          syncAvatarFromProfile(currentSession.user.id);
         }
       }
     });
@@ -260,6 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
       window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('storage', handleStorageChange);

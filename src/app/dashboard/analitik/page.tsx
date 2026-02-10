@@ -137,9 +137,11 @@ export default function AnalitikPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    // Start fetching immediately, don't wait for auth
+    // Fetch data when user is available
     if (user) {
       fetchMatchStats();
+    } else {
+      setLoading(false);
     }
   }, [user, pathname]);
 

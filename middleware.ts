@@ -73,7 +73,9 @@ export async function middleware(request: NextRequest) {
 
   // Only refresh session if we don't have a valid token cookie
   // This reduces unnecessary auth checks on every page navigation
-  const hasAuthToken = request.cookies.get('sb-qtdayzlrwmzdezkavjpd-auth-token');
+  const cookieNames = request.cookies.getAll().map(c => c.name);
+  const hasAuthToken = cookieNames.some(name => name.includes('auth-token') && name.startsWith('sb-'));
+  
   if (hasAuthToken) {
     // Session exists, skip expensive getSession call for dashboard/admin routes
     if (path.startsWith('/dashboard') || path.startsWith('/admin')) {

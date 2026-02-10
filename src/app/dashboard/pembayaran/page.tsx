@@ -67,7 +67,7 @@ export default function PembayaranPage() {
   }, [user, pathname]);
 
   async function fetchPaymentData() {
-    // Start fetching immediately, don't wait for auth
+    // Show loading while fetching
     if (!user) {
       setLoading(false);
       return;
