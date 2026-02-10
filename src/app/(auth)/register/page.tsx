@@ -225,13 +225,39 @@ export default function RegisterPage() {
     }
 
     try {
-      await signUp(email, password, fullName);
+      const result = await signUp(email, password, fullName);
       setSuccess(true);
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
+      
+      // Check if email confirmation is required
+      if (result?.user && !result.session) {
+        setError('');
+        alert('Pendaftaran berhasil! Silakan cek email Anda untuk konfirmasi akun.');
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
+        // Auto login successful
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 1000);
+      }
     } catch (err: any) {
-      setError(err.message || 'Pendaftaran gagal');
+      console.error('Registration error:', err);
+      let errorMessage = 'Pendaftaran gagal';
+      
+      if (err.message) {
+        if (err.message.includes('already registered') || err.message.includes('already exists')) {
+          errorMessage = 'Email sudah terdaftar. Silakan gunakan email lain atau login.';
+        } else if (err.message.includes('invalid email')) {
+          errorMessage = 'Format email tidak valid';
+        } else if (err.message.includes('password')) {
+          errorMessage = 'Password terlalu lemah. Gunakan minimal 6 karakter.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

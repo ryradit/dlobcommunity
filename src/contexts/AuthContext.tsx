@@ -288,15 +288,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) throw error;
 
-    // Create profile
-    if (data.user) {
-      await supabase.from('profiles').insert({
-        id: data.user.id,
-        full_name: fullName,
-        email: email,
-        role: 'member',
-      });
-    }
+    // Profile is automatically created by database trigger (handle_new_user)
+    // No need to manually insert into profiles table
+    
+    return data;
   };
 
   // Sign in with email and password
