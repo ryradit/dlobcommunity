@@ -137,7 +137,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
                 width={64}
                 height={64}
                 className="object-contain brightness-0 invert"
-                style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%' }}
+                style={{ width: 'auto', height: 'auto' }}
               />
             </div>
           </div>

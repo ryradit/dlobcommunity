@@ -185,6 +185,56 @@ export default function LoginPage() {
   const orangeRef = useRef<HTMLDivElement>(null);
   const { signIn, signInWithGoogle } = useAuth();
 
+  // Check for OAuth errors from URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlError = searchParams.get('error');
+    const errorDescription = searchParams.get('error_description');
+    const description = searchParams.get('description');
+    const code = searchParams.get('code');
+    
+    // Only process if there's actually an error parameter
+    if (urlError === null) {
+      // No error parameter at all - normal page load or OAuth with code
+      return;
+    }
+    
+    // Error parameter exists - check if it has content
+    // Handle empty or whitespace-only error parameters
+    if (urlError === '' || urlError.trim() === '') {
+      console.warn('⚠️ [Login] Empty error parameter - likely redirect configuration issue');
+      setError('Terjadi kesalahan saat login. Silakan coba lagi atau gunakan email & password.');
+      window.history.replaceState({}, '', '/login');
+      return;
+    }
+    
+    // Valid error with content
+    const errorMessages: Record<string, string> = {
+      'access_denied': 'Login dibatalkan. Anda menolak akses ke Google.',
+      'auth': 'Autentikasi gagal. Silakan coba lagi.',
+      'server_error': 'Terjadi kesalahan server. Silakan coba lagi.',
+      'no_session': 'Sesi tidak dapat dibuat. Silakan coba lagi.',
+      'missing_code': 'Kode autentikasi tidak ditemukan. Silakan coba lagi.',
+      'unauthorized_client': 'Aplikasi tidak diotorisasi. Hubungi administrator.',
+      'invalid_request': 'Permintaan tidak valid. Silakan coba lagi.',
+      'redirect_uri_mismatch': 'URL redirect tidak cocok. Hubungi administrator.',
+      'unknown_oauth_error': 'Terjadi kesalahan OAuth yang tidak diketahui.',
+    };
+    
+    console.error('❌ [Login] OAuth error:', urlError, {
+      errorDescription: errorDescription,
+      description: description,
+    });
+    
+    const errorMessage = errorMessages[urlError] || 
+                         errorDescription || 
+                         description || 
+                         `Login gagal: ${urlError}. Silakan coba lagi.`;
+    
+    setError(errorMessage);
+    window.history.replaceState({}, '', '/login');
+  }, []);
+
   useEffect(() => {
     const randomImage = portraits[Math.floor(Math.random() * portraits.length)];
     setBgImage(`/images/potrait/${randomImage}`);
@@ -296,8 +346,31 @@ export default function LoginPage() {
 
     try {
       await signInWithGoogle();
+      // Don't set loading to false here - user will be redirected
     } catch (err: any) {
-      setError(err.message || 'Google login failed');
+      console.error('❌ [Login] Google login error:', {
+        message: err?.message,
+        name: err?.name,
+        status: err?.status,
+        details: err,
+      });
+      
+      let errorMessage = 'Login dengan Google gagal. Silakan coba lagi.';
+      
+      // Handle specific error types
+      if (err?.message) {
+        if (err.message.includes('popup')) {
+          errorMessage = 'Pop-up diblokir. Mohon izinkan pop-up untuk situs ini.';
+        } else if (err.message.includes('network')) {
+          errorMessage = 'Koneksi internet bermasalah. Periksa koneksi Anda.';
+        } else if (err.message.includes('unauthorized')) {
+          errorMessage = 'Aplikasi tidak diotorisasi. Hubungi administrator.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };

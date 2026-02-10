@@ -11,25 +11,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   
   useEffect(() => {
-    // Only redirect if loading is complete and user is definitely not authorized
-    if (!loading) {
-      if (!user) {
+    // Non-blocking redirect - only after 500ms to avoid flash
+    const timer = setTimeout(() => {
+      if (!loading && !user) {
         router.replace('/login');
-      } else if (isAdmin && viewAs === 'admin') {
+      } else if (!loading && isAdmin && viewAs === 'admin') {
         router.replace('/admin');
       }
-    }
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [user, isAdmin, viewAs, loading, router]);
 
-  // Show content immediately if user exists, only block if no user and loading complete
-  if (!loading && !user) {
-    return null;
-  }
-
-  if (!loading && isAdmin && viewAs === 'admin') {
-    return null;
-  }
-
+  // Always show content immediately for fast perceived performance
   return (
     <div className="flex min-h-screen bg-zinc-950">
       <DashboardSidebar isAdmin={false} />

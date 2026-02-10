@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
 import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock } from 'lucide-react';
+import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 
 interface MatchMember {
   id: string;
@@ -45,17 +47,16 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function fetchUserData() {
-      // Wait for auth to complete before fetching
-      if (authLoading) return;
-      
+      // Start fetching immediately, don't wait for auth
       if (!user) {
         setLoading(false);
         return;
       }
 
       setLoading(true);
+      
       try {
-        // Get user profile to get full name
+        // First, get user profile for the name
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name, email')
@@ -65,39 +66,66 @@ export default function DashboardPage() {
         const name = profile?.full_name || profile?.email?.split('@')[0] || '';
         setMemberName(name);
 
-        // Fetch user's matches
-        const { data: matchesData, error: matchesError } = await supabase
-          .from('match_members')
-          .select(`
-            *,
-            matches (
-              match_number,
-              created_at,
-              shuttlecock_count
-            )
-          `)
-          .eq('member_name', name)
-          .order('created_at', { ascending: false });
-
-        if (!matchesError) {
-          setMyMatches(matchesData || []);
+        if (!name) {
+          setLoading(false);
+          return;
         }
 
-        // Fetch current membership
+        // Fetch matches and membership in parallel with caching
         const now = new Date();
         const currentMonth = now.getMonth() + 1;
         const currentYear = now.getFullYear();
 
-        const { data: membershipData, error: membershipError } = await supabase
-          .from('memberships')
-          .select('*')
-          .eq('member_name', name)
-          .eq('month', currentMonth)
-          .eq('year', currentYear)
-          .maybeSingle();
+        const [matchesResult, membershipResult] = await Promise.allSettled([
+          cachedQuery(
+            `member-matches-${name}`,
+            async () => {
+              const result = await supabase
+                .from('match_members')
+                .select(`
+                  *,
+                  matches (
+                    match_number,
+                    created_at,
+                    shuttlecock_count
+                  )
+                `)
+                .eq('member_name', name)
+                .order('created_at', { ascending: false });
+              return result;
+            },
+            30000 // 30 seconds cache
+          ),
+          cachedQuery(
+            `member-membership-${name}-${currentMonth}-${currentYear}`,
+            async () => {
+              const result = await supabase
+                .from('memberships')
+                .select('*')
+                .eq('member_name', name)
+                .eq('month', currentMonth)
+                .eq('year', currentYear)
+                .maybeSingle();
+              return result;
+            },
+            60000 // 1 minute cache for membership
+          ),
+        ]);
 
-        if (!membershipError) {
-          setMyMembership(membershipData);
+        // Process matches
+        if (matchesResult.status === 'fulfilled') {
+          const result = matchesResult.value as { data: any[] | null; error: any };
+          if (!result.error) {
+            setMyMatches(result.data || []);
+          }
+        }
+
+        // Process membership
+        if (membershipResult.status === 'fulfilled') {
+          const result = membershipResult.value as { data: any | null; error: any };
+          if (!result.error) {
+            setMyMembership(result.data);
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -107,34 +135,38 @@ export default function DashboardPage() {
     }
 
     fetchUserData();
-  }, [user, authLoading, pathname]);
+  }, [user, pathname]);
 
-  // Calculate stats
-  const totalPending = myMatches
-    .filter(m => m.payment_status === 'pending')
-    .reduce((sum, m) => sum + m.total_amount, 0);
+  // Calculate stats - memoized to avoid recalculation on every render
+  const stats = useMemo(() => {
+    const totalPending = myMatches
+      .filter(m => m.payment_status === 'pending')
+      .reduce((sum, m) => sum + m.total_amount, 0);
 
-  const totalPaid = myMatches
-    .filter(m => m.payment_status === 'paid')
-    .reduce((sum, m) => sum + m.total_amount, 0);
+    const totalPaid = myMatches
+      .filter(m => m.payment_status === 'paid')
+      .reduce((sum, m) => sum + m.total_amount, 0);
 
-  const pendingCount = myMatches.filter(m => m.payment_status === 'pending').length;
-  const paidCount = myMatches.filter(m => m.payment_status === 'paid').length;
+    const pendingCount = myMatches.filter(m => m.payment_status === 'pending').length;
+    const paidCount = myMatches.filter(m => m.payment_status === 'paid').length;
+
+    return { totalPending, totalPaid, pendingCount, paidCount };
+  }, [myMatches]);
 
   const statsDisplay = [
     {
       label: 'Total Pending',
-      value: loading ? '...' : `Rp ${totalPending.toLocaleString('id-ID')}`,
+      value: loading ? '...' : `Rp ${stats.totalPending.toLocaleString('id-ID')}`,
       icon: Clock,
       color: 'from-yellow-500 to-yellow-600',
-      subtext: `${pendingCount} matches`,
+      subtext: `${stats.pendingCount} matches`,
     },
     {
       label: 'Total Paid',
-      value: loading ? '...' : `Rp ${totalPaid.toLocaleString('id-ID')}`,
+      value: loading ? '...' : `Rp ${stats.totalPaid.toLocaleString('id-ID')}`,
       icon: CheckCircle,
       color: 'from-green-500 to-green-600',
-      subtext: `${paidCount} matches`,
+      subtext: `${stats.paidCount} matches`,
     },
     {
       label: 'Membership',
@@ -162,24 +194,29 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {statsDisplay.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={stat.label}
-              className="bg-zinc-900 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-colors"
-            >
-              <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${stat.color} mb-4`}>
-                <Icon className="w-6 h-6 text-white" />
+        {loading ? (
+          // Show skeleton loading states
+          [...Array(4)].map((_, i) => <StatCardSkeleton key={i} />)
+        ) : (
+          statsDisplay.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div
+                key={stat.label}
+                className="bg-zinc-900 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-colors"
+              >
+                <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${stat.color} mb-4`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
+                <div className="text-sm text-zinc-300">{stat.label}</div>
+                {stat.subtext && (
+                  <div className="text-xs text-zinc-400 mt-1">{stat.subtext}</div>
+                )}
               </div>
-              <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-              <div className="text-sm text-zinc-300">{stat.label}</div>
-              {stat.subtext && (
-                <div className="text-xs text-zinc-400 mt-1">{stat.subtext}</div>
-              )}
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {/* Membership Status */}
@@ -223,7 +260,9 @@ export default function DashboardPage() {
         </h2>
         
         {loading ? (
-          <p className="text-zinc-300">Memuat...</p>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => <MatchCardSkeleton key={i} />)}
+          </div>
         ) : myMatches.length === 0 ? (
           <p className="text-zinc-300">Belum ada pertandingan.</p>
         ) : (

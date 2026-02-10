@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navbar() {
@@ -30,7 +30,7 @@ export default function Navbar() {
               width={70}
               height={70}
               className="invert"
-              style={{ width: 'auto', height: 'auto', maxWidth: '70px', maxHeight: '70px' }}
+              style={{ width: 'auto', height: 'auto' }}
               priority
             />
           </Link>

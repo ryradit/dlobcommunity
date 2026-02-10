@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { TrendingUp, Users, Trophy, Edit, Save, X } from 'lucide-react';
+import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 
 interface Match {
   id: string;
@@ -53,29 +55,47 @@ export default function AdminAnalitikPage() {
 
   async function fetchMatches() {
     try {
-      const { data: matchesData, error } = await supabase
-        .from('matches')
-        .select('*')
-        .order('match_number', { ascending: false });
+      setLoading(true);
+      
+      // Fetch matches with caching
+      const matchesResult = await cachedQuery(
+        'admin-analytics-matches',
+        async () => {
+          const result = await supabase
+            .from('matches')
+            .select('*')
+            .order('match_number', { ascending: false });
+          return result;
+        },
+        30000 // 30 seconds cache
+      );
+      
+      const matchesRes = matchesResult as { data: Match[] | null; error: any };
+      if (!matchesRes.error && matchesRes.data) {
+        setMatches(matchesRes.data);
 
-      if (error) throw error;
+        // Fetch match members in parallel for all matches
+        const memberQueries = matchesRes.data.map(match =>
+          supabase
+            .from('match_members')
+            .select('id, member_name, match_id')
+            .eq('match_id', match.id)
+        );
+        
+        const membersResults = await Promise.allSettled(memberQueries);
+        const membersMap: Record<string, MatchMember[]> = {};
+        
+        membersResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const res = result.value as { data: MatchMember[] | null; error: any };
+            if (!res.error && res.data) {
+              membersMap[matchesRes.data![index].id] = res.data;
+            }
+          }
+        });
 
-      setMatches(matchesData || []);
-
-      // Fetch match members for each match
-      const membersMap: Record<string, MatchMember[]> = {};
-      for (const match of matchesData || []) {
-        const { data: members, error: membersError } = await supabase
-          .from('match_members')
-          .select('id, member_name, match_id')
-          .eq('match_id', match.id);
-
-        if (!membersError && members) {
-          membersMap[match.id] = members;
-        }
+        setMatchMembers(membersMap);
       }
-
-      setMatchMembers(membersMap);
     } catch (error) {
       console.error('Error fetching matches:', error);
     } finally {

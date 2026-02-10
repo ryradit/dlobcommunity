@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save } from 'lucide-react';
+import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 
 interface Match {
   id: string;
@@ -90,10 +92,115 @@ export default function AdminPembayaranPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      await fetchMemberships();
+      setLoading(true);
+      
+      // Fetch all data in parallel for faster loading
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+      
+      const [matchesResult, membershipsResult, profilesResult] = await Promise.allSettled([
+        // Fetch matches with caching
+        cachedQuery(
+          'admin-payment-matches',
+          async () => {
+            const result = await supabase
+              .from('matches')
+              .select('*')
+              .order('match_number', { ascending: false });
+            return result;
+          },
+          30000 // 30 seconds cache
+        ),
+        // Fetch memberships with caching
+        cachedQuery(
+          `admin-memberships-${currentMonth}-${currentYear}`,
+          async () => {
+            const result = await supabase
+              .from('memberships')
+              .select('*')
+              .eq('month', currentMonth)
+              .eq('year', currentYear)
+              .order('created_at', { ascending: false });
+            return result;
+          },
+          30000
+        ),
+        // Fetch all profiles for member list
+        cachedQuery(
+          'admin-all-profiles',
+          async () => {
+            const result = await supabase
+              .from('profiles')
+              .select('id, full_name')
+              .order('full_name', { ascending: true });
+            return result;
+          },
+          60000 // 1 minute cache
+        ),
+      ]);
+      
+      // Process matches
+      if (matchesResult.status === 'fulfilled') {
+        const matchesRes = matchesResult.value as { data: Match[] | null; error: any };
+        if (!matchesRes.error && matchesRes.data) {
+          setMatches(matchesRes.data);
+          
+          // Fetch match members in parallel for all matches
+          const memberQueries = matchesRes.data.map(match =>
+            supabase
+              .from('match_members')
+              .select('*')
+              .eq('match_id', match.id)
+          );
+          
+          const membersResults = await Promise.allSettled(memberQueries);
+          const membersMap: Record<string, MatchMember[]> = {};
+          
+          membersResults.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+              const res = result.value as { data: MatchMember[] | null; error: any };
+              if (!res.error && res.data) {
+                membersMap[matchesRes.data![index].id] = res.data;
+              }
+            }
+          });
+          
+          setMatchMembers(membersMap);
+        }
+      }
+      
+      // Process memberships
+      if (membershipsResult.status === 'fulfilled') {
+        const membershipsRes = membershipsResult.value as { data: Membership[] | null; error: any };
+        if (!membershipsRes.error && membershipsRes.data) {
+          setMemberships(membershipsRes.data);
+          
+          const map: Record<string, Membership> = {};
+          membershipsRes.data.forEach((m) => {
+            map[m.member_name.toLowerCase()] = m;
+          });
+          setMembershipMap(map);
+        }
+      }
+      
+      // Process profiles for member list
+      if (profilesResult.status === 'fulfilled') {
+        const profilesRes = profilesResult.value as { data: Array<{ id: string; full_name: string }> | null; error: any };
+        if (!profilesRes.error && profilesRes.data) {
+          setAllMembers(
+            profilesRes.data.map((p) => ({
+              id: p.id,
+              name: p.full_name || 'Unnamed',
+            }))
+          );
+        }
+      }
+      
+      // Recalculate attendance fees after data is loaded
       await recalculateAttendanceFees();
-      await fetchMatches();
-      await fetchAllMembers();
+      
+      setLoading(false);
     };
     loadData();
   }, [pathname]);
@@ -188,8 +295,6 @@ export default function AdminPembayaranPage() {
 
         if (updateError) {
           console.error('Error recalculating attendance fees:', updateError);
-        } else {
-          console.log('Recalculated attendance fees for', updated?.length || 0, 'match members');
         }
       }
     } catch (error) {
@@ -547,8 +652,6 @@ export default function AdminPembayaranPage() {
       // If status is paid, update all pending match_members records for this member
       // to set attendance_fee to 0 and has_membership to true
       if (status === 'paid' && membership) {
-        console.log('Updating matches for member:', membership.member_name);
-        
         const { data: updatedMembers, error: updateMatchesError } = await supabase
           .from('match_members')
           .update({
@@ -562,8 +665,6 @@ export default function AdminPembayaranPage() {
         if (updateMatchesError) {
           console.error('Error updating match members:', updateMatchesError);
           alert('Gagal mengupdate biaya kehadiran untuk pertandingan');
-        } else {
-          console.log('Updated match members:', updatedMembers);
         }
       }
 

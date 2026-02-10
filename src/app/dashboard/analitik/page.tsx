@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { Trophy, Target, TrendingUp, Award, Calendar, Users, Filter, X, Flame, BarChart3, UserCheck, Crown, Sparkles, TrendingDown, AlertCircle, Brain, Info } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { StatCardSkeleton, ChartSkeleton } from '@/components/LoadingSkeletons';
 
 interface MatchStats {
   totalMatches: number;
@@ -135,10 +137,11 @@ export default function AnalitikPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) {
+    // Start fetching immediately, don't wait for auth
+    if (user) {
       fetchMatchStats();
     }
-  }, [user, authLoading, pathname]);
+  }, [user, pathname]);
 
   useEffect(() => {
     applyFilters();
@@ -146,23 +149,57 @@ export default function AnalitikPage() {
 
   async function fetchMatchStats() {
     try {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user?.id)
-        .single();
-
-      if (!profileData) return;
-
-      const memberName = profileData.full_name;
-
-      const { data: matchesData, error } = await supabase
-        .from('matches')
-        .select('*')
-        .not('winner', 'is', null)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      setLoading(true);
+      
+      // Fetch profile and matches in parallel with caching
+      const [profileResult, matchesResult] = await Promise.allSettled([
+        cachedQuery(
+          `member-profile-${user?.id}`,
+          async () => {
+            const result = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', user?.id)
+              .single();
+            return result;
+          },
+          60000 // 1 minute cache
+        ),
+        cachedQuery(
+          'member-all-matches',
+          async () => {
+            const result = await supabase
+              .from('matches')
+              .select('*')
+              .not('winner', 'is', null)
+              .order('created_at', { ascending: false });
+            return result;
+          },
+          30000 // 30 seconds cache
+        ),
+      ]);
+      
+      let memberName = '';
+      let matchesData: any[] = [];
+      
+      if (profileResult.status === 'fulfilled') {
+        const res = profileResult.value as { data: { full_name: string } | null; error: any };
+        if (!res.error && res.data) {
+          memberName = res.data.full_name;
+        }
+      }
+      
+      if (!memberName) {
+        setLoading(false);
+        return;
+      }
+      
+      if (matchesResult.status === 'fulfilled') {
+        const res = matchesResult.value as { data: any[] | null; error: any };
+        if (!res.error && res.data) {
+          matchesData = res.data;
+        }
+      }
 
       const memberMatches = matchesData?.filter(match => {
         return match.team1_player1 === memberName ||

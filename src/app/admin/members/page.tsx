@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
 import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown } from 'lucide-react';
+import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import Image from 'next/image';
 
 interface Member {
@@ -41,60 +43,73 @@ export default function AdminMembersPage() {
 
   async function fetchMembers() {
     try {
-      // Fetch profiles data
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesData) {
-        // Fetch auth users to get metadata (including avatar_url)
-        const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
-        
-        // Fetch active memberships for current month
-        const currentDate = new Date();
-        const currentMonth = currentDate.getMonth() + 1;
-        const currentYear = currentDate.getFullYear();
-        
-        const { data: membershipsData } = await supabase
-          .from('memberships')
-          .select('member_name, payment_status')
-          .eq('month', currentMonth)
-          .eq('year', currentYear)
-          .eq('payment_status', 'paid');
-        
-        // Create a Set of member names with active membership
-        const membershipNames = new Set(
-          membershipsData?.map(m => m.member_name.toLowerCase()) || []
-        );
-        
-        if (!authError && users) {
-          // Merge auth metadata with profiles data and membership status
-          const mergedData = profilesData.map(profile => {
-            const authUser = users.find(u => u.id === profile.id);
-            const fullName = profile.full_name || authUser?.user_metadata?.full_name || '';
-            const hasMembership = membershipNames.has(fullName.toLowerCase());
-            
-            return {
-              ...profile,
-              avatar_url: profile.avatar_url || authUser?.user_metadata?.avatar_url,
-              full_name: fullName,
-              phone: profile.phone || authUser?.user_metadata?.phone,
-              has_membership: hasMembership,
-            };
-          });
-          setMembers(mergedData);
-        } else {
-          // Just merge membership status with profiles
-          const mergedData = profilesData.map(profile => {
-            const hasMembership = membershipNames.has((profile.full_name || '').toLowerCase());
-            return {
-              ...profile,
-              has_membership: hasMembership,
-            };
-          });
-          setMembers(mergedData);
+      setLoading(true);
+      
+      // Get current month/year for membership check
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentYear = currentDate.getFullYear();
+      
+      // Fetch profiles and memberships in parallel (skip slow auth.admin call)
+      const [profilesResult, membershipsResult] = await Promise.allSettled([
+        // Fetch profiles with caching
+        cachedQuery(
+          'admin-profiles-list',
+          async () => {
+            const result = await supabase
+              .from('profiles')
+              .select('*')
+              .order('created_at', { ascending: false });
+            return result;
+          },
+          30000 // 30 seconds cache
+        ),
+        // Fetch active memberships
+        cachedQuery(
+          `admin-active-memberships-${currentMonth}-${currentYear}`,
+          async () => {
+            const result = await supabase
+              .from('memberships')
+              .select('member_name, payment_status')
+              .eq('month', currentMonth)
+              .eq('year', currentYear)
+              .eq('payment_status', 'paid');
+            return result;
+          },
+          30000
+        ),
+      ]);
+      
+      // Process results
+      let profilesData: any[] = [];
+      let membershipNames = new Set<string>();
+      
+      if (profilesResult.status === 'fulfilled') {
+        const res = profilesResult.value as { data: any[] | null; error: any };
+        if (!res.error && res.data) {
+          profilesData = res.data;
         }
+      }
+      
+      if (membershipsResult.status === 'fulfilled') {
+        const res = membershipsResult.value as { data: any[] | null; error: any };
+        if (!res.error && res.data) {
+          membershipNames = new Set(
+            res.data.map((m: any) => m.member_name.toLowerCase())
+          );
+        }
+      }
+      
+      // Merge membership status with profiles (avatar_url already in profiles table)
+      if (profilesData.length > 0) {
+        const mergedData = profilesData.map(profile => {
+          const hasMembership = membershipNames.has((profile.full_name || '').toLowerCase());
+          return {
+            ...profile,
+            has_membership: hasMembership,
+          };
+        });
+        setMembers(mergedData);
       }
     } catch (error) {
       console.error('Error fetching members:', error);

@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle } from 'lucide-react';
+import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 
 interface MatchMember {
   id: string;
@@ -62,99 +64,142 @@ export default function PembayaranPage() {
 
   useEffect(() => {
     fetchPaymentData();
-  }, [user, authLoading, pathname]);
+  }, [user, pathname]);
 
   async function fetchPaymentData() {
-    if (authLoading || !user) {
+    // Start fetching immediately, don't wait for auth
+    if (!user) {
       setLoading(false);
       return;
     }
 
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, email')
-        .eq('id', user.id)
-        .single();
-
-      const name = profile?.full_name || profile?.email?.split('@')[0] || '';
-      setMemberName(name);
-
-      // Fetch all matches (including paid ones for history)
-      const { data: allMatchesData } = await supabase
-        .from('match_members')
-        .select(`
-          *,
-          matches (
-            match_number,
-            created_at,
-            shuttlecock_count
-          )
-        `)
-        .eq('member_name', name)
-        .order('created_at', { ascending: false });
-
-      // Remove duplicates by match_id (prioritize entries with payment_proof)
-      const uniqueAllMatches = allMatchesData?.reduce((acc: MatchMember[], current) => {
-        const existingIndex = acc.findIndex(item => item.match_id === current.match_id);
-        if (existingIndex === -1) {
-          acc.push(current);
-        } else {
-          // Replace if current has payment_proof and existing doesn't
-          if (current.payment_proof && !acc[existingIndex].payment_proof) {
-            acc[existingIndex] = current;
-          }
-        }
-        return acc;
-      }, []) || [];
+      setLoading(true);
       
-      setAllMatches(uniqueAllMatches);
-
-      // Fetch pending matches
-      const { data: matchesData } = await supabase
-        .from('match_members')
-        .select(`
-          *,
-          matches (
-            match_number,
-            created_at,
-            shuttlecock_count
-          )
-        `)
-        .eq('member_name', name)
-        .eq('payment_status', 'pending')
-        .order('created_at', { ascending: false });
-
-      // Remove duplicates by match_id (prioritize entries with payment_proof)
-      const uniqueMatches = matchesData?.reduce((acc: MatchMember[], current) => {
-        const existingIndex = acc.findIndex(item => item.match_id === current.match_id);
-        if (existingIndex === -1) {
-          acc.push(current);
-        } else {
-          // Replace if current has payment_proof and existing doesn't
-          if (current.payment_proof && !acc[existingIndex].payment_proof) {
-            acc[existingIndex] = current;
-          }
-        }
-        return acc;
-      }, []) || [];
-
-      setMyMatches(uniqueMatches);
-
-      // Fetch current month membership
+      // Get current month/year
       const now = new Date();
       const currentMonth = now.getMonth() + 1;
       const currentYear = now.getFullYear();
-
-      const { data: membershipData } = await supabase
-        .from('memberships')
-        .select('*')
-        .eq('member_name', name)
-        .eq('month', currentMonth)
-        .eq('year', currentYear)
-        .maybeSingle();
-
-      setMyMembership(membershipData);
+      
+      // Fetch all data in parallel with caching
+      const [profileResult, matchesResult, membershipResult] = await Promise.allSettled([
+        // Fetch profile
+        cachedQuery(
+          `member-payment-profile-${user.id}`,
+          async () => {
+            const result = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', user.id)
+              .single();
+            return result;
+          },
+          60000 // 1 minute cache
+        ),
+        // Fetch all matches
+        cachedQuery(
+          `member-payment-matches-${user.id}`,
+          async () => {
+            // First get profile to get member name
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', user.id)
+              .single();
+            
+            const name = profile?.full_name || profile?.email?.split('@')[0] || '';
+            
+            const result = await supabase
+              .from('match_members')
+              .select(`
+                *,
+                matches (
+                  match_number,
+                  created_at,
+                  shuttlecock_count
+                )
+              `)
+              .eq('member_name', name)
+              .order('created_at', { ascending: false });
+            return result;
+          },
+          30000 // 30 seconds cache
+        ),
+        // Fetch membership
+        cachedQuery(
+          `member-payment-membership-${user.id}-${currentMonth}-${currentYear}`,
+          async () => {
+            // Get profile first
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', user.id)
+              .single();
+            
+            const name = profile?.full_name || profile?.email?.split('@')[0] || '';
+            
+            const result = await supabase
+              .from('memberships')
+              .select('*')
+              .eq('member_name', name)
+              .eq('month', currentMonth)
+              .eq('year', currentYear)
+              .maybeSingle();
+            return result;
+          },
+          60000 // 1 minute cache
+        ),
+      ]);
+      
+      let name = '';
+      
+      // Process profile
+      if (profileResult.status === 'fulfilled') {
+        const res = profileResult.value as { data: { full_name: string; email: string } | null; error: any };
+        if (!res.error && res.data) {
+          name = res.data.full_name || res.data.email?.split('@')[0] || '';
+          setMemberName(name);
+        }
+      }
+      
+      if (!name) {
+        setLoading(false);
+        return;
+      }
+      
+      // Process matches
+      if (matchesResult.status === 'fulfilled') {
+        const res = matchesResult.value as { data: MatchMember[] | null; error: any };
+        if (!res.error && res.data) {
+          // Remove duplicates by match_id (prioritize entries with payment_proof)
+          const uniqueAllMatches = res.data.reduce((acc: MatchMember[], current) => {
+            const existingIndex = acc.findIndex(item => item.match_id === current.match_id);
+            if (existingIndex === -1) {
+              acc.push(current);
+            } else {
+              // Replace if current has payment_proof and existing doesn't
+              if (current.payment_proof && !acc[existingIndex].payment_proof) {
+                acc[existingIndex] = current;
+              }
+            }
+            return acc;
+          }, []);
+          
+          setAllMatches(uniqueAllMatches);
+          
+          // Filter pending matches
+          const pendingMatches = uniqueAllMatches.filter(m => m.payment_status === 'pending');
+          setMyMatches(pendingMatches);
+        }
+      }
+      
+      // Process membership
+      if (membershipResult.status === 'fulfilled') {
+        const res = membershipResult.value as { data: Membership | null; error: any };
+        if (!res.error) {
+          setMyMembership(res.data);
+        }
+      }
     } catch (error) {
       console.error('Error fetching payment data:', error);
     } finally {
@@ -264,19 +309,10 @@ export default function PembayaranPage() {
           .eq('id', selectedPayment.id)
           .single();
 
-        console.log('Selected payment ID:', selectedPayment.id);
-        console.log('Fetched member data:', memberData);
-
         if (fetchError || !memberData) {
           console.error('Error fetching member data:', fetchError);
           throw fetchError || new Error('Payment record not found');
         }
-
-        // Try to update ALL entries for this member in this match
-        console.log('Attempting to update records where:', {
-          match_id: memberData.match_id,
-          member_name: memberData.member_name,
-        });
 
         // Get all matching records first to see what we're updating
         const { data: matchingRecords } = await supabase
@@ -284,8 +320,6 @@ export default function PembayaranPage() {
           .select('id, member_name, payment_proof')
           .eq('match_id', memberData.match_id)
           .eq('member_name', memberData.member_name);
-
-        console.log('Found matching records:', matchingRecords);
 
         // If no records found, try updating just the original one
         if (!matchingRecords || matchingRecords.length === 0) {
@@ -296,7 +330,6 @@ export default function PembayaranPage() {
             .eq('id', selectedPayment.id)
             .select();
 
-          console.log('Direct ID update result:', updateData);
           if (error) throw error;
           if (!updateData || updateData.length === 0) {
             throw new Error('Failed to update payment proof - check RLS policies');
@@ -310,7 +343,6 @@ export default function PembayaranPage() {
             .eq('member_name', memberData.member_name)
             .select();
 
-          console.log(`Updated ${updateData?.length || 0} record(s)`);
           if (error) throw error;
         }
       } else {
@@ -324,7 +356,6 @@ export default function PembayaranPage() {
           console.error('Database update error:', error);
           throw error;
         }
-        console.log('Payment proof updated:', updateData);
       }
 
       alert('Bukti pembayaran berhasil diupload! Menunggu verifikasi admin.');

@@ -48,13 +48,6 @@ export default function SettingsPage() {
     }
   }, [user?.user_metadata?.avatar_url]);
 
-  // Debug: Log achievements data
-  useEffect(() => {
-    console.log('User data:', user);
-    console.log('Achievements from user_metadata:', user?.user_metadata?.achievements);
-    console.log('Is achievements array?', Array.isArray(user?.user_metadata?.achievements));
-  }, [user]);
-
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;

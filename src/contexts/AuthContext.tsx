@@ -117,21 +117,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const initAuth = async () => {
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (mounted) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
           
-          // Fetch role and sync avatar in background (non-blocking)
+          // Set loading to false immediately to show content fast
+          setLoading(false);
+          
+          // Fetch role and sync avatar in background (completely non-blocking)
           if (currentSession?.user) {
-            // Sync avatar first (await to ensure it completes)
-            await syncAvatarFromProfile(currentSession.user.id);
+            // Background tasks - don't await, let them complete later
+            syncAvatarFromProfile(currentSession.user.id);
             
-            // Set loading to false after avatar sync
-            setLoading(false);
-            
-            // Then fetch role
             fetchUserRole(currentSession.user.id).then((userRole) => {
               if (mounted) {
                 setRole(userRole);
@@ -145,13 +144,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
               }
             });
-          } else {
-            // Set loading to false if no user
-            setLoading(false);
           }
         }
       } catch (error) {
-        console.error('Auth init error:', error);
+        console.error('❗ [AuthContext] Auth init error:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -160,10 +156,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    // Listen for auth changes (login/logout only)
+    // Listen for storage events (cross-tab/window auth sync)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'sb-auth-token' || e.key?.startsWith('sb-')) {
+        // Re-fetch session when localStorage changes
+        supabase.auth.getSession().then(({ data: { session: newSession } }) => {
+          if (mounted) {
+            setSession(newSession);
+            setUser(newSession?.user ?? null);
+            
+            if (newSession?.user) {
+              syncAvatarFromProfile(newSession.user.id);
+              fetchUserRole(newSession.user.id).then((userRole) => {
+                if (mounted) {
+                  setRole(userRole);
+                }
+              });
+            } else {
+              setRole('member');
+              setIsAdmin(false);
+              setIsMember(true);
+              setViewAs('member');
+            }
+          }
+        });
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Listen for auth changes - handle ALL events for cross-tab sync
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      // Only handle sign in and sign out events
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+      // Handle all auth events for cross-tab synchronization
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (mounted) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
@@ -185,6 +210,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
               }
             });
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setRole('member');
+          setIsAdmin(false);
+          setIsMember(true);
+          setViewAs('member');
+        }
+      } else if (event === 'USER_UPDATED') {
+        if (mounted && currentSession?.user) {
+          setUser(currentSession.user);
+          await syncAvatarFromProfile(currentSession.user.id);
+        }
+      }
+    });
+
+    // Listen for window focus to check session (cross-tab sync)
+    const handleWindowFocus = async () => {
+      const { data: { session: focusSession } } = await supabase.auth.getSession();
+      
+      if (mounted) {
+        const hadUser = !!user;
+        const hasUserNow = !!focusSession?.user;
+        
+        // Session state changed while tab was in background
+        if (hadUser !== hasUserNow) {
+          setSession(focusSession);
+          setUser(focusSession?.user ?? null);
+          
+          if (focusSession?.user) {
+            await syncAvatarFromProfile(focusSession.user.id);
+            const userRole = await fetchUserRole(focusSession.user.id);
+            setRole(userRole);
           } else {
             setRole('member');
             setIsAdmin(false);
@@ -193,11 +254,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       }
-    });
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -250,14 +315,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign in with Google
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          skipBrowserRedirect: false,
+        },
+      });
 
-    if (error) throw error;
+      if (error) {
+        console.error('❌ [Google OAuth] Error:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          details: error,
+        });
+        throw error;
+      }
+    } catch (err: any) {
+      console.error('❌ [Google OAuth] Unexpected error:', err);
+      throw err;
+    }
   };
 
   // Sign out
