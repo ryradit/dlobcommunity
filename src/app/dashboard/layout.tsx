@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
+import FloatingAIChat from '@/components/FloatingAIChat';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, viewAs, loading } = useAuth();
@@ -30,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 bg-zinc-950" key={`member-${pathname}`}>
         {children}
       </div>
+      <FloatingAIChat />
     </div>
   );
 }

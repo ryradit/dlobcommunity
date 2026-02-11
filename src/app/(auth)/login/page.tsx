@@ -614,6 +614,12 @@ export default function LoginPage() {
               </svg>
               Google
             </button>
+
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-3">
+              <p className="text-xs text-blue-200 text-center">
+                💡 <strong>Tips:</strong> Jika Anda mendaftar menggunakan Google, gunakan tombol Google untuk login.
+              </p>
+            </div>
           </form>
         </div>
       </div>

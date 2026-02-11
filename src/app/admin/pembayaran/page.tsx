@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save } from 'lucide-react';
+import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 
 interface Match {
@@ -586,24 +586,55 @@ export default function AdminPembayaranPage() {
     }
   }
 
+  async function deleteMatch(matchId: string, matchNumber: number) {
+    if (!confirm(`Hapus seluruh Pertandingan #${matchNumber}? Tindakan ini tidak dapat dibatalkan dan akan menghapus semua entri pembayaran terkait.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/matches/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Gagal menghapus pertandingan');
+      }
+      
+      alert('Pertandingan berhasil dihapus');
+      fetchMatches();
+    } catch (error) {
+      console.error('Error deleting match:', error);
+      alert(`Gagal menghapus pertandingan: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   async function deleteMatchMember(matchId: string, memberId: string, memberName: string) {
     if (!confirm(`Hapus entri pembayaran untuk ${memberName}? Tindakan ini tidak dapat dibatalkan.`)) {
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('match_members')
-        .delete()
-        .eq('id', memberId);
+      const response = await fetch('/api/matches/delete-member', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Gagal menghapus entri pembayaran');
+      }
       
       alert('Entri pembayaran berhasil dihapus');
       fetchMatches();
     } catch (error) {
       console.error('Error deleting match member:', error);
-      alert('Gagal menghapus entri pembayaran');
+      alert(`Gagal menghapus entri pembayaran: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -1123,6 +1154,13 @@ export default function AdminPembayaranPage() {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => deleteMatch(match.id, match.match_number)}
+                          className="p-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                          title="Hapus Pertandingan"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </>
                     )}
                   </div>
@@ -1478,6 +1516,35 @@ export default function AdminPembayaranPage() {
               >
                 <X className="w-6 h-6" />
               </button>
+            </div>
+
+            {/* Image Extraction Option */}
+            <div className="mb-6 p-4 bg-blue-500/10 border border-blue-400/30 rounded-lg">
+              <div className="flex items-start gap-3">
+                <ImageIcon className="text-blue-400 mt-1" size={24} />
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold mb-1">Ekstraksi dari Gambar</h3>
+                  <p className="text-sm text-blue-200 mb-3">
+                    Upload gambar jadwal pertandingan dan ekstrak data otomatis dengan AI (15-20 pertandingan sekaligus)
+                  </p>
+                  <a
+                    href="/admin/match-image-extraction"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-all"
+                  >
+                    <ImageIcon size={18} />
+                    Gunakan Ekstraksi Gambar
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative mb-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-zinc-900 text-zinc-500">atau input manual</span>
+              </div>
             </div>
 
             <div className="space-y-4">

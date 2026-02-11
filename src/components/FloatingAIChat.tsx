@@ -71,9 +71,9 @@ export default function FloatingAIChat() {
 
   const quickQuestions = [
     'Bagaimana cara bergabung?',
-    'Jadwal dan lokasi latihan?',
-    'Pre-order jersey?',
-    'Tips bermain badminton?'
+    'Cara bayar membership?',
+    'Cara upload bukti pembayaran?',
+    'Fitur apa saja di dashboard?'
   ];
 
   const handleQuickQuestion = (question: string) => {
