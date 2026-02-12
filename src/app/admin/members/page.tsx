@@ -4,9 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
-import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown } from 'lucide-react';
+import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import Image from 'next/image';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 interface Member {
   id: string;
@@ -36,6 +39,10 @@ export default function AdminMembersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Tutorial for members page
+  const tutorialSteps = getTutorialSteps('members');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-members', tutorialSteps);
 
   useEffect(() => {
     fetchMembers();
@@ -194,14 +201,24 @@ export default function AdminMembersPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Kelola Anggota</h1>
-        <p className="text-sm sm:text-base text-zinc-400">Kelola semua anggota komunitas badminton.</p>
+      <div className="mb-6 sm:mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Kelola Anggota</h1>
+          <p className="text-sm sm:text-base text-zinc-400">Kelola semua anggota komunitas badminton.</p>
+        </div>
+        
+        <button
+          onClick={toggleTutorial}
+          className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+          title="Tampilkan panduan fitur"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="bg-zinc-900 border border-white/10 rounded-xl p-4 sm:p-5">
+        <div className="stat-card-total-members bg-zinc-900 border border-white/10 rounded-xl p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-zinc-400 mb-1">Total Anggota</p>
@@ -213,7 +230,7 @@ export default function AdminMembersPage() {
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-white/10 rounded-xl p-5">
+        <div className="stat-card-active-members bg-zinc-900 border border-white/10 rounded-xl p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-zinc-400 mb-1">Anggota Aktif</p>
@@ -225,7 +242,7 @@ export default function AdminMembersPage() {
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-white/10 rounded-xl p-5">
+        <div className="stat-card-admin-members bg-zinc-900 border border-white/10 rounded-xl p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-zinc-400 mb-1">Administrator</p>
@@ -239,7 +256,7 @@ export default function AdminMembersPage() {
       </div>
 
       {/* Search */}
-      <div className="mb-6">
+      <div className="members-search mb-6">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
           <input
@@ -253,7 +270,7 @@ export default function AdminMembersPage() {
       </div>
 
       {/* Members List */}
-      <div className="bg-zinc-900 border border-white/10 rounded-xl overflow-hidden">
+      <div className="members-table bg-zinc-900 border border-white/10 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead className="bg-zinc-800/50 border-b border-white/10">
@@ -814,6 +831,14 @@ export default function AdminMembersPage() {
           </div>
         </div>
       )}
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="admin-members"
+      />
     </div>
   );
 }

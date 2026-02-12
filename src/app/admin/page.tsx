@@ -6,9 +6,12 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Zap, TrendingUp, Calendar, Shield, Activity, UserPlus, Edit, Award, Target, DollarSign, TrendingDown, Bell } from 'lucide-react';
+import { Users, Zap, TrendingUp, Calendar, Shield, Activity, UserPlus, Edit, Award, Target, DollarSign, TrendingDown, Bell, HelpCircle } from 'lucide-react';
 import { StatCardSkeleton, ActivityItemSkeleton } from '@/components/LoadingSkeletons';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 interface AdminStats {
   totalMembers: number;
@@ -58,6 +61,9 @@ export default function AdminDashboardPage() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [revenueChange, setRevenueChange] = useState(0);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+
+  const tutorialSteps = getTutorialSteps('dashboard');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-dashboard', tutorialSteps);
 
   useEffect(() => {
     let mounted = true;
@@ -483,11 +489,20 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className="w-8 h-8 text-red-400" />
-          <h1 className="text-3xl font-bold text-white">
-            Dashboard Admin
-          </h1>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <Shield className="w-8 h-8 text-red-400" />
+            <h1 className="text-3xl font-bold text-white">
+              Dashboard Admin
+            </h1>
+          </div>
+          <button
+            onClick={toggleTutorial}
+            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+            title="Tampilkan panduan fitur"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
         </div>
         <p className="text-zinc-400">
           Selamat datang kembali, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! Kelola komunitas Anda dari sini.
@@ -504,9 +519,14 @@ export default function AdminDashboardPage() {
             const isPendingPayments = stat.label === 'Pembayaran Menunggu';
             const hasPendingItems = (stat as any).badge && pendingPaymentsCount > 0;
             
+            // Determine which className to add
+            let customClass = '';
+            if (stat.label === 'Total Anggota') customClass = 'stat-card-members';
+            else if (stat.label === 'Pembayaran Menunggu') customClass = 'stat-card-pending-payments';
+            
             const card = (
               <div
-                className={`bg-zinc-900 border rounded-xl p-6 transition-all ${
+                className={`bg-zinc-900 border rounded-xl p-6 transition-all ${customClass} ${
                   isPendingPayments && hasPendingItems
                     ? 'border-amber-500/30 hover:border-amber-500/50 shadow-lg shadow-amber-500/10 cursor-pointer'
                     : 'border-white/10 hover:border-white/20'
@@ -546,7 +566,7 @@ export default function AdminDashboardPage() {
 
       {/* Revenue Growth Chart - Stock Style */}
       <div className="mt-8">
-        <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+        <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 revenue-chart">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-linear-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/20">
@@ -684,7 +704,7 @@ export default function AdminDashboardPage() {
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Activity Feed */}
-        <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+        <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 activity-feed">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="w-5 h-5 text-purple-400" />
             <h2 className="text-xl font-bold text-white">Aktivitas Sistem</h2>
@@ -742,7 +762,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Performance Chart */}
-        <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+        <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 top-performers">
           <div className="flex items-center gap-2 mb-4">
             <Award className="w-5 h-5 text-yellow-400" />
             <h2 className="text-xl font-bold text-white">Performa Terbaik</h2>
@@ -791,7 +811,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Most Active Players */}
-        <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+        <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 active-players">
           <div className="flex items-center gap-2 mb-4">
             <Target className="w-5 h-5 text-cyan-400" />
             <h2 className="text-xl font-bold text-white">Pemain Paling Aktif</h2>
@@ -831,6 +851,14 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="admin-dashboard"
+      />
     </div>
   );
 }

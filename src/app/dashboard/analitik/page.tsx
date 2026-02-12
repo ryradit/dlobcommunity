@@ -5,9 +5,12 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { Trophy, Target, TrendingUp, Award, Calendar, Users, Filter, X, Flame, BarChart3, UserCheck, Crown, Sparkles, TrendingDown, AlertCircle, Brain, Info } from 'lucide-react';
+import { Trophy, Target, TrendingUp, Award, Calendar, Users, Filter, X, Flame, BarChart3, UserCheck, Crown, Sparkles, TrendingDown, AlertCircle, Brain, Info, HelpCircle } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { StatCardSkeleton, ChartSkeleton } from '@/components/LoadingSkeletons';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 interface MatchStats {
   totalMatches: number;
@@ -135,6 +138,10 @@ export default function AnalitikPage() {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedPartner, setSelectedPartner] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Tutorial for member analitik
+  const tutorialSteps = getTutorialSteps('member-analitik');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('member-analitik', tutorialSteps);
 
   useEffect(() => {
     // Fetch data when user is available
@@ -531,14 +538,25 @@ export default function AnalitikPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Analitik Pertandingan</h1>
             <p className="text-sm sm:text-base text-zinc-300">Statistik lengkap dan riwayat pertandingan Anda</p>
           </div>
-          <button
-            onClick={toggleAI}
-            disabled={aiLoading || stats.totalMatches === 0}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-medium"
-          >
-            <Sparkles className="w-5 h-5" />
-            {aiLoading ? 'Menganalisis...' : showAI ? 'Sembunyikan AI' : 'AI Insights'}
-          </button>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTutorial}
+              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+              title="Tampilkan panduan fitur"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+            
+            <button
+              onClick={toggleAI}
+              disabled={aiLoading || stats.totalMatches === 0}
+              className="member-analitik-ai-insights flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-medium"
+            >
+              <Sparkles className="w-5 h-5" />
+              {aiLoading ? 'Menganalisis...' : showAI ? 'Sembunyikan AI' : 'AI Insights'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -630,7 +648,7 @@ export default function AnalitikPage() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+      <div className="member-analitik-stats grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
         <div className="bg-zinc-900 border border-white/10 rounded-xl p-4 sm:p-5 lg:p-6">
           <div className="flex items-start justify-between mb-3 sm:mb-4">
             <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
@@ -788,7 +806,7 @@ export default function AnalitikPage() {
       )}
 
       {/* Score Progression & Form Trend Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="member-analitik-charts grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Score Progression */}
         {scoreProgression.length > 0 && (
           <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
@@ -909,7 +927,7 @@ export default function AnalitikPage() {
       </div>
 
       {/* Partner & Opponent Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="member-analitik-partners grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Best Partners - Now with Bar Chart */}
         <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
           <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
@@ -1006,7 +1024,7 @@ export default function AnalitikPage() {
       </div>
 
       {/* Partner & Opponent Lists (Keep original cards below charts) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="member-analitik-opponents grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Best Partners List */}
         <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -1056,7 +1074,7 @@ export default function AnalitikPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 mb-6">
+      <div className="member-analitik-filter bg-zinc-900 border border-white/10 rounded-xl p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
             <Filter className="w-5 h-5" />
@@ -1123,7 +1141,7 @@ export default function AnalitikPage() {
       </div>
 
       {/* Match History */}
-      <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+      <div className="member-analitik-match-history bg-zinc-900 border border-white/10 rounded-xl p-6">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <Award className="w-5 h-5" />
           Riwayat Pertandingan
@@ -1340,6 +1358,14 @@ export default function AnalitikPage() {
           </div>
         </div>
       )}
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="member-analitik"
+      />
     </div>
   );
 }

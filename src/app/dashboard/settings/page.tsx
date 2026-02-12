@@ -2,8 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Mail, Phone, Camera, Save, Loader2, Edit2, X, Award, Users, Instagram, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Phone, Camera, Save, Loader2, Edit2, X, Award, Users, Instagram, Lock, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import Image from 'next/image';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 export default function SettingsPage() {
   const { user, updateProfile, uploadAvatar, refreshUser, updatePassword } = useAuth();
@@ -45,6 +48,10 @@ export default function SettingsPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
   const [isOAuthUser, setIsOAuthUser] = useState(false);
+
+  // Tutorial for member settings
+  const tutorialSteps = getTutorialSteps('member-settings');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('member-settings', tutorialSteps);
 
   // Update avatar URL when user data changes
   useEffect(() => {
@@ -385,9 +392,19 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Pengaturan Profil</h1>
-          <p className="text-zinc-400">Kelola informasi profil dan preferensi akun Anda</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Pengaturan Profil</h1>
+            <p className="text-zinc-400">Kelola informasi profil dan preferensi akun Anda</p>
+          </div>
+          
+          <button
+            onClick={toggleTutorial}
+            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+            title="Tampilkan panduan fitur"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Success/Error Messages */}
@@ -401,7 +418,7 @@ export default function SettingsPage() {
           {/* Left Column */}
           <div className="space-y-6">
             {/* Profile Picture Card */}
-            <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+            <div className="member-settings-avatar bg-zinc-900 border border-white/10 rounded-xl p-6">
               <h2 className="text-xl font-bold text-white mb-6">Foto Profil</h2>
               <div className="flex flex-col items-center">
                 <div className="relative group mb-4">
@@ -449,7 +466,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Personal Information Card */}
-            <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-blue-500/30 transition-colors cursor-pointer" onClick={openPersonalModal}>
+            <div className="member-settings-personal bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-blue-500/30 transition-colors cursor-pointer" onClick={openPersonalModal}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Informasi Pribadi</h2>
                 <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
@@ -474,7 +491,7 @@ export default function SettingsPage() {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Badminton Profile Card */}
-            <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-blue-500/30 transition-colors cursor-pointer" onClick={openBadmintonModal}>
+            <div className="member-settings-badminton bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-green-500/30 transition-colors cursor-pointer" onClick={openBadmintonModal}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Profil Badminton</h2>
                 <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
@@ -496,7 +513,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Achievements Card */}
-            <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-blue-500/30 transition-colors cursor-pointer" onClick={openAchievementsModal}>
+            <div className="member-settings-achievements bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-yellow-500/30 transition-colors cursor-pointer" onClick={openAchievementsModal}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Pencapaian Turnamen</h2>
                 <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
@@ -536,7 +553,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Partner Preferences Card */}
-            <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-blue-500/30 transition-colors cursor-pointer" onClick={openPartnerModal}>
+            <div className="member-settings-partner bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-purple-500/30 transition-colors cursor-pointer" onClick={openPartnerModal}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Preferensi Partner</h2>
                 <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
@@ -955,6 +972,14 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="member-settings"
+      />
     </div>
   );
 }

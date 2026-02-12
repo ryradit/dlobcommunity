@@ -5,8 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
-import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock } from 'lucide-react';
+import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock, HelpCircle } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 interface MatchMember {
   id: string;
@@ -44,6 +47,10 @@ export default function DashboardPage() {
   const [myMembership, setMyMembership] = useState<Membership | null>(null);
   const [loading, setLoading] = useState(true);
   const [memberName, setMemberName] = useState('');
+
+  // Tutorial for member dashboard
+  const tutorialSteps = getTutorialSteps('member-dashboard');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('member-dashboard', tutorialSteps);
 
   useEffect(() => {
     async function fetchUserData() {
@@ -186,11 +193,21 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Selamat datang kembali, {memberName || user?.email?.split('@')[0] || 'User'}!
-        </h1>
-        <p className="text-zinc-300">Berikut ringkasan pembayaran dan riwayat pertandingan Anda.</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Selamat datang kembali, {memberName || user?.email?.split('@')[0] || 'User'}!
+          </h1>
+          <p className="text-zinc-300">Berikut ringkasan pembayaran dan riwayat pertandingan Anda.</p>
+        </div>
+        
+        <button
+          onClick={toggleTutorial}
+          className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+          title="Tampilkan panduan fitur"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -198,12 +215,13 @@ export default function DashboardPage() {
           // Show skeleton loading states
           [...Array(4)].map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
-          statsDisplay.map((stat) => {
+          statsDisplay.map((stat, index) => {
             const Icon = stat.icon;
+            const cssClass = index === 0 ? 'member-stat-matches' : index === 1 ? 'member-stat-membership' : index === 2 ? 'member-stat-winrate' : '';
             return (
               <div
                 key={stat.label}
-                className="bg-zinc-900 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-colors"
+                className={`${cssClass} bg-zinc-900 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-colors`}
               >
                 <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${stat.color} mb-4`}>
                   <Icon className="w-6 h-6 text-white" />
@@ -253,7 +271,7 @@ export default function DashboardPage() {
       )}
 
       {/* Recent Matches */}
-      <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+      <div className="member-recent-matches bg-zinc-900 border border-white/10 rounded-xl p-6">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <CreditCard className="w-6 h-6" />
           Pertandingan Terkini
@@ -318,6 +336,14 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="member-dashboard"
+      />
     </div>
   );
 }

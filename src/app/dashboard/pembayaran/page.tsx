@@ -7,6 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle, CheckSquare, Square, Sparkles, Send } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 interface MatchMember {
   id: string;
@@ -77,6 +80,10 @@ export default function PembayaranPage() {
     payments: Array<{ id: string; type: 'match' | 'membership'; amount: number; label: string; isRevision?: boolean }>;
     description: string;
   } | null>(null);
+
+  // Tutorial for member pembayaran
+  const tutorialSteps = getTutorialSteps('member-pembayaran');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('member-pembayaran', tutorialSteps);
 
   useEffect(() => {
     fetchPaymentData();
@@ -658,8 +665,16 @@ export default function PembayaranPage() {
           </div>
           <div className="flex items-center gap-3">
             <button
+              onClick={toggleTutorial}
+              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+              title="Tampilkan panduan fitur"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+            
+            <button
               onClick={() => setShowAIHelper(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-purple-500/20"
+              className="member-payment-ai-helper flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-purple-500/20"
             >
               <Sparkles className="w-5 h-5" />
               <span className="hidden sm:inline">AI Helper</span>
@@ -694,7 +709,7 @@ export default function PembayaranPage() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="member-payment-stats grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Total Due */}
           <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
             <div className="flex items-center justify-between mb-2">
@@ -702,7 +717,7 @@ export default function PembayaranPage() {
                 <p className="text-sm text-zinc-300">Total Tagihan</p>
                 <button
                   onClick={() => setShowStatusHelpModal(true)}
-                  className="hover:bg-white/10 rounded p-1 transition-colors"
+                  className="member-payment-status-help hover:bg-white/10 rounded p-1 transition-colors"
                   title="Info status pembayaran"
                 >
                   <Info className="w-3.5 h-3.5 text-zinc-400" />
@@ -756,7 +771,7 @@ export default function PembayaranPage() {
 
         {/* Membership Payment */}
         {myMembership && (
-          <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+          <div className="member-payment-membership bg-zinc-900 border border-white/10 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Award className="w-6 h-6 text-purple-400" />
@@ -853,7 +868,7 @@ export default function PembayaranPage() {
         )}
 
         {/* Payment List */}
-        <div className="bg-zinc-900 border border-white/10 rounded-xl overflow-hidden">
+        <div className="member-payment-matches bg-zinc-900 border border-white/10 rounded-xl overflow-hidden">
           <div className="p-6 border-b border-white/10">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">Riwayat Pembayaran Pertandingan</h2>
@@ -1006,7 +1021,7 @@ export default function PembayaranPage() {
                             {status.label}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="member-payment-actions px-6 py-4 whitespace-nowrap text-sm">
                           {match.payment_status === 'revision' && (
                             <div className="space-y-1">
                               <button
@@ -1797,6 +1812,14 @@ export default function PembayaranPage() {
           </div>
         </div>
       )}
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="member-pembayaran"
+      />
     </div>
   );
 }

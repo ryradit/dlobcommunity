@@ -5,8 +5,11 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { TrendingUp, Users, Trophy, Edit, Save, X } from 'lucide-react';
+import { TrendingUp, Users, Trophy, Edit, Save, X, HelpCircle } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 interface Match {
   id: string;
@@ -48,6 +51,10 @@ export default function AdminAnalitikPage() {
     team1_score: 0,
     team2_score: 0,
   });
+
+  // Tutorial for analitik page
+  const tutorialSteps = getTutorialSteps('analitik');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-analitik', tutorialSteps);
 
   useEffect(() => {
     fetchMatches();
@@ -166,14 +173,24 @@ export default function AdminAnalitikPage() {
   return (
     <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Analitik Pertandingan</h1>
-          <p className="text-zinc-400">Kelola informasi dan hasil pertandingan</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Analitik Pertandingan</h1>
+            <p className="text-zinc-400">Kelola informasi dan hasil pertandingan</p>
+          </div>
+          
+          <button
+            onClick={toggleTutorial}
+            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+            title="Tampilkan panduan fitur"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Match List */}
-          <div className="lg:col-span-1">
+          <div className="analitik-matches-list lg:col-span-1">
             <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
               <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5" />
@@ -215,7 +232,7 @@ export default function AdminAnalitikPage() {
           </div>
 
           {/* Match Details */}
-          <div className="lg:col-span-2">
+          <div className="analitik-match-stats lg:col-span-2">
             {selectedMatch ? (
               <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -225,7 +242,7 @@ export default function AdminAnalitikPage() {
                   {!editMode ? (
                     <button
                       onClick={() => setEditMode(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      className="analitik-edit-scores px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                     >
                       <Edit className="w-4 h-4" />
                       Edit
@@ -251,7 +268,7 @@ export default function AdminAnalitikPage() {
                 </div>
 
                 {/* Players List */}
-                <div className="mb-6">
+                <div className="analitik-member-selection mb-6">
                   <h3 className="text-sm font-semibold text-zinc-400 mb-2">Pemain:</h3>
                   <div className="flex flex-wrap gap-2">
                     {getAvailablePlayers().map((player, idx) => (
@@ -427,6 +444,14 @@ export default function AdminAnalitikPage() {
           </div>
         </div>
       </div>
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="admin-analitik"
+      />
     </div>
   );
 }

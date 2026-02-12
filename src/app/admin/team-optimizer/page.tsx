@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { usePathname } from 'next/navigation';
-import { Users, Sparkles, TrendingUp, Target, Zap, Flame, Droplet, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, Sparkles, TrendingUp, Target, Zap, Flame, Droplet, AlertCircle, RefreshCw, HelpCircle } from 'lucide-react';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 interface PlayerStat {
   id: string;
@@ -53,6 +56,10 @@ export default function TeamOptimizerPage() {
   const [mode, setMode] = useState<'balanced' | 'competitive' | 'training' | 'exciting'>('balanced');
   const [numTeams, setNumTeams] = useState<number>(4);
   const [result, setResult] = useState<OptimizationResult | null>(null);
+
+  // Tutorial for team optimizer page
+  const tutorialSteps = getTutorialSteps('team-optimizer');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-team-optimizer', tutorialSteps);
 
   useEffect(() => {
     fetchPlayerStats();
@@ -232,65 +239,24 @@ export default function TeamOptimizerPage() {
     <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl">
-            <Users className="w-8 h-8 text-white" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl">
+              <Users className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white">Racik Tim Pintar</h1>
+              <p className="text-zinc-400">Buat tim badminton yang seimbang dengan bantuan AI</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-white">Racik Tim Pintar</h1>
-            <p className="text-zinc-400">Buat tim badminton yang seimbang dengan bantuan AI</p>
-          </div>
-        </div>
 
-        {/* Instructions Card */}
-        <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-xl p-6">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-blue-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-white font-semibold mb-2">Cara Menggunakan:</h3>
-              <ol className="text-zinc-300 text-sm space-y-1.5 list-decimal list-inside">
-                <li>Pilih <strong>mode permainan</strong> yang diinginkan (Seimbang, Kompetitif, Latihan, atau Seru)</li>
-                <li>Klik <strong>kotak pemain</strong> untuk memilih/membatalkan (minimal 4 pemain, disarankan 8 untuk 4 tim)</li>
-                <li>Tekan tombol <strong>&quot;Generate Tim Optimal&quot;</strong> untuk membuat racikan tim</li>
-                <li>AI akan menganalisis performa dan chemistry pemain, lalu membuat tim yang optimal</li>
-              </ol>
-              
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <h4 className="text-white font-semibold mb-2 text-sm">Penjelasan Statistik Pemain:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                  <div className="flex items-start gap-2">
-                    <div className="p-1.5 bg-green-500/20 rounded">
-                      <TrendingUp className="w-3.5 h-3.5 text-green-400" />
-                    </div>
-                    <div>
-                      <div className="text-white font-medium">Win Rate (Tingkat Kemenangan)</div>
-                      <div className="text-zinc-400">Persentase kemenangan dari total pertandingan</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="p-1.5 bg-blue-500/20 rounded">
-                      <Target className="w-3.5 h-3.5 text-blue-400" />
-                    </div>
-                    <div>
-                      <div className="text-white font-medium">Total Pertandingan</div>
-                      <div className="text-zinc-400">Jumlah match yang sudah dimainkan</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="p-1.5 bg-purple-500/20 rounded">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                    </div>
-                    <div>
-                      <div className="text-white font-medium">Skill Level (Level Kemampuan)</div>
-                      <div className="text-zinc-400">Nilai 0-100 berdasarkan performa keseluruhan</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={toggleTutorial}
+            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+            title="Tampilkan panduan fitur"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Configuration */}
@@ -302,7 +268,7 @@ export default function TeamOptimizerPage() {
 
           {/* Mode Selection */}
           <div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="team-optimizer-mode-select grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { value: 'balanced', label: 'Seimbang', desc: 'Tim dengan skill merata', icon: '⚖️' },
                 { value: 'competitive', label: 'Kompetitif', desc: 'Maksimalkan kekuatan tim', icon: '🏆' },
@@ -327,7 +293,7 @@ export default function TeamOptimizerPage() {
           </div>
 
           {/* Player Selection */}
-          <div>
+          <div className="team-optimizer-player-select">
             <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
               <Users className="w-5 h-5 text-purple-400" />
               Langkah 2: Pilih Pemain (Minimal 4 orang)
@@ -410,7 +376,7 @@ export default function TeamOptimizerPage() {
             <button
               onClick={generateTeams}
               disabled={analyzing || selectedPlayers.length < 4}
-              className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-zinc-700 disabled:to-zinc-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed text-lg"
+              className="team-optimizer-analyze-button w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-zinc-700 disabled:to-zinc-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed text-lg"
             >
               {analyzing ? (
                 <>
@@ -434,7 +400,7 @@ export default function TeamOptimizerPage() {
 
         {/* Results */}
         {result && (
-          <div className="space-y-6">
+          <div className="team-optimizer-results space-y-6">
             {/* Summary */}
             <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
@@ -557,6 +523,14 @@ export default function TeamOptimizerPage() {
           </div>
         )}
       </div>
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="admin-team-optimizer"
+      />
     </div>
   );
 }

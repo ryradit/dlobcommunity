@@ -5,9 +5,12 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, CheckSquare, Square, Sparkles, Send, Zap } from 'lucide-react';
+import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, CheckSquare, Square, Sparkles, Send, Zap, HelpCircle } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 interface Match {
   id: string;
@@ -115,6 +118,10 @@ export default function AdminPembayaranPage() {
     payments?: Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string }>;
     description: string;
   } | null>(null);
+
+  // Tutorial for pembayaran page
+  const tutorialSteps = getTutorialSteps('pembayaran');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-pembayaran', tutorialSteps);
 
   // Utility function to calculate weeks in current month
   const calculateWeeksInMonth = (date: Date = new Date()): number => {
@@ -1323,15 +1330,26 @@ export default function AdminPembayaranPage() {
             <p className="text-sm sm:text-base text-zinc-400">Kelola pembayaran pertandingan dan membership</p>
           </div>
           
-          {/* AI Agent Helper Button */}
-          <button
-            onClick={() => setShowAIHelper(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 group"
-          >
-            <Sparkles className="w-5 h-5" />
-            <span className="hidden sm:inline">AI Helper</span>
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Help Button */}
+            <button
+              onClick={toggleTutorial}
+              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+              title="Tampilkan panduan fitur"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+
+            {/* AI Agent Helper Button */}
+            <button
+              onClick={() => setShowAIHelper(true)}
+              className="ai-helper-button flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 group"
+            >
+              <Sparkles className="w-5 h-5" />
+              <span className="hidden sm:inline">AI Helper</span>
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            </button>
+          </div>
         </div>
 
         {/* Monthly Recap */}
@@ -1433,7 +1451,7 @@ export default function AdminPembayaranPage() {
         <div className="flex gap-4 mb-6 border-b border-white/10">
           <button
             onClick={() => setActiveTab('matches')}
-            className={`px-6 py-3 font-medium transition-colors relative ${
+            className={`pembayaran-tab-matches px-6 py-3 font-medium transition-colors relative ${
               activeTab === 'matches'
                 ? 'text-blue-400'
                 : 'text-zinc-400 hover:text-white'
@@ -1446,7 +1464,7 @@ export default function AdminPembayaranPage() {
           </button>
           <button
             onClick={() => setActiveTab('memberships')}
-            className={`px-6 py-3 font-medium transition-colors relative ${
+            className={`pembayaran-tab-memberships px-6 py-3 font-medium transition-colors relative ${
               activeTab === 'memberships'
                 ? 'text-purple-400'
                 : 'text-zinc-400 hover:text-white'
@@ -1461,7 +1479,7 @@ export default function AdminPembayaranPage() {
 
         {/* Bulk Confirmation Banner */}
         {selectedPayments.length > 0 && (
-          <div className="mb-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-4">
+          <div className="bulk-actions mb-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <CheckSquare className="w-6 h-6 text-green-400" />
@@ -1574,7 +1592,7 @@ export default function AdminPembayaranPage() {
         )}
 
         {/* Actions Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="action-buttons flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
             <input
@@ -1582,7 +1600,7 @@ export default function AdminPembayaranPage() {
               placeholder="Cari nama anggota..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-zinc-900 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+              className="pembayaran-search w-full pl-10 pr-4 py-2 bg-zinc-900 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
             />
             {searchTerm && (
               <button
@@ -1614,7 +1632,7 @@ export default function AdminPembayaranPage() {
 
         {/* Content */}
         {activeTab === 'matches' ? (
-          <div className="space-y-6">
+          <div className="payment-table space-y-6">
             {searchTerm && (
               <div className="bg-zinc-900 border border-blue-500/30 rounded-lg p-3">
                 <p className="text-sm text-zinc-300">
@@ -3137,6 +3155,14 @@ export default function AdminPembayaranPage() {
           </div>
         </div>
       )}
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="admin-pembayaran"
+      />
     </div>
   );
 }
