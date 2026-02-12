@@ -63,7 +63,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
       icon: BarChart3,
     },
     {
-      label: 'Team Optimizer',
+      label: 'Racik Tim Pintar',
       href: '/admin/team-optimizer',
       icon: Sparkles,
     },

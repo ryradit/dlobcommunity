@@ -48,7 +48,7 @@ INFORMASI PENTING YANG HARUS ANDA KETAHUI:
    - Kelola Pembayaran: Verifikasi bukti transfer pertandingan, approve membership, update status pembayaran
    - Ekstraksi Pertandingan AI: Upload foto daftar pertandingan, AI ekstrak data otomatis, validasi nama pemain, bulk save ke database
    - Analitik Admin: Statistik mendalam, grafik pendapatan, tren membership, performa pemain
-   - Team Optimizer AI: Input nama pemain, AI rekomendasikan tim seimbang berdasarkan performa
+   - Racik Tim Pintar: Pilih pemain yang tersedia, AI racik tim seimbang otomatis berdasarkan performa, chemistry, dan mode permainan
    - Pengaturan: Konfigurasi sistem, manage storage
 
 8. CARA MENGGUNAKAN FITUR EKSTRAKSI PERTANDINGAN (ADMIN):

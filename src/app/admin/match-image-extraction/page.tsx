@@ -52,6 +52,12 @@ export default function MatchImageExtractionPage() {
   const [matchDate, setMatchDate] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper function to parse date string as local date (not UTC)
+  const getLocalDateFromString = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -262,7 +268,7 @@ export default function MatchImageExtractionPage() {
       return;
     }
 
-    const selectedDate = new Date(matchDate);
+    const selectedDate = getLocalDateFromString(matchDate);
     if (selectedDate.getDay() !== 6) {
       alert('Tanggal harus hari Sabtu!');
       return;
@@ -599,8 +605,12 @@ export default function MatchImageExtractionPage() {
                     type="date"
                     value={matchDate}
                     onChange={(e) => {
-                      const selectedDate = new Date(e.target.value);
-                      if (selectedDate.getDay() === 6 || !e.target.value) {
+                      if (!e.target.value) {
+                        setMatchDate(e.target.value);
+                        return;
+                      }
+                      const selectedDate = getLocalDateFromString(e.target.value);
+                      if (selectedDate.getDay() === 6) {
                         setMatchDate(e.target.value);
                       } else {
                         alert('Harap pilih hari Sabtu!');
@@ -611,7 +621,7 @@ export default function MatchImageExtractionPage() {
                   />
                   {matchDate && (
                     <p className="text-xs text-green-400 mt-2">
-                      {new Date(matchDate).toLocaleDateString('id-ID', {
+                      {getLocalDateFromString(matchDate).toLocaleDateString('id-ID', {
                         weekday: 'long',
                         day: 'numeric',
                         month: 'long',

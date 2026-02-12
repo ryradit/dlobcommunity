@@ -5,8 +5,9 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon } from 'lucide-react';
+import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, CheckSquare, Square, Sparkles, Send, Zap } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
+import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
 
 interface Match {
   id: string;
@@ -80,6 +81,7 @@ export default function AdminPembayaranPage() {
     member_name: '',
     weeks_in_month: 4,
   });
+  const [weeksAutoDetected, setWeeksAutoDetected] = useState(false);
   const [showProofModal, setShowProofModal] = useState(false);
   const [selectedProof, setSelectedProof] = useState<{
     type: 'match' | 'membership';
@@ -89,6 +91,49 @@ export default function AdminPembayaranPage() {
     amount: number;
     proofUrl: string | null;
   } | null>(null);
+  
+  // Bulk confirmation states
+  const [selectedPayments, setSelectedPayments] = useState<Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string }>>([]);
+  const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
+  const [bulkConfirming, setBulkConfirming] = useState(false);
+  const [confirmIrreversible, setConfirmIrreversible] = useState(false);
+  const [isConfirmingRevisions, setIsConfirmingRevisions] = useState(false);
+  
+  // Bulk revision states
+  const [showBulkRevisionModal, setShowBulkRevisionModal] = useState(false);
+  const [bulkRevising, setBulkRevising] = useState(false);
+  const [bulkRevisionAmount, setBulkRevisionAmount] = useState('');
+  const [bulkRevisionReason, setBulkRevisionReason] = useState('');
+  
+  // AI Agent Helper states
+  const [showAIHelper, setShowAIHelper] = useState(false);
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<{
+    action: 'confirm_payments' | 'confirm_revisions' | 'create_revision' | 'send_reminders' | 'filter_payments' | null;
+    memberName?: string;
+    payments?: Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string }>;
+    description: string;
+  } | null>(null);
+
+  // Utility function to calculate weeks in current month
+  const calculateWeeksInMonth = (date: Date = new Date()): number => {
+    return getSaturdaysInMonth(date);
+  };
+
+  // Auto-detect weeks when membership modal opens
+  useEffect(() => {
+    if (showMembershipModal) {
+      const detectedWeeks = calculateWeeksInMonth();
+      setNewMembership(prev => ({
+        ...prev,
+        weeks_in_month: detectedWeeks,
+      }));
+      setWeeksAutoDetected(true);
+    } else {
+      setWeeksAutoDetected(false);
+    }
+  }, [showMembershipModal]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -638,6 +683,492 @@ export default function AdminPembayaranPage() {
     }
   }
 
+  // Bulk confirmation functions
+  const togglePaymentSelection = (payment: { id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string }) => {
+    setSelectedPayments(prev => {
+      const exists = prev.find(p => p.id === payment.id && p.type === payment.type);
+      if (exists) {
+        return prev.filter(p => !(p.id === payment.id && p.type === payment.type));
+      } else {
+        return [...prev, payment];
+      }
+    });
+  };
+
+  const isPaymentSelected = (id: string, type: 'match' | 'membership') => {
+    return selectedPayments.some(p => p.id === id && p.type === type);
+  };
+
+  const clearBulkSelection = () => {
+    setSelectedPayments([]);
+  };
+
+  const openBulkConfirmModal = () => {
+    if (selectedPayments.length === 0) return;
+    setShowBulkConfirmModal(true);
+  };
+
+  const closeBulkConfirmModal = () => {
+    setShowBulkConfirmModal(false);
+    setConfirmIrreversible(false);
+    setIsConfirmingRevisions(false);
+  };
+
+  async function handleBulkConfirmPayments() {
+    if (selectedPayments.length === 0) return;
+    
+    // Check if user confirmed the irreversible action
+    const paymentsWithoutProof = selectedPayments.filter(p => !p.proofUrl).length;
+    if (paymentsWithoutProof > 0 && !confirmIrreversible) {
+      alert('Harap centang konfirmasi untuk melanjutkan. Tindakan ini tidak dapat dibatalkan.');
+      return;
+    }
+
+    try {
+      setBulkConfirming(true);
+
+      const now = new Date().toISOString();
+
+      // Update payments - split by type
+      const matchPayments = selectedPayments.filter(p => p.type === 'match');
+      const membershipPayments = selectedPayments.filter(p => p.type === 'membership');
+
+      const updatePromises: Promise<any>[] = [];
+
+      // Update match payments
+      if (matchPayments.length > 0) {
+        const matchIds = matchPayments.map(p => p.id);
+        const matchUpdatePromise = Promise.resolve(
+          supabase
+            .from('match_members')
+            .update({
+              payment_status: 'paid',
+              paid_at: now,
+            })
+            .in('id', matchIds)
+        );
+        updatePromises.push(matchUpdatePromise);
+      }
+
+      // Update membership payments (with side effects)
+      for (const payment of membershipPayments) {
+        updatePromises.push(
+          (async () => {
+            // Get membership details
+            const { data: membership } = await supabase
+              .from('memberships')
+              .select('member_name, month, year')
+              .eq('id', payment.id)
+              .single();
+
+            // Update membership status
+            await supabase
+              .from('memberships')
+              .update({
+                payment_status: 'paid',
+                paid_at: now,
+              })
+              .eq('id', payment.id);
+
+            // Update related match members
+            if (membership) {
+              await supabase
+                .from('match_members')
+                .update({
+                  attendance_fee: 0,
+                  has_membership: true,
+                })
+                .eq('member_name', membership.member_name)
+                .eq('payment_status', 'pending');
+            }
+          })()
+        );
+      }
+
+      const results = await Promise.allSettled(updatePromises);
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+
+      if (failedCount > 0) {
+        alert(`${selectedPayments.length - failedCount} dari ${selectedPayments.length} pembayaran berhasil dikonfirmasi. ${failedCount} gagal.`);
+      } else {
+        alert(`${selectedPayments.length} pembayaran berhasil dikonfirmasi!`);
+      }
+
+      closeBulkConfirmModal();
+      clearBulkSelection();
+      await Promise.all([fetchMatches(), fetchMemberships()]);
+    } catch (error) {
+      console.error('Error bulk confirming payments:', error);
+      alert('Gagal mengkonfirmasi pembayaran');
+    } finally {
+      setBulkConfirming(false);
+    }
+  }
+
+  async function handleBulkConfirmRevisions() {
+    if (selectedPayments.length === 0) return;
+
+    try {
+      setBulkConfirming(true);
+
+      const now = new Date().toISOString();
+
+      // Update payments - split by type
+      const matchPayments = selectedPayments.filter(p => p.type === 'match');
+      const membershipPayments = selectedPayments.filter(p => p.type === 'membership');
+
+      const updatePromises: Promise<any>[] = [];
+
+      // Update match payments - clear additional_amount for revisions
+      if (matchPayments.length > 0) {
+        const matchIds = matchPayments.map(p => p.id);
+        const matchUpdatePromise = Promise.resolve(
+          supabase
+            .from('match_members')
+            .update({
+              payment_status: 'paid',
+              paid_at: now,
+              additional_amount: null, // Clear revision amount
+            })
+            .in('id', matchIds)
+        );
+        updatePromises.push(matchUpdatePromise);
+      }
+
+      // Update membership payments
+      if (membershipPayments.length > 0) {
+        const membershipIds = membershipPayments.map(p => p.id);
+        const membershipUpdatePromise = Promise.resolve(
+          supabase
+            .from('memberships')
+            .update({
+              payment_status: 'paid',
+              paid_at: now,
+            })
+            .in('id', membershipIds)
+        );
+        updatePromises.push(membershipUpdatePromise);
+      }
+
+      const results = await Promise.allSettled(updatePromises);
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+
+      if (failedCount > 0) {
+        alert(`${selectedPayments.length - failedCount} dari ${selectedPayments.length} revisi berhasil dikonfirmasi. ${failedCount} gagal.`);
+      } else {
+        alert(`${selectedPayments.length} revisi berhasil dikonfirmasi!`);
+      }
+
+      closeBulkConfirmModal();
+      clearBulkSelection();
+      await Promise.all([fetchMatches(), fetchMemberships()]);
+    } catch (error) {
+      console.error('Error bulk confirming revisions:', error);
+      alert('Gagal mengkonfirmasi revisi');
+    } finally {
+      setBulkConfirming(false);
+    }
+  }
+
+  // Bulk revision functions
+  const closeBulkRevisionModal = () => {
+    setShowBulkRevisionModal(false);
+    setBulkRevisionAmount('');
+    setBulkRevisionReason('');
+  };
+
+  async function handleBulkCreateRevisions() {
+    if (selectedPayments.length === 0) return;
+    
+    const revisionAmount = parseFloat(bulkRevisionAmount);
+    if (isNaN(revisionAmount) || revisionAmount <= 0) {
+      alert('Jumlah revisi harus diisi dengan angka yang valid.');
+      return;
+    }
+    
+    if (!bulkRevisionReason.trim()) {
+      alert('Alasan revisi harus diisi.');
+      return;
+    }
+
+    try {
+      setBulkRevising(true);
+
+      // Update payments - split by type
+      const matchPayments = selectedPayments.filter(p => p.type === 'match');
+      const membershipPayments = selectedPayments.filter(p => p.type === 'membership');
+
+      const updatePromises: Promise<any>[] = [];
+
+      // Update match payments to revision status
+      for (const payment of matchPayments) {
+        const matchUpdatePromise = Promise.resolve(
+          supabase
+            .from('match_members')
+            .update({
+              payment_status: 'revision',
+              additional_amount: revisionAmount,
+            })
+            .eq('id', payment.id)
+        );
+        updatePromises.push(matchUpdatePromise);
+      }
+
+      // Update membership payments to revision status
+      for (const payment of membershipPayments) {
+        const membershipUpdatePromise = Promise.resolve(
+          supabase
+            .from('memberships')
+            .update({
+              payment_status: 'revision',
+              amount: revisionAmount,
+            })
+            .eq('id', payment.id)
+        );
+        updatePromises.push(membershipUpdatePromise);
+      }
+
+      const results = await Promise.allSettled(updatePromises);
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+
+      if (failedCount > 0) {
+        alert(`${selectedPayments.length - failedCount} dari ${selectedPayments.length} revisi berhasil dibuat. ${failedCount} gagal.`);
+      } else {
+        alert(`${selectedPayments.length} revisi berhasil dibuat! Member akan menerima tagihan tambahan Rp ${revisionAmount.toLocaleString('id-ID')}.`);
+      }
+
+      closeBulkRevisionModal();
+      clearBulkSelection();
+      await Promise.all([fetchMatches(), fetchMemberships()]);
+    } catch (error) {
+      console.error('Error bulk creating revisions:', error);
+      alert('Gagal membuat revisi');
+    } finally {
+      setBulkRevising(false);
+    }
+  }
+
+  // AI Agent Helper functions
+  async function processAIQuery() {
+    if (!aiQuery.trim()) return;
+
+    try {
+      setAiProcessing(true);
+      
+      // Parse query to extract intent and member name(s)
+      const query = aiQuery.toLowerCase();
+      let memberNames: string[] = [];
+      let action: 'confirm_payments' | 'confirm_revisions' | 'create_revision' | 'send_reminders' | 'filter_payments' | null = null;
+      
+      // Extract member names from query (support multiple names with "dan" or "and")
+      // Look for "from [name]" or "untuk [name]" or "dari [name]" or "dari [name] dan [name]"
+      const nameMatch = query.match(/(?:from|untuk|dari|by)\s+([a-z\s,]+?)(?:\s+who|\s+that|\s+yang|$)/i);
+      if (nameMatch) {
+        const namesString = nameMatch[1].trim();
+        // Split by "dan", "and", or comma
+        memberNames = namesString.split(/\s+(?:dan|and|,)\s+|,\s*/).map(n => n.trim()).filter(n => n);
+      }
+      
+      // Determine action
+      if (query.includes('confirm') || query.includes('konfirmasi') || query.includes('approve') || query.includes('setujui')) {
+        // Check if it's specifically for revisions
+        if (query.includes('revisi') || query.includes('revision')) {
+          action = 'confirm_revisions';
+        } else {
+          action = 'confirm_payments';
+        }
+      } else if (query.includes('revisi') || query.includes('revision') || query.includes('buat revisi') || query.includes('create revision')) {
+        action = 'create_revision';
+      } else if (query.includes('remind') || query.includes('ingatkan') || query.includes('催') || query.includes('notification')) {
+        action = 'send_reminders';
+      } else if (query.includes('show') || query.includes('tampilkan') || query.includes('filter') || query.includes('cari')) {
+        action = 'filter_payments';
+      }
+      
+      if (!action) {
+        setAiSuggestion({
+          action: null,
+          description: 'Maaf, saya tidak mengerti permintaan Anda. Coba gunakan kata kunci seperti "konfirmasi pembayaran dari [nama]", "buat revisi dari [nama]", atau "tampilkan pembayaran dari [nama]".',
+        });
+        return;
+      }
+      
+      // Find matching payments
+      let matchingPayments: Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string }> = [];
+      
+      // Determine which payment status to search for based on action
+      let targetStatus: 'pending' | 'paid' | 'revision' = 'pending';
+      if (action === 'create_revision') {
+        targetStatus = 'pending';
+      } else if (action === 'confirm_revisions') {
+        targetStatus = 'revision';
+      }
+      
+      // Search in match members
+      Object.values(matchMembers).flat().forEach(member => {
+        // Check if member name matches any of the provided names
+        const nameMatches = memberNames.length === 0 || memberNames.some(name => 
+          member.member_name.toLowerCase().includes(name.toLowerCase())
+        );
+        
+        if (nameMatches) {
+          if (member.payment_status === targetStatus) {
+            // Skip cash payments for confirmations
+            if (action === 'confirm_payments' && member.payment_proof === 'CASH_PAYMENT') return;
+            
+            // For create_revision: only include if payment_proof exists (unconfirmed payments with proof)
+            if (action === 'create_revision' && !member.payment_proof) return;
+            
+            // For revisions, use additional_amount instead of total_amount
+            const amount = action === 'confirm_revisions' && member.additional_amount 
+              ? member.additional_amount 
+              : member.total_amount;
+            
+            matchingPayments.push({
+              id: member.id,
+              type: 'match',
+              memberName: member.member_name,
+              amount: amount,
+              matchId: member.match_id,
+              proofUrl: member.payment_proof || undefined,
+            });
+          }
+        }
+      });
+      
+      // Search in memberships
+      memberships.forEach(membership => {
+        // Check if member name matches any of the provided names
+        const nameMatches = memberNames.length === 0 || memberNames.some(name => 
+          membership.member_name.toLowerCase().includes(name.toLowerCase())
+        );
+        
+        if (nameMatches) {
+          if (membership.payment_status === targetStatus) {
+            // Skip cash payments for confirmations
+            if (action === 'confirm_payments' && membership.payment_proof === 'CASH_PAYMENT') return;
+            
+            // For create_revision: only include if payment_proof exists (unconfirmed payments with proof)
+            if (action === 'create_revision' && !membership.payment_proof) return;
+            
+            matchingPayments.push({
+              id: membership.id,
+              type: 'membership',
+              memberName: membership.member_name,
+              amount: membership.amount,
+              proofUrl: membership.payment_proof || undefined,
+            });
+          }
+        }
+      });
+      
+      // Remove duplicates by id and type
+      matchingPayments = matchingPayments.filter((payment, index, self) =>
+        index === self.findIndex((p) => p.id === payment.id && p.type === payment.type)
+      );
+      
+      let description = '';
+      const memberNamesStr = memberNames.length > 0 ? memberNames.join(', ') : '';
+      
+      if (matchingPayments.length === 0) {
+        if (action === 'create_revision') {
+          description = memberNamesStr
+            ? `Tidak ditemukan pembayaran pending dengan bukti dari "${memberNamesStr}" yang perlu revisi.`
+            : 'Tidak ada pembayaran pending dengan bukti untuk dibuat revisi.';
+        } else if (action === 'confirm_revisions') {
+          description = memberNamesStr
+            ? `Tidak ditemukan pembayaran revisi dari "${memberNamesStr}".`
+            : 'Tidak ada pembayaran revisi yang perlu dikonfirmasi.';
+        } else {
+          description = memberNamesStr
+            ? `Tidak ditemukan pembayaran pending dari "${memberNamesStr}".`
+            : 'Tidak ada pembayaran pending yang perlu dikonfirmasi saat ini.';
+        }
+        setAiSuggestion({
+          action: null,
+          description,
+        });
+      } else {
+        const totalAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
+        
+        if (action === 'create_revision') {
+          // For revision, show list of pending payments with proof
+          description = memberNamesStr
+            ? `Ditemukan ${matchingPayments.length} pembayaran pending dengan bukti dari "${memberNamesStr}" yang perlu revisi (Total: Rp ${totalAmount.toLocaleString('id-ID')}).`
+            : `Ditemukan ${matchingPayments.length} pembayaran pending dengan bukti yang perlu revisi (Total: Rp ${totalAmount.toLocaleString('id-ID')}).`;
+        } else if (action === 'confirm_revisions') {
+          // For revision confirmation, show additional amounts
+          description = memberNamesStr
+            ? `Ditemukan ${matchingPayments.length} pembayaran revisi dari "${memberNamesStr}" (Total tambahan: Rp ${totalAmount.toLocaleString('id-ID')}) yang siap dikonfirmasi.`
+            : `Ditemukan ${matchingPayments.length} pembayaran revisi (Total tambahan: Rp ${totalAmount.toLocaleString('id-ID')}) yang siap dikonfirmasi.`;
+        } else {
+          // For confirmation, show proof status
+          const withProof = matchingPayments.filter(p => p.proofUrl).length;
+          const withoutProof = matchingPayments.length - withProof;
+          
+          let proofStatus = '';
+          if (withoutProof === 0) {
+            proofStatus = 'Semua memiliki bukti pembayaran.';
+          } else if (withProof === 0) {
+            proofStatus = `⚠️ Semua TANPA bukti pembayaran!`;
+          } else {
+            proofStatus = `${withProof} dengan bukti, ${withoutProof} tanpa bukti.`;
+          }
+          
+          description = memberNamesStr
+            ? `Ditemukan ${matchingPayments.length} pembayaran dari "${memberNamesStr}" (Total: Rp ${totalAmount.toLocaleString('id-ID')}). ${proofStatus}`
+            : `Ditemukan ${matchingPayments.length} pembayaran pending (Total: Rp ${totalAmount.toLocaleString('id-ID')}). ${proofStatus}`;
+        }
+        
+        setAiSuggestion({
+          action,
+          memberName: memberNamesStr || undefined,
+          payments: matchingPayments,
+          description,
+        });
+      }
+    } catch (error) {
+      console.error('Error processing AI query:', error);
+      setAiSuggestion({
+        action: null,
+        description: 'Terjadi kesalahan saat memproses permintaan.',
+      });
+    } finally {
+      setAiProcessing(false);
+    }
+  }
+  
+  function executeAISuggestion() {
+    if (!aiSuggestion?.payments || aiSuggestion.payments.length === 0) return;
+    
+    if (aiSuggestion.action === 'create_revision') {
+      // For revision creation, open bulk revision modal
+      setSelectedPayments(aiSuggestion.payments);
+      setShowAIHelper(false);
+      setShowBulkRevisionModal(true);
+      setBulkRevisionAmount('');
+      setBulkRevisionReason('');
+    } else if (aiSuggestion.action === 'confirm_revisions') {
+      // For revision confirmation, open bulk confirm modal with revision flag
+      setSelectedPayments(aiSuggestion.payments);
+      setIsConfirmingRevisions(true);
+      setShowAIHelper(false);
+      setShowBulkConfirmModal(true);
+      setConfirmIrreversible(false);
+    } else {
+      // For regular payment confirmation, open bulk confirm modal
+      setSelectedPayments(aiSuggestion.payments);
+      setIsConfirmingRevisions(false);
+      setShowAIHelper(false);
+      setShowBulkConfirmModal(true);
+      setConfirmIrreversible(false);
+    }
+    
+    // Reset AI state
+    setAiQuery('');
+    setAiSuggestion(null);
+  }
+
   async function updatePaymentStatus(matchId: string, memberId: string, status: 'paid' | 'cancelled') {
     try {
       const { error } = await supabase
@@ -786,9 +1317,21 @@ export default function AdminPembayaranPage() {
     <div className="min-h-screen bg-zinc-950 text-white py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Pembayaran</h1>
-          <p className="text-sm sm:text-base text-zinc-400">Kelola pembayaran pertandingan dan membership</p>
+        <div className="mb-6 sm:mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Pembayaran</h1>
+            <p className="text-sm sm:text-base text-zinc-400">Kelola pembayaran pertandingan dan membership</p>
+          </div>
+          
+          {/* AI Agent Helper Button */}
+          <button
+            onClick={() => setShowAIHelper(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 group"
+          >
+            <Sparkles className="w-5 h-5" />
+            <span className="hidden sm:inline">AI Helper</span>
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          </button>
         </div>
 
         {/* Monthly Recap */}
@@ -915,6 +1458,41 @@ export default function AdminPembayaranPage() {
             )}
           </button>
         </div>
+
+        {/* Bulk Confirmation Banner */}
+        {selectedPayments.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <CheckSquare className="w-6 h-6 text-green-400" />
+                <div>
+                  <p className="text-sm font-semibold text-green-400">
+                    {selectedPayments.length} pembayaran dipilih
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Total: Rp {selectedPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('id-ID')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={openBulkConfirmModal}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-green-500/20"
+                >
+                  <Check className="w-4 h-4" />
+                  Konfirmasi Semua
+                </button>
+                <button
+                  onClick={clearBulkSelection}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  title="Batalkan pilihan"
+                >
+                  <X className="w-5 h-5 text-zinc-400" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         {activeTab === 'matches' ? (
@@ -1175,6 +1753,9 @@ export default function AdminPembayaranPage() {
                     <table className="w-full min-w-[600px]">
                     <thead>
                       <tr className="border-b border-white/10">
+                        <th className="text-center py-3 px-2 w-12">
+                          <CheckSquare className="w-4 h-4 text-zinc-500 mx-auto" />
+                        </th>
                         <th className="text-left py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Nama</th>
                         <th className="text-right py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Shuttlecock</th>
                         <th className="text-right py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Kehadiran</th>
@@ -1188,8 +1769,33 @@ export default function AdminPembayaranPage() {
                         ?.filter(member => 
                           !searchTerm || member.member_name.toLowerCase().includes(searchTerm.toLowerCase())
                         )
-                        .map((member) => (
+                        .map((member) => {
+                        const canSelect = member.payment_status === 'pending' && member.payment_proof && member.payment_proof !== 'CASH_PAYMENT';
+                        const isSelected = isPaymentSelected(member.id, 'match');
+                        
+                        return (
                         <tr key={member.id} className="border-b border-white/5 last:border-0">
+                          <td className="py-3 px-2 text-center">
+                            {canSelect && (
+                              <button
+                                onClick={() => togglePaymentSelection({
+                                  id: member.id,
+                                  type: 'match',
+                                  memberName: member.member_name,
+                                  amount: member.total_amount,
+                                  matchId: match.id,
+                                  proofUrl: member.payment_proof || undefined
+                                })}
+                                className="text-zinc-400 hover:text-green-400 transition-colors mx-auto"
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-5 h-5 text-green-400" />
+                                ) : (
+                                  <Square className="w-5 h-5" />
+                                )}
+                              </button>
+                            )}
+                          </td>
                           <td className="py-3 px-4">
                             {isEditing ? (
                               <select
@@ -1338,7 +1944,8 @@ export default function AdminPembayaranPage() {
                             )}
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1375,6 +1982,9 @@ export default function AdminPembayaranPage() {
               <table className="w-full min-w-[700px]">
                 <thead>
                   <tr className="border-b border-white/10 bg-zinc-800/50">
+                    <th className="text-center py-3 sm:py-4 px-2 w-12">
+                      <CheckSquare className="w-4 h-4 text-zinc-500 mx-auto" />
+                    </th>
                     <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Nama Anggota</th>
                     <th className="text-center py-3 sm:py-4 px-3 sm:px-6 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Bulan</th>
                     <th className="text-center py-3 sm:py-4 px-3 sm:px-6 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Minggu</th>
@@ -1387,8 +1997,31 @@ export default function AdminPembayaranPage() {
                   {filteredMemberships.map((membership) => {
                     const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
                     const monthName = monthNames[membership.month - 1];
+                    const canSelect = membership.payment_status === 'pending' && membership.payment_proof && membership.payment_proof !== 'CASH_PAYMENT';
+                    const isSelected = isPaymentSelected(membership.id, 'membership');
+                    
                     return (
                     <tr key={membership.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                      <td className="py-3 sm:py-4 px-2 text-center">
+                        {canSelect && (
+                          <button
+                            onClick={() => togglePaymentSelection({
+                              id: membership.id,
+                              type: 'membership',
+                              memberName: membership.member_name,
+                              amount: membership.amount,
+                              proofUrl: membership.payment_proof || undefined
+                            })}
+                            className="text-zinc-400 hover:text-green-400 transition-colors mx-auto"
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-5 h-5 text-green-400" />
+                            ) : (
+                              <Square className="w-5 h-5" />
+                            )}
+                          </button>
+                        )}
+                      </td>
                       <td className="py-3 sm:py-4 px-3 sm:px-6 font-medium text-sm sm:text-base whitespace-nowrap">{membership.member_name}</td>
                       <td className="py-3 sm:py-4 px-3 sm:px-6 text-center text-xs sm:text-sm text-zinc-300 whitespace-nowrap">{monthName} {membership.year}</td>
                       <td className="py-3 sm:py-4 px-3 sm:px-6 text-center text-sm whitespace-nowrap">{membership.weeks_in_month} minggu</td>
@@ -1675,7 +2308,13 @@ export default function AdminPembayaranPage() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">Tambah Membership Baru</h2>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Tambah Membership Baru</h2>
+                <p className="text-xs text-blue-400 mt-1 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  AI Smart Detection menganalisis jumlah Sabtu bulan ini
+                </p>
+              </div>
               <button
                 onClick={() => setShowMembershipModal(false)}
                 className="text-zinc-400 hover:text-white"
@@ -1704,25 +2343,54 @@ export default function AdminPembayaranPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Jumlah Minggu dalam Bulan Ini
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-zinc-400">
+                    Jumlah Minggu dalam Bulan Ini
+                  </label>
+                  {weeksAutoDetected && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-full text-xs font-medium text-blue-300">
+                      <Sparkles className="w-3 h-3" />
+                      Smart Detection
+                    </span>
+                  )}
+                </div>
                 <select
                   value={newMembership.weeks_in_month}
-                  onChange={(e) => setNewMembership({ ...newMembership, weeks_in_month: parseInt(e.target.value) })}
+                  onChange={(e) => {
+                    setNewMembership({ ...newMembership, weeks_in_month: parseInt(e.target.value) });
+                    setWeeksAutoDetected(false);
+                  }}
                   className="w-full px-4 py-2 bg-zinc-800 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
                 >
                   <option value="4">4 Minggu - Rp 40.000</option>
                   <option value="5">5 Minggu - Rp 45.000</option>
                 </select>
+                {weeksAutoDetected && (
+                  <p className="text-xs text-blue-400 mt-2 flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Terdeteksi otomatis berdasarkan jumlah Sabtu bulan ini
+                  </p>
+                )}
               </div>
 
               <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
-                <p className="text-sm text-purple-300">
-                  Total: <span className="font-bold text-lg">Rp {(newMembership.weeks_in_month === 4 ? 40000 : 45000).toLocaleString('id-ID')}</span>
-                </p>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Member tidak perlu bayar biaya kehadiran saat pertandingan
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-sm text-purple-300">
+                      Total: <span className="font-bold text-lg">Rp {(newMembership.weeks_in_month === 4 ? 40000 : 45000).toLocaleString('id-ID')}</span>
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      {newMembership.weeks_in_month} minggu × Rp {(newMembership.weeks_in_month === 4 ? 10000 : 9000).toLocaleString('id-ID')}/minggu
+                    </p>
+                  </div>
+                  {weeksAutoDetected && (
+                    <div className="bg-blue-500/20 border border-blue-500/30 rounded px-2 py-1">
+                      <p className="text-xs text-blue-300 font-semibold">✓ Otomatis</p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-400 mt-2">
+                  Member tidak perlu bayar biaya kehadiran Rp 18.000 saat pertandingan
                 </p>
               </div>
 
@@ -1740,12 +2408,319 @@ export default function AdminPembayaranPage() {
                   Tambah Membership
                 </button>
               </div>
+
+              <div className="mt-4 p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                <p className="text-xs text-blue-300 flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Smart Detection:</strong> Sistem otomatis menghitung jumlah Sabtu dalam bulan untuk menentukan jumlah minggu (4 atau 5 minggu). Setiap sesi badminton adalah Sabtu pukul 20:00.
+                  </span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Payment Proof Modal */}
+      {/* Bulk Confirmation Modal */}
+      {showBulkConfirmModal && selectedPayments.length > 0 && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-green-500/30 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-semibold text-white flex items-center gap-2">
+                <CheckSquare className="w-6 h-6 text-green-400" />
+                {isConfirmingRevisions ? 'Konfirmasi Revisi (Bulk)' : 'Konfirmasi Pembayaran (Bulk)'}
+              </h3>
+              <button
+                onClick={closeBulkConfirmModal}
+                className="text-zinc-400 hover:text-zinc-300 p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Selected Payments Summary */}
+            <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-green-400 font-medium">
+                  {isConfirmingRevisions 
+                    ? `${selectedPayments.length} Revisi akan dikonfirmasi:` 
+                    : `${selectedPayments.length} Pembayaran akan dikonfirmasi:`
+                  }
+                </p>
+                {!isConfirmingRevisions && (() => {
+                  const withProof = selectedPayments.filter(p => p.proofUrl).length;
+                  const withoutProof = selectedPayments.length - withProof;
+                  if (withoutProof > 0) {
+                    return (
+                      <div className="flex items-center gap-1 text-xs px-2 py-1 bg-amber-500/20 border border-amber-500/30 rounded">
+                        <AlertCircle className="w-3 h-3 text-amber-400" />
+                        <span className="text-amber-400">{withoutProof} tanpa bukti</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {selectedPayments.map((payment, index) => (
+                  <div key={`${payment.type}-${payment.id}`} className="flex items-center justify-between bg-zinc-800/50 rounded px-3 py-2">
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="text-xs text-zinc-500">{index + 1}.</span>
+                      {isConfirmingRevisions ? (
+                        <span className="text-xs px-2 py-0.5 bg-blue-500/20 border border-blue-500/30 rounded text-blue-400 font-medium">
+                          Revisi
+                        </span>
+                      ) : (
+                        <>
+                          {payment.proofUrl ? (
+                            <span title="Ada bukti">
+                              <Check className="w-3.5 h-3.5 text-green-400" />
+                            </span>
+                          ) : (
+                            <span title="Tanpa bukti">
+                              <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                            </span>
+                          )}
+                        </>
+                      )}
+                      <div className="flex-1">
+                        <span className="text-sm text-white font-medium">
+                          {payment.memberName}
+                        </span>
+                        <span className="text-xs text-zinc-400 ml-2">
+                          ({payment.type === 'match' ? 'Pertandingan' : 'Membership'})
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {!isConfirmingRevisions && payment.proofUrl && (
+                        <a
+                          href={payment.proofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 transition-colors p-1.5 hover:bg-blue-500/10 rounded"
+                          title="Lihat Bukti Pembayaran"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </a>
+                      )}
+                      <span className="text-sm font-semibold text-green-400">
+                        Rp {payment.amount.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t border-green-500/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-green-400">
+                    {isConfirmingRevisions ? 'Total Tambahan:' : 'Total Pendapatan:'}
+                  </span>
+                  <span className="text-2xl font-bold text-white">
+                    Rp {selectedPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('id-ID')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Confirmation Warning */}
+            <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+              <p className="text-sm text-amber-400 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>
+                  <strong>Perhatian:</strong> {isConfirmingRevisions 
+                    ? 'Tindakan ini akan mengkonfirmasi pembayaran revisi dan menandai semua pembayaran terpilih sebagai LUNAS. Status revisi akan dihapus.'
+                    : 'Tindakan ini akan menandai semua pembayaran terpilih sebagai LUNAS dan mengupdate status pembayaran. Pastikan semua bukti pembayaran sudah diverifikasi.'
+                  }
+                </span>
+              </p>
+            </div>
+
+            {/* Irreversible Action Confirmation - Only show if there are payments without proof and not confirming revisions */}
+            {!isConfirmingRevisions && (() => {
+              const paymentsWithoutProof = selectedPayments.filter(p => !p.proofUrl).length;
+              if (paymentsWithoutProof > 0) {
+                return (
+                  <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                    <p className="text-sm text-red-400 font-semibold mb-3 flex items-center gap-2">
+                      <Ban className="w-4 h-4" />
+                      Verifikasi Ganda Diperlukan
+                    </p>
+                    <p className="text-xs text-red-300 mb-4">
+                      {paymentsWithoutProof} pembayaran TANPA bukti transfer akan dikonfirmasi. Tindakan ini <strong>TIDAK DAPAT DIBATALKAN</strong>. Pastikan Anda sudah menerima konfirmasi pembayaran melalui cara lain (cash, confirm langsung, dll).
+                    </p>
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={confirmIrreversible}
+                        onChange={(e) => setConfirmIrreversible(e.target.checked)}
+                        className="mt-0.5 w-5 h-5 rounded border-2 border-red-500/50 bg-zinc-800 checked:bg-red-600 checked:border-red-600 focus:ring-2 focus:ring-red-500/50 transition-all cursor-pointer"
+                      />
+                      <span className="text-xs text-red-200 group-hover:text-red-100 transition-colors">
+                        Saya memahami bahwa tindakan ini <strong>TIDAK DAPAT DIBATALKAN</strong> dan sudah memverifikasi pembayaran melalui cara lain.
+                      </span>
+                    </label>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={closeBulkConfirmModal}
+                className="flex-1 bg-zinc-800 text-zinc-300 px-6 py-3 rounded-lg font-medium hover:bg-zinc-700 transition-colors border border-white/10"
+              >
+                Batal
+              </button>
+              <button
+                onClick={isConfirmingRevisions ? handleBulkConfirmRevisions : handleBulkConfirmPayments}
+                disabled={bulkConfirming}
+                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
+              >
+                {bulkConfirming ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5" />
+                    {isConfirmingRevisions 
+                      ? `Konfirmasi ${selectedPayments.length} Revisi`
+                      : `Konfirmasi ${selectedPayments.length} Pembayaran`
+                    }
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Revision Modal */}
+      {showBulkRevisionModal && selectedPayments.length > 0 && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-amber-500/30 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-semibold text-white flex items-center gap-2">
+                <Edit className="w-6 h-6 text-amber-400" />
+                Buat Revisi Pembayaran (Bulk)
+              </h3>
+              <button
+                onClick={closeBulkRevisionModal}
+                className="text-zinc-400 hover:text-zinc-300 p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Selected Members Summary */}
+            <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+              <p className="text-sm text-amber-400 font-medium mb-3">
+                {selectedPayments.length} Member akan dibuatkan revisi pembayaran:
+              </p>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {selectedPayments.map((payment, index) => (
+                  <div key={`${payment.type}-${payment.id}`} className="flex items-center justify-between bg-zinc-800/50 rounded px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-500">{index + 1}.</span>
+                      <div>
+                        <span className="text-sm text-white font-medium">
+                          {payment.memberName}
+                        </span>
+                        <span className="text-xs text-zinc-400 ml-2">
+                          ({payment.type === 'match' ? 'Pertandingan' : 'Membership'})
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-amber-400">
+                      Sudah lunas: Rp {payment.amount.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Revision Details Form */}
+            <div className="mb-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Jumlah Revisi (Additional Amount) <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={bulkRevisionAmount}
+                  onChange={(e) => setBulkRevisionAmount(e.target.value)}
+                  placeholder="Contoh: 30000"
+                  className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50"
+                />
+                <p className="text-xs text-zinc-400 mt-1">
+                  Jumlah tambahan yang perlu dibayar oleh member
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Alasan Revisi <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={bulkRevisionReason}
+                  onChange={(e) => setBulkRevisionReason(e.target.value)}
+                  placeholder="Contoh: Penambahan shuttlecock, perubahan biaya venue, dll"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 resize-none"
+                />
+                <p className="text-xs text-zinc-400 mt-1">
+                  Jelaskan mengapa revisi diperlukan
+                </p>
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <p className="text-sm text-blue-400 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>
+                  <strong>Info:</strong> Revisi akan mengubah status pembayaran menjadi <strong>REVISION</strong> dan menambahkan tagihan tambahan sebesar jumlah yang diinput. Member perlu melakukan pembayaran tambahan.
+                </span>
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={closeBulkRevisionModal}
+                className="flex-1 bg-zinc-800 text-zinc-300 px-6 py-3 rounded-lg font-medium hover:bg-zinc-700 transition-colors border border-white/10"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleBulkCreateRevisions}
+                disabled={bulkRevising || !bulkRevisionAmount || !bulkRevisionReason}
+                className="flex-1 bg-amber-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+              >
+                {bulkRevising ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="w-5 h-5" />
+                    Buat Revisi untuk {selectedPayments.length} Member
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Proof Modal */}
       {showProofModal && selectedProof && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-auto">
@@ -1838,6 +2813,325 @@ export default function AdminPembayaranPage() {
                   <Ban className="w-5 h-5" />
                   Batalkan
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Agent Helper Modal */}
+      {showAIHelper && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 border border-purple-500/30 rounded-2xl max-w-2xl w-full shadow-2xl shadow-purple-500/20">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-b border-purple-500/30 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl shadow-lg">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                      AI Agent Helper
+                      <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30">Beta</span>
+                    </h3>
+                    <p className="text-sm text-zinc-400 mt-1">Permudah pekerjaan admin dengan AI</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAIHelper(false);
+                    setAiQuery('');
+                    setAiSuggestion(null);
+                  }}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Examples */}
+              <div className="bg-zinc-800/50 border border-purple-500/20 rounded-xl p-4">
+                <p className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  Contoh Perintah:
+                </p>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setAiQuery('Konfirmasi semua pembayaran dari Kevin')}
+                    className="w-full text-left text-xs text-zinc-300 hover:text-white bg-zinc-700/50 hover:bg-zinc-700 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    💡 "Konfirmasi semua pembayaran dari Kevin"
+                  </button>
+                  <button
+                    onClick={() => setAiQuery('Tampilkan pembayaran dari Budi yang perlu dikonfirmasi')}
+                    className="w-full text-left text-xs text-zinc-300 hover:text-white bg-zinc-700/50 hover:bg-zinc-700 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    💡 "Tampilkan pembayaran dari Budi yang perlu dikonfirmasi"
+                  </button>
+                  <button
+                    onClick={() => setAiQuery('Konfirmasi semua pembayaran yang sudah upload bukti')}
+                    className="w-full text-left text-xs text-zinc-300 hover:text-white bg-zinc-700/50 hover:bg-zinc-700 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    💡 "Konfirmasi semua pembayaran yang sudah upload bukti"
+                  </button>
+                </div>
+              </div>
+
+              {/* Input */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Apa yang ingin Anda lakukan?
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !aiProcessing) {
+                        processAIQuery();
+                      }
+                    }}
+                    placeholder="Contoh: Konfirmasi pembayaran dari Kevin..."
+                    className="flex-1 px-4 py-3 bg-zinc-900 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    disabled={aiProcessing}
+                  />
+                  <button
+                    onClick={processAIQuery}
+                    disabled={!aiQuery.trim() || aiProcessing}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-purple-500/30"
+                  >
+                    {aiProcessing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Memproses...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        Proses
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* AI Suggestion */}
+              {aiSuggestion && (
+                <div className={`border rounded-xl p-5 ${
+                  aiSuggestion.action 
+                    ? 'bg-green-500/10 border-green-500/30' 
+                    : 'bg-amber-500/10 border-amber-500/30'
+                }`}>
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className={`p-2 rounded-lg ${
+                      aiSuggestion.action 
+                        ? 'bg-green-500/20' 
+                        : 'bg-amber-500/20'
+                    }`}>
+                      <Sparkles className={`w-5 h-5 ${
+                        aiSuggestion.action 
+                          ? 'text-green-400' 
+                          : 'text-amber-400'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <p className={`text-sm font-semibold mb-1 ${
+                        aiSuggestion.action 
+                          ? 'text-green-400' 
+                          : 'text-amber-400'
+                      }`}>
+                        AI Assistant
+                      </p>
+                      <p className="text-sm text-white">{aiSuggestion.description}</p>
+                    </div>
+                  </div>
+
+                  {aiSuggestion.action && aiSuggestion.payments && aiSuggestion.payments.length > 0 && (() => {
+                    const withProof = aiSuggestion.payments.filter(p => p.proofUrl).length;
+                    const withoutProof = aiSuggestion.payments.length - withProof;
+                    const isCreateRevision = aiSuggestion.action === 'create_revision';
+                    const isConfirmRevision = aiSuggestion.action === 'confirm_revisions';
+                    
+                    return (
+                    <>
+                      {/* Payment List Preview with Proof Indicators */}
+                      <div className="bg-zinc-900/50 border border-white/5 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs text-zinc-400">
+                            {isCreateRevision 
+                              ? 'Pembayaran yang akan direvisi:' 
+                              : isConfirmRevision 
+                                ? 'Revisi yang akan dikonfirmasi:'
+                                : 'Ringkasan pembayaran:'}
+                          </p>
+                          {!isCreateRevision && !isConfirmRevision && (
+                            withoutProof === 0 ? (
+                              <div className="flex items-center gap-1 text-xs text-green-400">
+                                <Check className="w-3 h-3" />
+                                <span>Semua ada bukti</span>
+                              </div>
+                            ) : withProof === 0 ? (
+                              <div className="flex items-center gap-1 text-xs text-red-400">
+                                <AlertCircle className="w-3 h-3" />
+                                <span>Semua TANPA bukti</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-xs text-amber-400">
+                                <AlertCircle className="w-3 h-3" />
+                                <span>{withProof} ada / {withoutProof} tanpa</span>
+                              </div>
+                            )
+                          )}
+                        </div>
+                        <div className="space-y-1.5">
+                          {aiSuggestion.payments.slice(0, 5).map((payment, idx) => (
+                            <div key={`${payment.type}-${payment.id}`} className="flex items-center justify-between text-xs bg-zinc-800/50 rounded p-2">
+                              <div className="flex items-center gap-2 flex-1">
+                                <span className="text-zinc-500">{idx + 1}.</span>
+                                {!isCreateRevision && !isConfirmRevision && (
+                                  payment.proofUrl ? (
+                                    <span title="Ada bukti">
+                                      <Check className="w-3 h-3 text-green-400" />
+                                    </span>
+                                  ) : (
+                                    <span title="Tanpa bukti">
+                                      <AlertCircle className="w-3 h-3 text-amber-400" />
+                                    </span>
+                                  )
+                                )}
+                                <span className="text-zinc-300">
+                                  {payment.memberName}
+                                </span>
+                                <span className="text-zinc-500 text-[10px]">
+                                  ({payment.type === 'match' ? 'Match' : 'Member'})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {!isCreateRevision && !isConfirmRevision && payment.proofUrl && (
+                                  <a
+                                    href={payment.proofUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:text-blue-300 transition-colors p-1 hover:bg-blue-500/10 rounded"
+                                    title="Lihat Bukti"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                                <span className="text-green-400 font-medium">
+                                  Rp {payment.amount.toLocaleString('id-ID')}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                          {aiSuggestion.payments.length > 5 && (
+                            <p className="text-xs text-zinc-500 italic mt-2 text-center">
+                              +{aiSuggestion.payments.length - 5} pembayaran lainnya...
+                            </p>
+                          )}
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-white/5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-zinc-400">Total:</span>
+                            <span className="text-white font-semibold">
+                              Rp {aiSuggestion.payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Proof Verification Notice or Revision Notice */}
+                      {isCreateRevision ? (
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
+                          <p className="text-xs text-blue-400 flex items-start gap-2">
+                            <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                            <span>
+                              Pembayaran di atas sudah <strong>LUNAS</strong>. Revisi akan membuat tagihan tambahan untuk member. Anda akan diminta mengisi jumlah revisi dan alasan di langkah berikutnya.
+                            </span>
+                          </p>
+                        </div>
+                      ) : isConfirmRevision ? (
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
+                          <p className="text-xs text-green-400 flex items-start gap-2">
+                            <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                            <span>
+                              Member di atas sudah melakukan pembayaran <strong>REVISI</strong> (tambahan). Klik konfirmasi untuk menyelesaikan pembayaran revisi mereka.
+                            </span>
+                          </p>
+                        </div>
+                      ) : (
+                        withoutProof === 0 ? (
+                          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
+                            <p className="text-xs text-green-400 flex items-start gap-2">
+                              <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                              <span>
+                                Semua pembayaran memiliki bukti. Klik ikon mata untuk melihat bukti sebelum konfirmasi.
+                              </span>
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-3">
+                            <p className="text-xs text-red-400 flex items-start gap-2">
+                              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                              <span>
+                                <strong>⚠️ Peringatan:</strong> {withoutProof} pembayaran TANPA bukti transfer. Konfirmasi memerlukan verifikasi ganda karena tindakan ini <strong>TIDAK DAPAT DIBATALKAN</strong>.
+                              </span>
+                            </p>
+                          </div>
+                        )
+                      )}
+
+                      {/* Action Button */}
+                      <button
+                        onClick={executeAISuggestion}
+                        className={`w-full px-5 py-3 ${
+                          isCreateRevision 
+                            ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-500/30'
+                            : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'
+                        } text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 shadow-lg`}
+                      >
+                        {isCreateRevision ? (
+                          <>
+                            <Edit className="w-5 h-5" />
+                            Buat Revisi ({aiSuggestion.payments.length} Member)
+                          </>
+                        ) : isConfirmRevision ? (
+                          <>
+                            <Check className="w-5 h-5" />
+                            Konfirmasi {aiSuggestion.payments.length} Revisi
+                          </>
+                        ) : (
+                          <>
+                            <CheckSquare className="w-5 h-5" />
+                            Lanjut ke Review Akhir ({aiSuggestion.payments.length} Pembayaran)
+                          </>
+                        )}
+                      </button>
+                    </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Help Text */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <p className="text-xs text-blue-400 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>
+                    <strong>Tip:</strong> AI Helper dapat:<br/>
+                    • <strong>Konfirmasi</strong> pembayaran pending: "Konfirmasi pembayaran dari Kevin"<br/>
+                    • <strong>Konfirmasi revisi</strong>: "Konfirmasi revisi dari Kevin dan William"<br/>
+                    • <strong>Buat revisi</strong> untuk member yang sudah lunas: "Buat revisi dari Kevin"<br/>
+                    • <strong>Tampilkan</strong> pembayaran: "Tampilkan semua pembayaran pending"<br/>
+                    Untuk pembayaran tanpa bukti, sistem akan meminta verifikasi ganda.
+                  </span>
+                </p>
               </div>
             </div>
           </div>

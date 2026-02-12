@@ -88,36 +88,37 @@ export default function TeamOptimizerPage() {
           m.team2_player2 === profile.full_name
         );
 
-        if (playerMatches.length === 0) continue;
-
+        // Include all players, even those with no matches yet
         let wins = 0;
         let totalScore = 0;
         const partnershipMap = new Map<string, { wins: number; total: number }>();
 
-        playerMatches.forEach(match => {
-          const isTeam1 = match.team1_player1 === profile.full_name || match.team1_player2 === profile.full_name;
-          const isWinner = (isTeam1 && match.winner === 1) || (!isTeam1 && match.winner === 2);
-          const partner = isTeam1 
-            ? (match.team1_player1 === profile.full_name ? match.team1_player2 : match.team1_player1)
-            : (match.team2_player1 === profile.full_name ? match.team2_player2 : match.team2_player1);
-          const score = isTeam1 ? match.team1_score : match.team2_score;
+        if (playerMatches.length > 0) {
+          playerMatches.forEach(match => {
+            const isTeam1 = match.team1_player1 === profile.full_name || match.team1_player2 === profile.full_name;
+            const isWinner = (isTeam1 && match.winner === 1) || (!isTeam1 && match.winner === 2);
+            const partner = isTeam1 
+              ? (match.team1_player1 === profile.full_name ? match.team1_player2 : match.team1_player1)
+              : (match.team2_player1 === profile.full_name ? match.team2_player2 : match.team2_player1);
+            const score = isTeam1 ? match.team1_score : match.team2_score;
 
-          if (isWinner) wins++;
-          totalScore += score;
+            if (isWinner) wins++;
+            totalScore += score;
 
-          // Track partnerships
-          if (partner) {
-            if (!partnershipMap.has(partner)) {
-              partnershipMap.set(partner, { wins: 0, total: 0 });
+            // Track partnerships
+            if (partner) {
+              if (!partnershipMap.has(partner)) {
+                partnershipMap.set(partner, { wins: 0, total: 0 });
+              }
+              const partnerStat = partnershipMap.get(partner)!;
+              partnerStat.total++;
+              if (isWinner) partnerStat.wins++;
             }
-            const partnerStat = partnershipMap.get(partner)!;
-            partnerStat.total++;
-            if (isWinner) partnerStat.wins++;
-          }
-        });
+          });
+        }
 
-        const winRate = (wins / playerMatches.length) * 100;
-        const avgScore = totalScore / playerMatches.length;
+        const winRate = playerMatches.length > 0 ? (wins / playerMatches.length) * 100 : 0;
+        const avgScore = playerMatches.length > 0 ? totalScore / playerMatches.length : 0;
 
         // Get best partners
         const bestPartners = Array.from(partnershipMap.entries())
@@ -135,7 +136,9 @@ export default function TeamOptimizerPage() {
           winRate: Math.round(winRate),
           totalMatches: playerMatches.length,
           avgScore: Math.round(avgScore),
-          skillLevel: Math.min(Math.round(winRate + (avgScore / 21) * 10), 100),
+          skillLevel: playerMatches.length > 0 
+            ? Math.min(Math.round(winRate + (avgScore / 21) * 10), 100)
+            : 50, // Default skill level for new players
           bestPartners
         });
       }
@@ -234,8 +237,59 @@ export default function TeamOptimizerPage() {
             <Users className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Team Optimizer</h1>
-            <p className="text-zinc-400">Komposisi tim optimal dengan AI forecasting</p>
+            <h1 className="text-3xl font-bold text-white">Racik Tim Pintar</h1>
+            <p className="text-zinc-400">Buat tim badminton yang seimbang dengan bantuan AI</p>
+          </div>
+        </div>
+
+        {/* Instructions Card */}
+        <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-xl p-6">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-white font-semibold mb-2">Cara Menggunakan:</h3>
+              <ol className="text-zinc-300 text-sm space-y-1.5 list-decimal list-inside">
+                <li>Pilih <strong>mode permainan</strong> yang diinginkan (Seimbang, Kompetitif, Latihan, atau Seru)</li>
+                <li>Klik <strong>kotak pemain</strong> untuk memilih/membatalkan (minimal 4 pemain, disarankan 8 untuk 4 tim)</li>
+                <li>Tekan tombol <strong>&quot;Generate Tim Optimal&quot;</strong> untuk membuat racikan tim</li>
+                <li>AI akan menganalisis performa dan chemistry pemain, lalu membuat tim yang optimal</li>
+              </ol>
+              
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <h4 className="text-white font-semibold mb-2 text-sm">Penjelasan Statistik Pemain:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="flex items-start gap-2">
+                    <div className="p-1.5 bg-green-500/20 rounded">
+                      <TrendingUp className="w-3.5 h-3.5 text-green-400" />
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">Win Rate (Tingkat Kemenangan)</div>
+                      <div className="text-zinc-400">Persentase kemenangan dari total pertandingan</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="p-1.5 bg-blue-500/20 rounded">
+                      <Target className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">Total Pertandingan</div>
+                      <div className="text-zinc-400">Jumlah match yang sudah dimainkan</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="p-1.5 bg-purple-500/20 rounded">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">Skill Level (Level Kemampuan)</div>
+                      <div className="text-zinc-400">Nilai 0-100 berdasarkan performa keseluruhan</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -243,18 +297,17 @@ export default function TeamOptimizerPage() {
         <div className="bg-zinc-900 rounded-xl p-6 space-y-6">
           <h2 className="text-xl font-semibold text-white flex items-center gap-2">
             <Target className="w-5 h-5 text-purple-400" />
-            Konfigurasi
+            Langkah 1: Pilih Mode Permainan
           </h2>
 
           {/* Mode Selection */}
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-3">Mode Optimasi</label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { value: 'balanced', label: 'Seimbang', desc: 'Skill merata' },
-                { value: 'competitive', label: 'Kompetitif', desc: 'Maksimal kekuatan' },
-                { value: 'training', label: 'Latihan', desc: 'Campur level' },
-                { value: 'exciting', label: 'Seru', desc: 'Pertandingan ketat' }
+                { value: 'balanced', label: 'Seimbang', desc: 'Tim dengan skill merata', icon: '⚖️' },
+                { value: 'competitive', label: 'Kompetitif', desc: 'Maksimalkan kekuatan tim', icon: '🏆' },
+                { value: 'training', label: 'Latihan', desc: 'Campur pemain baru & lama', icon: '📚' },
+                { value: 'exciting', label: 'Seru', desc: 'Pertandingan lebih ketat', icon: '🔥' }
               ].map(m => (
                 <button
                   key={m.value}
@@ -265,8 +318,9 @@ export default function TeamOptimizerPage() {
                       : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
                   }`}
                 >
+                  <div className="text-2xl mb-2">{m.icon}</div>
                   <div className="text-white font-medium">{m.label}</div>
-                  <div className="text-sm text-zinc-400">{m.desc}</div>
+                  <div className="text-sm text-zinc-400 mt-1">{m.desc}</div>
                 </button>
               ))}
             </div>
@@ -274,10 +328,22 @@ export default function TeamOptimizerPage() {
 
           {/* Player Selection */}
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-3">
-              Pilih Pemain ({selectedPlayers.length} dipilih)
-            </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+            <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+              <Users className="w-5 h-5 text-purple-400" />
+              Langkah 2: Pilih Pemain (Minimal 4 orang)
+            </h2>
+            <div className="bg-zinc-800/50 rounded-lg p-3 mb-4">
+              <p className="text-sm text-zinc-300">
+                <strong className="text-white">{selectedPlayers.length} pemain dipilih</strong>
+                {selectedPlayers.length >= 4 && selectedPlayers.length % 4 === 0 && (
+                  <span className="ml-2 text-green-400">✓ Bisa membuat {selectedPlayers.length / 4} pertandingan</span>
+                )}
+                {selectedPlayers.length > 0 && selectedPlayers.length % 4 !== 0 && (
+                  <span className="ml-2 text-yellow-400">⚠ Pilih kelipatan 4 untuk hasil optimal</span>
+                )}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2">
               {playerStats.map(player => (
                 <button
                   key={player.id}
@@ -288,32 +354,82 @@ export default function TeamOptimizerPage() {
                       : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
                   }`}
                 >
-                  <div className="text-white font-medium truncate">{player.name}</div>
-                  <div className="text-sm text-zinc-400">WR: {player.winRate}% • {player.totalMatches}M</div>
-                  <div className="text-xs text-zinc-500">Skill: {player.skillLevel}</div>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="text-white font-semibold text-lg">{player.name}</div>
+                    {selectedPlayers.includes(player.name) && (
+                      <div className="bg-green-500 rounded-full p-1">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-400">Tingkat Kemenangan:</span>
+                      <span className={`font-semibold ${
+                        player.winRate >= 70 ? 'text-green-400' :
+                        player.winRate >= 50 ? 'text-yellow-400' :
+                        player.winRate > 0 ? 'text-orange-400' : 'text-zinc-400'
+                      }`}>
+                        {player.winRate}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-400">Total Main:</span>
+                      <span className="text-white font-medium">{player.totalMatches} pertandingan</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-400">Level Kemampuan:</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 bg-zinc-700 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              player.skillLevel >= 70 ? 'bg-green-500' :
+                              player.skillLevel >= 50 ? 'bg-yellow-500' :
+                              'bg-orange-500'
+                            }`}
+                            style={{ width: `${player.skillLevel}%` }}
+                          />
+                        </div>
+                        <span className="text-white font-medium w-8">{player.skillLevel}</span>
+                      </div>
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Generate Button */}
-          <button
-            onClick={generateTeams}
-            disabled={analyzing || selectedPlayers.length < 4}
-            className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-zinc-700 disabled:to-zinc-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition-all"
-          >
-            {analyzing ? (
-              <>
-                <RefreshCw className="w-5 h-5 animate-spin" />
-                Menganalisis...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                Generate Tim Optimal
-              </>
-            )}
-          </button>
+          <div>
+            <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              Langkah 3: Generate Tim
+            </h2>
+            <button
+              onClick={generateTeams}
+              disabled={analyzing || selectedPlayers.length < 4}
+              className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-zinc-700 disabled:to-zinc-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed text-lg"
+            >
+              {analyzing ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  Sedang Menganalisis Data Pemain...
+                </>
+              ) : selectedPlayers.length < 4 ? (
+                <>
+                  <AlertCircle className="w-5 h-5" />
+                  Pilih Minimal 4 Pemain
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  Generate Tim Optimal ({selectedPlayers.length} Pemain)
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Results */}

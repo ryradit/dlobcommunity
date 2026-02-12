@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle } from 'lucide-react';
+import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle, CheckSquare, Square, Sparkles, Send } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 
 interface MatchMember {
@@ -61,6 +61,22 @@ export default function PembayaranPage() {
   const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'cash'>('bank_transfer');
   const [showPaymentHelpModal, setShowPaymentHelpModal] = useState(false);
   const [showStatusHelpModal, setShowStatusHelpModal] = useState(false);
+  
+  // Bulk payment states
+  const [selectedPayments, setSelectedPayments] = useState<Array<{ id: string; type: 'match' | 'membership'; amount: number; matchNumber?: number; label: string }>>([]);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [bulkProofFile, setBulkProofFile] = useState<File | null>(null);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  
+  // AI Helper states
+  const [showAIHelper, setShowAIHelper] = useState(false);
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<{
+    action: 'pay_all' | 'pay_revisions' | null;
+    payments: Array<{ id: string; type: 'match' | 'membership'; amount: number; label: string; isRevision?: boolean }>;
+    description: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchPaymentData();
@@ -227,6 +243,7 @@ export default function PembayaranPage() {
   function closeUploadModal() {
     setShowUploadModal(false);
     setProofFile(null);
+    setSelectedPayment(null);
   }
 
   async function handleCashPayment() {
@@ -275,6 +292,112 @@ export default function PembayaranPage() {
       alert('Gagal mencatat pembayaran cash');
     } finally {
       setUploading(false);
+    }
+  }
+
+  // Bulk payment functions
+  const togglePaymentSelection = (payment: { id: string; type: 'match' | 'membership'; amount: number; matchNumber?: number; label: string }) => {
+    setSelectedPayments(prev => {
+      const exists = prev.find(p => p.id === payment.id && p.type === payment.type);
+      if (exists) {
+        return prev.filter(p => !(p.id === payment.id && p.type === payment.type));
+      } else {
+        return [...prev, payment];
+      }
+    });
+  };
+
+  const isPaymentSelected = (id: string, type: 'match' | 'membership') => {
+    return selectedPayments.some(p => p.id === id && p.type === type);
+  };
+
+  const clearBulkSelection = () => {
+    setSelectedPayments([]);
+  };
+
+  const openBulkUploadModal = () => {
+    if (selectedPayments.length === 0) return;
+    setShowBulkUploadModal(true);
+  };
+
+  const closeBulkUploadModal = () => {
+    setShowBulkUploadModal(false);
+    setBulkProofFile(null);
+    setSelectedPayments([]);
+  };
+
+  async function handleBulkUploadProof() {
+    if (!bulkProofFile || selectedPayments.length === 0) return;
+
+    try {
+      setBulkUploading(true);
+
+      // Upload file to Supabase Storage
+      const fileExt = bulkProofFile.name.split('.').pop();
+      const fileName = `bulk-payment-${Date.now()}.${fileExt}`;
+      const filePath = `payment-proofs/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('payment-proofs')
+        .upload(filePath, bulkProofFile);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('payment-proofs')
+        .getPublicUrl(filePath);
+
+      // Update all selected payments
+      const updatePromises = selectedPayments.map(async (payment) => {
+        if (payment.type === 'match') {
+          // Get match_id and member_name
+          const { data: memberData } = await supabase
+            .from('match_members')
+            .select('match_id, member_name')
+            .eq('id', payment.id)
+            .single();
+
+          if (memberData) {
+            // Update all matching records
+            return supabase
+              .from('match_members')
+              .update({ payment_proof: publicUrl })
+              .eq('match_id', memberData.match_id)
+              .eq('member_name', memberData.member_name);
+          }
+        } else {
+          // Update membership
+          return supabase
+            .from('memberships')
+            .update({ payment_proof: publicUrl })
+            .eq('id', payment.id);
+        }
+      });
+
+      const results = await Promise.allSettled(updatePromises);
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+
+      if (failedCount > 0) {
+        alert(`${selectedPayments.length - failedCount} dari ${selectedPayments.length} pembayaran berhasil diupload. ${failedCount} gagal.`);
+      } else {
+        alert(`Bukti pembayaran berhasil diupload untuk ${selectedPayments.length} pembayaran! Menunggu verifikasi admin.`);
+      }
+
+      // Invalidate cache to force fresh data fetch
+      queryCache.invalidatePattern('member-payment-');
+      
+      closeBulkUploadModal();
+      clearBulkSelection();
+      setBulkProofFile(null);
+      
+      // Fetch fresh data without cache
+      await fetchPaymentData();
+    } catch (error) {
+      console.error('Error uploading bulk proof:', error);
+      alert('Gagal upload bukti pembayaran');
+    } finally {
+      setBulkUploading(false);
     }
   }
 
@@ -359,14 +482,127 @@ export default function PembayaranPage() {
       }
 
       alert('Bukti pembayaran berhasil diupload! Menunggu verifikasi admin.');
+      
+      // Invalidate cache to force fresh data fetch
+      queryCache.invalidatePattern('member-payment-');
+      
       closeUploadModal();
-      fetchPaymentData();
+      setProofFile(null);
+      setSelectedPayment(null);
+      
+      // Fetch fresh data without cache
+      await fetchPaymentData();
     } catch (error) {
       console.error('Error uploading proof:', error);
       alert('Gagal upload bukti pembayaran');
     } finally {
       setUploading(false);
     }
+  }
+
+  async function processAIQuery() {
+    if (!aiQuery.trim()) return;
+
+    try {
+      setAiProcessing(true);
+      const query = aiQuery.toLowerCase();
+
+      let action: 'pay_all' | 'pay_revisions' | null = null;
+      let matchingPayments: Array<{ id: string; type: 'match' | 'membership'; amount: number; label: string; isRevision?: boolean }> = [];
+      let description = '';
+
+      // Detect intent
+      if (query.includes('bayar semua') || query.includes('bayar seluruh') || query.includes('semua tagihan') || query.includes('all')) {
+        action = 'pay_all';
+        
+        // Get all pending payments (including revisions)
+        myMatches.forEach(match => {
+          if (match.payment_status === 'pending' && !match.payment_proof) {
+            matchingPayments.push({
+              id: match.id,
+              type: 'match',
+              amount: match.total_amount,
+              label: `Match #${match.matches.match_number} - Pertandingan`,
+              isRevision: false,
+            });
+          } else if (match.payment_status === 'revision' && !match.payment_proof) {
+            matchingPayments.push({
+              id: match.id,
+              type: 'match',
+              amount: match.additional_amount || 0,
+              label: `Match #${match.matches.match_number} - Revisi`,
+              isRevision: true,
+            });
+          }
+        });
+
+        if (myMembership && myMembership.payment_status === 'pending' && !myMembership.payment_proof) {
+          matchingPayments.push({
+            id: myMembership.id,
+            type: 'membership',
+            amount: myMembership.amount,
+            label: `Membership ${new Date(0, myMembership.month - 1).toLocaleString('id-ID', { month: 'long' })} ${myMembership.year}`,
+            isRevision: false,
+          });
+        }
+
+        const totalAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
+        description = matchingPayments.length > 0
+          ? `Ditemukan ${matchingPayments.length} tagihan yang belum dibayar dengan total Rp ${totalAmount.toLocaleString('id-ID')}. Upload bukti transfer untuk melunasi semua tagihan sekaligus.`
+          : 'Tidak ada tagihan yang perlu dibayar saat ini.';
+
+      } else if (query.includes('revisi') || query.includes('revision') || query.includes('tambahan')) {
+        action = 'pay_revisions';
+        
+        // Get only revision payments
+        myMatches.forEach(match => {
+          if (match.payment_status === 'revision' && !match.payment_proof) {
+            matchingPayments.push({
+              id: match.id,
+              type: 'match',
+              amount: match.additional_amount || 0,
+              label: `Match #${match.matches.match_number} - Revisi`,
+              isRevision: true,
+            });
+          }
+        });
+
+        const totalAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
+        description = matchingPayments.length > 0
+          ? `Ditemukan ${matchingPayments.length} revisi pembayaran dengan total tambahan Rp ${totalAmount.toLocaleString('id-ID')}. Upload bukti transfer untuk melunasi semua revisi sekaligus.`
+          : 'Tidak ada revisi pembayaran yang perlu dibayar saat ini.';
+      } else {
+        description = 'Maaf, saya tidak mengerti permintaan Anda. Coba gunakan:\n• "Bayar semua tagihan"\n• "Bayar revisi"';
+      }
+
+      setAiSuggestion({
+        action: matchingPayments.length > 0 ? action : null,
+        payments: matchingPayments,
+        description,
+      });
+    } catch (error) {
+      console.error('Error processing AI query:', error);
+      setAiSuggestion({
+        action: null,
+        payments: [],
+        description: 'Terjadi kesalahan saat memproses permintaan.',
+      });
+    } finally {
+      setAiProcessing(false);
+    }
+  }
+
+  function executeAISuggestion() {
+    if (!aiSuggestion?.payments || aiSuggestion.payments.length === 0) return;
+    
+    // Set selected payments and open bulk upload modal
+    setSelectedPayments(aiSuggestion.payments);
+    setShowAIHelper(false);
+    setShowBulkUploadModal(true);
+    
+    // Reset AI state
+    setAiQuery('');
+    setAiSuggestion(null);
   }
 
   const totalPending = myMatches
@@ -420,15 +656,42 @@ export default function PembayaranPage() {
               Kelola pembayaran pertandingan dan membership Anda
             </p>
           </div>
-          <button
-            onClick={() => setShowPaymentHelpModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-          >
-            <HelpCircle className="w-5 h-5" />
-            <span className="hidden sm:inline">Panduan Pembayaran</span>
-            <span className="sm:hidden">Panduan</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowAIHelper(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-purple-500/20"
+            >
+              <Sparkles className="w-5 h-5" />
+              <span className="hidden sm:inline">AI Helper</span>
+              <span className="sm:hidden">AI</span>
+            </button>
+            <button
+              onClick={() => setShowPaymentHelpModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              <HelpCircle className="w-5 h-5" />
+              <span className="hidden sm:inline">Panduan Pembayaran</span>
+              <span className="sm:hidden">Panduan</span>
+            </button>
+          </div>
         </div>
+
+        {/* Bulk Upload Info Banner */}
+        {(myMatches.some(m => m.payment_status === 'pending' && !m.payment_proof) || 
+          (myMembership && myMembership.payment_status === 'pending' && !myMembership.payment_proof)) && (
+          <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-semibold text-blue-400 mb-1">💡 Fitur Baru: Upload Bukti Pembayaran Sekaligus (Bulk Upload)</h3>
+                <p className="text-sm text-zinc-300">
+                  Hemat waktu! Centang beberapa tagihan, transfer total keseluruhan dalam satu transaksi, lalu upload bukti pembayaran untuk semua tagihan sekaligus. 
+                  Tidak perlu upload satu per satu lagi!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -525,12 +788,35 @@ export default function PembayaranPage() {
             </div>
 
             {myMembership.payment_status === 'pending' && !myMembership.payment_proof && (
-              <button
-                onClick={() => openPaymentModal(myMembership.id, 'membership', myMembership.amount)}
-                className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
-              >
-                Bayar Sekarang
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => togglePaymentSelection({
+                    id: myMembership.id,
+                    type: 'membership',
+                    amount: myMembership.amount,
+                    label: `Membership ${new Date(myMembership.year, myMembership.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`
+                  })}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 hover:border-purple-500/50 bg-zinc-800 hover:bg-zinc-800/70 transition-colors text-white"
+                >
+                  {isPaymentSelected(myMembership.id, 'membership') ? (
+                    <>
+                      <CheckSquare className="w-5 h-5 text-purple-400" />
+                      <span className="text-sm font-medium">Dipilih untuk bulk upload</span>
+                    </>
+                  ) : (
+                    <>
+                      <Square className="w-5 h-5 text-zinc-400" />
+                      <span className="text-sm font-medium">Pilih untuk bulk upload</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => openPaymentModal(myMembership.id, 'membership', myMembership.amount)}
+                  className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                >
+                  Bayar Sekarang
+                </button>
+              </div>
             )}
 
             {myMembership.payment_proof && myMembership.payment_status === 'pending' && (
@@ -569,7 +855,31 @@ export default function PembayaranPage() {
         {/* Payment List */}
         <div className="bg-zinc-900 border border-white/10 rounded-xl overflow-hidden">
           <div className="p-6 border-b border-white/10">
-            <h2 className="text-xl font-semibold text-white">Riwayat Pembayaran Pertandingan</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Riwayat Pembayaran Pertandingan</h2>
+              
+              {/* Bulk Upload Banner */}
+              {selectedPayments.length > 0 && (
+                <div className="flex items-center gap-4 bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-2">
+                  <span className="text-sm text-blue-400 font-medium">
+                    {selectedPayments.length} item dipilih
+                  </span>
+                  <button
+                    onClick={openBulkUploadModal}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload Bukti (Bulk)
+                  </button>
+                  <button
+                    onClick={clearBulkSelection}
+                    className="text-zinc-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {allMatches.length === 0 ? (
@@ -585,6 +895,9 @@ export default function PembayaranPage() {
               <table className="w-full">
                 <thead className="bg-zinc-800/50">
                   <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-12">
+                      <CheckSquare className="w-4 h-4 text-zinc-500" />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
                       Pertandingan
                     </th>
@@ -612,8 +925,31 @@ export default function PembayaranPage() {
                   {allMatches.map((match) => {
                     const status = getPaymentStatus(match.payment_status, match.payment_proof);
                     const Icon = status.icon;
+                    const canSelect = match.payment_status === 'pending' && !match.payment_proof;
+                    const isSelected = isPaymentSelected(match.id, 'match');
+                    
                     return (
                       <tr key={match.id} className="hover:bg-zinc-800/50 transition-colors">
+                        <td className="px-3 py-4 whitespace-nowrap">
+                          {canSelect && (
+                            <button
+                              onClick={() => togglePaymentSelection({
+                                id: match.id,
+                                type: 'match',
+                                amount: match.total_amount,
+                                matchNumber: match.matches.match_number,
+                                label: `Match #${match.matches.match_number}`
+                              })}
+                              className="text-zinc-400 hover:text-blue-400 transition-colors"
+                            >
+                              {isSelected ? (
+                                <CheckSquare className="w-5 h-5 text-blue-400" />
+                              ) : (
+                                <Square className="w-5 h-5" />
+                              )}
+                            </button>
+                          )}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-zinc-400" />
@@ -943,6 +1279,108 @@ export default function PembayaranPage() {
         </div>
       )}
 
+      {/* Bulk Upload Modal */}
+      {showBulkUploadModal && selectedPayments.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-white">Upload Bukti Pembayaran (Bulk)</h3>
+              <button
+                onClick={closeBulkUploadModal}
+                className="text-zinc-400 hover:text-zinc-300"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Selected Payments Summary */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <p className="text-sm text-blue-400 font-medium mb-3">
+                  {selectedPayments.length} Pembayaran Dipilih:
+                </p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {selectedPayments.map((payment, index) => (
+                    <div key={`${payment.type}-${payment.id}`} className="flex items-center justify-between bg-zinc-800/50 rounded px-3 py-2">
+                      <span className="text-sm text-white">
+                        {index + 1}. {payment.label}
+                      </span>
+                      <span className="text-sm font-semibold text-white">
+                        Rp {payment.amount.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-blue-500/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-blue-400">Total:</span>
+                    <span className="text-xl font-bold text-white">
+                      Rp {selectedPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Alert */}
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <p className="text-sm text-amber-400 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong>Catatan:</strong> Pastikan Anda sudah mentransfer <strong>total keseluruhan</strong> sebesar Rp {selectedPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('id-ID')} dalam satu transaksi. Bukti transfer yang sama akan digunakan untuk semua pembayaran yang dipilih.
+                  </span>
+                </p>
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Pilih file bukti transfer (JPG, PNG, atau PDF)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setBulkProofFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-white border border-white/10 rounded-lg cursor-pointer bg-zinc-800 focus:outline-none p-2"
+                />
+                {bulkProofFile && (
+                  <p className="mt-2 text-sm text-green-400 flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    File dipilih: {bulkProofFile.name}
+                  </p>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={closeBulkUploadModal}
+                  className="flex-1 bg-zinc-800 text-zinc-300 px-4 py-2 rounded-lg font-medium hover:bg-zinc-700 transition-colors border border-white/10"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleBulkUploadProof}
+                  disabled={!bulkProofFile || bulkUploading}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {bulkUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Mengupload...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Upload untuk {selectedPayments.length} Pembayaran
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Upload Modal */}
       {showUploadModal && selectedPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1008,6 +1446,149 @@ export default function PembayaranPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Helper Modal */}
+      {showAIHelper && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 border border-purple-500/30 rounded-2xl max-w-2xl w-full shadow-2xl shadow-purple-500/20">
+            <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-b border-purple-500/30 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl shadow-lg">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">AI Helper Pembayaran</h3>
+                    <p className="text-sm text-purple-200">Asisten pintar untuk pembayaran Anda</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAIHelper(false);
+                    setAiQuery('');
+                    setAiSuggestion(null);
+                  }}
+                  className="text-zinc-400 hover:text-zinc-300 p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Query Input */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Apa yang ingin Anda lakukan?
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !aiProcessing) {
+                        processAIQuery();
+                      }
+                    }}
+                    placeholder="Contoh: Bayar semua tagihan saya, Bayar revisi..."
+                    className="w-full bg-zinc-800/50 border border-purple-500/30 rounded-lg px-4 py-3 pr-12 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20"
+                  />
+                  <button
+                    onClick={processAIQuery}
+                    disabled={!aiQuery.trim() || aiProcessing}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    {aiProcessing ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Help Text */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-xs text-blue-300">
+                  <strong>💡 Contoh perintah:</strong>
+                </p>
+                <ul className="text-xs text-blue-200 mt-1 space-y-1 ml-4">
+                  <li>• <strong>Bayar semua tagihan</strong> - Untuk membayar semua tagihan pending dan revisi sekaligus</li>
+                  <li>• <strong>Bayar revisi</strong> - Untuk membayar hanya tagihan revisi (pembayaran tambahan)</li>
+                </ul>
+              </div>
+
+              {/* AI Suggestion Result */}
+              {aiSuggestion && (
+                <div className="mt-4 space-y-3">
+                  <div className={`border rounded-lg p-4 ${
+                    aiSuggestion.action 
+                      ? 'bg-green-500/10 border-green-500/30' 
+                      : 'bg-amber-500/10 border-amber-500/30'
+                  }`}>
+                    <p className={`text-sm ${
+                      aiSuggestion.action ? 'text-green-300' : 'text-amber-300'
+                    } whitespace-pre-line`}>
+                      {aiSuggestion.description}
+                    </p>
+                  </div>
+
+                  {aiSuggestion.action && aiSuggestion.payments.length > 0 && (
+                    <>
+                      {/* Payment List */}
+                      <div className="bg-zinc-800/50 border border-purple-500/20 rounded-lg p-4">
+                        <p className="text-sm font-medium text-purple-300 mb-3">
+                          {aiSuggestion.action === 'pay_revisions' 
+                            ? 'Revisi yang akan dibayar:' 
+                            : 'Tagihan yang akan dibayar:'}
+                        </p>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {aiSuggestion.payments.map((payment, index) => (
+                            <div key={`${payment.type}-${payment.id}`} className="flex items-center justify-between bg-zinc-900/70 rounded px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-zinc-500">{index + 1}.</span>
+                                {payment.isRevision && (
+                                  <span className="text-xs px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 rounded text-amber-400 font-medium">
+                                    Revisi
+                                  </span>
+                                )}
+                                <span className="text-sm text-white">{payment.label}</span>
+                              </div>
+                              <span className="text-sm font-semibold text-purple-400">
+                                Rp {payment.amount.toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-purple-500/20">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold text-purple-300">
+                              {aiSuggestion.action === 'pay_revisions' ? 'Total Tambahan:' : 'Total Pembayaran:'}
+                            </span>
+                            <span className="text-xl font-bold text-white">
+                              Rp {aiSuggestion.payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      <button
+                        onClick={executeAISuggestion}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
+                      >
+                        <Upload className="w-5 h-5" />
+                        Lanjut Upload Bukti Pembayaran
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

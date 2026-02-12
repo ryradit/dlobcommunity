@@ -5,8 +5,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
-import { Users, Zap, TrendingUp, Calendar, Shield, Activity, UserPlus, Edit, Award, Target } from 'lucide-react';
-import { StatCardSkeleton, ActivityItemSkeleton, ChartSkeleton } from '@/components/LoadingSkeletons';
+import Link from 'next/link';
+import { Users, Zap, TrendingUp, Calendar, Shield, Activity, UserPlus, Edit, Award, Target, DollarSign, TrendingDown, Bell } from 'lucide-react';
+import { StatCardSkeleton, ActivityItemSkeleton } from '@/components/LoadingSkeletons';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AdminStats {
   totalMembers: number;
@@ -18,7 +20,7 @@ interface AdminStats {
 
 interface ActivityItem {
   id: string;
-  type: 'registration' | 'update';
+  type: 'registration' | 'update' | 'payment_pending';
   user: string;
   timestamp: string;
   icon: any;
@@ -30,6 +32,12 @@ interface PerformanceMember {
   name: string;
   streak: number;
   type: 'win' | 'loss';
+}
+
+interface RevenueData {
+  month: string;
+  label: string;
+  amount: number;
 }
 
 export default function AdminDashboardPage() {
@@ -46,6 +54,10 @@ export default function AdminDashboardPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [topPerformers, setTopPerformers] = useState<PerformanceMember[]>([]);
   const [mostActivePlayers, setMostActivePlayers] = useState<{ id: string; name: string; matches: number }[]>([]);
+  const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [revenueChange, setRevenueChange] = useState(0);
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -56,7 +68,7 @@ export default function AdminDashboardPage() {
       setLoading(true);
       
       // Fetch all stats in parallel for faster loading
-      const [statsResult, activitiesResult, matchesResult] = await Promise.allSettled([
+      const [statsResult, activitiesResult, matchesResult, revenueResult, pendingPaymentsResult] = await Promise.allSettled([
         // Stats queries in parallel with caching
         cachedQuery(
           'admin-profile-counts',
@@ -92,6 +104,48 @@ export default function AdminDashboardPage() {
             return result;
           },
           60000 // 1 minute cache for match data
+        ),
+        // Revenue data
+        cachedQuery(
+          'admin-revenue-monthly',
+          async () => {
+            const matchMembersResult = await supabase
+              .from('match_members')
+              .select('total_amount, paid_at')
+              .eq('payment_status', 'paid');
+            
+            const membershipsResult = await supabase
+              .from('memberships')
+              .select('amount, paid_at')
+              .eq('payment_status', 'paid');
+            
+            return { matchMembers: matchMembersResult, memberships: membershipsResult };
+          },
+          60000
+        ),
+        // Pending payments with proof
+        cachedQuery(
+          'admin-pending-payments',
+          async () => {
+            const matchPayments = await supabase
+              .from('match_members')
+              .select('id, member_name, payment_proof, created_at, match_id')
+              .eq('payment_status', 'pending')
+              .not('payment_proof', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(10);
+            
+            const membershipPayments = await supabase
+              .from('memberships')
+              .select('id, member_name, payment_proof, created_at')
+              .eq('payment_status', 'pending')
+              .not('payment_proof', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(10);
+            
+            return { matchPayments, membershipPayments };
+          },
+          30000 // 30 seconds cache
         ),
       ]);
 
@@ -144,6 +198,52 @@ export default function AdminDashboardPage() {
           });
         }
 
+        // Add pending payment activities
+        if (pendingPaymentsResult.status === 'fulfilled') {
+          const payments = pendingPaymentsResult.value as {
+            matchPayments: { data: any[] | null };
+            membershipPayments: { data: any[] | null };
+          };
+          
+          let pendingCount = 0;
+          
+          // Add match payment proofs
+          if (payments.matchPayments.data) {
+            payments.matchPayments.data.forEach((payment) => {
+              if (payment.payment_proof !== 'CASH_PAYMENT') {
+                activityList.push({
+                  id: `payment-match-${payment.id}`,
+                  type: 'payment_pending',
+                  user: `${payment.member_name} - Match Payment`,
+                  timestamp: payment.created_at,
+                  icon: Bell,
+                  color: 'text-amber-400',
+                });
+                pendingCount++;
+              }
+            });
+          }
+          
+          // Add membership payment proofs
+          if (payments.membershipPayments.data) {
+            payments.membershipPayments.data.forEach((payment) => {
+              if (payment.payment_proof !== 'CASH_PAYMENT') {
+                activityList.push({
+                  id: `payment-membership-${payment.id}`,
+                  type: 'payment_pending',
+                  user: `${payment.member_name} - Membership Payment`,
+                  timestamp: payment.created_at,
+                  icon: Bell,
+                  color: 'text-amber-400',
+                });
+                pendingCount++;
+              }
+            });
+          }
+          
+          setPendingPaymentsCount(pendingCount);
+        }
+        
         // Sort by timestamp and take top 8
         activityList.sort((a, b) => 
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -260,6 +360,14 @@ export default function AdminDashboardPage() {
         }
       }
 
+      // Process revenue data
+      if (mounted && revenueResult.status === 'fulfilled') {
+        const { value: revenueData } = revenueResult;
+        if (revenueData?.matchMembers?.data && revenueData?.memberships?.data) {
+          processMonthlyRevenue(revenueData.matchMembers.data, revenueData.memberships.data);
+        }
+      }
+
       if (mounted) {
         setLoading(false);
       }
@@ -272,6 +380,71 @@ export default function AdminDashboardPage() {
       mounted = false;
     };
   }, [pathname]);
+
+  // Process monthly revenue from Feb 2026
+  const processMonthlyRevenue = (matchMembers: any[], memberships: any[]) => {
+    const now = new Date();
+    const monthlyData: Record<string, number> = {};
+    
+    // Start from Jan 2026
+    const startYear = 2026;
+    const startMonth = 0; // January (0-indexed)
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    // Generate all months from Jan 2026 to current
+    let year = startYear;
+    let month = startMonth;
+    
+    while (year < currentYear || (year === currentYear && month <= currentMonth)) {
+      const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+      monthlyData[key] = 0;
+      
+      month++;
+      if (month > 11) {
+        month = 0;
+        year++;
+      }
+    }
+    
+    // Aggregate revenue by month
+    const allRevenue = [
+      ...matchMembers.map(m => ({ date: m.paid_at, amount: m.total_amount || 0 })),
+      ...memberships.map(m => ({ date: m.paid_at, amount: m.amount || 0 }))
+    ].filter(r => r.date);
+    
+    allRevenue.forEach(r => {
+      const date = new Date(r.date);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (monthlyData.hasOwnProperty(key)) {
+        monthlyData[key] += r.amount;
+      }
+    });
+    
+    // Convert to chart data
+    const chartData: RevenueData[] = Object.entries(monthlyData).map(([key, amount]) => {
+      const [year, month] = key.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      return {
+        month: key,
+        label: date.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }),
+        amount
+      };
+    });
+    
+    setRevenueData(chartData);
+    
+    // Calculate total and change
+    const total = allRevenue.reduce((sum, r) => sum + r.amount, 0);
+    setTotalRevenue(total);
+    
+    if (chartData.length >= 2) {
+      const lastMonth = chartData[chartData.length - 1].amount;
+      const previousMonth = chartData[chartData.length - 2].amount;
+      const change = previousMonth > 0 ? ((lastMonth - previousMonth) / previousMonth) * 100 : 0;
+      setRevenueChange(change);
+    }
+  };
 
   const statsDisplay = [
     {
@@ -293,16 +466,17 @@ export default function AdminDashboardPage() {
       color: 'from-purple-500 to-purple-600',
     },
     {
+      label: 'Pembayaran Menunggu',
+      value: loading ? '...' : pendingPaymentsCount.toLocaleString(),
+      icon: Bell,
+      color: 'from-amber-500 to-orange-600',
+      badge: pendingPaymentsCount > 0,
+    },
+    {
       label: 'Total Pengguna',
       value: loading ? '...' : stats.events.toLocaleString(),
       icon: TrendingUp,
-      color: 'from-orange-500 to-orange-600',
-    },
-    {
-      label: 'Acara',
-      value: loading ? '...' : stats.events.toLocaleString(),
-      icon: Calendar,
-      color: 'from-green-500 to-green-600',
+      color: 'from-green-500 to-emerald-600',
     },
   ];
 
@@ -327,20 +501,185 @@ export default function AdminDashboardPage() {
         ) : (
           statsDisplay.map((stat) => {
             const Icon = stat.icon;
-            return (
+            const isPendingPayments = stat.label === 'Pembayaran Menunggu';
+            const hasPendingItems = (stat as any).badge && pendingPaymentsCount > 0;
+            
+            const card = (
               <div
-                key={stat.label}
-                className="bg-zinc-900 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-colors"
+                className={`bg-zinc-900 border rounded-xl p-6 transition-all ${
+                  isPendingPayments && hasPendingItems
+                    ? 'border-amber-500/30 hover:border-amber-500/50 shadow-lg shadow-amber-500/10 cursor-pointer'
+                    : 'border-white/10 hover:border-white/20'
+                }`}
               >
-                <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${stat.color} mb-4`}>
+                <div className={`inline-flex p-3 rounded-xl bg-linear-to-br ${stat.color} mb-4 ${
+                  isPendingPayments && hasPendingItems ? 'animate-pulse' : ''
+                }`}>
                   <Icon className="w-6 h-6 text-white" />
+                  {hasPendingItems && (
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                    </span>
+                  )}
                 </div>
                 <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
                 <div className="text-sm text-zinc-400">{stat.label}</div>
+                {isPendingPayments && hasPendingItems && (
+                  <p className="text-xs text-amber-400 mt-2 font-medium">Klik untuk melihat</p>
+                )}
+              </div>
+            );
+            
+            return isPendingPayments && hasPendingItems ? (
+              <Link key={stat.label} href="/admin/pembayaran">
+                {card}
+              </Link>
+            ) : (
+              <div key={stat.label}>
+                {card}
               </div>
             );
           })
         )}
+      </div>
+
+      {/* Revenue Growth Chart - Stock Style */}
+      <div className="mt-8">
+        <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-linear-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/20">
+                <DollarSign className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Revenue Growth</h2>
+                <p className="text-sm text-zinc-400">Monthly revenue from Jan 2026</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-linear-to-br from-green-500/10 to-emerald-600/10 border border-green-500/20 rounded-lg p-4">
+              <p className="text-sm text-green-400 mb-1 font-medium">Total Revenue</p>
+              <p className="text-3xl font-bold text-white">Rp {totalRevenue.toLocaleString('id-ID')}</p>
+            </div>
+            <div className="bg-zinc-800/50 border border-white/5 rounded-lg p-4">
+              <p className="text-sm text-zinc-400 mb-1">Month-over-Month</p>
+              <div className="flex items-center gap-2">
+                <p className={`text-3xl font-bold ${revenueChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}%
+                </p>
+                {revenueChange >= 0 ? (
+                  <TrendingUp className="w-6 h-6 text-green-400" />
+                ) : (
+                  <TrendingDown className="w-6 h-6 text-red-400" />
+                )}
+              </div>
+            </div>
+            <div className="bg-zinc-800/50 border border-white/5 rounded-lg p-4">
+              <p className="text-sm text-zinc-400 mb-1">Data Points</p>
+              <p className="text-3xl font-bold text-white">{revenueData.length} Months</p>
+            </div>
+          </div>
+
+          {/* Stock-Style Chart */}
+          {loading ? (
+            <div className="h-96 flex items-center justify-center">
+              <div className="text-zinc-500">Loading chart...</div>
+            </div>
+          ) : revenueData.length === 0 ? (
+            <div className="h-96 flex items-center justify-center">
+              <div className="text-center">
+                <DollarSign className="w-12 h-12 text-zinc-600 mx-auto mb-2" />
+                <p className="text-zinc-500">No revenue data available</p>
+                <p className="text-zinc-600 text-sm">Data will appear from January 2026 onwards</p>
+              </div>
+            </div>
+          ) : (
+            <div className="h-96 bg-zinc-950/50 rounded-lg p-4 border border-white/5">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={revenueData}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                      <stop offset="50%" stopColor="#10b981" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    stroke="#27272a" 
+                    vertical={false}
+                  />
+                  <XAxis 
+                    dataKey="label" 
+                    stroke="#71717a"
+                    tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                    tickLine={{ stroke: '#27272a' }}
+                    axisLine={{ stroke: '#27272a' }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={70}
+                  />
+                  <YAxis 
+                    stroke="#71717a"
+                    tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                    tickLine={{ stroke: '#27272a' }}
+                    axisLine={{ stroke: '#27272a' }}
+                    tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: '#09090b',
+                      border: '1px solid #27272a',
+                      borderRadius: '8px',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                      padding: '12px'
+                    }}
+                    labelStyle={{ 
+                      color: '#e4e4e7', 
+                      fontWeight: 'bold',
+                      marginBottom: '4px'
+                    }}
+                    formatter={(value: any) => [
+                      <span className="text-green-400 font-bold">
+                        Rp {value.toLocaleString('id-ID')}
+                      </span>, 
+                      'Revenue'
+                    ]}
+                    cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '5 5' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="amount" 
+                    stroke="#10b981" 
+                    strokeWidth={2.5}
+                    fill="url(#revenueGradient)"
+                    dot={{
+                      fill: '#10b981',
+                      strokeWidth: 2,
+                      r: 4,
+                      stroke: '#065f46'
+                    }}
+                    activeDot={{
+                      r: 6,
+                      fill: '#10b981',
+                      stroke: '#fff',
+                      strokeWidth: 2
+                    }}
+                    animationDuration={1500}
+                    animationEasing="ease-in-out"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -361,12 +700,17 @@ export default function AdminDashboardPage() {
               {activities.map((activity) => {
                 const Icon = activity.icon;
                 const timeAgo = getTimeAgo(activity.timestamp);
-                return (
+                const isPaymentPending = activity.type === 'payment_pending';
+                
+                const content = (
                   <div
-                    key={activity.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors"
+                    className={`flex items-start gap-3 p-3 rounded-lg bg-zinc-800/50 transition-colors ${
+                      isPaymentPending ? 'hover:bg-amber-900/20 cursor-pointer border border-amber-500/20' : 'hover:bg-zinc-800'
+                    }`}
                   >
-                    <div className={`p-2 rounded-lg bg-zinc-900 ${activity.color}`}>
+                    <div className={`p-2 rounded-lg bg-zinc-900 ${activity.color} ${
+                      isPaymentPending ? 'animate-pulse' : ''
+                    }`}>
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -374,9 +718,22 @@ export default function AdminDashboardPage() {
                         <span className="font-semibold">{activity.user}</span>
                         {activity.type === 'registration' && ' bergabung ke sistem'}
                         {activity.type === 'update' && ' memperbarui profil'}
+                        {activity.type === 'payment_pending' && (
+                          <span className="text-amber-400"> mengirim bukti pembayaran - Menunggu konfirmasi</span>
+                        )}
                       </p>
                       <p className="text-xs text-zinc-500 mt-1">{timeAgo}</p>
                     </div>
+                  </div>
+                );
+                
+                return isPaymentPending ? (
+                  <Link key={activity.id} href="/admin/pembayaran">
+                    {content}
+                  </Link>
+                ) : (
+                  <div key={activity.id}>
+                    {content}
                   </div>
                 );
               })}
@@ -391,7 +748,9 @@ export default function AdminDashboardPage() {
             <h2 className="text-xl font-bold text-white">Performa Terbaik</h2>
           </div>
           {loading ? (
-            <ChartSkeleton />
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => <ActivityItemSkeleton key={i} />)}
+            </div>
           ) : topPerformers.length === 0 ? (
             <p className="text-zinc-400">Belum ada data performa.</p>
           ) : (
@@ -418,8 +777,8 @@ export default function AdminDashboardPage() {
                       <div
                         className={`absolute left-0 top-0 h-full rounded-full transition-all ${
                           isWin 
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-400' 
-                            : 'bg-gradient-to-r from-red-500 to-rose-400'
+                            ? 'bg-linear-to-r from-green-500 to-emerald-400' 
+                            : 'bg-linear-to-r from-red-500 to-rose-400'
                         }`}
                         style={{ width: `${percentage}%` }}
                       />
@@ -461,7 +820,7 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
                       <div
-                        className="absolute left-0 top-0 h-full rounded-full transition-all bg-gradient-to-r from-cyan-500 to-blue-400"
+                        className="absolute left-0 top-0 h-full rounded-full transition-all bg-linear-to-r from-cyan-500 to-blue-400"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>

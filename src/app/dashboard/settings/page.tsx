@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Mail, Phone, Camera, Save, Loader2, Edit2, X, Award, Users, Instagram } from 'lucide-react';
+import { User, Mail, Phone, Camera, Save, Loader2, Edit2, X, Award, Users, Instagram, Lock, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 
 export default function SettingsPage() {
-  const { user, updateProfile, uploadAvatar, refreshUser } = useAuth();
+  const { user, updateProfile, uploadAvatar, refreshUser, updatePassword } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || '');
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -38,6 +38,14 @@ export default function SettingsPage() {
   const [editInstagramUrl, setEditInstagramUrl] = useState('');
   const [isPartnerLoading, setIsPartnerLoading] = useState(false);
 
+  // Password Change States
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
+
   // Update avatar URL when user data changes
   useEffect(() => {
     if (user?.user_metadata?.avatar_url) {
@@ -47,6 +55,17 @@ export default function SettingsPage() {
       setAvatarUrl(urlWithTimestamp);
     }
   }, [user?.user_metadata?.avatar_url]);
+
+  // Check if user signed in with OAuth (Google)
+  useEffect(() => {
+    if (user?.app_metadata?.provider && user.app_metadata.provider === 'google') {
+      setIsOAuthUser(true);
+    } else if (user?.app_metadata?.providers && user.app_metadata.providers.includes('google')) {
+      setIsOAuthUser(true);
+    } else {
+      setIsOAuthUser(false);
+    }
+  }, [user]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -321,6 +340,47 @@ export default function SettingsPage() {
     return hand === 'right' ? 'Kanan' : 'Kiri';
   };
 
+  // Handle Change Password
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newPassword || !confirmPassword) {
+      setMessage({ type: 'error', text: 'Mohon isi semua field password' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'Password minimal 6 karakter' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: 'Password tidak cocok' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    try {
+      setIsPasswordLoading(true);
+      setMessage(null);
+
+      await updatePassword(newPassword);
+
+      setNewPassword('');
+      setConfirmPassword('');
+      setMessage({ type: 'success', text: 'Password berhasil diperbarui!' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error: any) {
+      console.error('Update password error:', error);
+      setMessage({ type: 'error', text: error?.message || 'Gagal memperbarui password' });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setIsPasswordLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-6xl mx-auto">
@@ -491,6 +551,85 @@ export default function SettingsPage() {
                   <p className="text-white font-medium">{user?.user_metadata?.instagram_url || 'Belum diisi'}</p>
                 </div>
               </div>
+            </div>
+
+            {/* Change Password Card */}
+            <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+              <h2 className="text-xl font-bold text-white mb-6">Ubah Password</h2>
+              
+              {isOAuthUser && (
+                <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <p className="text-sm text-blue-400">
+                    ℹ️ Anda login dengan Google. Membuat password akan memungkinkan Anda login dengan email & password selain Google OAuth.
+                  </p>
+                </div>
+              )}
+              
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Password Baru
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full pl-12 pr-12 py-3 bg-zinc-800 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                      placeholder="Minimal 6 karakter"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Konfirmasi Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full pl-12 pr-12 py-3 bg-zinc-800 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                      placeholder="Ulangi password baru"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isPasswordLoading || !newPassword || !confirmPassword}
+                  className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isPasswordLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5" />
+                      Ubah Password
+                    </>
+                  )}
+                </button>
+              </form>
             </div>
           </div>
         </div>

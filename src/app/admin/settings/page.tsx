@@ -22,6 +22,7 @@ export default function AdminSettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
 
   // Initialize full name from user data
   useEffect(() => {
@@ -39,6 +40,17 @@ export default function AdminSettingsPage() {
       setAvatarUrl(urlWithTimestamp);
     }
   }, [user?.user_metadata?.avatar_url]);
+
+  // Check if user signed in with OAuth (Google)
+  useEffect(() => {
+    if (user?.app_metadata?.provider && user.app_metadata.provider === 'google') {
+      setIsOAuthUser(true);
+    } else if (user?.app_metadata?.providers && user.app_metadata.providers.includes('google')) {
+      setIsOAuthUser(true);
+    } else {
+      setIsOAuthUser(false);
+    }
+  }, [user]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -274,6 +286,14 @@ export default function AdminSettingsPage() {
         {/* Change Password Section */}
         <div className="bg-zinc-900 border border-white/10 rounded-xl p-8">
           <h2 className="text-xl font-bold text-white mb-6">Ubah Password</h2>
+          
+          {isOAuthUser && (
+            <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <p className="text-sm text-blue-400">
+                ℹ️ Anda login dengan Google. Membuat password akan memungkinkan Anda login dengan email & password selain Google OAuth.
+              </p>
+            </div>
+          )}
           
           <form onSubmit={handleChangePassword} className="space-y-6">
             <div>
