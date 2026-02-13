@@ -103,13 +103,19 @@ export default function TrainingCenterPage() {
 
       if (response.ok) {
         const data = await response.json();
-        // Update the session with the actual ID from database
         const updatedSession = {
           ...session,
           id: data.data.id,
           timestamp: data.data.created_at,
         };
-        setHistory(prev => [updatedSession, ...prev]);
+        
+        // Remove old entry if it exists (in case of update)
+        setHistory(prev => {
+          const filtered = prev.filter(item => item.id !== data.data.id);
+          return [updatedSession, ...filtered];
+        });
+
+        console.log('[Training UI] ✅ History saved/updated:', data.data.id);
       }
     } catch (error) {
       console.error('Failed to save training history:', error);
@@ -162,15 +168,26 @@ export default function TrainingCenterPage() {
 
       const data = await response.json();
       
+      console.log('[Training UI] Received data:', {
+        hasAdvice: !!data.advice,
+        adviceLength: data.advice?.length || 0,
+        videoCount: data.videos?.length || 0,
+        videos: data.videos
+      });
+      
       setCurrentAdvice(data.advice);
-      setCurrentVideos(data.videos);
+      setCurrentVideos(data.videos || []);
+
+      if (!data.videos || data.videos.length === 0) {
+        console.warn('[Training UI] ⚠️ No videos in response!');
+      }
 
       // Create session and save to Supabase
       const newSession: TrainingSession = {
         id: '', // Will be set by database
         query: searchQuery,
         advice: data.advice,
-        videos: data.videos,
+        videos: data.videos || [],
         timestamp: new Date().toISOString(),
       };
       

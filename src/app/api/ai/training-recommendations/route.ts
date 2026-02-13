@@ -51,12 +51,15 @@ PENTING: Selalu berikan tepat 5 keywords yang spesifik dan dalam bahasa Indonesi
 
 async function searchYouTubeVideos(keywords: string[]): Promise<YouTubeVideo[]> {
   if (!YOUTUBE_API_KEY) {
-    console.warn('YouTube API key not configured');
+    console.error('[YouTube] ❌ API key not configured');
     return [];
   }
 
   try {
     const searchQuery = keywords.join(' OR ');
+    console.log('[YouTube] 🔍 Searching with keywords:', keywords);
+    console.log('[YouTube] 🔍 Search query:', searchQuery);
+    
     const response = await fetch(
       `${YOUTUBE_SEARCH_URL}?` +
         new URLSearchParams({
@@ -74,10 +77,15 @@ async function searchYouTubeVideos(keywords: string[]): Promise<YouTubeVideo[]> 
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('[YouTube] ❌ API error:', errorData);
       throw new Error(`YouTube API error: ${errorData.error?.message || response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('[YouTube] ✅ Search response:', {
+      resultCount: data.items?.length || 0,
+      pageInfo: data.pageInfo
+    });
 
     // Get video durations
     const videoIds = data.items?.map((item: any) => item.id.videoId).join(',') || '';
@@ -110,9 +118,10 @@ async function searchYouTubeVideos(keywords: string[]): Promise<YouTubeVideo[]> 
       url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
     })) || [];
 
+    console.log('[YouTube] ✅ Returning', videos.length, 'videos');
     return videos;
   } catch (error) {
-    console.error('YouTube search error:', error);
+    console.error('[YouTube] ❌ Search error:', error);
     return [];
   }
 }
@@ -205,10 +214,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Search YouTube videos
-    console.log('[Training API] Searching YouTube...');
+    console.log('[Training API] Searching YouTube with keywords:', searchKeywords);
     const videos = await searchYouTubeVideos(searchKeywords);
     
-    console.log('[Training API] Found', videos.length, 'videos');
+    console.log('[Training API] ✅ Found', videos.length, 'videos');
+    if (videos.length === 0) {
+      console.warn('[Training API] ⚠️ No videos found! Check YouTube API quota or keywords');
+    }
 
     // If no advice was generated, create a simple one
     if (!advice || advice.trim() === '') {
@@ -220,6 +232,12 @@ export async function POST(request: NextRequest) {
       videos,
       cached: false,
     };
+
+    console.log('[Training API] 📦 Returning response:', {
+      adviceLength: advice.length,
+      videoCount: videos.length,
+      cached: false
+    });
 
     // Cache the result
     cache.set(cacheKey, { data: finalResponse, timestamp: Date.now() });

@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Save new training session
+// POST - Save or update training session (prevents duplicates)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -64,16 +64,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
+    // Normalize query for comparison
+    const queryNormalized = query.toLowerCase().trim();
+
+    // Check if this query already exists for this user
+    const { data: existingEntry, error: fetchError } = await supabase
       .from('training_history')
-      .insert({
-        user_id: userId,
-        query,
-        advice,
-        videos: videos || []
-      })
-      .select()
+      .select('id')
+      .eq('user_id', userId)
+      .eq('query_normalized', queryNormalized)
       .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('[Training History] Fetch error:', fetchError);
+    }
+
+    let data;
+    let error;
+
+    if (existingEntry) {
+      // Update existing entry with fresh data
+      console.log('[Training History] ♻️ Updating existing entry:', existingEntry.id);
+      const result = await supabase
+        .from('training_history')
+        .update({
+          advice,
+          videos: videos || [],
+          created_at: new Date().toISOString() // Update timestamp to keep it at top
+        })
+        .eq('id', existingEntry.id)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // Insert new entry
+      console.log('[Training History] ✨ Creating new entry for query:', query);
+      const result = await supabase
+        .from('training_history')
+        .insert({
+          user_id: userId,
+          query,
+          advice,
+          videos: videos || []
+        })
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) {
       console.error('[Training History] Save error:', error);
