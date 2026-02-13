@@ -343,9 +343,45 @@ export const MEMBER_SETTINGS_TUTORIAL: TutorialStep[] = [
 ];
 
 /**
+ * Tutorial steps for Member Training Center page
+ */
+export const MEMBER_TRAINING_TUTORIAL: TutorialStep[] = [
+  {
+    element: '.training-search-bar',
+    title: '🔍 Tanya Pelatih AI',
+    description: 'Ketik pertanyaan tentang teknik badminton Anda. Contoh: "Bagaimana cara meningkatkan smash?" AI akan memberikan saran personalisasi!',
+    position: 'bottom',
+  },
+  {
+    element: '.training-popular-topics',
+    title: '⚡ Topik Populer',
+    description: 'Klik shortcut topik untuk langsung mendapatkan rekomendasi latihan. Hemat waktu dengan topik yang sering dicari!',
+    position: 'bottom',
+  },
+  {
+    element: '.training-tips',
+    title: '💡 Tips Bertanya',
+    description: 'Panduan untuk mendapatkan saran terbaik dari AI. Jelaskan masalah spesifik dan level skill Anda untuk hasil optimal.',
+    position: 'left',
+  },
+  {
+    element: '.training-history',
+    title: '📚 Riwayat Latihan',
+    description: 'Akses kembali sesi latihan sebelumnya. Klik untuk melihat saran dan video lagi. Hover untuk menghapus riwayat.',
+    position: 'left',
+  },
+  {
+    element: '.training-main-content',
+    title: '🤖 Area Hasil',
+    description: 'Setelah bertanya, area ini akan menampilkan saran pelatih AI dan video tutorial YouTube yang relevan dalam bahasa Indonesia!',
+    position: 'top',
+  },
+];
+
+/**
  * Get tutorial for a specific page
  */
-export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'members' | 'analitik' | 'team-optimizer' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings'): TutorialStep[] {
+export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'members' | 'analitik' | 'team-optimizer' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings' | 'member-training'): TutorialStep[] {
   switch (page) {
     case 'dashboard':
       return ADMIN_DASHBOARD_TUTORIAL;
@@ -365,6 +401,8 @@ export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'members' | 
       return MEMBER_PEMBAYARAN_TUTORIAL;
     case 'member-settings':
       return MEMBER_SETTINGS_TUTORIAL;
+    case 'member-training':
+      return MEMBER_TRAINING_TUTORIAL;
     default:
       return [];
   }

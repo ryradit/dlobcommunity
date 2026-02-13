@@ -769,8 +769,62 @@ export default function AdminMembersPage() {
                           <Award className="w-5 h-5 text-amber-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs text-zinc-500 mb-1">Pencapaian</p>
-                          <p className="text-sm text-white whitespace-pre-wrap">{selectedMember.achievements}</p>
+                          <p className="text-xs text-zinc-500 mb-2">Pencapaian</p>
+                          {(() => {
+                            try {
+                              const achievements = JSON.parse(selectedMember.achievements);
+                              if (Array.isArray(achievements) && achievements.length > 0) {
+                                return (
+                                  <div className="space-y-2">
+                                    {achievements.map((achievement: any, index: number) => {
+                                      // Determine styling based on placement
+                                      let bgColor = 'bg-zinc-700/50';
+                                      let borderColor = 'border-zinc-600/50';
+                                      let iconBg = 'bg-zinc-600/50';
+                                      let iconColor = 'text-zinc-400';
+                                      let textColor = 'text-white';
+                                      
+                                      if (achievement.place === 'Juara 1') {
+                                        bgColor = 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10';
+                                        borderColor = 'border-amber-500/30';
+                                        iconBg = 'bg-gradient-to-br from-amber-400 to-yellow-500';
+                                        iconColor = 'text-white';
+                                        textColor = 'text-amber-400';
+                                      } else if (achievement.place === 'Juara 2') {
+                                        bgColor = 'bg-gradient-to-r from-gray-400/10 to-zinc-300/10';
+                                        borderColor = 'border-gray-400/30';
+                                        iconBg = 'bg-gradient-to-br from-gray-300 to-gray-400';
+                                        iconColor = 'text-white';
+                                        textColor = 'text-gray-300';
+                                      } else if (achievement.place === 'Juara 3') {
+                                        bgColor = 'bg-gradient-to-r from-orange-600/10 to-amber-700/10';
+                                        borderColor = 'border-orange-600/30';
+                                        iconBg = 'bg-gradient-to-br from-orange-500 to-amber-600';
+                                        iconColor = 'text-white';
+                                        textColor = 'text-orange-400';
+                                      }
+                                      
+                                      return (
+                                        <div key={index} className={`flex items-start gap-3 p-3 rounded-lg border ${bgColor} ${borderColor}`}>
+                                          <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                                            <span className={`text-lg ${iconColor}`}>🏆</span>
+                                          </div>
+                                          <div className="flex-1">
+                                            <div className={`font-bold ${textColor}`}>{achievement.place}</div>
+                                            <div className="text-sm text-zinc-400">{achievement.tournament}</div>
+                                            <div className="text-xs text-zinc-500">Tahun {achievement.year}</div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              }
+                              return <p className="text-sm text-zinc-500">Belum ada pencapaian</p>;
+                            } catch {
+                              return <p className="text-sm text-white whitespace-pre-wrap">{selectedMember.achievements}</p>;
+                            }
+                          })()}
                         </div>
                       </div>
                     </div>

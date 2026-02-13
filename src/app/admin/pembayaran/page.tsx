@@ -33,7 +33,7 @@ interface MatchMember {
   attendance_fee: number;
   has_membership: boolean;
   total_amount: number;
-  payment_status: 'pending' | 'paid' | 'cancelled' | 'revision';
+  payment_status: 'pending' | 'paid' | 'cancelled' | 'revision' | 'rejected';
   paid_at: string | null;
   payment_proof: string | null;
   additional_amount?: number;
@@ -46,7 +46,7 @@ interface Membership {
   year: number;
   weeks_in_month: number;
   amount: number;
-  payment_status: 'pending' | 'paid' | 'cancelled';
+  payment_status: 'pending' | 'paid' | 'cancelled' | 'rejected';
   paid_at: string | null;
   payment_proof: string | null;
   created_at: string;
@@ -117,6 +117,18 @@ export default function AdminPembayaranPage() {
     memberName?: string;
     payments?: Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string }>;
     description: string;
+  } | null>(null);
+
+  // Rejection states
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [customRejectionReason, setCustomRejectionReason] = useState('');
+  const [paymentToReject, setPaymentToReject] = useState<{
+    type: 'match' | 'membership';
+    id: string;
+    matchId?: string;
+    memberName: string;
   } | null>(null);
 
   // Tutorial for pembayaran page
@@ -874,6 +886,66 @@ export default function AdminPembayaranPage() {
       alert('Gagal mengkonfirmasi revisi');
     } finally {
       setBulkConfirming(false);
+    }
+  }
+
+  // Rejection handler
+  async function handleRejectPayment() {
+    if (!paymentToReject) return;
+    
+    const finalReason = rejectionReason === 'other' 
+      ? customRejectionReason 
+      : rejectionReason;
+
+    if (!finalReason.trim()) {
+      alert('Harap pilih atau masukkan alasan penolakan');
+      return;
+    }
+
+    try {
+      setRejecting(true);
+
+      if (paymentToReject.type === 'match') {
+        const { error } = await supabase
+          .from('match_members')
+          .update({
+            payment_status: 'rejected',
+            rejection_reason: finalReason,
+            rejection_date: new Date().toISOString(),
+            rejected_by: user?.id,
+          })
+          .eq('id', paymentToReject.id);
+
+        if (error) throw error;
+      } else if (paymentToReject.type === 'membership') {
+        const { error } = await supabase
+          .from('memberships')
+          .update({
+            payment_status: 'rejected',
+            rejection_reason: finalReason,
+            rejection_date: new Date().toISOString(),
+            rejected_by: user?.id,
+          })
+          .eq('id', paymentToReject.id);
+
+        if (error) throw error;
+      }
+
+      alert(`Bukti pembayaran dari ${paymentToReject.memberName} telah ditolak. Member dapat mengupload ulang bukti yang benar.`);
+      
+      setShowRejectModal(false);
+      setShowProofModal(false);
+      setRejectionReason('');
+      setCustomRejectionReason('');
+      setPaymentToReject(null);
+      setSelectedProof(null);
+      
+      await Promise.all([fetchMatches(), fetchMemberships()]);
+    } catch (error) {
+      console.error('Error rejecting payment:', error);
+      alert('Gagal menolak bukti pembayaran');
+    } finally {
+      setRejecting(false);
     }
   }
 
@@ -1858,8 +1930,10 @@ export default function AdminPembayaranPage() {
                                   ? 'bg-green-500/20 text-green-400'
                                   : member.payment_status === 'revision'
                                   ? 'bg-blue-500/20 text-blue-400'
-                                  : member.payment_status === 'cancelled'
+                                  : member.payment_status === 'rejected'
                                   ? 'bg-red-500/20 text-red-400'
+                                  : member.payment_status === 'cancelled'
+                                  ? 'bg-gray-500/20 text-gray-400'
                                   : member.payment_proof
                                   ? 'bg-yellow-500/20 text-yellow-400'
                                   : 'bg-orange-500/20 text-orange-400'
@@ -1869,11 +1943,13 @@ export default function AdminPembayaranPage() {
                                 ? 'Lunas' 
                                 : member.payment_status === 'revision'
                                 ? 'Revisi'
+                                : member.payment_status === 'rejected'
+                                ? 'Ditolak'
                                 : member.payment_status === 'cancelled' 
                                 ? 'Dibatalkan' 
                                 : member.payment_proof
-                                ? (member.payment_proof === 'CASH_PAYMENT' ? 'Cash (Unconfirmed)' : 'Unconfirmed')
-                                : 'Unpaid'}
+                                ? (member.payment_proof === 'CASH_PAYMENT' ? 'Cash (Menunggu Verifikasi)' : 'Menunggu Verifikasi')
+                                : 'Belum Bayar'}
                             </span>
                             {member.payment_status === 'revision' && member.additional_amount && (
                               <p className="text-xs text-blue-400 mt-1">
@@ -2049,8 +2125,10 @@ export default function AdminPembayaranPage() {
                           className={`inline-flex px-2 sm:px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                             membership.payment_status === 'paid'
                               ? 'bg-green-500/20 text-green-400'
-                              : membership.payment_status === 'cancelled'
+                              : membership.payment_status === 'rejected'
                               ? 'bg-red-500/20 text-red-400'
+                              : membership.payment_status === 'cancelled'
+                              ? 'bg-gray-500/20 text-gray-400'
                               : membership.payment_proof
                               ? 'bg-yellow-500/20 text-yellow-400'
                               : 'bg-orange-500/20 text-orange-400'
@@ -2058,11 +2136,13 @@ export default function AdminPembayaranPage() {
                         >
                           {membership.payment_status === 'paid' 
                             ? 'Lunas' 
+                            : membership.payment_status === 'rejected'
+                            ? 'Ditolak'
                             : membership.payment_status === 'cancelled' 
                             ? 'Dibatalkan' 
                             : membership.payment_proof
-                            ? (membership.payment_proof === 'CASH_PAYMENT' ? 'Cash (Unconfirmed)' : 'Unconfirmed')
-                            : 'Unpaid'}
+                            ? (membership.payment_proof === 'CASH_PAYMENT' ? 'Cash (Menunggu Verifikasi)' : 'Menunggu Verifikasi')
+                            : 'Belum Bayar'}
                         </span>
                         {membership.payment_proof && membership.payment_proof !== 'CASH_PAYMENT' && membership.payment_status === 'pending' && (
                           <button
@@ -2803,6 +2883,21 @@ export default function AdminPembayaranPage() {
                 </button>
                 <button
                   onClick={() => {
+                    setPaymentToReject({
+                      type: selectedProof.type,
+                      id: selectedProof.id,
+                      matchId: selectedProof.matchId,
+                      memberName: selectedProof.memberName,
+                    });
+                    setShowRejectModal(true);
+                  }}
+                  className="px-4 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <X className="w-5 h-5" />
+                  Tolak
+                </button>
+                <button
+                  onClick={() => {
                     if (confirm(`Konfirmasi pembayaran dari ${selectedProof.memberName}?`)) {
                       if (selectedProof.type === 'match' && selectedProof.matchId) {
                         updatePaymentStatus(selectedProof.matchId, selectedProof.id, 'paid');
@@ -2816,20 +2911,130 @@ export default function AdminPembayaranPage() {
                   <Check className="w-5 h-5" />
                   Konfirmasi Pembayaran
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Reason Modal */}
+      {showRejectModal && paymentToReject && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-red-500/30 rounded-xl max-w-lg w-full shadow-2xl">
+            <div className="bg-red-500/10 border-b border-red-500/30 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <AlertCircle className="w-6 h-6 text-red-400" />
+                    Tolak Bukti Pembayaran
+                  </h3>
+                  <p className="text-sm text-zinc-400 mt-1">
+                    {paymentToReject.memberName}
+                  </p>
+                </div>
                 <button
                   onClick={() => {
-                    if (confirm(`Batalkan pembayaran dari ${selectedProof.memberName}?`)) {
-                      if (selectedProof.type === 'match' && selectedProof.matchId) {
-                        updatePaymentStatus(selectedProof.matchId, selectedProof.id, 'cancelled');
-                      } else if (selectedProof.type === 'membership') {
-                        updateMembershipStatus(selectedProof.id, 'cancelled');
-                      }
-                    }
+                    setShowRejectModal(false);
+                    setPaymentToReject(null);
+                    setRejectionReason('');
+                    setCustomRejectionReason('');
                   }}
-                  className="px-4 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                  className="text-zinc-400 hover:text-white transition-colors"
                 >
-                  <Ban className="w-5 h-5" />
-                  Batalkan
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <p className="text-sm text-zinc-300 mb-4">
+                Pilih alasan penolakan. Member akan dapat mengupload ulang bukti pembayaran yang benar.
+              </p>
+
+              {/* Rejection Reasons */}
+              <div className="space-y-2 mb-4">
+                {[
+                  { value: 'Foto tidak jelas/buram', label: 'Foto tidak jelas/buram' },
+                  { value: 'Jumlah transfer tidak sesuai', label: 'Jumlah transfer tidak sesuai' },
+                  { value: 'Rekening tujuan salah', label: 'Rekening tujuan salah' },
+                  { value: 'Tanggal transfer tidak sesuai periode', label: 'Tanggal transfer tidak sesuai periode' },
+                  { value: 'Bukti palsu/di-edit', label: 'Bukti palsu/di-edit' },
+                  { value: 'other', label: 'Lainnya (tulis alasan)' },
+                ].map((reason) => (
+                  <label
+                    key={reason.value}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                      rejectionReason === reason.value
+                        ? 'bg-red-500/10 border-red-500/50'
+                        : 'bg-zinc-800/50 border-white/5 hover:border-white/10'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="rejection-reason"
+                      value={reason.value}
+                      checked={rejectionReason === reason.value}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      className="w-4 h-4 text-red-600 focus:ring-red-500"
+                    />
+                    <span className="text-sm text-zinc-200">{reason.label}</span>
+                  </label>
+                ))}
+              </div>
+
+              {/* Custom Reason Input */}
+              {rejectionReason === 'other' && (
+                <div className="mb-4">
+                  <textarea
+                    value={customRejectionReason}
+                    onChange={(e) => setCustomRejectionReason(e.target.value)}
+                    placeholder="Tulis alasan penolakan..."
+                    rows={3}
+                    className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20"
+                  />
+                </div>
+              )}
+
+              {/* Warning */}
+              <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                <p className="text-sm text-amber-400 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>
+                    Member akan menerima notifikasi dan dapat mengupload ulang bukti pembayaran yang benar.
+                  </span>
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setPaymentToReject(null);
+                    setRejectionReason('');
+                    setCustomRejectionReason('');
+                  }}
+                  disabled={rejecting}
+                  className="flex-1 px-4 py-3 bg-zinc-800 text-zinc-300 rounded-lg font-medium hover:bg-zinc-700 transition-colors border border-white/10 disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleRejectPayment}
+                  disabled={rejecting || (!rejectionReason || (rejectionReason === 'other' && !customRejectionReason.trim()))}
+                  className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {rejecting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Menolak...
+                    </>
+                  ) : (
+                    <>
+                      <X className="w-5 h-5" />
+                      Tolak Bukti
+                    </>
+                  )}
                 </button>
               </div>
             </div>

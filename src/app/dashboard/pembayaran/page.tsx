@@ -19,10 +19,12 @@ interface MatchMember {
   attendance_fee: number;
   has_membership: boolean;
   total_amount: number;
-  payment_status: 'pending' | 'paid' | 'cancelled' | 'revision';
+  payment_status: 'pending' | 'paid' | 'cancelled' | 'revision' | 'rejected';
   paid_at: string | null;
   payment_proof: string | null;
   additional_amount?: number;
+  rejection_reason?: string | null;
+  rejection_date?: string | null;
   matches: {
     match_number: number;
     created_at: string;
@@ -37,9 +39,11 @@ interface Membership {
   year: number;
   weeks_in_month: number;
   amount: number;
-  payment_status: 'pending' | 'paid' | 'cancelled';
+  payment_status: 'pending' | 'paid' | 'cancelled' | 'rejected';
   paid_at: string | null;
   payment_proof: string | null;
+  rejection_reason?: string | null;
+  rejection_date?: string | null;
   created_at: string;
 }
 
@@ -210,9 +214,9 @@ export default function PembayaranPage() {
           
           setAllMatches(uniqueAllMatches);
           
-          // Filter pending matches
-          const pendingMatches = uniqueAllMatches.filter(m => m.payment_status === 'pending');
-          setMyMatches(pendingMatches);
+          // Filter matches (exclude only paid and cancelled)
+          const myMatchesFiltered = uniqueAllMatches.filter(m => m.payment_status !== 'paid' && m.payment_status !== 'cancelled');
+          setMyMatches(myMatchesFiltered);
         }
       }
       
@@ -522,35 +526,49 @@ export default function PembayaranPage() {
       if (query.includes('bayar semua') || query.includes('bayar seluruh') || query.includes('semua tagihan') || query.includes('all')) {
         action = 'pay_all';
         
-        // Get all pending payments (including revisions)
+        // Get all non-paid/non-cancelled payments (including unconfirmed, revisions, and rejections)
         myMatches.forEach(match => {
-          if (match.payment_status === 'pending' && !match.payment_proof) {
-            matchingPayments.push({
-              id: match.id,
-              type: 'match',
-              amount: match.total_amount,
-              label: `Match #${match.matches.match_number} - Pertandingan`,
-              isRevision: false,
-            });
-          } else if (match.payment_status === 'revision' && !match.payment_proof) {
-            matchingPayments.push({
-              id: match.id,
-              type: 'match',
-              amount: match.additional_amount || 0,
-              label: `Match #${match.matches.match_number} - Revisi`,
-              isRevision: true,
-            });
+          if (match.payment_status !== 'paid' && match.payment_status !== 'cancelled') {
+            if (match.payment_status === 'revision') {
+              matchingPayments.push({
+                id: match.id,
+                type: 'match',
+                amount: match.additional_amount || match.total_amount,
+                label: `Match #${match.matches.match_number} - Revisi`,
+                isRevision: true,
+              });
+            } else if (match.payment_status === 'rejected') {
+              matchingPayments.push({
+                id: match.id,
+                type: 'match',
+                amount: match.total_amount,
+                label: `Match #${match.matches.match_number} - Ditolak (Perlu Upload Ulang)`,
+                isRevision: false,
+              });
+            } else if (!match.payment_proof) {
+              // Pending without proof - needs payment
+              matchingPayments.push({
+                id: match.id,
+                type: 'match',
+                amount: match.total_amount,
+                label: `Match #${match.matches.match_number} - Belum Bayar`,
+                isRevision: false,
+              });
+            }
+            // Skip pending with proof (already uploaded, waiting for admin confirmation)
           }
         });
 
-        if (myMembership && myMembership.payment_status === 'pending' && !myMembership.payment_proof) {
-          matchingPayments.push({
-            id: myMembership.id,
-            type: 'membership',
-            amount: myMembership.amount,
-            label: `Membership ${new Date(0, myMembership.month - 1).toLocaleString('id-ID', { month: 'long' })} ${myMembership.year}`,
-            isRevision: false,
-          });
+        if (myMembership && myMembership.payment_status !== 'paid' && myMembership.payment_status !== 'cancelled') {
+          if (myMembership.payment_status === 'rejected' || !myMembership.payment_proof) {
+            matchingPayments.push({
+              id: myMembership.id,
+              type: 'membership',
+              amount: myMembership.amount,
+              label: `Membership ${new Date(0, myMembership.month - 1).toLocaleString('id-ID', { month: 'long' })} ${myMembership.year}${myMembership.payment_status === 'rejected' ? ' - Ditolak' : ''}`,
+              isRevision: false,
+            });
+          }
         }
 
         const totalAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -612,10 +630,17 @@ export default function PembayaranPage() {
     setAiSuggestion(null);
   }
 
+  // Calculate total bills (exclude only 'paid' and 'cancelled')
   const totalPending = myMatches
-    .filter(m => m.payment_status === 'pending' || m.payment_status === 'revision')
-    .reduce((sum, m) => sum + (m.payment_status === 'revision' ? (m.additional_amount || 0) : m.total_amount), 0) +
-    (myMembership?.payment_status === 'pending' ? myMembership.amount : 0);
+    .filter(m => m.payment_status !== 'paid' && m.payment_status !== 'cancelled')
+    .reduce((sum, m) => {
+      if (m.payment_status === 'revision' && m.additional_amount) {
+        return sum + m.additional_amount;
+      } else {
+        return sum + m.total_amount;
+      }
+    }, 0) +
+    (myMembership && myMembership.payment_status !== 'paid' && myMembership.payment_status !== 'cancelled' ? myMembership.amount : 0);
 
   const revisionCount = myMatches.filter(m => m.payment_status === 'revision').length;
   const revisionAmount = myMatches
@@ -628,18 +653,22 @@ export default function PembayaranPage() {
   const totalPaid = allMatches.filter(m => m.payment_status === 'paid').reduce((sum, m) => sum + m.total_amount, 0) +
     (myMembership?.payment_status === 'paid' ? myMembership.amount : 0);
 
-  const unpaidCount = myMatches.filter(m => m.payment_status === 'pending' && !m.payment_proof).length +
-    (myMembership?.payment_status === 'pending' && !myMembership.payment_proof ? 1 : 0);
+  const unpaidCount = myMatches.filter(m => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected').length +
+    ((myMembership?.payment_status === 'pending' && !myMembership.payment_proof) || myMembership?.payment_status === 'rejected' ? 1 : 0);
 
   function getPaymentStatus(paymentStatus: string, paymentProof: string | null) {
     if (paymentStatus === 'paid') {
-      return { label: 'Paid', color: 'bg-green-100 text-green-700', icon: CheckCircle };
+      return { label: 'Lunas', color: 'bg-green-100 text-green-700', icon: CheckCircle };
+    } else if (paymentStatus === 'rejected') {
+      return { label: 'Ditolak', color: 'bg-red-100 text-red-700', icon: X };
+    } else if (paymentStatus === 'cancelled') {
+      return { label: 'Dibatalkan', color: 'bg-gray-100 text-gray-700', icon: X };
     } else if (paymentStatus === 'revision') {
       return { label: 'Revisi', color: 'bg-blue-100 text-blue-700', icon: AlertCircle };
     } else if (paymentProof) {
-      return { label: 'Unconfirmed', color: 'bg-yellow-100 text-yellow-700', icon: Clock };
+      return { label: 'Menunggu Verifikasi', color: 'bg-yellow-100 text-yellow-700', icon: Clock };
     } else {
-      return { label: 'Unpaid', color: 'bg-red-100 text-red-700', icon: AlertCircle };
+      return { label: 'Belum Bayar', color: 'bg-red-100 text-red-700', icon: AlertCircle };
     }
   }
 
@@ -692,8 +721,8 @@ export default function PembayaranPage() {
         </div>
 
         {/* Bulk Upload Info Banner */}
-        {(myMatches.some(m => m.payment_status === 'pending' && !m.payment_proof) || 
-          (myMembership && myMembership.payment_status === 'pending' && !myMembership.payment_proof)) && (
+        {(myMatches.some(m => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected') || 
+          (myMembership && ((myMembership.payment_status === 'pending' && !myMembership.payment_proof) || myMembership.payment_status === 'rejected'))) && (
           <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-xl p-4">
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -736,7 +765,7 @@ export default function PembayaranPage() {
             </p>
           </div>
 
-          {/* Unconfirmed */}
+          {/* Menunggu Verifikasi */}
           <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-zinc-300">Menunggu Konfirmasi</p>
@@ -864,6 +893,35 @@ export default function PembayaranPage() {
                 </p>
               </div>
             )}
+
+            {myMembership.payment_status === 'rejected' && (
+              <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-red-900 mb-1">
+                      Bukti Pembayaran Ditolak
+                    </p>
+                    {myMembership.rejection_reason && (
+                      <p className="text-sm text-red-700 mb-2">
+                        <span className="font-medium">Alasan:</span> {myMembership.rejection_reason}
+                      </p>
+                    )}
+                    {myMembership.rejection_date && (
+                      <p className="text-xs text-red-600 mb-3">
+                        Ditolak pada {new Date(myMembership.rejection_date).toLocaleString('id-ID')}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => openPaymentModal(myMembership.id, 'membership', myMembership.amount)}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Upload Ulang Bukti Pembayaran
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -942,9 +1000,10 @@ export default function PembayaranPage() {
                     const Icon = status.icon;
                     const canSelect = match.payment_status === 'pending' && !match.payment_proof;
                     const isSelected = isPaymentSelected(match.id, 'match');
-                    
+
                     return (
-                      <tr key={match.id} className="hover:bg-zinc-800/50 transition-colors">
+                      <React.Fragment key={match.id}>
+                      <tr className="hover:bg-zinc-800/50 transition-colors">
                         <td className="px-3 py-4 whitespace-nowrap">
                           {canSelect && (
                             <button
@@ -1022,6 +1081,14 @@ export default function PembayaranPage() {
                           </span>
                         </td>
                         <td className="member-payment-actions px-6 py-4 whitespace-nowrap text-sm">
+                          {match.payment_status === 'rejected' && (
+                            <button
+                              onClick={() => openPaymentModal(match.id, 'match', match.total_amount, match.matches.match_number)}
+                              className="text-red-600 hover:text-red-700 font-medium"
+                            >
+                              Upload Ulang
+                            </button>
+                          )}
                           {match.payment_status === 'revision' && (
                             <div className="space-y-1">
                               <button
@@ -1061,6 +1128,33 @@ export default function PembayaranPage() {
                           )}
                         </td>
                       </tr>
+                      {/* Rejection Alert Row */}
+                      {match.payment_status === 'rejected' && match.rejection_reason && (
+                        <tr className="bg-red-50 border-l-4 border-red-500">
+                          <td colSpan={8} className="px-6 py-4">
+                            <div className="flex items-start gap-3">
+                              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-red-900 mb-1">
+                                  Bukti Pembayaran Ditolak
+                                </p>
+                                <p className="text-sm text-red-700">
+                                  <span className="font-medium">Alasan:</span> {match.rejection_reason}
+                                </p>
+                                {match.rejection_date && (
+                                  <p className="text-xs text-red-600 mt-1">
+                                    Ditolak pada {new Date(match.rejection_date).toLocaleString('id-ID')}
+                                  </p>
+                                )}
+                                <p className="text-sm text-red-800 mt-2">
+                                  Silakan upload ulang bukti pembayaran yang benar.
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -1736,7 +1830,7 @@ export default function PembayaranPage() {
             
             <div className="p-6 space-y-5">
               <p className="text-zinc-300">
-                Berikut adalah penjelasan 3 status pembayaran yang ada di sistem:
+                Berikut adalah penjelasan 5 status pembayaran yang ada di sistem:
               </p>
 
               {/* Belum Dibayar */}
@@ -1746,9 +1840,9 @@ export default function PembayaranPage() {
                     <AlertCircle className="w-5 h-5 text-red-400" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-white mb-1">Belum Dibayar (Pending)</h4>
+                    <h4 className="text-lg font-semibold text-white mb-1">Belum Dibayar</h4>
                     <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
-                      PENDING
+                      BELUM BAYAR
                     </span>
                   </div>
                 </div>
@@ -1772,10 +1866,10 @@ export default function PembayaranPage() {
                     <h4 className="text-lg font-semibold text-white mb-1">Menunggu Konfirmasi / Revisi</h4>
                     <div className="flex gap-2">
                       <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                        UNCONFIRMED
+                        MENUNGGU VERIFIKASI
                       </span>
-                      <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                        REVISION
+                      <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                        REVISI
                       </span>
                     </div>
                   </div>
@@ -1784,8 +1878,32 @@ export default function PembayaranPage() {
                   <p><strong className="text-white">Artinya:</strong> Bukti pembayaran sudah diunggah dan sedang diverifikasi oleh admin, atau perlu revisi</p>
                   <p><strong className="text-white">Yang harus dilakukan:</strong></p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
-                    <li><strong>Unconfirmed:</strong> Tunggu admin memverifikasi (1-2 hari kerja)</li>
-                    <li><strong>Revision:</strong> Upload ulang bukti pembayaran yang lebih jelas atau benar</li>
+                    <li><strong>Menunggu Verifikasi:</strong> Tunggu admin memverifikasi (1-2 hari kerja)</li>
+                    <li><strong>Revisi:</strong> Upload ulang bukti pembayaran yang lebih jelas atau benar</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Ditolak */}
+              <div className="border border-red-600/30 rounded-lg p-4 bg-red-600/10">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-600/20 flex items-center justify-center">
+                    <X className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-white mb-1">Ditolak</h4>
+                    <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-red-600/20 text-red-400 border border-red-600/30">
+                      DITOLAK
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm text-zinc-300 ml-13">
+                  <p><strong className="text-white">Artinya:</strong> Bukti pembayaran ditolak oleh admin karena tidak sesuai atau tidak valid. Tagihan masih harus dibayar!</p>
+                  <p><strong className="text-white">Yang harus dilakukan:</strong></p>
+                  <ul className="list-disc list-inside ml-4 space-y-1">
+                    <li>Baca alasan penolakan yang diberikan admin</li>
+                    <li>Klik tombol "Upload Ulang" untuk mengunggah bukti yang benar</li>
+                    <li>Pastikan bukti pembayaran jelas dan sesuai dengan jumlah tagihan</li>
                   </ul>
                 </div>
               </div>
@@ -1797,15 +1915,34 @@ export default function PembayaranPage() {
                     <CheckCircle className="w-5 h-5 text-green-400" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-white mb-1">Lunas (Paid)</h4>
+                    <h4 className="text-lg font-semibold text-white mb-1">Lunas</h4>
                     <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
-                      PAID
+                      LUNAS
                     </span>
                   </div>
                 </div>
                 <div className="space-y-2 text-sm text-zinc-300 ml-13">
                   <p><strong className="text-white">Artinya:</strong> Pembayaran telah diverifikasi dan diterima oleh admin. Tagihan sudah lunas!</p>
                   <p><strong className="text-white">Yang harus dilakukan:</strong> Tidak ada - pembayaran sudah selesai ✓</p>
+                </div>
+              </div>
+
+              {/* Dibatalkan */}
+              <div className="border border-gray-500/30 rounded-lg p-4 bg-gray-500/10">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-500/20 flex items-center justify-center">
+                    <X className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-white mb-1">Dibatalkan</h4>
+                    <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
+                      DIBATALKAN
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm text-zinc-300 ml-13">
+                  <p><strong className="text-white">Artinya:</strong> Tagihan dibatalkan oleh admin. Anda tidak perlu membayar untuk tagihan ini.</p>
+                  <p><strong className="text-white">Yang harus dilakukan:</strong> Tidak ada - tagihan sudah dibatalkan dan tidak perlu dibayar</p>
                 </div>
               </div>
             </div>

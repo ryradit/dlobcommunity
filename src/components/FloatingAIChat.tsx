@@ -1,12 +1,22 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader2, Sparkles, Copy, Check } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Sparkles, Copy, Check, Dumbbell, HelpCircle, ExternalLink, Play } from 'lucide-react';
 import Image from 'next/image';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  videos?: YouTubeVideo[];
+}
+
+interface YouTubeVideo {
+  id: string;
+  title: string;
+  thumbnail: string;
+  channelTitle: string;
+  duration: string;
+  url: string;
 }
 
 export default function FloatingAIChat() {
@@ -14,7 +24,7 @@ export default function FloatingAIChat() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Halo! Saya DLOB AI Assistant. Ada yang bisa saya bantu mengenai komunitas badminton DLOB?'
+      content: 'Halo! Saya Dlob Agent - asisten pintar untuk semua kebutuhan badminton Anda. Saya bisa membantu dengan:\n\n🏸 Info komunitas & membership\n💪 Coaching & teknik bermain\n📊 Analisis performa Anda\n\nAda yang bisa saya bantu?'
     }
   ]);
   const [input, setInput] = useState('');
@@ -37,6 +47,8 @@ export default function FloatingAIChat() {
     }
   }, [isOpen]);
 
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -47,18 +59,24 @@ export default function FloatingAIChat() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/ai-chat', {
+      // Unified Dlob Agent - handles all types of queries
+      const response = await fetch('/api/ai/dlob-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...messages, { role: 'user', content: userMessage }]
+          query: userMessage,
+          conversationHistory: messages
         })
       });
 
       if (!response.ok) throw new Error('Gagal mendapatkan respons');
 
       const data = await response.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.response,
+        videos: data.videos || undefined
+      }]);
     } catch (error) {
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -70,10 +88,10 @@ export default function FloatingAIChat() {
   };
 
   const quickQuestions = [
-    'Bagaimana cara bergabung?',
-    'Cara bayar membership?',
-    'Cara upload bukti pembayaran?',
-    'Fitur apa saja di dashboard?'
+    'Bagaimana cara bergabung DLOB?',
+    'Analisis performa saya',
+    'Tips meningkatkan smash',
+    'Cara upload bukti bayar'
   ];
 
   const handleQuickQuestion = (question: string) => {
@@ -147,7 +165,7 @@ export default function FloatingAIChat() {
           <div className="relative flex flex-col h-full">
             {/* Header */}
             <div className="relative bg-gradient-to-br from-[#3e6461]/80 to-[#2d4a47]/80 backdrop-blur-xl border-b border-white/10 p-5 rounded-t-3xl">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="relative">
                   <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-xl border border-white/30 overflow-hidden">
                     <Image
@@ -161,8 +179,10 @@ export default function FloatingAIChat() {
                   <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-[#3e6461]/80 animate-pulse" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-white font-bold text-lg tracking-tight">DLOB AI Assistant</h3>
-                  <p className="text-xs text-white/90 font-medium">Siap membantu Anda 24/7</p>
+                  <h3 className="text-white font-bold text-lg tracking-tight">
+                    Dlob Agent
+                  </h3>
+                  <p className="text-xs text-white/90 font-medium">AI Assistant untuk semua kebutuhan badminton Anda</p>
                 </div>
               </div>
             </div>
@@ -170,26 +190,70 @@ export default function FloatingAIChat() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
               {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="w-7 h-7 bg-gradient-to-br from-[#3e6461]/30 to-[#2d4a47]/30 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-white/10 flex-shrink-0">
-                      <Sparkles className="w-4 h-4 text-[#3e6461]" />
+                <div key={index}>
+                  <div
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {message.role === 'assistant' && (
+                      <div className="w-7 h-7 bg-gradient-to-br from-[#3e6461]/30 to-[#2d4a47]/30 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-white/10 flex-shrink-0">
+                        <Sparkles className="w-4 h-4 text-[#3e6461]" />
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[75%] p-3.5 rounded-2xl backdrop-blur-xl border ${
+                        message.role === 'user'
+                          ? 'bg-gradient-to-br from-[#3e6461]/90 to-[#2d4a47]/90 text-white rounded-br-md border-[#3e6461]/30 shadow-lg'
+                          : 'bg-zinc-800/60 text-zinc-100 rounded-bl-md border-white/5'
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {message.role === 'assistant' ? formatMessageWithCopyButton(message.content) : message.content}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* YouTube Videos */}
+                  {message.videos && message.videos.length > 0 && (
+                    <div className="ml-9 mt-2 space-y-2">
+                      <p className="text-xs text-zinc-400 font-semibold mb-2">📹 Video Tutorial:</p>
+                      {message.videos.map((video) => (
+                        <a
+                          key={video.id}
+                          href={video.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block group"
+                        >
+                          <div className="flex gap-2 bg-zinc-800/40 hover:bg-zinc-800/60 p-2 rounded-lg border border-white/5 hover:border-white/10 transition-all">
+                            <div className="relative w-28 h-16 flex-shrink-0 rounded overflow-hidden">
+                              <Image
+                                src={video.thumbnail}
+                                alt={video.title}
+                                fill
+                                className="object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Play className="w-6 h-6 text-white" />
+                              </div>
+                              <div className="absolute bottom-1 right-1 bg-black/80 px-1 py-0.5 rounded text-[10px] text-white font-semibold">
+                                {video.duration}
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-semibold text-zinc-200 line-clamp-2 mb-1 group-hover:text-white transition-colors">
+                                {video.title}
+                              </h4>
+                              <p className="text-[10px] text-zinc-500 line-clamp-1">{video.channelTitle}</p>
+                              <div className="flex items-center gap-1 mt-1">
+                                <ExternalLink className="w-3 h-3 text-zinc-500" />
+                                <span className="text-[10px] text-zinc-500">Tonton di YouTube</span>
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                      ))}
                     </div>
                   )}
-                  <div
-                    className={`max-w-[75%] p-3.5 rounded-2xl backdrop-blur-xl border ${
-                      message.role === 'user'
-                        ? 'bg-gradient-to-br from-[#3e6461]/90 to-[#2d4a47]/90 text-white rounded-br-md border-[#3e6461]/30 shadow-lg'
-                        : 'bg-zinc-800/60 text-zinc-100 rounded-bl-md border-white/5'
-                    }`}
-                  >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                      {message.role === 'assistant' ? formatMessageWithCopyButton(message.content) : message.content}
-                    </p>
-                  </div>
                 </div>
               ))}
               {isLoading && (
@@ -231,7 +295,7 @@ export default function FloatingAIChat() {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ketik pertanyaan Anda..."
+                  placeholder="Tanya apa saja tentang badminton, performa, atau DLOB..."
                   disabled={isLoading}
                   className="flex-1 px-4 py-3 bg-zinc-800/60 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#3e6461]/50 focus:ring-2 focus:ring-[#3e6461]/20 disabled:opacity-50 transition-all"
                 />

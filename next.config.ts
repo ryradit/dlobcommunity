@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
         hostname: 'drive.google.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+        pathname: '/**',
+      },
     ],
   },
 };

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, User, Users, Shield, Sparkles } from 'lucide-react';
+import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, User, Users, Shield, Sparkles, Dumbbell } from 'lucide-react';
 import Image from 'next/image';
 import ViewSwitcher from './ViewSwitcher';
 
@@ -81,14 +81,19 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
       icon: LayoutDashboard,
     },
     {
+      label: 'Pembayaran',
+      href: '/dashboard/pembayaran',
+      icon: CreditCard,
+    },
+    {
       label: 'Analitik',
       href: '/dashboard/analitik',
       icon: BarChart3,
     },
     {
-      label: 'Pembayaran',
-      href: '/dashboard/pembayaran',
-      icon: CreditCard,
+      label: 'Training Center',
+      href: '/dashboard/training',
+      icon: Dumbbell,
     },
     {
       label: 'Pengaturan Profil',
