@@ -79,29 +79,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CRITICAL FIX: Force clear email_confirmed_at via direct database update
-    // This ensures the user cannot login until they verify their new email
-    console.log('[Complete Profile] Forcing email unconfirmed state...');
-    
-    const { error: sqlError } = await supabaseAdmin.rpc('clear_email_confirmation', {
-      user_id_param: userId
-    });
-
-    // If the RPC doesn't exist, try direct update (requires proper RLS)
-    if (sqlError) {
-      console.log('[Complete Profile] RPC not found, trying direct auth update...');
-      // Direct SQL won't work without the RPC, so we rely on client-side check
-      console.warn('[Complete Profile] Could not force clear confirmation - relying on client-side check');
-    }
-
-    if (updateError) {
-      console.error('[Complete Profile] Update error:', updateError);
-      return NextResponse.json(
-        { error: updateError.message || 'Gagal memperbarui kredensial' },
-        { status: 500 }
-      );
-    }
-
     console.log('[Complete Profile] ✅ User updated, now sending verification email via Resend...');
 
     // Update profile to mark as complete (but email not verified yet)
