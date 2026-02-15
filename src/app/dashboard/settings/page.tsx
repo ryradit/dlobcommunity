@@ -2,11 +2,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Mail, Phone, Camera, Save, Loader2, Edit2, X, Award, Users, Instagram, Lock, Eye, EyeOff, HelpCircle } from 'lucide-react';
+import { User, Mail, Phone, Camera, Save, Loader2, Edit2, X, Award, Users, Instagram, Lock, Eye, EyeOff, HelpCircle, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
+import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
+import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 
 export default function SettingsPage() {
   const { user, updateProfile, uploadAvatar, refreshUser, updatePassword } = useAuth();
@@ -14,6 +17,11 @@ export default function SettingsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Settings blocking state
+  const [isSettingsBlocked, setIsSettingsBlocked] = useState(false);
+  const [blockReason, setBlockReason] = useState<'temp_credentials' | 'unverified_email' | null>(null);
+  const [checkingBlockStatus, setCheckingBlockStatus] = useState(true);
 
   // Modal states
   const [showPersonalModal, setShowPersonalModal] = useState(false);
@@ -49,6 +57,11 @@ export default function SettingsPage() {
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
   const [isOAuthUser, setIsOAuthUser] = useState(false);
 
+  // Account Linking States
+  const [hasGoogleLinked, setHasGoogleLinked] = useState(false);
+  const [isLinkingGoogle, setIsLinkingGoogle] = useState(false);
+  const [linkedIdentities, setLinkedIdentities] = useState<any[]>([]);
+
   // Tutorial for member settings
   const tutorialSteps = getTutorialSteps('member-settings');
   const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('member-settings', tutorialSteps);
@@ -60,6 +73,8 @@ export default function SettingsPage() {
         ? user.user_metadata.avatar_url 
         : `${user.user_metadata.avatar_url}?t=${Date.now()}`;
       setAvatarUrl(urlWithTimestamp);
+    } else {
+      setAvatarUrl(''); // Clear avatar if none exists
     }
   }, [user?.user_metadata?.avatar_url]);
 
@@ -72,6 +87,145 @@ export default function SettingsPage() {
     } else {
       setIsOAuthUser(false);
     }
+  }, [user]);
+
+  // Check linked identities
+  useEffect(() => {
+    const checkLinkedIdentities = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase.auth.getUserIdentities();
+        
+        if (error) {
+          console.error('Error fetching identities:', error);
+          return;
+        }
+
+        if (data?.identities) {
+          setLinkedIdentities(data.identities);
+          
+          // Check if Google is linked
+          const googleLinked = data.identities.some(
+            (identity: any) => identity.provider === 'google'
+          );
+          setHasGoogleLinked(googleLinked);
+        }
+      } catch (error) {
+        console.error('Error checking linked identities:', error);
+      }
+    };
+
+    checkLinkedIdentities();
+  }, [user]);
+
+  // Detect returning from OAuth account linking
+  useEffect(() => {
+    // Check URL for indication of successful account linking
+    if (typeof window !== 'undefined' && user) {
+      const url = new URL(window.location.href);
+      const fromOAuth = url.searchParams.get('from_oauth');
+      
+      if (fromOAuth === 'true') {
+        // Refresh identities and show success message
+        const checkAfterLink = async () => {
+          const { data } = await supabase.auth.getUserIdentities();
+          if (data?.identities) {
+            const googleLinked = data.identities.some(
+              (identity: any) => identity.provider === 'google'
+            );
+            
+            if (googleLinked) {
+              setHasGoogleLinked(true);
+              setLinkedIdentities(data.identities);
+              setMessage({ 
+                type: 'success', 
+                text: '✅ Akun Google berhasil dihubungkan! Anda sekarang bisa login dengan Google.' 
+              });
+              setTimeout(() => setMessage(null), 5000);
+            }
+          }
+          setIsLinkingGoogle(false);
+        };
+        
+        checkAfterLink();
+        
+        // Clean up URL
+        url.searchParams.delete('from_oauth');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [user]); // Run when user is available
+
+  // Check if settings should be blocked
+  useEffect(() => {
+    const checkBlockStatus = async () => {
+      console.log('[Settings] ==> CHECKING BLOCK STATUS');
+      if (!user) {
+        console.log('[Settings] No user');
+        setCheckingBlockStatus(false);
+        return;
+      }
+
+      console.log('[Settings] User ID:', user.id);
+
+      try {
+        // Check profile flags
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('using_temp_email, must_change_password')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('[Settings] ❌ Error fetching profile:', error);
+          setCheckingBlockStatus(false);
+          return;
+        }
+
+        console.log('[Settings] Profile data:', profile);
+        console.log('[Settings] using_temp_email:', profile?.using_temp_email);
+        console.log('[Settings] must_change_password:', profile?.must_change_password);
+
+        // Check if using temp credentials
+        if (profile?.using_temp_email || profile?.must_change_password) {
+          console.log('[Settings] 🔒 BLOCKING SETTINGS - temp credentials');
+          setIsSettingsBlocked(true);
+          setBlockReason('temp_credentials');
+          setCheckingBlockStatus(false);
+          return;
+        }
+
+        // Check if email is verified
+        const { data: { session } } = await supabase.auth.getSession();
+        const emailConfirmed = session?.user?.email_confirmed_at;
+
+        console.log('[Settings] Email confirmed:', emailConfirmed);
+
+        if (!emailConfirmed) {
+          console.log('[Settings] 🔒 BLOCKING SETTINGS - unverified email');
+          setIsSettingsBlocked(true);
+          setBlockReason('unverified_email');
+          setCheckingBlockStatus(false);
+          return;
+        }
+
+        // All checks passed
+        console.log('[Settings] ✅ SETTINGS UNLOCKED');
+        setIsSettingsBlocked(false);
+        setBlockReason(null);
+        setCheckingBlockStatus(false);
+      } catch (error) {
+        console.error('Error checking block status:', error);
+        setCheckingBlockStatus(false);
+      }
+    };
+
+    checkBlockStatus();
+    
+    // Re-check every 30 seconds to detect verification
+    const interval = setInterval(checkBlockStatus, 30000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -388,9 +542,89 @@ export default function SettingsPage() {
     }
   };
 
+  // Handle Link Google Account
+  const handleLinkGoogle = async () => {
+    try {
+      setIsLinkingGoogle(true);
+      setMessage(null);
+
+      const { data, error } = await supabase.auth.linkIdentity({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/settings`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // The user will be redirected to Google OAuth
+      // After successful link, they'll be redirected back to settings page
+    } catch (error: any) {
+      console.error('Link Google error:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error?.message || 'Gagal menghubungkan akun Google' 
+      });
+      setTimeout(() => setMessage(null), 5000);
+      setIsLinkingGoogle(false);
+    }
+  };
+
+  // Handle Unlink Google Account
+  const handleUnlinkGoogle = async () => {
+    if (!confirm('Apakah Anda yakin ingin memutuskan hubungan dengan akun Google? Anda masih bisa login dengan email & password.')) {
+      return;
+    }
+
+    try {
+      setMessage(null);
+
+      // Find the Google identity
+      const googleIdentity = linkedIdentities.find(
+        (identity: any) => identity.provider === 'google'
+      );
+
+      if (!googleIdentity) {
+        setMessage({ type: 'error', text: 'Akun Google tidak ditemukan' });
+        setTimeout(() => setMessage(null), 3000);
+        return;
+      }
+
+      const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
+
+      if (error) {
+        throw error;
+      }
+
+      setHasGoogleLinked(false);
+      setMessage({ 
+        type: 'success', 
+        text: 'Akun Google berhasil diputuskan. Anda masih bisa login dengan email & password.' 
+      });
+      setTimeout(() => setMessage(null), 5000);
+
+      // Refresh identities
+      const { data } = await supabase.auth.getUserIdentities();
+      if (data?.identities) {
+        setLinkedIdentities(data.identities);
+      }
+    } catch (error: any) {
+      console.error('Unlink Google error:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error?.message || 'Gagal memutuskan hubungan dengan akun Google' 
+      });
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="max-w-6xl mx-auto">
+        <ProfileCompletionWarning />
+        
         {/* Header */}
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
@@ -422,7 +656,7 @@ export default function SettingsPage() {
               <h2 className="text-xl font-bold text-white mb-6">Foto Profil</h2>
               <div className="flex flex-col items-center">
                 <div className="relative group mb-4">
-                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/10 bg-zinc-800">
+                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/10 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500">
                     {avatarUrl ? (
                       <Image
                         key={avatarUrl}
@@ -434,15 +668,18 @@ export default function SettingsPage() {
                         unoptimized
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <User className="w-16 h-16 text-zinc-600" />
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500">
+                        <span className="text-5xl font-bold text-white">
+                          {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                        </span>
                       </div>
                     )}
                   </div>
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
+                    onClick={() => !isSettingsBlocked && fileInputRef.current?.click()}
+                    disabled={isUploading || isSettingsBlocked}
                     className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={isSettingsBlocked ? 'Lengkapi profil terlebih dahulu' : 'Ubah foto profil'}
                   >
                     {isUploading ? (
                       <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -466,10 +703,21 @@ export default function SettingsPage() {
             </div>
 
             {/* Personal Information Card */}
-            <div className="member-settings-personal bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-blue-500/30 transition-colors cursor-pointer" onClick={openPersonalModal}>
+            <div 
+              className={`member-settings-personal bg-zinc-900 border border-white/10 rounded-xl p-6 group transition-colors ${
+                isSettingsBlocked 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:border-blue-500/30 cursor-pointer'
+              }`} 
+              onClick={() => !isSettingsBlocked && openPersonalModal()}
+            >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Informasi Pribadi</h2>
-                <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
+                <Edit2 className={`w-5 h-5 transition-colors ${
+                  isSettingsBlocked 
+                    ? 'text-zinc-600' 
+                    : 'text-zinc-400 group-hover:text-blue-400'
+                }`} />
               </div>
               <div className="space-y-4">
                 <div>
@@ -491,10 +739,21 @@ export default function SettingsPage() {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Badminton Profile Card */}
-            <div className="member-settings-badminton bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-green-500/30 transition-colors cursor-pointer" onClick={openBadmintonModal}>
+            <div 
+              className={`member-settings-badminton bg-zinc-900 border border-white/10 rounded-xl p-6 group transition-colors ${
+                isSettingsBlocked 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:border-green-500/30 cursor-pointer'
+              }`} 
+              onClick={() => !isSettingsBlocked && openBadmintonModal()}
+            >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Profil Badminton</h2>
-                <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
+                <Edit2 className={`w-5 h-5 transition-colors ${
+                  isSettingsBlocked 
+                    ? 'text-zinc-600' 
+                    : 'text-zinc-400 group-hover:text-blue-400'
+                }`} />
               </div>
               <div className="space-y-4">
                 <div>
@@ -513,10 +772,21 @@ export default function SettingsPage() {
             </div>
 
             {/* Achievements Card */}
-            <div className="member-settings-achievements bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-yellow-500/30 transition-colors cursor-pointer" onClick={openAchievementsModal}>
+            <div 
+              className={`member-settings-achievements bg-zinc-900 border border-white/10 rounded-xl p-6 group transition-colors ${
+                isSettingsBlocked 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:border-yellow-500/30 cursor-pointer'
+              }`} 
+              onClick={() => !isSettingsBlocked && openAchievementsModal()}
+            >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Pencapaian Turnamen</h2>
-                <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
+                <Edit2 className={`w-5 h-5 transition-colors ${
+                  isSettingsBlocked 
+                    ? 'text-zinc-600' 
+                    : 'text-zinc-400 group-hover:text-blue-400'
+                }`} />
               </div>
               <div className="space-y-3">
                 {(() => {
@@ -553,10 +823,21 @@ export default function SettingsPage() {
             </div>
 
             {/* Partner Preferences Card */}
-            <div className="member-settings-partner bg-zinc-900 border border-white/10 rounded-xl p-6 group hover:border-purple-500/30 transition-colors cursor-pointer" onClick={openPartnerModal}>
+            <div 
+              className={`member-settings-partner bg-zinc-900 border border-white/10 rounded-xl p-6 group transition-colors ${
+                isSettingsBlocked 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:border-purple-500/30 cursor-pointer'
+              }`} 
+              onClick={() => !isSettingsBlocked && openPartnerModal()}
+            >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Preferensi Partner</h2>
-                <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
+                <Edit2 className={`w-5 h-5 transition-colors ${
+                  isSettingsBlocked 
+                    ? 'text-zinc-600' 
+                    : 'text-zinc-400 group-hover:text-blue-400'
+                }`} />
               </div>
               <div className="space-y-4">
                 <div>
@@ -571,10 +852,18 @@ export default function SettingsPage() {
             </div>
 
             {/* Change Password Card */}
-            <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+            <div className={`bg-zinc-900 border border-white/10 rounded-xl p-6 ${isSettingsBlocked ? 'opacity-50' : ''}`}>
               <h2 className="text-xl font-bold text-white mb-6">Ubah Password</h2>
               
-              {isOAuthUser && (
+              {isSettingsBlocked && (
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <p className="text-sm text-red-400">
+                    🔒 Lengkapi profil terlebih dahulu untuk mengubah password
+                  </p>
+                </div>
+              )}
+              
+              {isOAuthUser && !isSettingsBlocked && (
                 <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                   <p className="text-sm text-blue-400">
                     ℹ️ Anda login dengan Google. Membuat password akan memungkinkan Anda login dengan email & password selain Google OAuth.
@@ -593,7 +882,8 @@ export default function SettingsPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full pl-12 pr-12 py-3 bg-zinc-800 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                      disabled={isSettingsBlocked}
+                      className="w-full pl-12 pr-12 py-3 bg-zinc-800 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                       placeholder="Minimal 6 karakter"
                     />
                     <button
@@ -616,7 +906,8 @@ export default function SettingsPage() {
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-12 pr-12 py-3 bg-zinc-800 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                      disabled={isSettingsBlocked}
+                      className="w-full pl-12 pr-12 py-3 bg-zinc-800 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                       placeholder="Ulangi password baru"
                     />
                     <button
@@ -631,7 +922,7 @@ export default function SettingsPage() {
 
                 <button
                   type="submit"
-                  disabled={isPasswordLoading || !newPassword || !confirmPassword}
+                  disabled={isPasswordLoading || !newPassword || !confirmPassword || isSettingsBlocked}
                   className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isPasswordLoading ? (
@@ -648,6 +939,107 @@ export default function SettingsPage() {
                 </button>
               </form>
             </div>
+
+            {/* Linked Accounts / Authentication Methods Card */}
+            {!isSettingsBlocked ? (
+              <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+                <h2 className="text-xl font-bold text-white mb-4">Metode Login</h2>
+                <p className="text-sm text-zinc-400 mb-6">
+                  Kelola cara Anda masuk ke akun ini. Anda bisa menggunakan email & password, Google, atau keduanya.
+                </p>
+
+                <div className="space-y-3">
+                  {/* Email/Password Method */}
+                  <div className="flex items-center justify-between p-4 bg-zinc-800/50 border border-white/10 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-500/20 rounded-lg">
+                        <Mail className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">Email & Password</p>
+                        <p className="text-sm text-zinc-400">{user?.email}</p>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">
+                      Aktif
+                    </span>
+                  </div>
+
+                  {/* Google OAuth Method */}
+                  <div className="flex items-center justify-between p-4 bg-zinc-800/50 border border-white/10 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-500/20 rounded-lg">
+                        <svg className="w-5 h-5" viewBox="0 0 24 24">
+                          <path fill="#EA4335" d="M5.26620003,9.76452941 C6.19878754,6.93863203 8.85444915,4.90909091 12,4.90909091 C13.6909091,4.90909091 15.2181818,5.50909091 16.4181818,6.49090909 L19.9090909,3 C17.7818182,1.14545455 15.0545455,0 12,0 C7.27006974,0 3.1977497,2.69829785 1.23999023,6.65002441 L5.26620003,9.76452941 Z"/>
+                          <path fill="#34A853" d="M16.0407269,18.0125889 C14.9509167,18.7163016 13.5660892,19.0909091 12,19.0909091 C8.86648613,19.0909091 6.21911939,17.076871 5.27698177,14.2678769 L1.23746264,17.3349879 C3.19279051,21.2936293 7.26500293,24 12,24 C14.9328362,24 17.7353462,22.9573905 19.834192,20.9995801 L16.0407269,18.0125889 Z"/>
+                          <path fill="#4A90E2" d="M19.834192,20.9995801 C22.0291676,18.9520994 23.4545455,15.903663 23.4545455,12 C23.4545455,11.2909091 23.3454545,10.5818182 23.1818182,9.90909091 L12,9.90909091 L12,14.4545455 L18.4363636,14.4545455 C18.1187732,16.013626 17.2662994,17.2212117 16.0407269,18.0125889 L19.834192,20.9995801 Z"/>
+                          <path fill="#FBBC05" d="M5.27698177,14.2678769 C5.03832634,13.556323 4.90909091,12.7937589 4.90909091,12 C4.90909091,11.2182781 5.03443647,10.4668121 5.26620003,9.76452941 L1.23999023,6.65002441 C0.43658717,8.26043162 0,10.0753848 0,12 C0,13.9195484 0.444780743,15.7301709 1.23746264,17.3349879 L5.27698177,14.2678769 Z"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">Google</p>
+                        <p className="text-sm text-zinc-400">
+                          {hasGoogleLinked ? 'Terhubung' : 'Belum terhubung'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {hasGoogleLinked ? (
+                      <button
+                        onClick={handleUnlinkGoogle}
+                        className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Putuskan
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleLinkGoogle}
+                        disabled={isLinkingGoogle}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {isLinkingGoogle ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Menghubungkan...
+                          </>
+                        ) : (
+                          'Hubungkan'
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <p className="text-sm text-blue-400">
+                    💡 Tips: Dengan menghubungkan Google, Anda bisa login menggunakan email & password <strong>atau</strong> tombol "Sign in with Google" di halaman login.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-zinc-900 border border-white/10 rounded-xl p-6 opacity-50">
+                <h2 className="text-xl font-bold text-white mb-4">Metode Login</h2>
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-yellow-400 font-medium mb-2">🔒 Fitur Terkunci</p>
+                      <p className="text-sm text-yellow-300">
+                        Fitur pengelolaan metode login (termasuk menghubungkan akun Google) akan tersedia setelah Anda:
+                      </p>
+                      <ol className="text-sm text-yellow-300 mt-2 ml-4 list-decimal space-y-1">
+                        <li>Memperbarui email ke alamat email sebenarnya</li>
+                        <li>Memverifikasi email tersebut</li>
+                        <li>Mengubah password default</li>
+                      </ol>
+                      <p className="text-sm text-yellow-400 mt-3">
+                        Silakan lengkapi profil Anda terlebih dahulu untuk membuka fitur ini.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

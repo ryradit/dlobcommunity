@@ -169,6 +169,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [bgImage, setBgImage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -233,6 +234,20 @@ export default function LoginPage() {
     
     setError(errorMessage);
     window.history.replaceState({}, '', '/login');
+  }, []);
+
+  // Check for success messages (like after profile completion)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const message = searchParams.get('message');
+    
+    if (message === 'please-verify-email') {
+      setSuccessMessage('✅ Profil berhasil diperbarui! Email verifikasi telah dikirim ke inbox Anda. Silakan klik link verifikasi terlebih dahulu, kemudian login dengan email dan password baru Anda.');
+      window.history.replaceState({}, '', '/login');
+    } else if (message === 'email-verified') {
+      setSuccessMessage('✅ Email berhasil diverifikasi! Sekarang Anda dapat login dengan email dan password baru Anda.');
+      window.history.replaceState({}, '', '/login');
+    }
   }, []);
 
   useEffect(() => {
@@ -576,6 +591,12 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
+
+            {successMessage && (
+              <div className="bg-green-500/10 border border-green-500/50 text-green-200 px-4 py-3 rounded-lg text-sm">
+                {successMessage}
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-500/10 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg text-sm">

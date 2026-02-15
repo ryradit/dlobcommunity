@@ -77,10 +77,10 @@ export async function middleware(request: NextRequest) {
   const hasAuthToken = cookieNames.some(name => name.includes('auth-token') && name.startsWith('sb-'));
   
   if (hasAuthToken) {
-    // Session exists, skip expensive getSession call for dashboard/admin routes
-    if (path.startsWith('/dashboard') || path.startsWith('/admin')) {
-      return response;
-    }
+    // Allow dashboard access for all authenticated users
+    // Temp email users will see warning banner in dashboard
+    // No forced redirect - user decides when to update
+    return response;
   }
 
   // For other routes or when no token, check session

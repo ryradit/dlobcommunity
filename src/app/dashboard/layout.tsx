@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import FloatingAIChat from '@/components/FloatingAIChat';
+import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, viewAs, loading } = useAuth();

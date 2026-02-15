@@ -304,6 +304,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
 
     if (data.user) {
+      // Check if email is confirmed (not a temp email)
+      const emailConfirmed = data.user.email_confirmed_at;
+      const isTempEmail = data.user.email?.includes('@temp.dlob.local');
+      
+      // ADDITIONAL CHECK: Check profiles table for pending_email_verification flag
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('pending_email_verification')
+        .eq('id', data.user.id)
+        .single();
+      
+      const hasPendingVerification = profile?.pending_email_verification === true;
+      
+      console.log('[Auth] Login attempt:', {
+        email: data.user.email,
+        emailConfirmed: !!emailConfirmed,
+        isTempEmail,
+        hasPendingVerification,
+        shouldBlock: hasPendingVerification || (!emailConfirmed && !isTempEmail)
+      });
+      
+      // CRITICAL: Block login if pending_email_verification flag is set
+      // The flag should ONLY be cleared by clicking the verification link in email
+      // NOT by attempting to login
+      if (hasPendingVerification) {
+        console.log('[Auth] 🚫 BLOCKING LOGIN - Pending email verification flag is set');
+        console.log('[Auth] User must click verification link in email first');
+        // Sign them out immediately
+        await supabase.auth.signOut();
+        throw new Error('Email belum diverifikasi. Silakan cek inbox email Anda dan klik link verifikasi terlebih dahulu.');
+      }
+      
+      // Also block if email not confirmed and not temp email
+      if (!emailConfirmed && !isTempEmail) {
+        console.log('[Auth] 🚫 BLOCKING LOGIN - Email not confirmed');
+        await supabase.auth.signOut();
+        throw new Error('Email belum diverifikasi. Silakan cek inbox email Anda dan klik link verifikasi terlebih dahulu.');
+      }
+
+      console.log('[Auth] ✅ Login allowed');
       const userRole = await fetchUserRole(data.user.id);
       setRole(userRole);
       
@@ -376,12 +416,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (data: Record<string, any>) => {
     if (!user) throw new Error('No user logged in');
     
+    // Update profiles table
     const { error } = await supabase
       .from('profiles')
       .update(data)
       .eq('id', user.id);
       
     if (error) throw error;
+    
+    // Sync full_name to auth.users metadata for consistency
+    if (data.full_name) {
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: { full_name: data.full_name }
+      });
+      
+      if (metadataError) {
+        console.error('Error updating user metadata:', metadataError);
+        // Don't throw - profile update succeeded
+      }
+    }
     
     // Refresh user metadata
     await refreshUser();

@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock, HelpCircle } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import TutorialOverlay from '@/components/TutorialOverlay';
+import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
 
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [myMembership, setMyMembership] = useState<Membership | null>(null);
   const [loading, setLoading] = useState(true);
   const [memberName, setMemberName] = useState('');
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
 
   // Tutorial for member dashboard
   const tutorialSteps = getTutorialSteps('member-dashboard');
@@ -66,12 +68,26 @@ export default function DashboardPage() {
         // First, get user profile for the name
         const { data: profile } = await supabase
           .from('profiles')
-          .select('full_name, email')
+          .select('full_name, email, last_dashboard_visit')
           .eq('id', user.id)
           .single();
 
-        const name = profile?.full_name || profile?.email?.split('@')[0] || '';
+        // Prioritize user_metadata full_name (most up-to-date), then profiles table, then email
+        const name = user.user_metadata?.full_name || profile?.full_name || profile?.email?.split('@')[0] || '';
         setMemberName(name);
+
+        // Check if this is first time visiting dashboard
+        const isFirst = !profile?.last_dashboard_visit;
+        setIsFirstLogin(isFirst);
+
+        // Update last_dashboard_visit timestamp (do this in background, don't wait)
+        if (isFirst) {
+          supabase
+            .from('profiles')
+            .update({ last_dashboard_visit: new Date().toISOString() })
+            .eq('id', user.id)
+            .then(() => console.log('Dashboard visit timestamp updated'));
+        }
 
         if (!name) {
           setLoading(false);
@@ -193,10 +209,15 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
+      <ProfileCompletionWarning />
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            Selamat datang kembali, {memberName || user?.email?.split('@')[0] || 'User'}!
+            {isFirstLogin ? (
+              <>Selamat datang di Dashboard Member, {memberName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}!</>
+            ) : (
+              <>Selamat datang kembali, {memberName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}!</>
+            )}
           </h1>
           <p className="text-zinc-300">Berikut ringkasan pembayaran dan riwayat pertandingan Anda.</p>
         </div>

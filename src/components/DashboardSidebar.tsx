@@ -165,7 +165,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
                     unoptimized
                   />
                 ) : (
-                  <span>{user?.email?.[0]?.toUpperCase() || 'U'}</span>
+                  <span>{user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}</span>
                 )}
               </div>
               <div className="flex-1 min-w-0">

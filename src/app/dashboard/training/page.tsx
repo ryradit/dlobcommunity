@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Dumbbell, Send, Loader2, Play, ExternalLink, BookOpen, Trophy, Target, Zap, Clock, Star, Trash2, HelpCircle, X } from 'lucide-react';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
+import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
 
@@ -215,6 +216,7 @@ export default function TrainingCenterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white p-6">
+      <ProfileCompletionWarning />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex items-start justify-between gap-4">
