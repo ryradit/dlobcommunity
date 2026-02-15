@@ -1,163 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import Image from 'next/image';
-
-interface PupilProps {
-  size?: number;
-  maxDistance?: number;
-  pupilColor?: string;
-  forceLookX?: number;
-  forceLookY?: number;
-}
-
-const Pupil = ({ 
-  size = 12, 
-  maxDistance = 5,
-  pupilColor = "black",
-  forceLookX,
-  forceLookY
-}: PupilProps) => {
-  const [mouseX, setMouseX] = useState<number>(0);
-  const [mouseY, setMouseY] = useState<number>(0);
-  const pupilRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMouseX(e.clientX);
-      setMouseY(e.clientY);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  const calculatePupilPosition = () => {
-    if (!pupilRef.current) return { x: 0, y: 0 };
-
-    if (forceLookX !== undefined && forceLookY !== undefined) {
-      return { x: forceLookX, y: forceLookY };
-    }
-
-    const pupil = pupilRef.current.getBoundingClientRect();
-    const pupilCenterX = pupil.left + pupil.width / 2;
-    const pupilCenterY = pupil.top + pupil.height / 2;
-
-    const deltaX = mouseX - pupilCenterX;
-    const deltaY = mouseY - pupilCenterY;
-    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
-
-    const angle = Math.atan2(deltaY, deltaX);
-    const x = Math.cos(angle) * distance;
-    const y = Math.sin(angle) * distance;
-
-    return { x, y };
-  };
-
-  const pupilPosition = calculatePupilPosition();
-
-  return (
-    <div
-      ref={pupilRef}
-      className="rounded-full"
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        backgroundColor: pupilColor,
-        transform: `translate(${pupilPosition.x}px, ${pupilPosition.y}px)`,
-        transition: 'transform 0.1s ease-out',
-      }}
-    />
-  );
-};
-
-interface EyeBallProps {
-  size?: number;
-  pupilSize?: number;
-  maxDistance?: number;
-  eyeColor?: string;
-  pupilColor?: string;
-  isBlinking?: boolean;
-  forceLookX?: number;
-  forceLookY?: number;
-}
-
-const EyeBall = ({ 
-  size = 48, 
-  pupilSize = 16, 
-  maxDistance = 10,
-  eyeColor = "white",
-  pupilColor = "black",
-  isBlinking = false,
-  forceLookX,
-  forceLookY
-}: EyeBallProps) => {
-  const [mouseX, setMouseX] = useState<number>(0);
-  const [mouseY, setMouseY] = useState<number>(0);
-  const eyeRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMouseX(e.clientX);
-      setMouseY(e.clientY);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  const calculatePupilPosition = () => {
-    if (!eyeRef.current) return { x: 0, y: 0 };
-
-    if (forceLookX !== undefined && forceLookY !== undefined) {
-      return { x: forceLookX, y: forceLookY };
-    }
-
-    const eye = eyeRef.current.getBoundingClientRect();
-    const eyeCenterX = eye.left + eye.width / 2;
-    const eyeCenterY = eye.top + eye.height / 2;
-
-    const deltaX = mouseX - eyeCenterX;
-    const deltaY = mouseY - eyeCenterY;
-    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
-
-    const angle = Math.atan2(deltaY, deltaX);
-    const x = Math.cos(angle) * distance;
-    const y = Math.sin(angle) * distance;
-
-    return { x, y };
-  };
-
-  const pupilPosition = calculatePupilPosition();
-
-  return (
-    <div
-      ref={eyeRef}
-      className="rounded-full flex items-center justify-center transition-all duration-150"
-      style={{
-        width: `${size}px`,
-        height: isBlinking ? '2px' : `${size}px`,
-        backgroundColor: eyeColor,
-        overflow: 'hidden',
-      }}
-    >
-      {!isBlinking && (
-        <div
-          className="rounded-full"
-          style={{
-            width: `${pupilSize}px`,
-            height: `${pupilSize}px`,
-            backgroundColor: pupilColor,
-            transform: `translate(${pupilPosition.x}px, ${pupilPosition.y}px)`,
-            transition: 'transform 0.1s ease-out',
-          }}
-        />
-      )}
-    </div>
-  );
-};
+import { useRouter } from 'next/navigation';
 
 const portraits = [
   'IMG_1999.jpg', 'IMG_2035.jpg', 'IMG_2039.jpg', 'IMG_2046.jpg', 'IMG_2049.jpg',
@@ -173,18 +20,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [bgImage, setBgImage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [mouseX, setMouseX] = useState<number>(0);
-  const [mouseY, setMouseY] = useState<number>(0);
-  const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
-  const [isBlackBlinking, setIsBlackBlinking] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
-  const [isPurplePeeking, setIsPurplePeeking] = useState(false);
-  const purpleRef = useRef<HTMLDivElement>(null);
-  const blackRef = useRef<HTMLDivElement>(null);
-  const yellowRef = useRef<HTMLDivElement>(null);
-  const orangeRef = useRef<HTMLDivElement>(null);
-  const { signIn, signInWithGoogle } = useAuth();
+  const [rememberMe, setRememberMe] = useState(true);
+  const { signIn, signInWithGoogle, user } = useAuth();
+  const router = useRouter();
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (user) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
 
   // Check for OAuth errors from URL
   useEffect(() => {
@@ -247,99 +92,22 @@ export default function LoginPage() {
     } else if (message === 'email-verified') {
       setSuccessMessage('✅ Email berhasil diverifikasi! Sekarang Anda dapat login dengan email dan password baru Anda.');
       window.history.replaceState({}, '', '/login');
+    } else if (message === 'password-reset-success') {
+      setSuccessMessage('✅ Password berhasil direset! Silakan login dengan password baru Anda.');
+      window.history.replaceState({}, '', '/login');
     }
   }, []);
 
   useEffect(() => {
     const randomImage = portraits[Math.floor(Math.random() * portraits.length)];
     setBgImage(`/images/potrait/${randomImage}`);
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMouseX(e.clientX);
-      setMouseY(e.clientY);
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  // Blinking effects
-  useEffect(() => {
-    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
-    const scheduleBlink = () => {
-      const blinkTimeout = setTimeout(() => {
-        setIsPurpleBlinking(true);
-        setTimeout(() => {
-          setIsPurpleBlinking(false);
-          scheduleBlink();
-        }, 150);
-      }, getRandomBlinkInterval());
-      return blinkTimeout;
-    };
-    const timeout = scheduleBlink();
-    return () => clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
-    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
-    const scheduleBlink = () => {
-      const blinkTimeout = setTimeout(() => {
-        setIsBlackBlinking(true);
-        setTimeout(() => {
-          setIsBlackBlinking(false);
-          scheduleBlink();
-        }, 150);
-      }, getRandomBlinkInterval());
-      return blinkTimeout;
-    };
-    const timeout = scheduleBlink();
-    return () => clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
-    if (isTyping) {
-      setIsLookingAtEachOther(true);
-      const timer = setTimeout(() => setIsLookingAtEachOther(false), 800);
-      return () => clearTimeout(timer);
-    } else {
-      setIsLookingAtEachOther(false);
+    
+    // Load remember me preference from localStorage
+    const savedRememberMe = localStorage.getItem('rememberMe');
+    if (savedRememberMe !== null) {
+      setRememberMe(savedRememberMe === 'true');
     }
-  }, [isTyping]);
-
-  useEffect(() => {
-    if (password.length > 0 && showPassword) {
-      const schedulePeek = () => {
-        const peekInterval = setTimeout(() => {
-          setIsPurplePeeking(true);
-          setTimeout(() => setIsPurplePeeking(false), 800);
-        }, Math.random() * 3000 + 2000);
-        return peekInterval;
-      };
-      const firstPeek = schedulePeek();
-      return () => clearTimeout(firstPeek);
-    } else {
-      setIsPurplePeeking(false);
-    }
-  }, [password, showPassword, isPurplePeeking]);
-
-  const calculatePosition = (ref: React.RefObject<HTMLDivElement | null>) => {
-    if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
-    const rect = ref.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 3;
-    const deltaX = mouseX - centerX;
-    const deltaY = mouseY - centerY;
-    const faceX = Math.max(-15, Math.min(15, deltaX / 20));
-    const faceY = Math.max(-10, Math.min(10, deltaY / 30));
-    const bodySkew = Math.max(-6, Math.min(6, -deltaX / 120));
-    return { faceX, faceY, bodySkew };
-  };
-
-  const purplePos = calculatePosition(purpleRef);
-  const blackPos = calculatePosition(blackRef);
-  const yellowPos = calculatePosition(yellowRef);
-  const orangePos = calculatePosition(orangeRef);
+  }, []);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,6 +115,9 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // Save remember me preference
+      localStorage.setItem('rememberMe', rememberMe.toString());
+      
       await signIn(email, password);
     } catch (err: any) {
       setError(err.message || 'Login failed');
@@ -406,134 +177,9 @@ export default function LoginPage() {
         </div>
       )}
       
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center relative z-10">
-        {/* Animated Characters Section */}
-        <div className="hidden lg:flex relative h-[600px] items-center justify-center">
-          {/* Purple Character - Tall Rectangle */}
-          <div
-            ref={purpleRef}
-            className="absolute left-12 top-20 transition-transform duration-300"
-            style={{ transform: `skewY(${purplePos.bodySkew}deg)` }}
-          >
-            <div
-              className="relative bg-purple-500 rounded-3xl flex flex-col items-center justify-start pt-8 transition-all duration-300"
-              style={{
-                width: "180px",
-                height: "400px",
-                transform: `translate(${purplePos.faceX}px, ${purplePos.faceY}px)`,
-              }}
-            >
-              <div className="flex gap-6">
-                <EyeBall
-                  size={isPurplePeeking ? 50 : 45}
-                  pupilSize={isPurplePeeking ? 20 : 16}
-                  eyeColor="white"
-                  isBlinking={isPurpleBlinking}
-                  forceLookX={isLookingAtEachOther ? 50 : undefined}
-                  forceLookY={isLookingAtEachOther ? 0 : undefined}
-                />
-                <EyeBall
-                  size={isPurplePeeking ? 50 : 45}
-                  pupilSize={isPurplePeeking ? 20 : 16}
-                  eyeColor="white"
-                  isBlinking={isPurpleBlinking}
-                  forceLookX={isLookingAtEachOther ? 50 : undefined}
-                  forceLookY={isLookingAtEachOther ? 0 : undefined}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Black Character - Tall Rectangle */}
-          <div
-            ref={blackRef}
-            className="absolute right-12 top-32 transition-transform duration-300"
-            style={{ transform: `skewY(${blackPos.bodySkew}deg)` }}
-          >
-            <div
-              className="relative bg-zinc-800 rounded-3xl flex flex-col items-center justify-start pt-8 transition-all duration-300"
-              style={{
-                width: "120px",
-                height: "310px",
-                transform: `translate(${blackPos.faceX}px, ${blackPos.faceY}px)`,
-              }}
-            >
-              <div className="flex gap-4">
-                <EyeBall
-                  size={35}
-                  pupilSize={14}
-                  eyeColor="white"
-                  isBlinking={isBlackBlinking}
-                  forceLookX={isLookingAtEachOther ? -50 : undefined}
-                  forceLookY={isLookingAtEachOther ? 0 : undefined}
-                />
-                <EyeBall
-                  size={35}
-                  pupilSize={14}
-                  eyeColor="white"
-                  isBlinking={isBlackBlinking}
-                  forceLookX={isLookingAtEachOther ? -50 : undefined}
-                  forceLookY={isLookingAtEachOther ? 0 : undefined}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Orange Character - Semi-circle */}
-          <div
-            ref={orangeRef}
-            className="absolute bottom-12 left-24 transition-transform duration-300"
-            style={{ transform: `skewY(${orangePos.bodySkew}deg)` }}
-          >
-            <div
-              className="relative bg-orange-500 flex items-start justify-center pt-12 transition-all duration-300"
-              style={{
-                width: "240px",
-                height: "200px",
-                borderRadius: "120px 120px 0 0",
-                transform: `translate(${orangePos.faceX}px, ${orangePos.faceY}px)`,
-              }}
-            >
-              <div className="flex gap-12">
-                <div className="w-6 h-6 relative">
-                  <Pupil size={12} maxDistance={6} pupilColor="#27272a" />
-                </div>
-                <div className="w-6 h-6 relative">
-                  <Pupil size={12} maxDistance={6} pupilColor="#27272a" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Yellow Character - Rounded Rectangle */}
-          <div
-            ref={yellowRef}
-            className="absolute bottom-12 right-32 transition-transform duration-300"
-            style={{ transform: `skewY(${yellowPos.bodySkew}deg)` }}
-          >
-            <div
-              className="relative bg-yellow-400 rounded-[60px] flex flex-col items-center justify-start pt-12 gap-6 transition-all duration-300"
-              style={{
-                width: "140px",
-                height: "230px",
-                transform: `translate(${yellowPos.faceX}px, ${yellowPos.faceY}px)`,
-              }}
-            >
-              <div className="flex gap-8">
-                <div className="w-6 h-6 relative">
-                  <Pupil size={12} maxDistance={6} pupilColor="#27272a" />
-                </div>
-                <div className="w-6 h-6 relative">
-                  <Pupil size={12} maxDistance={6} pupilColor="#27272a" />
-                </div>
-              </div>
-              <div className="w-16 h-0.5 bg-zinc-800 rounded-full" />
-            </div>
-          </div>
-        </div>
-
+      <div className="w-full max-w-md mx-auto relative z-10">
         {/* Login Form Section */}
-        <div className="max-w-md w-full space-y-8 bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-white/20 mx-auto lg:mx-0">
+        <div className="w-full space-y-8 bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-white/20">
           <div>
             <h2 className="text-center text-3xl font-bold text-white">
               Masuk ke DLOB
@@ -558,17 +204,20 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onFocus={() => setIsTyping(true)}
-                  onBlur={() => setIsTyping(false)}
                   className="w-full px-3 py-2 border border-gray-300/20 placeholder-gray-400 text-white bg-white/5 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="email@example.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-2">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-200">
+                    Password
+                  </label>
+                  <Link href="/lupa-password" className="text-xs text-blue-400 hover:text-blue-300">
+                    Lupa password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <input
                     id="password"
@@ -576,8 +225,6 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    onFocus={() => setIsTyping(true)}
-                    onBlur={() => setIsTyping(false)}
                     className="w-full px-3 py-2 border border-gray-300/20 placeholder-gray-400 text-white bg-white/5 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="••••••••"
                   />
@@ -589,6 +236,20 @@ export default function LoginPage() {
                     {showPassword ? "👁️" : "👁️‍🗨️"}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300/20 bg-white/5 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
+                  Ingat saya
+                </label>
               </div>
             </div>
 
@@ -617,7 +278,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-300/20"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-transparent text-gray-300">Atau</span>
+                <span className="px-2 bg-transparent text-gray-300">Atau Lanjutkan Dengan</span>
               </div>
             </div>
 
@@ -642,6 +303,20 @@ export default function LoginPage() {
               </p>
             </div>
           </form>
+
+          <div className="pt-4 border-t border-gray-300/20">
+            <p className="text-xs text-gray-400 text-center">
+              Dengan masuk, Anda menyetujui{' '}
+              <Link href="/syarat-layanan" className="text-blue-400 hover:text-blue-300">
+                Syarat Layanan
+              </Link>
+              {' '}dan{' '}
+              <Link href="/kebijakan-privasi" className="text-blue-400 hover:text-blue-300">
+                Kebijakan Privasi
+              </Link>
+              {' '}kami.
+            </p>
+          </div>
         </div>
       </div>
     </div>

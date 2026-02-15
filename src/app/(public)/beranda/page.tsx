@@ -2,6 +2,7 @@ import Link from 'next/link';
 import HeroSection from '@/components/HeroSection';
 import GallerySection from '@/components/GallerySection';
 import FeaturesSection from '@/components/FeaturesSection';
+import { CommunityCTA } from '@/components/ui/community-cta';
 
 export default function BerandaPage() {
   const stats = [
@@ -222,20 +223,7 @@ export default function BerandaPage() {
       </section>
 
       {/* CTA Section - Mulai Bergabung */}
-      <section className="relative bg-gradient-to-r from-[#3e6461] to-[#2d4a47] py-32 text-white overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center">
-          <h2 className="text-5xl md:text-6xl font-bold mb-6">Siap Bergabung dengan DLOB?</h2>
-          <p className="text-xl text-white/90 max-w-3xl mx-auto mb-12">
-            Memulai perjalanan badminton Anda bersama kami sangat mudah. Jadilah bagian dari komunitas badminton yang terus berkembang.
-          </p>
-          
-          <Link href="/register">
-            <button className="px-12 py-5 bg-[#1e4843] text-white font-bold rounded-full hover:shadow-xl transition-all duration-300 hover:scale-105 text-xl shadow-2xl">
-              Daftar Sekarang
-            </button>
-          </Link>
-        </div>
-      </section>
+      <CommunityCTA />
     </main>
   );
 }

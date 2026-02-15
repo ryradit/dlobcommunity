@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,103 +12,6 @@ const portraits = [
   'IMG_7800.JPG', 'IMG_8028.JPG', 'IMG_8861.JPG', 'IMG_8865.JPG', 'IMG_8873.JPG'
 ];
 
-// Pupil Component
-const Pupil = ({
-  size,
-  maxDistance,
-  pupilColor,
-  forceLookX,
-  forceLookY,
-}: {
-  size: number;
-  maxDistance: number;
-  pupilColor: string;
-  forceLookX?: number;
-  forceLookY?: number;
-}) => {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const pupilRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (forceLookX !== undefined && forceLookY !== undefined) {
-      setPosition({ x: forceLookX, y: forceLookY });
-      return;
-    }
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!pupilRef.current) return;
-      const rect = pupilRef.current.getBoundingClientRect();
-      const pupilCenterX = rect.left + rect.width / 2;
-      const pupilCenterY = rect.top + rect.height / 2;
-      const dx = e.clientX - pupilCenterX;
-      const dy = e.clientY - pupilCenterY;
-      const angle = Math.atan2(dy, dx);
-      const distance = Math.min(Math.sqrt(dx * dx + dy * dy), maxDistance);
-      const x = Math.cos(angle) * distance;
-      const y = Math.sin(angle) * distance;
-      setPosition({ x, y });
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [maxDistance, forceLookX, forceLookY]);
-
-  return (
-    <div
-      ref={pupilRef}
-      className="absolute inset-0 flex items-center justify-center"
-    >
-      <div
-        className="rounded-full transition-transform duration-100"
-        style={{
-          width: `${size}px`,
-          height: `${size}px`,
-          backgroundColor: pupilColor,
-          transform: `translate(${position.x}px, ${position.y}px)`,
-        }}
-      />
-    </div>
-  );
-};
-
-// EyeBall Component
-const EyeBall = ({
-  size,
-  pupilSize,
-  eyeColor,
-  isBlinking,
-  forceLookX,
-  forceLookY,
-}: {
-  size: number;
-  pupilSize: number;
-  eyeColor: string;
-  isBlinking: boolean;
-  forceLookX?: number;
-  forceLookY?: number;
-}) => {
-  return (
-    <div
-      className="rounded-full flex items-center justify-center relative transition-all duration-150"
-      style={{
-        width: `${size}px`,
-        height: isBlinking ? "2px" : `${size}px`,
-        backgroundColor: eyeColor,
-      }}
-    >
-      {!isBlinking && (
-        <Pupil
-          size={pupilSize}
-          maxDistance={size / 4}
-          pupilColor={eyeColor === "white" ? "black" : "white"}
-          forceLookX={forceLookX}
-          forceLookY={forceLookY}
-        />
-      )}
-    </div>
-  );
-};
-
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -119,93 +22,20 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [bgImage, setBgImage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [mouseX, setMouseX] = useState<number>(0);
-  const [mouseY, setMouseY] = useState<number>(0);
-  const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
-  const [isBlackBlinking, setIsBlackBlinking] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
-  const purpleRef = useRef<HTMLDivElement>(null);
-  const blackRef = useRef<HTMLDivElement>(null);
-  const yellowRef = useRef<HTMLDivElement>(null);
-  const orangeRef = useRef<HTMLDivElement>(null);
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle, user } = useAuth();
   const router = useRouter();
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (user) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
 
   useEffect(() => {
     const randomImage = portraits[Math.floor(Math.random() * portraits.length)];
     setBgImage(`/images/potrait/${randomImage}`);
   }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMouseX(e.clientX);
-      setMouseY(e.clientY);
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  // Blinking effects
-  useEffect(() => {
-    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
-    const scheduleBlink = () => {
-      const blinkTimeout = setTimeout(() => {
-        setIsPurpleBlinking(true);
-        setTimeout(() => {
-          setIsPurpleBlinking(false);
-          scheduleBlink();
-        }, 150);
-      }, getRandomBlinkInterval());
-      return blinkTimeout;
-    };
-    const timeout = scheduleBlink();
-    return () => clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
-    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
-    const scheduleBlink = () => {
-      const blinkTimeout = setTimeout(() => {
-        setIsBlackBlinking(true);
-        setTimeout(() => {
-          setIsBlackBlinking(false);
-          scheduleBlink();
-        }, 150);
-      }, getRandomBlinkInterval());
-      return blinkTimeout;
-    };
-    const timeout = scheduleBlink();
-    return () => clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
-    if (isTyping) {
-      setIsLookingAtEachOther(true);
-      const timer = setTimeout(() => setIsLookingAtEachOther(false), 800);
-      return () => clearTimeout(timer);
-    } else {
-      setIsLookingAtEachOther(false);
-    }
-  }, [isTyping]);
-
-  const calculatePosition = (ref: React.RefObject<HTMLDivElement | null>) => {
-    if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
-    const rect = ref.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 3;
-    const deltaX = mouseX - centerX;
-    const deltaY = mouseY - centerY;
-    const faceX = Math.max(-15, Math.min(15, deltaX / 20));
-    const faceY = Math.max(-10, Math.min(10, deltaY / 30));
-    const bodySkew = Math.max(-6, Math.min(6, -deltaX / 120));
-    return { faceX, faceY, bodySkew };
-  };
-
-  const purplePos = calculatePosition(purpleRef);
-  const blackPos = calculatePosition(blackRef);
-  const yellowPos = calculatePosition(yellowRef);
-  const orangePos = calculatePosition(orangeRef);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,134 +121,9 @@ export default function RegisterPage() {
         </div>
       )}
       
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center relative z-10">
-        {/* Animated Characters Section */}
-        <div className="hidden lg:flex relative h-[600px] items-center justify-center">
-          {/* Purple Character - Tall Rectangle */}
-          <div
-            ref={purpleRef}
-            className="absolute left-12 top-20 transition-transform duration-300"
-            style={{ transform: `skewY(${purplePos.bodySkew}deg)` }}
-          >
-            <div
-              className="relative bg-purple-500 rounded-3xl flex flex-col items-center justify-start pt-8 transition-all duration-300"
-              style={{
-                width: "180px",
-                height: "400px",
-                transform: `translate(${purplePos.faceX}px, ${purplePos.faceY}px)`,
-              }}
-            >
-              <div className="flex gap-6">
-                <EyeBall
-                  size={45}
-                  pupilSize={16}
-                  eyeColor="white"
-                  isBlinking={isPurpleBlinking}
-                  forceLookX={isLookingAtEachOther ? 50 : undefined}
-                  forceLookY={isLookingAtEachOther ? 0 : undefined}
-                />
-                <EyeBall
-                  size={45}
-                  pupilSize={16}
-                  eyeColor="white"
-                  isBlinking={isPurpleBlinking}
-                  forceLookX={isLookingAtEachOther ? 50 : undefined}
-                  forceLookY={isLookingAtEachOther ? 0 : undefined}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Black Character - Tall Rectangle */}
-          <div
-            ref={blackRef}
-            className="absolute right-12 top-32 transition-transform duration-300"
-            style={{ transform: `skewY(${blackPos.bodySkew}deg)` }}
-          >
-            <div
-              className="relative bg-zinc-800 rounded-3xl flex flex-col items-center justify-start pt-8 transition-all duration-300"
-              style={{
-                width: "120px",
-                height: "310px",
-                transform: `translate(${blackPos.faceX}px, ${blackPos.faceY}px)`,
-              }}
-            >
-              <div className="flex gap-4">
-                <EyeBall
-                  size={35}
-                  pupilSize={14}
-                  eyeColor="white"
-                  isBlinking={isBlackBlinking}
-                  forceLookX={isLookingAtEachOther ? -50 : undefined}
-                  forceLookY={isLookingAtEachOther ? 0 : undefined}
-                />
-                <EyeBall
-                  size={35}
-                  pupilSize={14}
-                  eyeColor="white"
-                  isBlinking={isBlackBlinking}
-                  forceLookX={isLookingAtEachOther ? -50 : undefined}
-                  forceLookY={isLookingAtEachOther ? 0 : undefined}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Orange Character - Semi-circle */}
-          <div
-            ref={orangeRef}
-            className="absolute bottom-12 left-24 transition-transform duration-300"
-            style={{ transform: `skewY(${orangePos.bodySkew}deg)` }}
-          >
-            <div
-              className="relative bg-orange-500 flex items-start justify-center pt-12 transition-all duration-300"
-              style={{
-                width: "240px",
-                height: "200px",
-                borderRadius: "120px 120px 0 0",
-                transform: `translate(${orangePos.faceX}px, ${orangePos.faceY}px)`,
-              }}
-            >
-              <div className="flex gap-12">
-                <div className="w-6 h-6 relative">
-                  <Pupil size={12} maxDistance={6} pupilColor="#27272a" />
-                </div>
-                <div className="w-6 h-6 relative">
-                  <Pupil size={12} maxDistance={6} pupilColor="#27272a" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Yellow Character - Rounded Rectangle */}
-          <div
-            ref={yellowRef}
-            className="absolute bottom-12 right-32 transition-transform duration-300"
-            style={{ transform: `skewY(${yellowPos.bodySkew}deg)` }}
-          >
-            <div
-              className="relative bg-yellow-400 rounded-[60px] flex flex-col items-center justify-start pt-12 gap-6 transition-all duration-300"
-              style={{
-                width: "140px",
-                height: "230px",
-                transform: `translate(${yellowPos.faceX}px, ${yellowPos.faceY}px)`,
-              }}
-            >
-              <div className="flex gap-8">
-                <div className="w-6 h-6 relative">
-                  <Pupil size={12} maxDistance={6} pupilColor="#27272a" />
-                </div>
-                <div className="w-6 h-6 relative">
-                  <Pupil size={12} maxDistance={6} pupilColor="#27272a" />
-                </div>
-              </div>
-              <div className="w-16 h-0.5 bg-zinc-800 rounded-full" />
-            </div>
-          </div>
-        </div>
-
+      <div className="w-full max-w-md mx-auto relative z-10">
         {/* Register Form Section */}
-        <div className="max-w-md w-full space-y-8 bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-white/20 mx-auto lg:mx-0">
+        <div className="w-full space-y-8 bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-white/20">
           <div>
             <h2 className="text-center text-3xl font-bold text-white">
               Daftar DLOB
@@ -448,8 +153,6 @@ export default function RegisterPage() {
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    onFocus={() => setIsTyping(true)}
-                    onBlur={() => setIsTyping(false)}
                     className="w-full px-3 py-2 border border-gray-300/20 placeholder-gray-400 text-white bg-white/5 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="Nama lengkap"
                   />
@@ -465,8 +168,6 @@ export default function RegisterPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    onFocus={() => setIsTyping(true)}
-                    onBlur={() => setIsTyping(false)}
                     className="w-full px-3 py-2 border border-gray-300/20 placeholder-gray-400 text-white bg-white/5 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="email@example.com"
                   />
@@ -483,8 +184,6 @@ export default function RegisterPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      onFocus={() => setIsTyping(true)}
-                      onBlur={() => setIsTyping(false)}
                       className="w-full px-3 py-2 border border-gray-300/20 placeholder-gray-400 text-white bg-white/5 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                       placeholder="Minimal 6 karakter"
                     />
@@ -508,8 +207,6 @@ export default function RegisterPage() {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    onFocus={() => setIsTyping(true)}
-                    onBlur={() => setIsTyping(false)}
                     className="w-full px-3 py-2 border border-gray-300/20 placeholder-gray-400 text-white bg-white/5 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="Ketik ulang password"
                   />
@@ -535,7 +232,7 @@ export default function RegisterPage() {
                   <div className="w-full border-t border-gray-300/20"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-transparent text-gray-300">Atau</span>
+                  <span className="px-2 bg-transparent text-gray-300">Atau Lanjutkan Dengan</span>
                 </div>
               </div>
 
@@ -555,6 +252,20 @@ export default function RegisterPage() {
               </button>
             </form>
           )}
+
+          <div className="pt-4 border-t border-gray-300/20">
+            <p className="text-xs text-gray-400 text-center">
+              Dengan mendaftar, Anda menyetujui{' '}
+              <Link href="/syarat-layanan" className="text-blue-400 hover:text-blue-300">
+                Syarat Layanan
+              </Link>
+              {' '}dan{' '}
+              <Link href="/kebijakan-privasi" className="text-blue-400 hover:text-blue-300">
+                Kebijakan Privasi
+              </Link>
+              {' '}kami.
+            </p>
+          </div>
         </div>
       </div>
     </div>
