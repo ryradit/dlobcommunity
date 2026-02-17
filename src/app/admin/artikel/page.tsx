@@ -25,13 +25,13 @@ interface GenerationStep {
 }
 
 const GENERATION_STEPS: GenerationStep[] = [
-  { id: 'structure', label: 'Membuat struktur artikel & konten', duration: 10, icon: '📝' },
-  { id: 'hero', label: 'Menghasilkan Hero Image', duration: 70, icon: '🎨' },
-  { id: 'content1', label: 'Menghasilkan gambar konten 1', duration: 70, icon: '🖼️' },
-  { id: 'content2', label: 'Menghasilkan gambar konten 2', duration: 70, icon: '🖼️' },
-  { id: 'content3', label: 'Menghasilkan gambar konten 3', duration: 70, icon: '🖼️' },
-  { id: 'cta', label: 'Menghasilkan CTA Image', duration: 70, icon: '🎯' },
-  { id: 'save', label: 'Menyimpan artikel ke database', duration: 5, icon: '💾' }
+  { id: 'structure', label: 'Membuat struktur artikel & konten', duration: 10, icon: '' },
+  { id: 'hero', label: 'Menghasilkan Hero Image', duration: 70, icon: '' },
+  { id: 'content1', label: 'Menghasilkan gambar konten 1', duration: 70, icon: '' },
+  { id: 'content2', label: 'Menghasilkan gambar konten 2', duration: 70, icon: '' },
+  { id: 'content3', label: 'Menghasilkan gambar konten 3', duration: 70, icon: '' },
+  { id: 'cta', label: 'Menghasilkan CTA Image', duration: 70, icon: '' },
+  { id: 'save', label: 'Menyimpan artikel ke database', duration: 5, icon: '' }
 ];
 
 export default function AdminArtikelPage() {
@@ -71,7 +71,7 @@ export default function AdminArtikelPage() {
       setLoadError(error.message);
       setArticles([]);
     } else if (data) {
-      console.log('✅ Loaded articles:', data.length);
+      console.log('Loaded articles:', data.length);
       
       // Add hardcoded Refleksi 2025 article
       const hardcodedArticle: Article = {
@@ -183,10 +183,10 @@ export default function AdminArtikelPage() {
       setQueueId(data.queueItem.id);
       setQueuePosition(data.queueItem.position);
 
-      console.log('✅ Added to queue, position:', data.queueItem.position);
+      console.log('Added to queue, position:', data.queueItem.position);
 
     } catch (err) {
-      console.error('❌ Queue error:', err);
+      console.error('Queue error:', err);
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
       setIsGenerating(false);
       setIsInQueue(false);
@@ -238,7 +238,7 @@ export default function AdminArtikelPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">🤖 AI Artikel Generator</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">AI Artikel Generator</h1>
           <p className="text-zinc-400">Buat artikel lengkap dengan satu prompt, lengkap dengan gambar!</p>
         </div>
 
@@ -252,7 +252,7 @@ export default function AdminArtikelPage() {
               <h3 className="text-lg font-semibold text-white mb-2">Generate Artikel Baru</h3>
               <p className="text-sm text-zinc-400 mb-4">
                 Masukkan topik atau deskripsi artikel yang ingin dibuat. AI akan membuat artikel lengkap dengan:
-                <br />✨ Hero Image • 📝 Konten Terstruktur • 🖼️ Gambar Penjelas • 🎯 CTA Visual
+                <br />Hero Image • Konten Terstruktur • Gambar Penjelas • CTA Visual
               </p>
 
               <textarea
@@ -357,7 +357,6 @@ export default function AdminArtikelPage() {
                           {/* Step Info */}
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-lg">{step.icon}</span>
                               <span className={`text-sm font-medium ${
                                 isCurrent ? 'text-purple-400' :
                                 isCompleted ? 'text-green-400' :
@@ -477,10 +476,10 @@ export default function AdminArtikelPage() {
 
           {loadError && (
             <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-red-400 font-medium mb-2">⚠️ Database Error</p>
+              <p className="text-red-400 font-medium mb-2">Database Error</p>
               <p className="text-sm text-red-300/80 mb-3">{loadError}</p>
               <p className="text-xs text-zinc-400">
-                💡 Apakah Anda sudah menjalankan migration SQL? 
+                Apakah Anda sudah menjalankan migration SQL? 
                 <br />
                 Jalankan file <code className="text-blue-400">supabase-articles-table.sql</code> di Supabase SQL Editor.
               </p>
