@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: "DLOB Community - Komunitas Indonesia untuk Pertumbuhan Bisnis",
   description: "DLOB Community adalah komunitas Indonesia yang didedikasikan untuk pertumbuhan pribadi, profesional, dan bisnis bersama.",
   keywords: "komunitas, bisnis, entrepreneurship, networking, Indonesia",
+  icons: {
+    icon: '/icon-dlob-hitam.png',
+    shortcut: '/icon-dlob-hitam.png',
+    apple: '/icon-dlob-hitam.png',
+  },
 };
 
 export default function RootLayout({
