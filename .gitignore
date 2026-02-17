@@ -33,6 +33,28 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Google Cloud credentials
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+dlobplatform-*.json
+
+# Test scripts and results
+create-*.js
+check-*.js
+test-*.js
+remove-*.js
+setup-*.js
+reset-*.js
+fix-*.js
+verify-*.js
+recreate-*.js
+add-*.js
+force-*.js
+*.ps1
+*-results-*.json
+
 # vercel
 .vercel
 

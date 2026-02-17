@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ShoppingCart, Star, Heart, Eye } from 'lucide-react';
+import { ShoppingCart, Star, Heart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Footer from '@/components/Footer';
 
@@ -82,7 +82,7 @@ export default function StorePage() {
   const [selectedSleeve, setSelectedSleeve] = useState<'pendek' | 'panjang'>('pendek');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [cart, setCart] = useState<string[]>([]);
-  const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
   const router = useRouter();
 
   const selectedVariant = colorVariants.find(variant => variant.id === selectedColor) || colorVariants[0];
@@ -110,6 +110,64 @@ export default function StorePage() {
   return (
     <div className="min-h-screen bg-white">
       
+      {/* Size Guide Modal */}
+      {showSizeGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">📏 Panduan Ukuran Jersey</h2>
+                <button
+                  onClick={() => setShowSizeGuideModal(false)}
+                  className="text-gray-500 hover:text-gray-900 text-2xl font-light"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-gray-300 bg-gray-50">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900">Ukuran</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-900">Tinggi (cm)</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-900">Lebar (cm)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sizeGuide.map((guide, index) => (
+                      <tr key={guide.size} className={`border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        <td className="py-3 px-4 font-semibold text-gray-900">{guide.size}</td>
+                        <td className="text-right py-3 px-4 text-gray-900">{guide.tinggi}</td>
+                        <td className="text-right py-3 px-4 text-gray-900">{guide.lebar}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-gray-900 leading-relaxed">
+                  <span className="font-semibold">💡 Catatan Penting:</span><br />
+                  • Ukuran dalam centimeter (cm)<br />
+                  • Toleransi pengukuran ±2cm<br />
+                  • Untuk fit yang lebih longgar, pilih 1 size lebih besar
+                </p>
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowSizeGuideModal(false)}
+                  className="px-6 py-3 bg-black text-white hover:bg-gray-800 transition-colors rounded-lg font-medium"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Banner */}
       <div className="bg-gray-100 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -117,7 +175,7 @@ export default function StorePage() {
             <h1 className="text-5xl font-light text-gray-900 mb-6 tracking-tight">
               DLOB JERSEY
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg text-gray-700 max-w-2xl mx-auto leading-relaxed">
               Koleksi jersey resmi DLOB Community dengan kualitas premium. 
               Desain modern, bahan berkualitas tinggi, dan kenyamanan maksimal untuk setiap aktivitas.
             </p>
@@ -168,7 +226,7 @@ export default function StorePage() {
             
             {/* Color Variant Selection */}
             <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600 mb-3">Pilihan warna lainnya:</p>
+              <p className="text-sm text-gray-800 mb-3 font-medium">Pilihan warna lainnya:</p>
               <div className="grid grid-cols-3 gap-4">
                 {colorVariants.map((variant) => (
                   <button
@@ -203,7 +261,7 @@ export default function StorePage() {
               <h1 className="text-3xl font-light text-gray-900 mb-2">
                 {baseProduct.name}
               </h1>
-              <p className="text-lg text-gray-600 mb-4">
+              <p className="text-lg text-gray-800 mb-4 font-medium">
                 {selectedVariant.color}
               </p>
             </div>
@@ -248,7 +306,7 @@ export default function StorePage() {
                   </button>
                 ))}
               </div>
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-sm text-gray-800 mt-2 font-medium">
                 Warna terpilih: {selectedVariant.color}
               </p>
             </div>
@@ -303,16 +361,16 @@ export default function StorePage() {
                 ))}
               </div>
               <button 
-                onClick={() => setShowSizeGuide(!showSizeGuide)}
-                className="text-sm text-blue-600 hover:text-blue-700 mt-2"
+                onClick={() => setShowSizeGuideModal(true)}
+                className="text-sm text-blue-600 hover:text-blue-800 mt-3 font-medium flex items-center gap-2"
               >
-                {showSizeGuide ? '▼' : '▶'} 📏 Panduan Ukuran
+                📏 Lihat Panduan Ukuran
               </button>
             </div>
 
             {/* Product Description */}
             <div className="mb-8">
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-gray-800 leading-relaxed">
                 {baseProduct.description}
               </p>
             </div>
@@ -327,13 +385,9 @@ export default function StorePage() {
               </button>
               
               <div className="flex gap-4 text-sm">
-                <button className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors">
+                <button className="flex items-center gap-2 text-gray-700 hover:text-black transition-colors font-medium">
                   <Heart className="h-4 w-4" />
                   Tambah ke Wishlist
-                </button>
-                <button className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors">
-                  <Eye className="h-4 w-4" />
-                  Panduan Ukuran
                 </button>
               </div>
             </div>
@@ -341,49 +395,19 @@ export default function StorePage() {
             <div className="mt-12 pt-8 border-t border-gray-200">
               <div className="space-y-4">
                 <div className="flex justify-between py-2">
-                  <span className="text-sm text-gray-600">Material</span>
-                  <span className="text-sm font-medium">{baseProduct.material}</span>
+                  <span className="text-sm text-gray-700 font-medium">Material</span>
+                  <span className="text-sm font-semibold text-gray-900">{baseProduct.material}</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span className="text-sm text-gray-600">Perawatan</span>
-                  <span className="text-sm font-medium">{baseProduct.care}</span>
+                  <span className="text-sm text-gray-700 font-medium">Perawatan</span>
+                  <span className="text-sm font-semibold text-gray-900">{baseProduct.care}</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span className="text-sm text-gray-600">Asal</span>
-                  <span className="text-sm font-medium">{baseProduct.origin}</span>
+                  <span className="text-sm text-gray-700 font-medium">Asal</span>
+                  <span className="text-sm font-semibold text-gray-900">{baseProduct.origin}</span>
                 </div>
               </div>
             </div>
-
-            {/* Size Guide Table */}
-            {showSizeGuide && (
-              <div className="mt-12 pt-8 border-t border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Panduan Ukuran Jersey</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-300">
-                        <th className="text-left py-2 px-2 text-gray-600">Ukuran</th>
-                        <th className="text-right py-2 px-2 text-gray-600">Tinggi (cm)</th>
-                        <th className="text-right py-2 px-2 text-gray-600">Lebar (cm)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sizeGuide.map((guide) => (
-                        <tr key={guide.size} className="border-b border-gray-200">
-                          <td className="py-2 px-2 font-medium text-gray-900">{guide.size}</td>
-                          <td className="text-right py-2 px-2 text-gray-600">{guide.tinggi}</td>
-                          <td className="text-right py-2 px-2 text-gray-600">{guide.lebar}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="text-xs text-gray-500 mt-4">
-                  💡 Catatan Penting: Ukuran dalam centimeter (cm). Toleransi pengukuran ±2cm. Untuk fi yang lebih longgar, pilih 1 size lebih besar.
-                </p>
-              </div>
-            )}
 
           </div>
         </div>

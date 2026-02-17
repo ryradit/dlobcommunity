@@ -171,18 +171,29 @@ export default function AdminMembersPage() {
     
     setActionLoading(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', selectedMember.id);
+      const response = await fetch('/api/members/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ memberId: selectedMember.id }),
+      });
 
-      if (!error) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Clear cache and refetch
+        queryCache.clear();
         await fetchMembers();
         setShowDeleteModal(false);
         setSelectedMember(null);
+      } else {
+        console.error('Error deleting member:', data.error);
+        alert(data.error || 'Gagal menghapus anggota');
       }
     } catch (error) {
       console.error('Error deleting member:', error);
+      alert('Gagal menghapus anggota. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
     }

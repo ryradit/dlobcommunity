@@ -1,55 +1,71 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+
+interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  excerpt: string;
+  read_time_minutes: number;
+  published_at: string;
+  content: {
+    hero_image: { url: string; alt: string };
+  };
+  views: number;
+}
 
 export default function ArtikelPage() {
-  const articles = [
-    {
-      id: 1,
-      title: 'Refleksi Tahun 2025: Perjalanan Menakjubkan Komunitas DLOB',
-      category: 'Komunitas',
-      date: '2025-12-20',
-      readTime: '5 menit baca',
-      excerpt: 'Tahun 2025 telah menjadi tahun yang luar biasa bagi komunitas badminton DLOB. Mari kita merenungkan perjalanan menakjubkan yang telah kita lalui bersama.',
-      image: '/images/nominasi/headerimage.jpeg',
-      featured: true,
-    },
-    {
-      id: 2,
-      title: 'Tips Meningkatkan Teknik Smash',
-      category: 'Tips & Trik',
-      date: '2024-01-15',
-      readTime: '4 menit baca',
-      excerpt: 'Pelajari teknik smash yang efektif untuk meningkatkan performa Anda dalam setiap pertandingan.',
-      image: '/images/dlob1.jpg',
-      featured: false,
-    },
-    {
-      id: 3,
-      title: 'Nutrisi untuk Pemain Badminton',
-      category: 'Kesehatan',
-      date: '2024-01-10',
-      readTime: '6 menit baca',
-      excerpt: 'Panduan nutrisi lengkap untuk atlet badminton profesional dan pemula.',
-      image: '/images/dlob2.jpg',
-      featured: false,
-    },
-    {
-      id: 4,
-      title: 'Analisis Strategi Pertandingan Modern',
-      category: 'Strategi',
-      date: '2024-01-05',
-      readTime: '7 menit baca',
-      excerpt: 'Eksplorasi strategi terbaru yang digunakan pemain top dunia dalam kompetisi internasional.',
-      image: '/images/dlob3.jpg',
-      featured: false,
-    },
-  ];
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const featuredArticle = articles.find(a => a.featured);
-  const otherArticles = articles.filter(a => !a.featured);
+  useEffect(() => {
+    fetchArticles();
+  }, []);
+
+  async function fetchArticles() {
+    try {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false });
+
+      if (!error && data) {
+        // Add hardcoded Refleksi 2025 article
+        const hardcodedArticle: Article = {
+          id: 'refleksi-2025-hardcoded',
+          title: 'Refleksi Tahun 2025: Perjalanan Menakjubkan Komunitas DLOB',
+          slug: 'refleksi-2025',
+          category: 'Komunitas',
+          excerpt: 'Merayakan pencapaian dan mempersiapkan masa depan yang gemilang bersama komunitas DLOB di tahun 2025.',
+          read_time_minutes: 5,
+          published_at: '2025-12-20T00:00:00Z',
+          content: {
+            hero_image: {
+              url: '/images/nominasi/headerimage.jpeg',
+              alt: 'Refleksi Tahun 2025'
+            }
+          },
+          views: 0
+        };
+        
+        // Combine hardcoded article with database articles
+        setArticles([hardcodedArticle, ...data]);
+      }
+    } catch (err) {
+      console.error('Error fetching articles:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const featuredArticle = articles[0]; // Most recent
+  const otherArticles = articles.slice(1);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -72,7 +88,16 @@ export default function ArtikelPage() {
       </section>
 
       {/* Featured Article */}
-      {featuredArticle && (
+      {loading ? (
+        <section className="py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-white rounded-2xl p-12 text-center">
+              <div className="animate-spin w-12 h-12 border-4 border-[#3e6461] border-t-transparent rounded-full mx-auto"></div>
+              <p className="text-gray-500 mt-4">Memuat artikel...</p>
+            </div>
+          </div>
+        </section>
+      ) : featuredArticle ? (
         <section className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
@@ -80,8 +105,8 @@ export default function ArtikelPage() {
                 {/* Featured Image */}
                 <div className="relative h-96 lg:h-full overflow-hidden rounded-l-2xl">
                   <img 
-                    src={featuredArticle.image} 
-                    alt={featuredArticle.title}
+                    src={featuredArticle.content.hero_image.url} 
+                    alt={featuredArticle.content.hero_image.alt}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
@@ -104,7 +129,7 @@ export default function ArtikelPage() {
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       <span className="text-sm">
-                        {new Date(featuredArticle.date).toLocaleDateString('id-ID', {
+                        {new Date(featuredArticle.published_at).toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'long',
                           year: 'numeric',
@@ -113,7 +138,7 @@ export default function ArtikelPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
-                      <span className="text-sm">{featuredArticle.readTime}</span>
+                      <span className="text-sm">{featuredArticle.read_time_minutes} menit baca</span>
                     </div>
                   </div>
 
@@ -122,7 +147,7 @@ export default function ArtikelPage() {
                   </p>
 
                   <Link 
-                    href={`/artikel/${featuredArticle.id === 1 ? 'refleksi-2025' : 'artikel-' + featuredArticle.id}`}
+                    href={`/artikel/${featuredArticle.slug}`}
                     className="inline-flex items-center gap-2 px-6 py-3 bg-[#1e4843] text-white font-semibold rounded-full hover:bg-[#162f2c] transition-colors"
                   >
                     Baca Selengkapnya →
@@ -132,61 +157,77 @@ export default function ArtikelPage() {
             </div>
           </div>
         </section>
+      ) : (
+        <section className="py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-white rounded-2xl p-12 text-center">
+              <p className="text-gray-500">Belum ada artikel yang dipublish.</p>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Articles Grid */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-12">Artikel Lainnya</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {otherArticles.map((article) => (
-              <article key={article.id} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all group">
-                {/* Article Image */}
-                <div className="relative h-48 overflow-hidden bg-gray-200">
-                  <img 
-                    src={article.image} 
-                    alt={article.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                </div>
-
-                {/* Article Content */}
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="inline-block px-2 py-1 bg-[#3e6461]/10 text-[#3e6461] text-xs font-semibold rounded-full">
-                      {article.category}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(article.date).toLocaleDateString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: '2-digit',
-                      })}
-                    </span>
+          {otherArticles.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {otherArticles.map((article) => (
+                <article key={article.id} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all group">
+                  {/* Article Image */}
+                  <div className="relative h-48 overflow-hidden bg-gray-200">
+                    <img 
+                      src={article.content.hero_image.url} 
+                      alt={article.content.hero_image.alt}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
 
-                  <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-[#3e6461] transition-colors line-clamp-2">
-                    {article.title}
-                  </h3>
+                  {/* Article Content */}
+                  <div className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="inline-block px-2 py-1 bg-[#3e6461]/10 text-[#3e6461] text-xs font-semibold rounded-full">
+                        {article.category}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(article.published_at).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: '2-digit',
+                        })}
+                      </span>
+                    </div>
 
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {article.excerpt}
-                  </p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-[#3e6461] transition-colors line-clamp-2">
+                      {article.title}
+                    </h3>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">{article.readTime}</span>
-                    <Link 
-                      href={`/artikel/${article.id === 1 ? 'refleksi-2025' : 'artikel-' + article.id}`}
-                      className="text-[#3e6461] font-semibold text-sm hover:text-[#2d4a47] transition-colors"
-                    >
-                      Baca →
-                    </Link>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                      {article.excerpt}
+                    </p>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">{article.read_time_minutes} menit baca</span>
+                      <Link 
+                        href={`/artikel/${article.slug}`}
+                        className="text-[#3e6461] font-semibold text-sm hover:text-[#2d4a47] transition-colors"
+                      >
+                        Baca →
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            !loading && (
+              <p className="text-center text-gray-500 py-12">
+                Tidak ada artikel lainnya saat ini.
+              </p>
+            )
+          )}
         </div>
       </section>
 
