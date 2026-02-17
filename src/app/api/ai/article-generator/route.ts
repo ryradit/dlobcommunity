@@ -6,10 +6,25 @@ import { createClient } from '@supabase/supabase-js';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Initialize Google Auth for Vertex AI REST API
-const auth = new GoogleAuth({
-  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-  scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-});
+// Support both local (file) and Vercel (JSON string) environments
+const getAuthConfig = () => {
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    // Vercel: Use JSON string from environment variable
+    const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+    return {
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    };
+  } else {
+    // Local: Use file path
+    return {
+      keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    };
+  }
+};
+
+const auth = new GoogleAuth(getAuthConfig());
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
