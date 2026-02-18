@@ -83,20 +83,32 @@ function generateSlug(title: string): string {
  */
 async function generateImage(prompt: string, aspectRatio: string = '16:9'): Promise<Buffer | null> {
   try {
-    // Enhance prompt to ensure badminton context
-    let enhancedPrompt = prompt;
-    const badmintonKeywords = ['badminton', 'shuttlecock', 'racket', 'racquet'];
-    const hasBadmintonKeyword = badmintonKeywords.some(keyword => 
+    // Check if this is a non-athlete image (food, equipment, facility, etc)
+    const nonAthleteKeywords = ['food', 'meal', 'nutrition', 'protein', 'vegetable', 'fruit', 'chicken', 'rice', 'shake', 'breakfast', 'lunch', 'dinner', 'snack', 'vitamin', 'supplement', 'product', 'equipment', 'racket', 'shuttlecock', 'shoe', 'bag', 'court', 'facility', 'gym', 'studio', 'stretching', 'yoga', 'therapy'];
+    const isNonAthleteImage = nonAthleteKeywords.some(keyword => 
       prompt.toLowerCase().includes(keyword)
     );
     
-    if (!hasBadmintonKeyword) {
-      // Add badminton context if missing
-      enhancedPrompt = `Badminton sports photography: ${prompt}, include visible badminton equipment (racket or shuttlecock or court)`;
-      console.log(`⚠️ Prompt enhanced to include badminton context`);
-    }
+    // Enhance prompt based on image type
+    let enhancedPrompt = prompt;
     
-    console.log(`🎨 Generating image with Imagen 3: ${enhancedPrompt.substring(0, 80)}...`);
+    if (!isNonAthleteImage) {
+      // For athlete images, ensure badminton context
+      const badmintonKeywords = ['badminton', 'shuttlecock', 'racket', 'racquet'];
+      const hasBadmintonKeyword = badmintonKeywords.some(keyword => 
+        prompt.toLowerCase().includes(keyword)
+      );
+      
+      if (!hasBadmintonKeyword) {
+        // Add badminton context if missing
+        enhancedPrompt = `Badminton sports photography: ${prompt}, include visible badminton equipment (racket or shuttlecock or court)`;
+        console.log(`⚠️ Prompt enhanced to include badminton context`);
+      }
+    }
+    // For non-athlete images (food, equipment, etc), use prompt as-is
+    
+    console.log(`🎨 Generating image with Imagen 3`);
+    console.log(`📝 Full prompt: ${enhancedPrompt}`);
     
     const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
     const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
@@ -223,13 +235,27 @@ async function generateAndUploadImage(
   const imageBuffer = await generateImage(prompt, aspectRatio);
   
   if (!imageBuffer) {
-    console.log(`⚠️ Failed to generate ${type} image, using badminton placeholder`);
-    // Fallback to badminton-specific placeholder using Unsplash
-    // Using badminton keyword ensures sports-related images
-    const randomNum = Math.floor(Math.random() * 20) + 1; // Variation in results
-    if (type === 'hero') return `https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&h=600&fit=crop&q=80`;
-    if (type === 'body') return `https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&h=600&fit=crop&q=80`;
-    return `https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1000&h=750&fit=crop&q=80`;
+    console.log(`⚠️ Failed to generate ${type} image, using placeholder`);
+    // Fallback to different images from Unsplash for variety
+    // Mix of badminton and sports nutrition/health images
+    const placeholderImages = [
+      'photo-1626224583764-f87db24ac4ea', // Badminton court
+      'photo-1606567595334-d39972c85dbe', // Badminton player
+      'photo-1490645935967-10de6ba17061', // Healthy food bowl
+      'photo-1546069901-ba9599a7e63c', // Fresh salad
+      'photo-1612872087720-bb876e2e67d1', // Badminton equipment
+      'photo-1511688878353-3a2f5be94cd7', // Fruits and vegetables
+      'photo-1517649763962-0c623066013b', // Indoor sport
+      'photo-1498837167922-ddd27525d352', // Healthy meal
+    ];
+    
+    // Use different image based on type and index for variety
+    const imageIndex = (index + (type === 'hero' ? 0 : type === 'cta' ? 7 : index + 1)) % placeholderImages.length;
+    const imageId = placeholderImages[imageIndex];
+    
+    if (type === 'hero') return `https://images.unsplash.com/${imageId}?w=1200&h=600&fit=crop&q=80`;
+    if (type === 'body') return `https://images.unsplash.com/${imageId}?w=800&h=600&fit=crop&q=80`;
+    return `https://images.unsplash.com/${imageId}?w=1000&h=750&fit=crop&q=80`;
   }
   
   // Upload to Supabase Storage
@@ -239,10 +265,20 @@ async function generateAndUploadImage(
   
   if (!publicUrl) {
     console.log(`⚠️ Failed to upload ${type} image, using badminton placeholder`);
-    // Fallback to badminton-specific placeholder
+    // Fallback with variety
+    const badmintonImages = [
+      'photo-1626224583764-f87db24ac4ea',
+      'photo-1606567595334-d39972c85dbe',
+      'photo-1519505907962-0a6cb0167c73',
+      'photo-1517649763962-0c623066013b',
+      'photo-1612872087720-bb876e2e67d1',
+    ];
+    const imageIndex = (index + (type === 'hero' ? 0 : type === 'cta' ? 4 : index + 1)) % badmintonImages.length;
+    const imageId = badmintonImages[imageIndex];
+    
     if (type === 'hero') return `https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&h=600&fit=crop&q=80`;
-    if (type === 'body') return `https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&h=600&fit=crop&q=80`;
-    return `https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1000&h=750&fit=crop&q=80`;
+    if (type === 'body') return `https://images.unsplash.com/${imageId}?w=800&h=600&fit=crop&q=80`;
+    return `https://images.unsplash.com/${imageId}?w=1000&h=750&fit=crop&q=80`;
   }
   
   return publicUrl;
@@ -250,7 +286,23 @@ async function generateAndUploadImage(
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, userId } = await request.json();
+    const { prompt, userId, queueId } = await request.json();
+    
+    // Helper to update queue progress
+    const updateQueueProgress = async (percent: number, step: string) => {
+      if (!queueId) return;
+      try {
+        await supabase
+          .from('article_generation_queue')
+          .update({
+            progress_percent: percent,
+            current_step: step
+          })
+          .eq('id', queueId);
+      } catch (err) {
+        console.error('Failed to update queue progress:', err);
+      }
+    };
 
     if (!prompt) {
       return NextResponse.json(
@@ -260,6 +312,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('📝 Generating article from prompt:', prompt);
+    await updateQueueProgress(5, 'Memulai pembuatan artikel...');
 
     // Step 1: Generate article structure with Gemini 2.5 Flash Lite
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
@@ -283,21 +336,57 @@ ATURAN GAMBAR (WAJIB - SANGAT PENTING):
 - Gambar harus relevan 100% dengan konten di sekitarnya
 
 ⚠️ ATURAN KHUSUS PROMPT GAMBAR BADMINTON (WAJIB DIIKUTI):
-SETIAP prompt gambar HARUS menyebutkan elemen badminton secara EKSPLISIT:
+SETIAP prompt gambar HARUS relevan dengan konteks artikel dan bagiannya:
+
+A. UNTUK GAMBAR PEMAIN/ATLET BADMINTON:
 - WAJIB termasuk kata kunci: "badminton" atau "badminton court" atau "shuttlecock" atau "badminton racket"
 - WAJIB menyebutkan elemen visual: "player holding badminton racket", "shuttlecock in motion", "indoor badminton court with green/blue floor", "badminton net"
+- WAJIB menyebutkan: "wearing DLOB jersey" atau "in DLOB uniform" atau "DLOB badminton team jersey" untuk setiap gambar yang menampilkan pemain
+- Warna jersey DLOB: hitam atau putih dengan logo DLOB
+- PENTING: Sesuaikan usia/demografi pemain dengan target artikel:
+  * Artikel tentang anak-anak → "children aged 6-12" atau "young kids" atau "junior badminton players"
+  * Artikel tentang remaja → "teenage players" atau "youth badminton athletes"
+  * Artikel tentang dewasa → "adult players" atau "professional badminton athletes"
+  * Artikel tentang lansia → "senior players" atau "elderly badminton enthusiasts"
+
+B. UNTUK GAMBAR NON-ATLET (nutrisi, peralatan, fasilitas, dll):
+- JIKA tentang NUTRISI/MAKANAN: Tunjukkan makanan sehat, meal prep, protein, buah, sayuran, minuman olahraga, suplemen
+  * Contoh: "Professional food photography of healthy athlete meal with grilled chicken, brown rice, vegetables and fruits on white plate, clean lighting, top view"
+  * Contoh: "Sports nutrition spread showing protein shake, bananas, energy bars, and bottled water on wooden table, natural lighting"
+- JIKA tentang PERALATAN: Tunjukkan raket, shuttlecock, sepatu badminton, tas, grip, senar
+  * Contoh: "Professional product photography of badminton racket with shuttlecocks on clean background, studio lighting"
+- JIKA tentang FASILITAS: Tunjukkan lapangan, gedung olahraga, gym, area pemanasan
+  * Contoh: "Wide angle shot of professional indoor badminton court with green floor, white net, and stadium seating"
+- JIKA tentang KESEHATAN/MEDIS: Tunjukkan stretching, physiotherapy, injury prevention, medical care
+  * Contoh: "Professional photo of athlete stretching leg muscles on yoga mat, fitness studio environment"
+
+C. ATURAN UMUM:
+- SETIAP gambar harus BERBEDA dan unik - variasikan angle, pose, dan komposisi
 - Hindari prompt yang terlalu abstrak atau umum
-- Format: "Professional photo of [subject] in badminton context, [badminton elements], [lighting/style]"
+- Pastikan gambar 100% relevan dengan konten bagian artikel tersebut
+- Gunakan kata kunci spesifik untuk hasil terbaik
 
 CONTOH PROMPT YANG BENAR:
-✅ "Professional photo of a focused badminton player holding a racket on an indoor court, shuttlecock in mid-air, dramatic lighting, high quality sports photography"
-✅ "Close-up shot of badminton player's hands gripping a racket with shuttlecocks visible, indoor court background, professional sports photography"
-✅ "Wide angle view of badminton doubles match in action, players positioned on court, shuttlecock near the net, indoor stadium lighting"
 
-CONTOH PROMPT YANG SALAH (JANGAN SEPERTI INI):
-❌ "Person thinking deeply" (terlalu umum, tidak ada elemen badminton)
-❌ "Athlete training" (tidak spesifik badminton)
-❌ "Sports equipment" (harus spesifik: badminton racket and shuttlecock)
+ATLET BADMINTON:
+✅ "Professional photo of children aged 8-10 wearing black DLOB jerseys practicing badminton on indoor court, holding junior rackets, shuttlecock in mid-air, cheerful expressions, dramatic lighting"
+✅ "Close-up shot of teenage badminton player in white DLOB uniform gripping a racket, indoor court background, professional sports photography"
+✅ "Wide angle view of adult badminton doubles match, players wearing DLOB team jerseys, shuttlecock near the net, indoor stadium lighting"
+
+NUTRISI/MAKANAN:
+✅ "Top-down professional food photography of balanced athlete breakfast with oatmeal, berries, banana, protein shake, and almonds on marble table, natural morning light"
+✅ "Colorful healthy meal prep containers with grilled chicken, quinoa, broccoli and sweet potato, arranged neatly, clean studio lighting"
+✅ "Sports nutrition still life with fresh fruits (banana, apple, orange), energy bars, water bottle, and protein powder on wooden surface"
+
+PERALATAN:
+✅ "Professional product shot of premium badminton racket with carbon fiber frame and fresh shuttlecocks on white background, studio lighting"
+✅ "Close-up detail of badminton shoe sole with grip pattern, athletic footwear product photography"
+
+CONTOH PROMPT YANG SALAH:
+❌ "Person thinking deeply" (terlalu umum, tidak relevan)
+❌ "Athlete training" (tidak spesifik)
+❌ "Food" (terlalu umum, harus detail makanan apa)
+❌ "Badminton player on court" (untuk atlet: tidak menyebutkan DLOB jersey atau usia)
 
 FORMAT OUTPUT (JSON):
 {
@@ -307,20 +396,33 @@ FORMAT OUTPUT (JSON):
   "excerpt": "Ringkasan 2-3 kalimat yang menarik",
   "seo_title": "SEO title maksimal 60 karakter",
   "seo_description": "Meta description maksimal 155 karakter",
-  "hero_image_prompt": "Professional badminton photo with VISIBLE badminton elements (racket/shuttlecock/court/net/player), high quality, detailed description",
+  "hero_image_prompt": "Gambar utama yang menarik - bisa atlet badminton (dengan DLOB jersey + usia spesifik) ATAU makanan/peralatan/fasilitas tergantung topik artikel. Professional photography, dramatic lighting",
   "intro": "Paragraf pembuka 2-3 paragraf yang engaging",
   "sections": [
     {
       "heading": "Sub Judul 1",
       "content": "Konten lengkap 300-500 kata",
       "has_image": true/false,
-      "image_prompt": "MUST include badminton elements: racket/shuttlecock/court/player - detailed prompt for AI"
+      "image_prompt": "SESUAIKAN dengan konten bagian ini: Jika tentang atlet → sertakan DLOB jersey + usia spesifik + elemen badminton. Jika tentang nutrisi → food photography makanan sehat. Jika tentang peralatan → product shot raket/shuttlecock. Jika tentang fasilitas → lapangan/gym. SETIAP gambar HARUS BERBEDA angle/komposisi!"
     }
   ],
   "conclusion": "Kesimpulan yang kuat dan memorable",
   "cta_text": "Ajakan untuk pembaca (misal: Bergabunglah dengan DLOB!)",
-  "cta_image_prompt": "Inspiring badminton scene with VISIBLE badminton elements (racket/shuttlecock/court), call-to-action composition"
+  "cta_image_prompt": "Inspiring image sesuai tema artikel - bisa pemain DLOB yang motivational ATAU makanan/peralatan/fasilitas yang mendukung CTA, professional photography, BERBEDA dari gambar lain"
 }
+
+PENTING - VARIASI DAN RELEVANSI GAMBAR:
+- Analisis setiap bagian artikel untuk tentukan jenis gambar yang paling relevan
+- Artikel nutrisi → lebih banyak gambar makanan, meal prep, minuman
+- Artikel teknik → lebih banyak gambar atlet demonstrasi teknik (dengan DLOB jersey)
+- Artikel peralatan → lebih banyak produk shot raket, sepatu, tas
+- Artikel kesehatan → mix antara atlet stretching dan makanan sehat
+- SETIAP gambar HARUS berbeda:
+  * Gambar 1: Misalnya hero shot atlet atau makanan utama
+  * Gambar 2: Misalnya close-up detail atau bahan makanan
+  * Gambar 3: Misalnya wide shot suasana atau variasi menu
+  * Gambar 4: Misalnya different angle atau presentation style
+- Pastikan 100% relevan dengan konten di sekitarnya!
 
 GAYA PENULISAN:
 - Bahasa Indonesia formal tapi friendly
@@ -350,6 +452,7 @@ Buat artikel lengkap sekarang dalam format JSON yang sempurna!`;
 
     // Generate slug first (needed for image paths)
     const slug = generateSlug(articleData.title);
+    await updateQueueProgress(10, 'Struktur artikel selesai, memulai pembuatan gambar...');
 
     // Step 2: Generate images using Google Imagen 3 via Vertex AI
     // Note: Imagen 3 has quota limit of 1 request/minute, so we generate sequentially with delays
@@ -390,23 +493,22 @@ Buat artikel lengkap sekarang dalam format JSON yang sempurna!`;
     
     // 1. Hero image
     console.log(`🎨 [1/${totalImages}] Generating hero image...`);
+    await updateQueueProgress(15, 'Menghasilkan Hero Image...');
     articleData.hero_image_url = await generateAndUploadImage(articleData.hero_image_prompt, 'hero', slug, 0);
     logProgress('Hero image');
+    await updateQueueProgress(25, 'Hero Image selesai');
     
     if (totalImages > 1) await waitForQuota();
     
-    // 2. CTA image  
-    console.log(`🎨 [2/${totalImages}] Generating CTA image...`);
-    articleData.cta_image_url = await generateAndUploadImage(articleData.cta_image_prompt, 'cta', slug, 0);
-    logProgress('CTA image');
-    
-    // 3. Section images
-    let sectionImageIndex = 3;
+    // 2. Section images
+    let sectionImageIndex = 2;
     for (let i = 0; i < articleData.sections.length; i++) {
       const section = articleData.sections[i];
       if (section.has_image && section.image_prompt) {
-        if (sectionImageIndex > 2) await waitForQuota();
+        if (sectionImageIndex > 1) await waitForQuota();
         
+        const sectionProgress = 30 + ((i + 1) / sectionImagesCount) * 35; // 30-65%
+        await updateQueueProgress(Math.floor(sectionProgress), `Menghasilkan gambar konten ${i + 1}...`);
         console.log(`🎨 [${sectionImageIndex}/${totalImages}] Generating section ${i + 1} image...`);
         section.image_url = await generateAndUploadImage(section.image_prompt, 'body', slug, i);
         logProgress(`Section ${i + 1} image`);
@@ -414,6 +516,14 @@ Buat artikel lengkap sekarang dalam format JSON yang sempurna!`;
         sectionImageIndex++;
       }
     }
+    
+    // 3. CTA image (last before saving)
+    if (sectionImageIndex > 1) await waitForQuota();
+    console.log(`🎨 [${sectionImageIndex}/${totalImages}] Generating CTA image...`);
+    await updateQueueProgress(70, 'Menghasilkan CTA Image...');
+    articleData.cta_image_url = await generateAndUploadImage(articleData.cta_image_prompt, 'cta', slug, 0);
+    logProgress('CTA image');
+    await updateQueueProgress(80, 'CTA Image selesai');
     
     const totalElapsed = ((Date.now() - startTime) / 60000).toFixed(1);
     console.log(`✅ All ${totalImages} images generated in ${totalElapsed} minutes`);
@@ -427,6 +537,7 @@ Buat artikel lengkap sekarang dalam format JSON yang sempurna!`;
     console.log('📸 Images generated, read time:', articleData.read_time_minutes, 'minutes');
 
     // Step 3: Save to database
+    await updateQueueProgress(85, 'Menyimpan artikel ke database...');
     const content = {
       hero_image: {
         url: articleData.hero_image_url,
@@ -484,6 +595,7 @@ Buat artikel lengkap sekarang dalam format JSON yang sempurna!`;
     }
 
     console.log('💾 Article saved to database:', article.id);
+    await updateQueueProgress(100, 'Selesai!');
 
     return NextResponse.json({
       success: true,

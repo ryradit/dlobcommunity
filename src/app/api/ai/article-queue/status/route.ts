@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,12 +35,12 @@ export async function GET(request: NextRequest) {
       query = query.eq('admin_id', userId).in('status', ['pending', 'processing']);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false }).limit(1).single();
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
-      console.error('❌ Status check error:', error);
+    if (error) {
+      console.error('Status check error:', error);
       return NextResponse.json(
-        { error: 'Failed to check status' },
+        { error: 'Failed to check status', details: error.message },
         { status: 500 }
       );
     }

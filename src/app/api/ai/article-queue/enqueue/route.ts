@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('📋 Adding to generation queue:', { userId, prompt: prompt.substring(0, 50) });
+    console.log('Adding to generation queue:', { userId, prompt: prompt.substring(0, 50) });
 
     // Check if user already has a pending/processing job
     const { data: existingJobs } = await supabase
@@ -20,7 +31,7 @@ export async function POST(request: NextRequest) {
       .select('id, status, position')
       .eq('admin_id', userId)
       .in('status', ['pending', 'processing'])
-      .single();
+      .maybeSingle();
 
     if (existingJobs) {
       return NextResponse.json(
@@ -66,18 +77,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('❌ Queue error:', error);
+      console.error('Queue error:', error);
       return NextResponse.json(
         { error: 'Failed to add to queue', details: error.message },
         { status: 500 }
       );
     }
 
-    console.log('✅ Added to queue:', queueItem.id, 'Position:', position);
+    console.log('Added to queue:', queueItem.id, 'Position:', position);
 
     // If no one is processing, trigger processor
     if (!hasProcessing) {
-      console.log('🚀 Triggering queue processor...');
+      console.log('Triggering queue processor...');
       // Trigger processor asynchronously (don't wait)
       fetch(`${request.nextUrl.origin}/api/ai/article-queue/process`, {
         method: 'POST',
@@ -95,7 +106,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Enqueue error:', error);
+    console.error('Enqueue error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

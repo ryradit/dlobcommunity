@@ -17,23 +17,6 @@ interface Article {
   views: number;
 }
 
-interface GenerationStep {
-  id: string;
-  label: string;
-  duration: number; // in seconds
-  icon: string;
-}
-
-const GENERATION_STEPS: GenerationStep[] = [
-  { id: 'structure', label: 'Membuat struktur artikel & konten', duration: 10, icon: '' },
-  { id: 'hero', label: 'Menghasilkan Hero Image', duration: 70, icon: '' },
-  { id: 'content1', label: 'Menghasilkan gambar konten 1', duration: 70, icon: '' },
-  { id: 'content2', label: 'Menghasilkan gambar konten 2', duration: 70, icon: '' },
-  { id: 'content3', label: 'Menghasilkan gambar konten 3', duration: 70, icon: '' },
-  { id: 'cta', label: 'Menghasilkan CTA Image', duration: 70, icon: '' },
-  { id: 'save', label: 'Menyimpan artikel ke database', duration: 5, icon: '' }
-];
-
 export default function AdminArtikelPage() {
   const { user } = useAuth();
   const [prompt, setPrompt] = useState('');
@@ -43,12 +26,6 @@ export default function AdminArtikelPage() {
   const [showArticles, setShowArticles] = useState(true);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
-  const [currentStep, setCurrentStep] = useState(0);
-  const [progressPercent, setProgressPercent] = useState(0);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [queueId, setQueueId] = useState<string | null>(null);
-  const [queuePosition, setQueuePosition] = useState<number>(0);
-  const [isInQueue, setIsInQueue] = useState(false);
 
   // Load existing articles
   useEffect(() => {
@@ -91,60 +68,6 @@ export default function AdminArtikelPage() {
     }
   }
 
-  // Poll queue status
-  useEffect(() => {
-    if (!queueId || !isInQueue) return;
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/ai/article-queue/status?id=${queueId}`);
-        const data = await response.json();
-
-        if (data.queueItem) {
-          const item = data.queueItem;
-          
-          setQueuePosition(item.position || 0);
-          setProgressPercent(item.progress_percent || 0);
-          setCurrentStep(getCurrentStepFromProgress(item.progress_percent || 0));
-
-          if (item.status === 'completed') {
-            clearInterval(pollInterval);
-            setIsInQueue(false);
-            setIsGenerating(false);
-            
-            // Load the generated article
-            const { data: article } = await supabase
-              .from('articles')
-              .select('*')
-              .eq('id', item.article_id)
-              .single();
-            
-            if (article) {
-              setGeneratedArticle(article);
-              setPrompt('');
-              loadArticles();
-            }
-          } else if (item.status === 'failed') {
-            clearInterval(pollInterval);
-            setIsInQueue(false);
-            setIsGenerating(false);
-            setError(item.error_message || 'Generation failed');
-          }
-        }
-      } catch (err) {
-        console.error('Polling error:', err);
-      }
-    }, 2000); // Poll every 2 seconds
-
-    return () => clearInterval(pollInterval);
-  }, [queueId, isInQueue]);
-
-  function getCurrentStepFromProgress(progress: number): number {
-    // Map progress percentage to step index
-    const stepSize = 100 / GENERATION_STEPS.length;
-    return Math.min(Math.floor(progress / stepSize), GENERATION_STEPS.length - 1);
-  }
-
   async function handleGenerate() {
     if (!prompt.trim()) {
       setError('Silakan masukkan prompt artikel');
@@ -152,44 +75,37 @@ export default function AdminArtikelPage() {
     }
 
     setIsGenerating(true);
-    setIsInQueue(true);
     setError('');
     setGeneratedArticle(null);
-    setCurrentStep(0);
-    setProgressPercent(0);
-    setElapsedTime(0);
-    setQueuePosition(0);
 
     try {
-      console.log('📋 Adding to queue:', prompt);
-      
-      const response = await fetch('/api/ai/article-queue/enqueue', {
+      const response = await fetch('/api/ai/article-generator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt: prompt.trim(),
           userId: user?.id,
           userName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Admin'
-        })
+        }),
       });
 
       const data = await response.json();
-      console.log('📦 Queue Response:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Gagal menambahkan ke antrian');
+        throw new Error(data.error || 'Failed to generate article');
       }
 
-      setQueueId(data.queueItem.id);
-      setQueuePosition(data.queueItem.position);
-
-      console.log('Added to queue, position:', data.queueItem.position);
+      if (data.article) {
+        setGeneratedArticle(data.article);
+        setPrompt('');
+        loadArticles();
+      }
 
     } catch (err) {
-      console.error('Queue error:', err);
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      console.error('Generation error:', err);
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat membuat artikel');
+    } finally {
       setIsGenerating(false);
-      setIsInQueue(false);
     }
   }
 
@@ -257,129 +173,32 @@ export default function AdminArtikelPage() {
 
               <textarea
                 value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                onFocus={() => {
+                  // Clear any stale errors when user focuses on textarea
+                  if (error) setError('');
+                }}
+                onChange={(e) => {
+                  setPrompt(e.target.value);
+                  // Clear any stale errors when user starts typing
+                  if (error) setError('');
+                }}
                 placeholder="Contoh: Tulis artikel tentang teknik smash yang efektif untuk pemain pemula, sertakan tips praktis dan kesalahan yang harus dihindari"
                 className="w-full bg-zinc-800 border border-white/10 rounded-lg p-4 text-white placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
                 rows={4}
                 disabled={isGenerating}
               />
 
-              {error && (
+              {error && !isGenerating && (
                 <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
                   {error}
                 </div>
               )}
 
-              {/* Progress Bar Section */}
               {isGenerating && (
-                <div className="mb-6 p-6 bg-zinc-800/50 border border-purple-500/30 rounded-xl">
-                  {/* Queue Position Indicator */}
-                 {queuePosition > 0 && progressPercent === 0 && (
-                    <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Clock className="w-6 h-6 text-yellow-400 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-yellow-400">
-                            Menunggu Antrian
-                          </p>
-                          <p className="text-xs text-yellow-300/80 mt-1">
-                            Posisi antrian Anda: <span className="font-bold">#{queuePosition}</span>
-                            {queuePosition > 1 && ` • ${queuePosition - 1} artikel sedang diproses`}
-                          </p>
-                          <p className="text-xs text-yellow-300/60 mt-1">
-                            Estimasi waktu tunggu: ~{queuePosition * 6} menit
-                          </p>
-                        </div>
-                        <Loader className="w-5 h-5 text-yellow-400 animate-spin" />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-white">
-                        {queuePosition > 0 && progressPercent === 0 ? 'Menunggu Giliran...' : 'Progres Pembuatan Artikel'}
-                      </span>
-                      {progressPercent > 0 && (
-                        <span className="text-sm text-zinc-400">
-                          ~{Math.floor(GENERATION_STEPS.reduce((acc, s) => acc + s.duration, 0) / 60)}:{(GENERATION_STEPS.reduce((acc, s) => acc + s.duration, 0) % 60).toString().padStart(2, '0')}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="relative w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
-                      <div 
-                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-300 ease-out"
-                        style={{ width: `${progressPercent}%` }}
-                      >
-                        <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-2 text-center text-sm font-medium text-purple-400">
-                      {progressPercent > 0 ? `${progressPercent.toFixed(0)}% Selesai` : 'Menunggu...'}
-                    </div>
-                  </div>
-
-                  {/* Steps List - Only show when processing */}
-                  {progressPercent > 0 && (
-                  <div className="space-y-3">
-                    {GENERATION_STEPS.map((step, index) => {
-                      const isCompleted = index < currentStep;
-                      const isCurrent = index === currentStep;
-                      const isPending = index > currentStep;
-                      
-                      return (
-                        <div 
-                          key={step.id}
-                          className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                            isCurrent ? 'bg-purple-500/20 border border-purple-500/40' :
-                            isCompleted ? 'bg-green-500/10 border border-green-500/20' :
-                            'bg-zinc-800/30 border border-zinc-700/30'
-                          }`}
-                        >
-                          {/* Icon/Status */}
-                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                            isCompleted ? 'bg-green-500' :
-                            isCurrent ? 'bg-purple-500 animate-pulse' :
-                            'bg-zinc-700'
-                          }`}>
-                            {isCompleted ? (
-                              <Check className="w-5 h-5 text-white" />
-                            ) : isCurrent ? (
-                              <Loader className="w-5 h-5 text-white animate-spin" />
-                            ) : (
-                              <Clock className="w-4 h-4 text-zinc-500" />
-                            )}
-                          </div>
-                          
-                          {/* Step Info */}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-sm font-medium ${
-                                isCurrent ? 'text-purple-400' :
-                                isCompleted ? 'text-green-400' :
-                                'text-zinc-500'
-                              }`}>
-                                {step.label}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* Duration */}
-                          <div className={`text-xs ${
-                            isCompleted ? 'text-green-400' :
-                            isCurrent ? 'text-purple-400' :
-                            'text-zinc-600'
-                          }`}>
-                            ~{step.duration}s
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  )}
+                <div className="mb-4 p-6 bg-zinc-800/50 border border-purple-500/30 rounded-xl text-center">
+                  <Loader className="w-12 h-12 text-purple-400 animate-spin mx-auto mb-4" />
+                  <p className="text-white font-medium mb-2">Sedang Membuat Artikel...</p>
+                  <p className="text-sm text-zinc-400">Proses ini memakan waktu 5-8 menit untuk menghasilkan artikel lengkap dengan gambar</p>
                 </div>
               )}
 
