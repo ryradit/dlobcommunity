@@ -26,6 +26,9 @@ export default function AdminArtikelPage() {
   const [showArticles, setShowArticles] = useState(true);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [progressMessage, setProgressMessage] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [totalSteps, setTotalSteps] = useState(0);
 
   // Load existing articles
   useEffect(() => {
@@ -77,9 +80,17 @@ export default function AdminArtikelPage() {
     setIsGenerating(true);
     setError('');
     setGeneratedArticle(null);
+    setProgressMessage('');
+    setCurrentStep(0);
+    setTotalSteps(0);
 
     try {
-      const response = await fetch('/api/ai/article-generator', {
+      // Step 1: Generate article structure with fallback images
+      setProgressMessage('📝 Step 1: Membuat struktur artikel...');
+      setCurrentStep(1);
+      setTotalSteps(1); // Will update when we know image count
+
+      const structureResponse = await fetch('/api/ai/article-generator/create-structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -89,74 +100,160 @@ export default function AdminArtikelPage() {
         }),
       });
 
-      // Check if response is JSON before parsing
-      const contentType = response.headers.get('content-type');
+      const contentType = structureResponse.headers.get('content-type');
       const isJson = contentType?.includes('application/json');
 
-      // Handle various error status codes
-      if (response.status === 504) {
-        throw new Error('⏱️ TIMEOUT (504): Generasi artikel memakan waktu 5-8 menit, melebihi batas waktu server production. Artikel mungkin masih sedang dibuat di background. Coba refresh halaman dalam beberapa menit untuk melihat hasilnya.');
-      }
-
-      if (response.status === 502 || response.status === 503) {
-        throw new Error('⚠️ SERVER ERROR: Server sedang sibuk atau restart. Coba lagi dalam beberapa menit.');
-      }
-
-      // Parse response based on content type
-      let data;
-      if (isJson) {
-        try {
-          data = await response.json();
-        } catch (jsonError) {
-          console.error('JSON parsing error:', jsonError);
-          const text = await response.text().catch(() => 'Unable to read response');
-          console.error('Response text:', text);
-          throw new Error('❌ PARSING ERROR: Server mengembalikan response yang rusak. Ini biasanya terjadi karena timeout atau error di production.');
-        }
-      } else {
-        // If not JSON, it's likely an error page (HTML)
-        const text = await response.text().catch(() => 'Unable to read response');
+      if (!isJson) {
+        const text = await structureResponse.text().catch(() => 'Unable to read response');
         console.error('Non-JSON response:', text.substring(0, 200));
-        
-        if (response.status >= 500) {
-          throw new Error('⚠️ SERVER ERROR: Server mengalami error internal. Artikel mungkin masih sedang diproses di background. Coba refresh halaman setelah beberapa menit.');
-        } else if (response.status === 408 || response.status === 499) {
-          throw new Error('⏱️ REQUEST TIMEOUT: Request timeout sebelum selesai. Artikel mungkin masih sedang diproses. Coba refresh halaman setelah beberapa menit.');
-        } else {
-          throw new Error(`❌ UNEXPECTED ERROR (${response.status}): Server mengembalikan response tidak valid. Periksa console untuk detail.`);
+        throw new Error('❌ Server mengembalikan response tidak valid');
+      }
+
+      const structureData = await structureResponse.json();
+
+      if (!structureResponse.ok) {
+        throw new Error(structureData?.error || 'Failed to create article structure');
+      }
+
+      const article = structureData.article;
+      const imagesToGenerate = structureData.imagesToGenerate;
+
+      console.log('✅ Article structure created:', article.id);
+      console.log('📸 Images to generate:', imagesToGenerate);
+
+      // Calculate total steps: structure + all images
+      const bodyImagesCount = imagesToGenerate.body ? imagesToGenerate.body.length : 0;
+      const totalImages = 1 + bodyImagesCount + 1; // hero + body + cta
+      setTotalSteps(1 + totalImages);
+
+      setProgressMessage(`✅ Artikel dibuat! Sekarang menghasilkan ${totalImages} gambar AI...`);
+
+      // Helper function to wait between image generations (quota cooldown)
+      const waitForQuota = async (seconds: number = 65) => {
+        for (let i = seconds; i > 0; i--) {
+          setProgressMessage(`⏳ Cooldown: menunggu ${i} detik untuk quota Imagen 3...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      };
+
+      // Step 2: Generate hero image
+      setCurrentStep(2);
+      setProgressMessage('🎨 Step 2: Menghasilkan Hero Image...');
+
+      await generateSingleImage(
+        article.id,
+        imagesToGenerate.hero.prompt,
+        'hero',
+        0,
+        undefined
+      );
+
+      console.log('✅ Hero image generated');
+
+      // Wait for quota before next image
+      await waitForQuota();
+
+      // Step 3: Generate body images
+      let stepNum = 3;
+      if (imagesToGenerate.body && imagesToGenerate.body.length > 0) {
+        for (let i = 0; i < imagesToGenerate.body.length; i++) {
+          const bodyImage = imagesToGenerate.body[i];
+          setCurrentStep(stepNum);
+          setProgressMessage(`🎨 Step ${stepNum}: Menghasilkan gambar konten ${i + 1}/${imagesToGenerate.body.length}...`);
+
+          await generateSingleImage(
+            article.id,
+            bodyImage.prompt,
+            'body',
+            bodyImage.index,
+            bodyImage.sectionIndex
+          );
+
+          console.log(`✅ Body image ${i + 1} generated`);
+
+          // Wait for quota before next image (except for last one)
+          if (i < imagesToGenerate.body.length - 1 || true) { // Always wait before CTA
+            await waitForQuota();
+          }
+
+          stepNum++;
         }
       }
 
-      // Check for API errors
-      if (!response.ok) {
-        throw new Error(data?.error || data?.details || `HTTP ${response.status}: Failed to generate article`);
-      }
+      // Step 4: Generate CTA image
+      setCurrentStep(stepNum);
+      setProgressMessage(`🎨 Step ${stepNum}: Menghasilkan CTA Image...`);
+
+      await generateSingleImage(
+        article.id,
+        imagesToGenerate.cta.prompt,
+        'cta',
+        0,
+        undefined
+      );
+
+      console.log('✅ CTA image generated');
 
       // Success!
-      if (data.article) {
-        setGeneratedArticle(data.article);
-        setPrompt('');
+      setProgressMessage('✅ Artikel dan semua gambar berhasil dibuat!');
+      setGeneratedArticle(article);
+      setPrompt('');
+      
+      // Reload articles list
+      setTimeout(() => {
         loadArticles();
-      }
+      }, 1000);
 
     } catch (err) {
       console.error('Generation error:', err);
       
-      // Network errors (fetch failed completely)
       if (err instanceof TypeError && err.message.includes('fetch')) {
         setError('🌐 NETWORK ERROR: Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
-        return;
-      }
-
-      // Custom error messages already formatted
-      if (err instanceof Error && (err.message.includes('TIMEOUT') || err.message.includes('ERROR') || err.message.includes('PARSING'))) {
-        setError(err.message);
       } else {
         setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat membuat artikel');
       }
     } finally {
       setIsGenerating(false);
+      setProgressMessage('');
     }
+  }
+
+  // Helper function to generate a single image
+  async function generateSingleImage(
+    articleId: string,
+    prompt: string,
+    type: 'hero' | 'body' | 'cta',
+    index: number,
+    sectionIndex?: number
+  ) {
+    const response = await fetch('/api/ai/article-generator/generate-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        articleId,
+        prompt,
+        type,
+        index,
+        sectionIndex
+      }),
+    });
+
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType?.includes('application/json');
+
+    if (!isJson) {
+      const text = await response.text().catch(() => 'Unable to read response');
+      console.error('Non-JSON response:', text.substring(0, 200));
+      throw new Error('❌ Server mengembalikan response tidak valid saat generate image');
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.error || `Failed to generate ${type} image`);
+    }
+
+    return data;
   }
 
   async function handlePublish(id: string) {
@@ -221,14 +318,14 @@ export default function AdminArtikelPage() {
                 <br />Hero Image • Konten Terstruktur • Gambar Penjelas • CTA Visual
               </p>
 
-              {/* Production Timeout Warning */}
-              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              {/* Production Note */}
+              <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <div className="text-xs text-amber-200/90">
-                    <strong>Production Note:</strong> Generasi artikel memakan waktu 5-8 menit. Di production, Vercel memiliki batas waktu maksimal 5 menit. Jika timeout (504), artikel mungkin masih sedang dibuat di background. <strong>Refresh halaman setelah beberapa menit</strong> untuk melihat hasilnya.
+                  <div className="text-xs text-blue-200/90">
+                    <strong>Split API Approach:</strong> Artikel dibuat dalam beberapa langkah terpisah untuk menghindari timeout. Struktur artikel dibuat dulu (~30 detik), lalu gambar AI dihasilkan satu per satu (~70 detik/gambar + 65 detik cooldown). <strong>Total waktu: ~10-11 menit</strong> untuk artikel dengan 5 gambar. Anda bisa melihat progress real-time di layar.
                   </div>
                 </div>
               </div>
@@ -257,10 +354,30 @@ export default function AdminArtikelPage() {
               )}
 
               {isGenerating && (
-                <div className="mb-4 p-6 bg-zinc-800/50 border border-purple-500/30 rounded-xl text-center">
-                  <Loader className="w-12 h-12 text-purple-400 animate-spin mx-auto mb-4" />
-                  <p className="text-white font-medium mb-2">Sedang Membuat Artikel...</p>
-                  <p className="text-sm text-zinc-400">Proses ini memakan waktu 5-8 menit untuk menghasilkan artikel lengkap dengan gambar</p>
+                <div className="mb-4 p-6 bg-zinc-800/50 border border-purple-500/30 rounded-xl">
+                  <div className="flex flex-col items-center text-center mb-4">
+                    <Loader className="w-12 h-12 text-purple-400 animate-spin mx-auto mb-4" />
+                    <p className="text-white font-medium mb-2">Sedang Membuat Artikel...</p>
+                    {totalSteps > 0 && (
+                      <div className="text-sm text-zinc-400 mb-3">
+                        Step {currentStep} / {totalSteps}
+                      </div>
+                    )}
+                    {progressMessage && (
+                      <p className="text-sm text-purple-300 mb-3">{progressMessage}</p>
+                    )}
+                  </div>
+                  {totalSteps > 0 && (
+                    <div className="w-full bg-zinc-700 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 transition-all duration-500"
+                        style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-zinc-500 text-center mt-4">
+                    ⏱️ Setiap gambar membutuhkan ~70 detik + 65 detik cooldown
+                  </p>
                 </div>
               )}
 
