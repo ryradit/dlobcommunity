@@ -36,10 +36,18 @@ const supabase = createClient(
 
 async function generateImage(prompt: string, aspectRatio: string = '16:9'): Promise<Buffer | null> {
   try {
-    const nonAthleteKeywords = ['food', 'meal', 'nutrition', 'protein', 'vegetable', 'fruit', 'chicken', 'rice', 'shake', 'breakfast', 'lunch', 'dinner', 'snack', 'vitamin', 'supplement', 'product', 'equipment', 'racket', 'shuttlecock', 'shoe', 'bag', 'court', 'facility', 'gym', 'studio', 'stretching', 'yoga', 'therapy'];
-    const isNonAthleteImage = nonAthleteKeywords.some(keyword => 
+    // Only show food images for EXPLICIT nutrition/diet topics
+    // Keywords are very specific to avoid showing food in training/stamina articles
+    const foodKeywords = ['food photography', 'meal prep', 'healthy meal', 'diet plan', 'breakfast', 'lunch', 'dinner', 'snack', 'nutrition plan', 'eating', 'dish', 'plate', 'recipe'];
+    const equipmentKeywords = ['product photography', 'racket product', 'shoe product', 'equipment only', 'gear only'];
+    
+    const isFoodImage = foodKeywords.some(keyword => 
       prompt.toLowerCase().includes(keyword)
     );
+    const isEquipmentImage = equipmentKeywords.some(keyword => 
+      prompt.toLowerCase().includes(keyword)
+    );
+    const isNonAthleteImage = isFoodImage || isEquipmentImage;
     
     let enhancedPrompt = prompt;
     

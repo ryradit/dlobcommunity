@@ -130,16 +130,19 @@ A. UNTUK GAMBAR PEMAIN/ATLET BADMINTON:
   * Artikel tentang dewasa → "adult players" atau "professional badminton athletes"
   * Artikel tentang lansia → "senior players" atau "elderly badminton enthusiasts"
 
-B. UNTUK GAMBAR NON-ATLET (nutrisi, peralatan, fasilitas, dll):
-- JIKA tentang NUTRISI/MAKANAN: Tunjukkan makanan sehat, meal prep, protein, buah, sayuran, minuman olahraga, suplemen
+B. UNTUK GAMBAR NON-ATLET (HANYA untuk artikel yang MEMANG tentang nutrisi/makanan/peralatan):
+- ⚠️ PENTING: Jangan gunakan gambar makanan untuk artikel tentang latihan/stamina/kecepatan/teknik!
+- HANYA gunakan gambar makanan jika artikel FOKUS pada nutrisi/diet/makanan
+- Artikel latihan fisik/stamina/kecepatan → HARUS pakai gambar atlet badminton dengan DLOB jersey
+- JIKA artikel MEMANG tentang NUTRISI/MAKANAN (bukan hanya menyebutkan nutrisi):
+  * Gunakan "food photography" atau "meal prep" di prompt
   * Contoh: "Professional food photography of healthy athlete meal with grilled chicken, brown rice, vegetables and fruits on white plate, clean lighting, top view"
-  * Contoh: "Sports nutrition spread showing protein shake, bananas, energy bars, and bottled water on wooden table, natural lighting"
-- JIKA tentang PERALATAN: Tunjukkan raket, shuttlecock, sepatu badminton, tas, grip, senar
+  * Minimal 1 gambar harus tetap pemain badminton dengan DLOB jersey
+- JIKA tentang PERALATAN (review raket, sepatu, dll):
+  * Gunakan "product photography" di prompt
   * Contoh: "Professional product photography of badminton racket with shuttlecocks on clean background, studio lighting"
-- JIKA tentang FASILITAS: Tunjukkan lapangan, gedung olahraga, gym, area pemanasan
+- JIKA tentang FASILITAS: Tunjukkan lapangan, gedung olahraga, gym
   * Contoh: "Wide angle shot of professional indoor badminton court with green floor, white net, and stadium seating"
-- JIKA tentang KESEHATAN/MEDIS: Tunjukkan stretching, physiotherapy, injury prevention, medical care
-  * Contoh: "Professional photo of athlete stretching leg muscles on yoga mat, fitness studio environment"
 
 C. ATURAN UMUM:
 - SETIAP gambar harus BERBEDA dan unik - variasikan angle, pose, dan komposisi
@@ -155,33 +158,33 @@ FORMAT OUTPUT (JSON):
   "excerpt": "Ringkasan 2-3 kalimat yang menarik",
   "seo_title": "SEO title maksimal 60 karakter",
   "seo_description": "Meta description maksimal 155 karakter",
-  "hero_image_prompt": "Gambar utama yang menarik - bisa atlet badminton (dengan DLOB jersey + usia spesifik) ATAU makanan/peralatan/fasilitas tergantung topik artikel. Professional photography, dramatic lighting",
-  "intro": "Paragraf pembuka 2-3 paragraf yang engaging",
+  "hero_image_prompt": "DEFAULT: Atlet badminton dengan DLOB jersey + usia spesifik. HANYA gunakan food/equipment jika artikel MEMANG fokus pada topik tersebut (bukan hanya menyebut). Professional photography, dramatic lighting",
+  "intro": "Paragraf pembuka 2-3 paragraf yang engaging (TANPA MARKDOWN ** atau *)",
   "sections": [
     {
       "heading": "Sub Judul 1",
-      "content": "Konten lengkap 300-500 kata",
+      "content": "Konten lengkap 300-500 kata (TANPA MARKDOWN ** atau *)",
       "has_image": true/false,
-      "image_prompt": "SESUAIKAN dengan konten bagian ini: Jika tentang atlet → sertakan DLOB jersey + usia spesifik + elemen badminton. Jika tentang nutrisi → food photography makanan sehat. Jika tentang peralatan → product shot raket/shuttlecock. Jika tentang fasilitas → lapangan/gym. SETIAP gambar HARUS BERBEDA angle/komposisi!"
+      "image_prompt": "DEFAULT: Atlet DLOB jersey + usia + badminton. KHUSUS artikel nutrisi → 'food photography'. KHUSUS review gear → 'product photography'. Artikel latihan/stamina/teknik → WAJIB atlet DLOB jersey. BERBEDA angle!"
     }
   ],
-  "conclusion": "Kesimpulan yang kuat dan memorable",
-  "cta_text": "Ajakan untuk pembaca (misal: Bergabunglah dengan DLOB!)",
-  "cta_image_prompt": "Inspiring image sesuai tema artikel - bisa pemain DLOB yang motivational ATAU makanan/peralatan/fasilitas yang mendukung CTA, professional photography, BERBEDA dari gambar lain"
+  "conclusion": "Kesimpulan yang kuat dan memorable (TANPA MARKDOWN ** atau *)",
+  "cta_text": "Ajakan untuk pembaca (misal: Bergabunglah dengan DLOB!) - TANPA MARKDOWN ** atau *",
+  "cta_image_prompt": "DEFAULT: Inspiring badminton player DLOB jersey. KHUSUS artikel nutrisi → bisa food/meal. BERBEDA dari gambar lain"
 }
 
 PENTING - VARIASI DAN RELEVANSI GAMBAR:
-- Analisis setiap bagian artikel untuk tentukan jenis gambar yang paling relevan
-- Artikel nutrisi → lebih banyak gambar makanan, meal prep, minuman
-- Artikel teknik → lebih banyak gambar atlet demonstrasi teknik (dengan DLOB jersey)
-- Artikel peralatan → lebih banyak produk shot raket, sepatu, tas
-- Artikel kesehatan → mix antara atlet stretching dan makanan sehat
+- Analisis TOPIK UTAMA artikel untuk tentukan jenis gambar yang dominan
+- ⚠️ ATURAN PENTING: Artikel latihan/stamina/kecepatan/teknik/strategi → SEMUA gambar HARUS atlet badminton dengan DLOB jersey
+- Artikel KHUSUS nutrisi/diet/makanan → Boleh mayoritas gambar makanan, tapi minimal 1 gambar atlet dengan DLOB jersey
+- Artikel review peralatan → Mix product shot dengan atlet demonstrasi (DLOB jersey)
+- JANGAN menampilkan gambar makanan hanya karena artikel menyebut "protein" atau "nutrisi" di dalam konteks latihan
 - SETIAP gambar HARUS berbeda:
-  * Gambar 1: Misalnya hero shot atlet atau makanan utama
-  * Gambar 2: Misalnya close-up detail atau bahan makanan
-  * Gambar 3: Misalnya wide shot suasana atau variasi menu
-  * Gambar 4: Misalnya different angle atau presentation style
-- Pastikan 100% relevan dengan konten di sekitarnya!
+  * Gambar 1: Misalnya wide shot pemain atau teknik tertentu
+  * Gambar 2: Misalnya close-up detail gerakan atau ekspresi
+  * Gambar 3: Misalnya medium shot dari angle berbeda
+  * Gambar 4: Misalnya action shot atau situasi berbeda
+- Pastikan 100% relevan dengan TOPIK UTAMA artikel!
 
 GAYA PENULISAN:
 - Bahasa Indonesia formal tapi friendly
@@ -189,6 +192,14 @@ GAYA PENULISAN:
 - Tone: Informatif, inspiratif, actionable
 - Gunakan contoh konkret dan data jika relevan
 - Hindari jargon yang terlalu teknis
+
+⚠️ FORMAT TEKS (SANGAT PENTING):
+- JANGAN gunakan Markdown formatting (**, *, _, ##, dll)
+- JANGAN gunakan tanda ** untuk bold text
+- Gunakan teks biasa saja, tanpa formatting apapun
+- Struktur dengan paragraf yang jelas, tanpa markup
+- Contoh SALAH: "**Badminton**" atau "*penting*"
+- Contoh BENAR: "Badminton" atau "penting"
 
 PROMPT USER: ${prompt}
 
