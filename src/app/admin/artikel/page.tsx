@@ -89,12 +89,50 @@ export default function AdminArtikelPage() {
         }),
       });
 
-      const data = await response.json();
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType?.includes('application/json');
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate article');
+      // Handle various error status codes
+      if (response.status === 504) {
+        throw new Error('⏱️ TIMEOUT (504): Generasi artikel memakan waktu 5-8 menit, melebihi batas waktu server production. Artikel mungkin masih sedang dibuat di background. Coba refresh halaman dalam beberapa menit untuk melihat hasilnya.');
       }
 
+      if (response.status === 502 || response.status === 503) {
+        throw new Error('⚠️ SERVER ERROR: Server sedang sibuk atau restart. Coba lagi dalam beberapa menit.');
+      }
+
+      // Parse response based on content type
+      let data;
+      if (isJson) {
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          console.error('JSON parsing error:', jsonError);
+          const text = await response.text().catch(() => 'Unable to read response');
+          console.error('Response text:', text);
+          throw new Error('❌ PARSING ERROR: Server mengembalikan response yang rusak. Ini biasanya terjadi karena timeout atau error di production.');
+        }
+      } else {
+        // If not JSON, it's likely an error page (HTML)
+        const text = await response.text().catch(() => 'Unable to read response');
+        console.error('Non-JSON response:', text.substring(0, 200));
+        
+        if (response.status >= 500) {
+          throw new Error('⚠️ SERVER ERROR: Server mengalami error internal. Artikel mungkin masih sedang diproses di background. Coba refresh halaman setelah beberapa menit.');
+        } else if (response.status === 408 || response.status === 499) {
+          throw new Error('⏱️ REQUEST TIMEOUT: Request timeout sebelum selesai. Artikel mungkin masih sedang diproses. Coba refresh halaman setelah beberapa menit.');
+        } else {
+          throw new Error(`❌ UNEXPECTED ERROR (${response.status}): Server mengembalikan response tidak valid. Periksa console untuk detail.`);
+        }
+      }
+
+      // Check for API errors
+      if (!response.ok) {
+        throw new Error(data?.error || data?.details || `HTTP ${response.status}: Failed to generate article`);
+      }
+
+      // Success!
       if (data.article) {
         setGeneratedArticle(data.article);
         setPrompt('');
@@ -103,7 +141,19 @@ export default function AdminArtikelPage() {
 
     } catch (err) {
       console.error('Generation error:', err);
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat membuat artikel');
+      
+      // Network errors (fetch failed completely)
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('🌐 NETWORK ERROR: Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
+        return;
+      }
+
+      // Custom error messages already formatted
+      if (err instanceof Error && (err.message.includes('TIMEOUT') || err.message.includes('ERROR') || err.message.includes('PARSING'))) {
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat membuat artikel');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -170,6 +220,18 @@ export default function AdminArtikelPage() {
                 Masukkan topik atau deskripsi artikel yang ingin dibuat. AI akan membuat artikel lengkap dengan:
                 <br />Hero Image • Konten Terstruktur • Gambar Penjelas • CTA Visual
               </p>
+
+              {/* Production Timeout Warning */}
+              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div className="text-xs text-amber-200/90">
+                    <strong>Production Note:</strong> Generasi artikel memakan waktu 5-8 menit. Di production, Vercel memiliki batas waktu maksimal 5 menit. Jika timeout (504), artikel mungkin masih sedang dibuat di background. <strong>Refresh halaman setelah beberapa menit</strong> untuk melihat hasilnya.
+                  </div>
+                </div>
+              </div>
 
               <textarea
                 value={prompt}

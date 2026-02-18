@@ -3,6 +3,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleAuth } from 'google-auth-library';
 import { createClient } from '@supabase/supabase-js';
 
+// Increase timeout for long-running article generation
+// Vercel Pro: max 300s (5 minutes), Hobby: max 10s
+// Note: Article generation takes 5-8 minutes, may still timeout on 8-minute generations
+export const maxDuration = 300; // 5 minutes
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Initialize Google Auth for Vertex AI REST API
@@ -285,8 +290,20 @@ async function generateAndUploadImage(
 }
 
 export async function POST(request: NextRequest) {
+  // Global error wrapper to ALWAYS return JSON
   try {
-    const { prompt, userId, queueId } = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('❌ Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid request body', details: 'Request body must be valid JSON' },
+        { status: 400 }
+      );
+    }
+
+    const { prompt, userId, queueId } = body;
     
     // Helper to update queue progress
     const updateQueueProgress = async (percent: number, step: string) => {
