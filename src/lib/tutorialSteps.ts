@@ -71,9 +71,15 @@ export const ADMIN_PEMBAYARAN_TUTORIAL: TutorialStep[] = [
     position: 'bottom',
   },
   {
-    element: '.ai-helper-button',
-    title: '🤖 AI Assistant',
-    description: 'Gunakan AI Helper untuk pencarian smart. Contoh: "Konfirmasi pembayaran dari Kevin" atau "Buat revisi dari William".',
+    element: '.smart-actions-section',
+    title: '⚡ Smart Actions',
+    description: 'Aksi cepat satu-klik! Auto-confirm pembayaran terverifikasi, kirim reminder otomatis, atau confirm semua pending. Hemat waktu dengan automasi cerdas.',
+    position: 'bottom',
+  },
+  {
+    element: '.suggestion-cards-section',
+    title: '💡 Suggestion Cards',
+    description: 'AI secara proaktif memberikan saran berdasarkan data pembayaran. Dismiss yang tidak relevan, atau klik tombol aksi untuk eksekusi langsung.',
     position: 'top',
   },
   {
@@ -379,14 +385,64 @@ export const MEMBER_TRAINING_TUTORIAL: TutorialStep[] = [
 ];
 
 /**
+ * Tutorial steps for Admin Artikel Generator page
+ */
+export const ADMIN_ARTIKEL_TUTORIAL: TutorialStep[] = [
+  {
+    element: '.artikel-prompt-input',
+    title: '✍️ Input Prompt Artikel',
+    description: 'Masukkan topik atau prompt artikel yang ingin Anda buat. Contoh: "Tips meningkatkan stamina untuk pemain badminton remaja" atau "Panduan nutrisi untuk atlet bulutangkis".',
+    position: 'bottom',
+  },
+  {
+    element: '.artikel-generate-button',
+    title: '🚀 Generate Artikel',
+    description: 'Klik untuk memulai pembuatan artikel dengan AI. Proses ini menggunakan split API untuk menghindari timeout: 1) Generate struktur teks (~30 detik), 2) Generate gambar AI (~2 menit per gambar).',
+    position: 'bottom',
+  },
+  {
+    element: '.artikel-progress-tracker',
+    title: '📊 Progress Tracker',
+    description: 'Monitor real-time progress pembuatan artikel. Lihat step counter, progress bar, dan countdown cooldown untuk setiap gambar AI yang dihasilkan.',
+    position: 'top',
+  },
+  {
+    element: '.artikel-preview',
+    title: '👁️ Preview Artikel',
+    description: 'Setelah selesai, lihat preview lengkap artikel dengan hero image, konten terstruktur, dan gambar AI. Review sebelum publikasi!',
+    position: 'top',
+  },
+  {
+    element: '.artikel-publish-button',
+    title: '📤 Publikasikan',
+    description: 'Upload artikel ke Supabase Storage untuk gambar, simpan struktur ke database, dan artikel langsung live di halaman publik!',
+    position: 'top',
+  },
+  {
+    element: '.artikel-list',
+    title: '📚 Daftar Artikel',
+    description: 'Lihat semua artikel yang sudah dibuat. Status: Published (hijau), Draft (kuning). Klik Preview untuk melihat, atau Delete untuk menghapus.',
+    position: 'left',
+  },
+  {
+    element: '.artikel-tips',
+    title: '💡 Tips AI Generator',
+    description: 'Image categorization: Artikel nutrisi → food photography, Artikel latihan → atlet DLOB jersey. Training/stamina/teknik HARUS menampilkan atlet, bukan makanan!',
+    position: 'left',
+  },
+];
+
+/**
  * Get tutorial for a specific page
  */
-export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'members' | 'analitik' | 'team-optimizer' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings' | 'member-training'): TutorialStep[] {
+export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'members' | 'analitik' | 'team-optimizer' | 'artikel' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings' | 'member-training'): TutorialStep[] {
   switch (page) {
     case 'dashboard':
       return ADMIN_DASHBOARD_TUTORIAL;
     case 'pembayaran':
       return ADMIN_PEMBAYARAN_TUTORIAL;
+    case 'artikel':
+      return ADMIN_ARTIKEL_TUTORIAL;
     case 'members':
       return ADMIN_MEMBERS_TUTORIAL;
     case 'analitik':

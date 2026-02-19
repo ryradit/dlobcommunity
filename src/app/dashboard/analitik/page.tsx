@@ -5,13 +5,14 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { Trophy, Target, TrendingUp, Award, Calendar, Users, Filter, X, Flame, BarChart3, UserCheck, Crown, Sparkles, TrendingDown, AlertCircle, Brain, Info, HelpCircle } from 'lucide-react';
+import { Trophy, Target, TrendingUp, Award, Calendar, Users, Filter, X, Flame, BarChart3, UserCheck, Crown, Sparkles, TrendingDown, AlertCircle, Brain, Info, HelpCircle, Download, Share2 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { StatCardSkeleton, ChartSkeleton } from '@/components/LoadingSkeletons';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
+import { useReportGenerator } from '@/hooks/useReportGenerator';
 
 interface MatchStats {
   totalMatches: number;
@@ -139,6 +140,12 @@ export default function AnalitikPage() {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedPartner, setSelectedPartner] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Member info for reports
+  const [memberName, setMemberName] = useState('');
+  
+  // Report generation
+  const { generateMemberReport, isGenerating: isGeneratingReport } = useReportGenerator();
 
   // Tutorial for member analitik
   const tutorialSteps = getTutorialSteps('member-analitik');
@@ -196,6 +203,7 @@ export default function AnalitikPage() {
         const res = profileResult.value as { data: { full_name: string } | null; error: any };
         if (!res.error && res.data) {
           memberName = res.data.full_name;
+          setMemberName(memberName); // Store for report generation
         }
       }
       
@@ -528,6 +536,46 @@ export default function AnalitikPage() {
     setDateRange({ start: '', end: '' });
     setSelectedPartner('');
   }
+  
+  // Generate PDF report
+  async function handleGenerateReport(share: boolean = false) {
+    if (!memberName || stats.totalMatches === 0) {
+      alert('Tidak ada data untuk membuat laporan');
+      return;
+    }
+
+    const reportData = {
+      memberName,
+      memberEmail: user?.email || 'member@dlob.com',
+      stats: {
+        totalMatches: stats.totalMatches,
+        winRate: stats.winRate,
+        singlesWinRate: 0, // DLOB is doubles-only
+        doublesWinRate: stats.winRate,
+        attendanceRate: 0, // Can be integrated later
+        currentRank: 0, // Can be integrated later
+        totalMembers: 0, // Can be integrated later
+      },
+      insights: aiInsights.map(insight => ({
+        title: insight.title,
+        description: insight.description,
+        type: insight.type === 'positive' ? 'strength' as const : 
+              insight.type === 'negative' ? 'improvement' as const : 
+              'recommendation' as const,
+      })),
+    };
+
+    const result = await generateMemberReport(reportData, {
+      chartElementId: 'performance-chart', // We'll add this ID to a chart
+      share,
+    });
+
+    if (result.success) {
+      // Success feedback handled by the hook
+    } else {
+      alert(`Gagal membuat laporan: ${result.error}`);
+    }
+  }
 
   const hasActiveFilters = dateRange.start || dateRange.end || selectedPartner;
 
@@ -548,6 +596,26 @@ export default function AnalitikPage() {
               title="Tampilkan panduan fitur"
             >
               <HelpCircle className="w-5 h-5" />
+            </button>
+            
+            <button
+              onClick={() => handleGenerateReport(false)}
+              disabled={isGeneratingReport || stats.totalMatches === 0}
+              className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              title="Download laporan sebagai PDF"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Download PDF</span>
+            </button>
+            
+            <button
+              onClick={() => handleGenerateReport(true)}
+              disabled={isGeneratingReport || stats.totalMatches === 0}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              title="Bagikan laporan"
+            >
+              <Share2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Share</span>
             </button>
             
             <button
@@ -769,8 +837,9 @@ export default function AnalitikPage() {
             <BarChart3 className="w-5 h-5" />
             Performa Bulanan
           </h3>
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+          <div id="performance-chart">
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.5} />
               <XAxis 
                 dataKey="month" 
@@ -804,6 +873,7 @@ export default function AnalitikPage() {
               <Bar dataKey="losses" fill="#f43f5e" name="Kalah" radius={[8, 8, 0, 0]} maxBarSize={60} />
             </BarChart>
           </ResponsiveContainer>
+          </div>
         </div>
       )}
 

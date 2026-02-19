@@ -11,6 +11,8 @@ import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
+import { useReportGenerator } from '@/hooks/useReportGenerator';
+import { formatReportDate } from '@/lib/reportGenerator';
 
 interface Match {
   id: string;
@@ -96,7 +98,7 @@ export default function AdminPembayaranPage() {
   } | null>(null);
   
   // Bulk confirmation states
-  const [selectedPayments, setSelectedPayments] = useState<Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string }>>([]);
+  const [selectedPayments, setSelectedPayments] = useState<Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string | null }>>([]);
   const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
   const [bulkConfirming, setBulkConfirming] = useState(false);
   const [confirmIrreversible, setConfirmIrreversible] = useState(false);
@@ -107,17 +109,6 @@ export default function AdminPembayaranPage() {
   const [bulkRevising, setBulkRevising] = useState(false);
   const [bulkRevisionAmount, setBulkRevisionAmount] = useState('');
   const [bulkRevisionReason, setBulkRevisionReason] = useState('');
-  
-  // AI Agent Helper states
-  const [showAIHelper, setShowAIHelper] = useState(false);
-  const [aiQuery, setAiQuery] = useState('');
-  const [aiProcessing, setAiProcessing] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<{
-    action: 'confirm_payments' | 'confirm_revisions' | 'create_revision' | 'send_reminders' | 'filter_payments' | null;
-    memberName?: string;
-    payments?: Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string }>;
-    description: string;
-  } | null>(null);
 
   // Rejection states
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -131,9 +122,41 @@ export default function AdminPembayaranPage() {
     memberName: string;
   } | null>(null);
 
+  // Smart Actions & Suggestion Cards states (NEW MVP)
+  const [smartActions, setSmartActions] = useState<Array<{
+    id: string;
+    type: 'auto-confirm' | 'confirm-all' | 'send-reminders' | 'flag-suspicious' | 'generate-report';
+    title: string;
+    description: string;
+    count?: number;
+    payments?: Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string | null }>;
+    priority: 'high' | 'medium' | 'low';
+    icon: string;
+  }>>([]);
+  
+  const [suggestionCards, setSuggestionCards] = useState<Array<{
+    id: string;
+    type: 'attention' | 'success' | 'info' | 'warning';
+    title: string;
+    description: string;
+    action?: {
+      label: string;
+      actionType: string;
+      data?: any;
+    };
+    dismissible: boolean;
+    priority: number;
+  }>>([]);
+  
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
   // Tutorial for pembayaran page
   const tutorialSteps = getTutorialSteps('pembayaran');
   const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-pembayaran', tutorialSteps);
+  
+  // Report generation
+  const { generateFinancialReport, isGenerating: isGeneratingReport } = useReportGenerator();
 
   // Utility function to calculate weeks in current month
   const calculateWeeksInMonth = (date: Date = new Date()): number => {
@@ -392,6 +415,177 @@ export default function AdminPembayaranPage() {
     return membershipMap[memberName.toLowerCase()]?.payment_status === 'paid';
   }
 
+  // Fetch Smart Suggestions (MVP Feature)
+  async function fetchSmartSuggestions() {
+    if (loadingSuggestions) return;
+    
+    setLoadingSuggestions(true);
+    try {
+      const now = new Date();
+      const response = await fetch('/api/ai/payment-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          month: now.getMonth() + 1,
+          year: now.getFullYear()
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSmartActions(data.smartActions || []);
+        setSuggestionCards(data.suggestionCards || []);
+        console.log('✅ Smart suggestions loaded:', data.smartActions?.length || 0, 'actions,', data.suggestionCards?.length || 0, 'cards');
+      }
+    } catch (error) {
+      console.error('Error fetching smart suggestions:', error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  }
+
+  // Load smart suggestions when data changes
+  useEffect(() => {
+    if (!loading && matches.length > 0) {
+      fetchSmartSuggestions();
+    }
+  }, [loading, matches.length, memberships.length]);
+
+  // Handle smart action execution
+  async function executeSmartAction(action: typeof smartActions[0]) {
+    if (action.type === 'auto-confirm' && action.payments) {
+      setSelectedPayments(action.payments);
+      setIsConfirmingRevisions(false);
+      setShowBulkConfirmModal(true);
+    } else if (action.type === 'confirm-all' && action.payments) {
+      // Confirm ALL pending payments (including without proof - will require checklist)
+      setSelectedPayments(action.payments);
+      setIsConfirmingRevisions(false);
+      setShowBulkConfirmModal(true);
+    } else if (action.type === 'send-reminders') {
+      alert('Reminder feature coming soon!');
+    } else if (action.type === 'flag-suspicious') {
+      alert('Flagging feature coming soon!');
+    } else if (action.type === 'generate-report') {
+      // Generate financial report
+      await handleGenerateFinancialReport(false);
+    }
+  }
+
+  // Handle suggestion card action
+  async function executeSuggestionAction(card: typeof suggestionCards[0]) {
+    if (!card.action) return;
+    
+    if (card.action.actionType === 'auto-confirm' && card.action.data?.payments) {
+      setSelectedPayments(card.action.data.payments);
+      setIsConfirmingRevisions(false);
+      setShowBulkConfirmModal(true);
+      dismissSuggestion(card.id);
+    } else if (card.action.actionType === 'send-reminders') {
+      alert('Reminder feature coming soon!');
+    } else if (card.action.actionType === 'flag-suspicious') {
+      alert('Flagging feature coming soon!');
+    } else if (card.action.actionType === 'generate-report') {
+      // Generate financial report
+      await handleGenerateFinancialReport(false);
+      dismissSuggestion(card.id);
+    }
+  }
+
+  // Dismiss suggestion card
+  function dismissSuggestion(id: string) {
+    setDismissedSuggestions(prev => [...prev, id]);
+  }
+  
+  // Generate Financial Report
+  async function handleGenerateFinancialReport(share: boolean = false) {
+    if (matches.length === 0 && memberships.length === 0) {
+      alert('Tidak ada data pembayaran untuk membuat laporan');
+      return;
+    }
+
+    // Get current month/year
+    const now = new Date();
+    const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    const periodStart = `1 ${now.toLocaleDateString('id-ID', { month: 'long' })} ${now.getFullYear()}`;
+    const periodEnd = `${new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()} ${now.toLocaleDateString('id-ID', { month: 'long' })} ${now.getFullYear()}`;
+
+    // Prepare payment data
+    const allPayments: Array<{
+      memberName: string;
+      type: string;
+      amount: number;
+      status: 'paid' | 'pending' | 'overdue';
+      dueDate: string;
+      paidDate?: string;
+    }> = [];
+
+    // Add match payments
+    matches.forEach(match => {
+      const members = matchMembers[match.id] || [];
+      members.forEach(member => {
+        allPayments.push({
+          memberName: member.member_name,
+          type: `Match #${match.match_number}`,
+          amount: member.total_amount,
+          status: member.payment_status === 'paid' ? 'paid' : 
+                  member.payment_status === 'pending' ? 'pending' : 
+                  'overdue',
+          dueDate: match.match_date || match.created_at,
+          paidDate: member.paid_at || undefined,
+        });
+      });
+    });
+
+    // Add membership payments
+    memberships.forEach(membership => {
+      allPayments.push({
+        memberName: membership.member_name,
+        type: 'Monthly Membership',
+        amount: membership.amount,
+        status: membership.payment_status === 'paid' ? 'paid' : 
+                membership.payment_status === 'pending' ? 'pending' : 
+                'overdue',
+        dueDate: membership.created_at,
+        paidDate: membership.paid_at || undefined,
+      });
+    });
+
+    // Prepare report data
+    const reportData = {
+      period: {
+        start: periodStart,
+        end: periodEnd,
+      },
+      summary: {
+        totalRevenue: monthlyRecap.totalRevenue,
+        totalPending: allPayments.filter(p => p.status === 'pending').length,
+        totalPaid: allPayments.filter(p => p.status === 'paid').length,
+        totalMembers: new Set(allPayments.map(p => p.memberName)).size,
+        paymentRate: collectionRate,
+      },
+      payments: allPayments.sort((a, b) => {
+        // Sort: paid first, then by date
+        if (a.status !== b.status) {
+          return a.status === 'paid' ? -1 : 1;
+        }
+        return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+      }),
+    };
+
+    // Generate report
+    const result = await generateFinancialReport(reportData, {
+      share,
+    });
+
+    if (result.success) {
+      console.log('✅ Financial report generated:', result.filename);
+    } else {
+      alert(`Gagal membuat laporan: ${result.error}`);
+    }
+  }
+
+  // Create new match
   async function createMatch() {
     try {
       const members = [newMatch.member1, newMatch.member2, newMatch.member3, newMatch.member4].filter(m => m);
@@ -816,6 +1010,8 @@ export default function AdminPembayaranPage() {
       closeBulkConfirmModal();
       clearBulkSelection();
       await Promise.all([fetchMatches(), fetchMemberships()]);
+      // Refresh smart suggestions after payment confirmation
+      fetchSmartSuggestions();
     } catch (error) {
       console.error('Error bulk confirming payments:', error);
       alert('Gagal mengkonfirmasi pembayaran');
@@ -881,6 +1077,8 @@ export default function AdminPembayaranPage() {
       closeBulkConfirmModal();
       clearBulkSelection();
       await Promise.all([fetchMatches(), fetchMemberships()]);
+      // Refresh smart suggestions after revision confirmation
+      fetchSmartSuggestions();
     } catch (error) {
       console.error('Error bulk confirming revisions:', error);
       alert('Gagal mengkonfirmasi revisi');
@@ -1025,227 +1223,6 @@ export default function AdminPembayaranPage() {
     } finally {
       setBulkRevising(false);
     }
-  }
-
-  // AI Agent Helper functions
-  async function processAIQuery() {
-    if (!aiQuery.trim()) return;
-
-    try {
-      setAiProcessing(true);
-      
-      // Parse query to extract intent and member name(s)
-      const query = aiQuery.toLowerCase();
-      let memberNames: string[] = [];
-      let action: 'confirm_payments' | 'confirm_revisions' | 'create_revision' | 'send_reminders' | 'filter_payments' | null = null;
-      
-      // Extract member names from query (support multiple names with "dan" or "and")
-      // Look for "from [name]" or "untuk [name]" or "dari [name]" or "dari [name] dan [name]"
-      const nameMatch = query.match(/(?:from|untuk|dari|by)\s+([a-z\s,]+?)(?:\s+who|\s+that|\s+yang|$)/i);
-      if (nameMatch) {
-        const namesString = nameMatch[1].trim();
-        // Split by "dan", "and", or comma
-        memberNames = namesString.split(/\s+(?:dan|and|,)\s+|,\s*/).map(n => n.trim()).filter(n => n);
-      }
-      
-      // Determine action
-      if (query.includes('confirm') || query.includes('konfirmasi') || query.includes('approve') || query.includes('setujui')) {
-        // Check if it's specifically for revisions
-        if (query.includes('revisi') || query.includes('revision')) {
-          action = 'confirm_revisions';
-        } else {
-          action = 'confirm_payments';
-        }
-      } else if (query.includes('revisi') || query.includes('revision') || query.includes('buat revisi') || query.includes('create revision')) {
-        action = 'create_revision';
-      } else if (query.includes('remind') || query.includes('ingatkan') || query.includes('催') || query.includes('notification')) {
-        action = 'send_reminders';
-      } else if (query.includes('show') || query.includes('tampilkan') || query.includes('filter') || query.includes('cari')) {
-        action = 'filter_payments';
-      }
-      
-      if (!action) {
-        setAiSuggestion({
-          action: null,
-          description: 'Maaf, saya tidak mengerti permintaan Anda. Coba gunakan kata kunci seperti "konfirmasi pembayaran dari [nama]", "buat revisi dari [nama]", atau "tampilkan pembayaran dari [nama]".',
-        });
-        return;
-      }
-      
-      // Find matching payments
-      let matchingPayments: Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string; proofUrl?: string }> = [];
-      
-      // Determine which payment status to search for based on action
-      let targetStatus: 'pending' | 'paid' | 'revision' = 'pending';
-      if (action === 'create_revision') {
-        targetStatus = 'pending';
-      } else if (action === 'confirm_revisions') {
-        targetStatus = 'revision';
-      }
-      
-      // Search in match members
-      Object.values(matchMembers).flat().forEach(member => {
-        // Check if member name matches any of the provided names
-        const nameMatches = memberNames.length === 0 || memberNames.some(name => 
-          member.member_name.toLowerCase().includes(name.toLowerCase())
-        );
-        
-        if (nameMatches) {
-          if (member.payment_status === targetStatus) {
-            // Skip cash payments for confirmations
-            if (action === 'confirm_payments' && member.payment_proof === 'CASH_PAYMENT') return;
-            
-            // For create_revision: only include if payment_proof exists (unconfirmed payments with proof)
-            if (action === 'create_revision' && !member.payment_proof) return;
-            
-            // For revisions, use additional_amount instead of total_amount
-            const amount = action === 'confirm_revisions' && member.additional_amount 
-              ? member.additional_amount 
-              : member.total_amount;
-            
-            matchingPayments.push({
-              id: member.id,
-              type: 'match',
-              memberName: member.member_name,
-              amount: amount,
-              matchId: member.match_id,
-              proofUrl: member.payment_proof || undefined,
-            });
-          }
-        }
-      });
-      
-      // Search in memberships
-      memberships.forEach(membership => {
-        // Check if member name matches any of the provided names
-        const nameMatches = memberNames.length === 0 || memberNames.some(name => 
-          membership.member_name.toLowerCase().includes(name.toLowerCase())
-        );
-        
-        if (nameMatches) {
-          if (membership.payment_status === targetStatus) {
-            // Skip cash payments for confirmations
-            if (action === 'confirm_payments' && membership.payment_proof === 'CASH_PAYMENT') return;
-            
-            // For create_revision: only include if payment_proof exists (unconfirmed payments with proof)
-            if (action === 'create_revision' && !membership.payment_proof) return;
-            
-            matchingPayments.push({
-              id: membership.id,
-              type: 'membership',
-              memberName: membership.member_name,
-              amount: membership.amount,
-              proofUrl: membership.payment_proof || undefined,
-            });
-          }
-        }
-      });
-      
-      // Remove duplicates by id and type
-      matchingPayments = matchingPayments.filter((payment, index, self) =>
-        index === self.findIndex((p) => p.id === payment.id && p.type === payment.type)
-      );
-      
-      let description = '';
-      const memberNamesStr = memberNames.length > 0 ? memberNames.join(', ') : '';
-      
-      if (matchingPayments.length === 0) {
-        if (action === 'create_revision') {
-          description = memberNamesStr
-            ? `Tidak ditemukan pembayaran pending dengan bukti dari "${memberNamesStr}" yang perlu revisi.`
-            : 'Tidak ada pembayaran pending dengan bukti untuk dibuat revisi.';
-        } else if (action === 'confirm_revisions') {
-          description = memberNamesStr
-            ? `Tidak ditemukan pembayaran revisi dari "${memberNamesStr}".`
-            : 'Tidak ada pembayaran revisi yang perlu dikonfirmasi.';
-        } else {
-          description = memberNamesStr
-            ? `Tidak ditemukan pembayaran pending dari "${memberNamesStr}".`
-            : 'Tidak ada pembayaran pending yang perlu dikonfirmasi saat ini.';
-        }
-        setAiSuggestion({
-          action: null,
-          description,
-        });
-      } else {
-        const totalAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
-        
-        if (action === 'create_revision') {
-          // For revision, show list of pending payments with proof
-          description = memberNamesStr
-            ? `Ditemukan ${matchingPayments.length} pembayaran pending dengan bukti dari "${memberNamesStr}" yang perlu revisi (Total: Rp ${totalAmount.toLocaleString('id-ID')}).`
-            : `Ditemukan ${matchingPayments.length} pembayaran pending dengan bukti yang perlu revisi (Total: Rp ${totalAmount.toLocaleString('id-ID')}).`;
-        } else if (action === 'confirm_revisions') {
-          // For revision confirmation, show additional amounts
-          description = memberNamesStr
-            ? `Ditemukan ${matchingPayments.length} pembayaran revisi dari "${memberNamesStr}" (Total tambahan: Rp ${totalAmount.toLocaleString('id-ID')}) yang siap dikonfirmasi.`
-            : `Ditemukan ${matchingPayments.length} pembayaran revisi (Total tambahan: Rp ${totalAmount.toLocaleString('id-ID')}) yang siap dikonfirmasi.`;
-        } else {
-          // For confirmation, show proof status
-          const withProof = matchingPayments.filter(p => p.proofUrl).length;
-          const withoutProof = matchingPayments.length - withProof;
-          
-          let proofStatus = '';
-          if (withoutProof === 0) {
-            proofStatus = 'Semua memiliki bukti pembayaran.';
-          } else if (withProof === 0) {
-            proofStatus = `⚠️ Semua TANPA bukti pembayaran!`;
-          } else {
-            proofStatus = `${withProof} dengan bukti, ${withoutProof} tanpa bukti.`;
-          }
-          
-          description = memberNamesStr
-            ? `Ditemukan ${matchingPayments.length} pembayaran dari "${memberNamesStr}" (Total: Rp ${totalAmount.toLocaleString('id-ID')}). ${proofStatus}`
-            : `Ditemukan ${matchingPayments.length} pembayaran pending (Total: Rp ${totalAmount.toLocaleString('id-ID')}). ${proofStatus}`;
-        }
-        
-        setAiSuggestion({
-          action,
-          memberName: memberNamesStr || undefined,
-          payments: matchingPayments,
-          description,
-        });
-      }
-    } catch (error) {
-      console.error('Error processing AI query:', error);
-      setAiSuggestion({
-        action: null,
-        description: 'Terjadi kesalahan saat memproses permintaan.',
-      });
-    } finally {
-      setAiProcessing(false);
-    }
-  }
-  
-  function executeAISuggestion() {
-    if (!aiSuggestion?.payments || aiSuggestion.payments.length === 0) return;
-    
-    if (aiSuggestion.action === 'create_revision') {
-      // For revision creation, open bulk revision modal
-      setSelectedPayments(aiSuggestion.payments);
-      setShowAIHelper(false);
-      setShowBulkRevisionModal(true);
-      setBulkRevisionAmount('');
-      setBulkRevisionReason('');
-    } else if (aiSuggestion.action === 'confirm_revisions') {
-      // For revision confirmation, open bulk confirm modal with revision flag
-      setSelectedPayments(aiSuggestion.payments);
-      setIsConfirmingRevisions(true);
-      setShowAIHelper(false);
-      setShowBulkConfirmModal(true);
-      setConfirmIrreversible(false);
-    } else {
-      // For regular payment confirmation, open bulk confirm modal
-      setSelectedPayments(aiSuggestion.payments);
-      setIsConfirmingRevisions(false);
-      setShowAIHelper(false);
-      setShowBulkConfirmModal(true);
-      setConfirmIrreversible(false);
-    }
-    
-    // Reset AI state
-    setAiQuery('');
-    setAiSuggestion(null);
   }
 
   async function updatePaymentStatus(matchId: string, memberId: string, status: 'paid' | 'cancelled') {
@@ -1402,26 +1379,13 @@ export default function AdminPembayaranPage() {
             <p className="text-sm sm:text-base text-zinc-400">Kelola pembayaran pertandingan dan membership</p>
           </div>
           
-          <div className="flex items-center gap-2">
-            {/* Help Button */}
-            <button
-              onClick={toggleTutorial}
-              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
-              title="Tampilkan panduan fitur"
-            >
-              <HelpCircle className="w-5 h-5" />
-            </button>
-
-            {/* AI Agent Helper Button */}
-            <button
-              onClick={() => setShowAIHelper(true)}
-              className="ai-helper-button flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 group"
-            >
-              <Sparkles className="w-5 h-5" />
-              <span className="hidden sm:inline">AI Helper</span>
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            </button>
-          </div>
+          <button
+            onClick={toggleTutorial}
+            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+            title="Tampilkan panduan fitur"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Monthly Recap */}
@@ -1519,6 +1483,112 @@ export default function AdminPembayaranPage() {
           </div>
         </div>
 
+        {/* Smart Actions Section (MVP) */}
+        {smartActions.length > 0 && (
+          <div className="smart-actions-section mb-6 bg-gradient-to-br from-emerald-900/20 to-cyan-900/20 border border-emerald-500/30 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-emerald-400" />
+                <h2 className="text-xl font-bold text-white">Smart Actions</h2>
+                <span className="text-xs text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                  {smartActions.length} available
+                </span>
+              </div>
+              {loadingSuggestions && (
+                <div className="flex items-center gap-2 text-sm text-zinc-400">
+                  <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+                  Updating...
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {smartActions.map((action) => (
+                <button
+                  key={action.id}
+                  onClick={() => executeSmartAction(action)}
+                  className={`text-left p-4 rounded-lg border transition-all hover:scale-105 ${
+                    action.priority === 'high'
+                      ? 'bg-emerald-500/10 border-emerald-500/40 hover:bg-emerald-500/20'
+                      : action.priority === 'medium'
+                      ? 'bg-amber-500/10 border-amber-500/40 hover:bg-amber-500/20'
+                      : 'bg-blue-500/10 border-blue-500/40 hover:bg-blue-500/20'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-2xl">{action.icon}</span>
+                    {action.count && (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        action.priority === 'high'
+                          ? 'bg-emerald-500 text-white'
+                          : action.priority === 'medium'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-blue-500 text-white'
+                      }`}>
+                        {action.count}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-semibold text-white mb-1">{action.title}</h3>
+                  <p className="text-xs text-zinc-400">{action.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Suggestion Cards Section (MVP) */}
+        {suggestionCards.filter(card => !dismissedSuggestions.includes(card.id)).length > 0 && (
+          <div className="suggestion-cards-section mb-6 space-y-3">
+            {suggestionCards
+              .filter(card => !dismissedSuggestions.includes(card.id))
+              .sort((a, b) => a.priority - b.priority)
+              .map((card) => (
+              <div
+                key={card.id}
+                className={`p-4 rounded-lg border-l-4 flex items-start justify-between gap-4 ${
+                  card.type === 'success'
+                    ? 'bg-green-500/10 border-green-500'
+                    : card.type === 'attention'
+                    ? 'bg-red-500/10 border-red-500'
+                    : card.type === 'warning'
+                    ? 'bg-amber-500/10 border-amber-500'
+                    : 'bg-blue-500/10 border-blue-500'
+                }`}
+              >
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-white mb-1">{card.title}</h3>
+                  <p className="text-xs text-zinc-300 mb-3">{card.description}</p>
+                  {card.action && (
+                    <button
+                      onClick={() => executeSuggestionAction(card)}
+                      className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                        card.type === 'success'
+                          ? 'bg-green-500 hover:bg-green-600 text-white'
+                          : card.type === 'attention'
+                          ? 'bg-red-500 hover:bg-red-600 text-white'
+                          : card.type === 'warning'
+                          ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                          : 'bg-blue-500 hover:bg-blue-600 text-white'
+                      }`}
+                    >
+                      {card.action.label}
+                    </button>
+                  )}
+                </div>
+                {card.dismissible && (
+                  <button
+                    onClick={() => dismissSuggestion(card.id)}
+                    className="text-zinc-400 hover:text-white transition-colors p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-4 mb-6 border-b border-white/10">
           <button
@@ -1545,6 +1615,7 @@ export default function AdminPembayaranPage() {
             Membership
             {activeTab === 'memberships' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400" />
+
             )}
           </button>
         </div>
@@ -3036,325 +3107,6 @@ export default function AdminPembayaranPage() {
                     </>
                   )}
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* AI Agent Helper Modal */}
-      {showAIHelper && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 border border-purple-500/30 rounded-2xl max-w-2xl w-full shadow-2xl shadow-purple-500/20">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-b border-purple-500/30 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl shadow-lg">
-                    <Sparkles className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white flex items-center gap-2">
-                      AI Agent Helper
-                      <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30">Beta</span>
-                    </h3>
-                    <p className="text-sm text-zinc-400 mt-1">Permudah pekerjaan admin dengan AI</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowAIHelper(false);
-                    setAiQuery('');
-                    setAiSuggestion(null);
-                  }}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <X className="w-6 h-6 text-white" />
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 space-y-6">
-              {/* Examples */}
-              <div className="bg-zinc-800/50 border border-purple-500/20 rounded-xl p-4">
-                <p className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2">
-                  <Zap className="w-4 h-4" />
-                  Contoh Perintah:
-                </p>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setAiQuery('Konfirmasi semua pembayaran dari Kevin')}
-                    className="w-full text-left text-xs text-zinc-300 hover:text-white bg-zinc-700/50 hover:bg-zinc-700 px-3 py-2 rounded-lg transition-colors"
-                  >
-                    💡 "Konfirmasi semua pembayaran dari Kevin"
-                  </button>
-                  <button
-                    onClick={() => setAiQuery('Tampilkan pembayaran dari Budi yang perlu dikonfirmasi')}
-                    className="w-full text-left text-xs text-zinc-300 hover:text-white bg-zinc-700/50 hover:bg-zinc-700 px-3 py-2 rounded-lg transition-colors"
-                  >
-                    💡 "Tampilkan pembayaran dari Budi yang perlu dikonfirmasi"
-                  </button>
-                  <button
-                    onClick={() => setAiQuery('Konfirmasi semua pembayaran yang sudah upload bukti')}
-                    className="w-full text-left text-xs text-zinc-300 hover:text-white bg-zinc-700/50 hover:bg-zinc-700 px-3 py-2 rounded-lg transition-colors"
-                  >
-                    💡 "Konfirmasi semua pembayaran yang sudah upload bukti"
-                  </button>
-                </div>
-              </div>
-
-              {/* Input */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Apa yang ingin Anda lakukan?
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={aiQuery}
-                    onChange={(e) => setAiQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !aiProcessing) {
-                        processAIQuery();
-                      }
-                    }}
-                    placeholder="Contoh: Konfirmasi pembayaran dari Kevin..."
-                    className="flex-1 px-4 py-3 bg-zinc-900 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    disabled={aiProcessing}
-                  />
-                  <button
-                    onClick={processAIQuery}
-                    disabled={!aiQuery.trim() || aiProcessing}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-purple-500/30"
-                  >
-                    {aiProcessing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        Memproses...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-5 h-5" />
-                        Proses
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* AI Suggestion */}
-              {aiSuggestion && (
-                <div className={`border rounded-xl p-5 ${
-                  aiSuggestion.action 
-                    ? 'bg-green-500/10 border-green-500/30' 
-                    : 'bg-amber-500/10 border-amber-500/30'
-                }`}>
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className={`p-2 rounded-lg ${
-                      aiSuggestion.action 
-                        ? 'bg-green-500/20' 
-                        : 'bg-amber-500/20'
-                    }`}>
-                      <Sparkles className={`w-5 h-5 ${
-                        aiSuggestion.action 
-                          ? 'text-green-400' 
-                          : 'text-amber-400'
-                      }`} />
-                    </div>
-                    <div className="flex-1">
-                      <p className={`text-sm font-semibold mb-1 ${
-                        aiSuggestion.action 
-                          ? 'text-green-400' 
-                          : 'text-amber-400'
-                      }`}>
-                        AI Assistant
-                      </p>
-                      <p className="text-sm text-white">{aiSuggestion.description}</p>
-                    </div>
-                  </div>
-
-                  {aiSuggestion.action && aiSuggestion.payments && aiSuggestion.payments.length > 0 && (() => {
-                    const withProof = aiSuggestion.payments.filter(p => p.proofUrl).length;
-                    const withoutProof = aiSuggestion.payments.length - withProof;
-                    const isCreateRevision = aiSuggestion.action === 'create_revision';
-                    const isConfirmRevision = aiSuggestion.action === 'confirm_revisions';
-                    
-                    return (
-                    <>
-                      {/* Payment List Preview with Proof Indicators */}
-                      <div className="bg-zinc-900/50 border border-white/5 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs text-zinc-400">
-                            {isCreateRevision 
-                              ? 'Pembayaran yang akan direvisi:' 
-                              : isConfirmRevision 
-                                ? 'Revisi yang akan dikonfirmasi:'
-                                : 'Ringkasan pembayaran:'}
-                          </p>
-                          {!isCreateRevision && !isConfirmRevision && (
-                            withoutProof === 0 ? (
-                              <div className="flex items-center gap-1 text-xs text-green-400">
-                                <Check className="w-3 h-3" />
-                                <span>Semua ada bukti</span>
-                              </div>
-                            ) : withProof === 0 ? (
-                              <div className="flex items-center gap-1 text-xs text-red-400">
-                                <AlertCircle className="w-3 h-3" />
-                                <span>Semua TANPA bukti</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1 text-xs text-amber-400">
-                                <AlertCircle className="w-3 h-3" />
-                                <span>{withProof} ada / {withoutProof} tanpa</span>
-                              </div>
-                            )
-                          )}
-                        </div>
-                        <div className="space-y-1.5">
-                          {aiSuggestion.payments.slice(0, 5).map((payment, idx) => (
-                            <div key={`${payment.type}-${payment.id}`} className="flex items-center justify-between text-xs bg-zinc-800/50 rounded p-2">
-                              <div className="flex items-center gap-2 flex-1">
-                                <span className="text-zinc-500">{idx + 1}.</span>
-                                {!isCreateRevision && !isConfirmRevision && (
-                                  payment.proofUrl ? (
-                                    <span title="Ada bukti">
-                                      <Check className="w-3 h-3 text-green-400" />
-                                    </span>
-                                  ) : (
-                                    <span title="Tanpa bukti">
-                                      <AlertCircle className="w-3 h-3 text-amber-400" />
-                                    </span>
-                                  )
-                                )}
-                                <span className="text-zinc-300">
-                                  {payment.memberName}
-                                </span>
-                                <span className="text-zinc-500 text-[10px]">
-                                  ({payment.type === 'match' ? 'Match' : 'Member'})
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {!isCreateRevision && !isConfirmRevision && payment.proofUrl && (
-                                  <a
-                                    href={payment.proofUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-400 hover:text-blue-300 transition-colors p-1 hover:bg-blue-500/10 rounded"
-                                    title="Lihat Bukti"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                  </a>
-                                )}
-                                <span className="text-green-400 font-medium">
-                                  Rp {payment.amount.toLocaleString('id-ID')}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                          {aiSuggestion.payments.length > 5 && (
-                            <p className="text-xs text-zinc-500 italic mt-2 text-center">
-                              +{aiSuggestion.payments.length - 5} pembayaran lainnya...
-                            </p>
-                          )}
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-white/5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-zinc-400">Total:</span>
-                            <span className="text-white font-semibold">
-                              Rp {aiSuggestion.payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('id-ID')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Proof Verification Notice or Revision Notice */}
-                      {isCreateRevision ? (
-                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
-                          <p className="text-xs text-blue-400 flex items-start gap-2">
-                            <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                            <span>
-                              Pembayaran di atas sudah <strong>LUNAS</strong>. Revisi akan membuat tagihan tambahan untuk member. Anda akan diminta mengisi jumlah revisi dan alasan di langkah berikutnya.
-                            </span>
-                          </p>
-                        </div>
-                      ) : isConfirmRevision ? (
-                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
-                          <p className="text-xs text-green-400 flex items-start gap-2">
-                            <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                            <span>
-                              Member di atas sudah melakukan pembayaran <strong>REVISI</strong> (tambahan). Klik konfirmasi untuk menyelesaikan pembayaran revisi mereka.
-                            </span>
-                          </p>
-                        </div>
-                      ) : (
-                        withoutProof === 0 ? (
-                          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
-                            <p className="text-xs text-green-400 flex items-start gap-2">
-                              <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                              <span>
-                                Semua pembayaran memiliki bukti. Klik ikon mata untuk melihat bukti sebelum konfirmasi.
-                              </span>
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-3">
-                            <p className="text-xs text-red-400 flex items-start gap-2">
-                              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                              <span>
-                                <strong>⚠️ Peringatan:</strong> {withoutProof} pembayaran TANPA bukti transfer. Konfirmasi memerlukan verifikasi ganda karena tindakan ini <strong>TIDAK DAPAT DIBATALKAN</strong>.
-                              </span>
-                            </p>
-                          </div>
-                        )
-                      )}
-
-                      {/* Action Button */}
-                      <button
-                        onClick={executeAISuggestion}
-                        className={`w-full px-5 py-3 ${
-                          isCreateRevision 
-                            ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-500/30'
-                            : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'
-                        } text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 shadow-lg`}
-                      >
-                        {isCreateRevision ? (
-                          <>
-                            <Edit className="w-5 h-5" />
-                            Buat Revisi ({aiSuggestion.payments.length} Member)
-                          </>
-                        ) : isConfirmRevision ? (
-                          <>
-                            <Check className="w-5 h-5" />
-                            Konfirmasi {aiSuggestion.payments.length} Revisi
-                          </>
-                        ) : (
-                          <>
-                            <CheckSquare className="w-5 h-5" />
-                            Lanjut ke Review Akhir ({aiSuggestion.payments.length} Pembayaran)
-                          </>
-                        )}
-                      </button>
-                    </>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* Help Text */}
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                <p className="text-xs text-blue-400 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span>
-                    <strong>Tip:</strong> AI Helper dapat:<br/>
-                    • <strong>Konfirmasi</strong> pembayaran pending: "Konfirmasi pembayaran dari Kevin"<br/>
-                    • <strong>Konfirmasi revisi</strong>: "Konfirmasi revisi dari Kevin dan William"<br/>
-                    • <strong>Buat revisi</strong> untuk member yang sudah lunas: "Buat revisi dari Kevin"<br/>
-                    • <strong>Tampilkan</strong> pembayaran: "Tampilkan semua pembayaran pending"<br/>
-                    Untuk pembayaran tanpa bukti, sistem akan meminta verifikasi ganda.
-                  </span>
-                </p>
               </div>
             </div>
           </div>

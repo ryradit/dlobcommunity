@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, Send, Loader, FileText, Eye, Trash2, Globe, Check, Clock } from 'lucide-react';
+import { Sparkles, Send, Loader, FileText, Eye, Trash2, Globe, Check, Clock, HelpCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
+import TutorialOverlay from '@/components/TutorialOverlay';
 
 interface Article {
   id: string;
@@ -29,6 +32,10 @@ export default function AdminArtikelPage() {
   const [progressMessage, setProgressMessage] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
   const [totalSteps, setTotalSteps] = useState(0);
+
+  // Tutorial
+  const tutorialSteps = getTutorialSteps('artikel');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-artikel', tutorialSteps);
 
   // Load existing articles
   useEffect(() => {
@@ -297,12 +304,37 @@ export default function AdminArtikelPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-zinc-950 text-white py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">AI Artikel Generator</h1>
-          <p className="text-zinc-400">Buat artikel lengkap dengan satu prompt, lengkap dengan gambar!</p>
+        <div className="mb-6 sm:mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">AI Artikel Generator</h1>
+            <p className="text-sm sm:text-base text-zinc-400">Buat artikel lengkap dengan satu prompt, lengkap dengan gambar!</p>
+          </div>
+          
+          <button
+            onClick={toggleTutorial}
+            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+            title="Tampilkan panduan fitur"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tips Section */}
+        <div className="artikel-tips mb-6 bg-gradient-to-br from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-white mb-1">💡 Tips AI Generator</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                <strong className="text-purple-300">Image categorization:</strong> Artikel <span className="text-blue-300">nutrisi/makanan</span> → food photography, Artikel <span className="text-green-300">latihan/teknik/stamina</span> → atlet DLOB jersey. Training/stamina/teknik <strong className="text-amber-300">HARUS</strong> menampilkan atlet, bukan makanan!
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Generator Section */}
@@ -342,7 +374,7 @@ export default function AdminArtikelPage() {
                   if (error) setError('');
                 }}
                 placeholder="Contoh: Tulis artikel tentang teknik smash yang efektif untuk pemain pemula, sertakan tips praktis dan kesalahan yang harus dihindari"
-                className="w-full bg-zinc-800 border border-white/10 rounded-lg p-4 text-white placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
+                className="artikel-prompt-input w-full bg-zinc-800 border border-white/10 rounded-lg p-4 text-white placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
                 rows={4}
                 disabled={isGenerating}
               />
@@ -354,7 +386,7 @@ export default function AdminArtikelPage() {
               )}
 
               {isGenerating && (
-                <div className="mb-4 p-6 bg-zinc-800/50 border border-purple-500/30 rounded-xl">
+                <div className="artikel-progress-tracker mb-4 p-6 bg-zinc-800/50 border border-purple-500/30 rounded-xl">
                   <div className="flex flex-col items-center text-center mb-4">
                     <Loader className="w-12 h-12 text-purple-400 animate-spin mx-auto mb-4" />
                     <p className="text-white font-medium mb-2">Sedang Membuat Artikel...</p>
@@ -384,7 +416,7 @@ export default function AdminArtikelPage() {
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating || !prompt.trim()}
-                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:from-zinc-700 disabled:to-zinc-700 text-white font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+                className="artikel-generate-button w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:from-zinc-700 disabled:to-zinc-700 text-white font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
               >
                 {isGenerating ? (
                   <>
@@ -402,12 +434,17 @@ export default function AdminArtikelPage() {
           </div>
         </div>
 
-        {/* Generated Article Preview */}
+        {/* Generated Article Success & Preview */}
         {generatedArticle && (
-          <div className="bg-zinc-900 border border-green-500/30 rounded-2xl p-6 mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <h3 className="text-lg font-semibold text-white">Artikel Berhasil Dibuat!</h3>
+          <div className="artikel-preview bg-zinc-900 border border-white/10 rounded-2xl p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <Check className="w-6 h-6 text-green-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Artikel Berhasil Dibuat!</h3>
+                <p className="text-xs text-zinc-400">Preview artikel dan publikasikan ke halaman publik</p>
+              </div>
             </div>
             
             <div className="space-y-3 text-sm">
@@ -448,7 +485,7 @@ export default function AdminArtikelPage() {
               </a>
               <button
                 onClick={() => handlePublish(generatedArticle.id)}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
+                className="artikel-publish-button px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
               >
                 <Globe className="w-4 h-4" />
                 Publish
@@ -458,7 +495,7 @@ export default function AdminArtikelPage() {
         )}
 
         {/* Articles List */}
-        <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6">
+        <div className="artikel-list bg-zinc-900 border border-white/10 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-white flex items-center gap-2">
               <FileText className="w-5 h-5" />
@@ -466,7 +503,7 @@ export default function AdminArtikelPage() {
             </h3>
             <button
               onClick={() => loadArticles()}
-              className="text-sm text-blue-400 hover:text-blue-300"
+              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
             >
               Refresh
             </button>
@@ -548,6 +585,16 @@ export default function AdminArtikelPage() {
           )}
         </div>
       </div>
+
+      {/* Tutorial Overlay */}
+      {isTutorialActive && (
+        <TutorialOverlay
+          steps={tutorialSteps}
+          isActive={isTutorialActive}
+          onClose={closeTutorial}
+          tutorialKey="admin-artikel"
+        />
+      )}
     </div>
   );
 }
