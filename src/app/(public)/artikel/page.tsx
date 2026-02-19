@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Newspaper } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Article {
@@ -64,30 +64,27 @@ export default function ArtikelPage() {
     }
   }
 
-  const featuredArticle = articles[0]; // Most recent
-  const otherArticles = articles.slice(1);
+  const heroArticles = articles.slice(0, 5);
+  const editorsPicks = articles.slice(5, 13); // Show next 8 articles after hero section
+
+  function formatDate(dateString: string) {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Hero Section */}
-      <section className="relative bg-white py-16 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-[#3e6461] hover:text-[#2d4a47] mb-8 transition-colors font-semibold">
-            <ArrowLeft className="w-4 h-4" />
-            Kembali
-          </Link>
-          <div className="flex flex-col gap-4">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900">
-              Artikel & Blog
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl">
-              Berita terkini, tips, strategi, dan cerita menarik dari komunitas badminton DLOB
-            </p>
-          </div>
-        </div>
-      </section>
+    <main className="min-h-screen bg-white">
+      {/* Header Navigation */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-[#3e6461] transition-colors font-medium">
+          <ArrowLeft className="w-4 h-4" />
+          Kembali ke Beranda
+        </Link>
+      </div>
 
-      {/* Featured Article */}
       {loading ? (
         <section className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -97,152 +94,195 @@ export default function ArtikelPage() {
             </div>
           </div>
         </section>
-      ) : featuredArticle ? (
-        <section className="py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-              <div className="grid lg:grid-cols-2 gap-8 items-center">
-                {/* Featured Image */}
-                <div className="relative h-96 lg:h-full overflow-hidden rounded-l-2xl">
+      ) : (
+        <>
+          {/* Hero Grid Section - 5 Images */}
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-150">
+              {/* Main Large Image - Left */}
+              {heroArticles[0] && (
+                <Link 
+                  href={`/artikel/${heroArticles[0].slug}`}
+                  className="relative overflow-hidden rounded-lg group cursor-pointer"
+                >
                   <img 
-                    src={featuredArticle.content.hero_image.url} 
-                    alt={featuredArticle.content.hero_image.alt}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    src={heroArticles[0].content.hero_image.url}
+                    alt={heroArticles[0].content.hero_image.alt}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                </div>
-
-                {/* Featured Content */}
-                <div className="p-8 lg:p-12">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="inline-block px-3 py-1 bg-[#3e6461]/10 text-[#3e6461] text-sm font-semibold rounded-full">
-                      {featuredArticle.category}
-                    </span>
-                    <span className="text-sm text-gray-500">Featured</span>
-                  </div>
-
-                  <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-tight">
-                    {featuredArticle.title}
-                  </h2>
-
-                  <div className="flex items-center gap-6 mb-6 text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm">
-                        {new Date(featuredArticle.published_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
+                  <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent"></div>
+                  <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Newspaper className="w-4 h-4" />
+                      <span className="text-sm font-medium uppercase tracking-wide">
+                        {heroArticles[0].category}
+                      </span>
+                      <span className="text-sm opacity-80">
+                        • {formatDate(heroArticles[0].published_at)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm">{featuredArticle.read_time_minutes} menit baca</span>
-                    </div>
+                    <h2 className="text-3xl md:text-4xl font-bold leading-tight">
+                      {heroArticles[0].title}
+                    </h2>
                   </div>
+                </Link>
+              )}
 
-                  <p className="text-gray-700 text-lg mb-8 leading-relaxed">
-                    {featuredArticle.excerpt}
-                  </p>
-
+              {/* Right Grid - 4 Images in 2x2 */}
+              <div className="grid grid-cols-2 gap-4">
+                {heroArticles.slice(1, 5).map((article) => (
                   <Link 
-                    href={`/artikel/${featuredArticle.slug}`}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#1e4843] text-white font-semibold rounded-full hover:bg-[#162f2c] transition-colors"
+                    key={article.id}
+                    href={`/artikel/${article.slug}`}
+                    className="relative overflow-hidden rounded-lg group cursor-pointer"
                   >
-                    Baca Selengkapnya →
+                    <img 
+                      src={article.content.hero_image.url}
+                      alt={article.content.hero_image.alt}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent"></div>
+                    <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                      <div className="flex items-center gap-2 mb-2 text-xs">
+                        <Newspaper className="w-3 h-3" />
+                        <span className="font-medium uppercase tracking-wide">
+                          {article.category}
+                        </span>
+                      </div>
+                      <h3 className="text-sm md:text-base font-bold leading-tight line-clamp-2">
+                        {article.title}
+                      </h3>
+                    </div>
                   </Link>
-                </div>
+                ))}
               </div>
             </div>
-          </div>
-        </section>
-      ) : (
-        <section className="py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-white rounded-2xl p-12 text-center">
-              <p className="text-gray-500">Belum ada artikel yang dipublish.</p>
-            </div>
-          </div>
-        </section>
-      )}
+          </section>
 
-      {/* Articles Grid */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-12">Artikel Lainnya</h2>
-          {otherArticles.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {otherArticles.map((article) => (
-                <article key={article.id} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all group">
-                  {/* Article Image */}
-                  <div className="relative h-48 overflow-hidden bg-gray-200">
-                    <img 
-                      src={article.content.hero_image.url} 
-                      alt={article.content.hero_image.alt}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                  </div>
-
-                  {/* Article Content */}
-                  <div className="p-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="inline-block px-2 py-1 bg-[#3e6461]/10 text-[#3e6461] text-xs font-semibold rounded-full">
-                        {article.category}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(article.published_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: '2-digit',
-                        })}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-[#3e6461] transition-colors line-clamp-2">
-                      {article.title}
-                    </h3>
-
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                      {article.excerpt}
-                    </p>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">{article.read_time_minutes} menit baca</span>
-                      <Link 
-                        href={`/artikel/${article.slug}`}
-                        className="text-[#3e6461] font-semibold text-sm hover:text-[#2d4a47] transition-colors"
-                      >
-                        Baca →
-                      </Link>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            !loading && (
-              <p className="text-center text-gray-500 py-12">
-                Tidak ada artikel lainnya saat ini.
+          {/* Editor's Picks Section */}
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="mb-12">
+              <p className="text-sm text-gray-500 uppercase tracking-widest mb-2">
+                Explore some of our favorite articles
               </p>
-            )
-          )}
-        </div>
-      </section>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+                Editor's Picks
+              </h2>
+            </div>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-[#3e6461]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-4">Bergabunglah dengan Komunitas DLOB</h2>
-          <p className="text-lg text-slate-100 mb-8">
-            Jadilah bagian dari komunitas badminton terbesar dan ikuti update terbaru langsung dari DLOB
-          </p>
-          <button className="px-8 py-3 bg-white text-[#3e6461] font-semibold rounded-full hover:bg-slate-50 transition-colors">
-            Daftar Sekarang
-          </button>
-        </div>
-      </section>
+            {editorsPicks.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Featured Large Card - First Article */}
+                {editorsPicks[0] && (
+                  <Link 
+                    href={`/artikel/${editorsPicks[0].slug}`}
+                    className="md:col-span-2 lg:col-span-1 lg:row-span-2 group cursor-pointer"
+                  >
+                    <article className="h-full flex flex-col">
+                      <div className="relative overflow-hidden rounded-lg mb-4 h-80 lg:h-full">
+                        <img 
+                          src={editorsPicks[0].content.hero_image.url}
+                          alt={editorsPicks[0].content.hero_image.alt}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
+                        <div className="absolute top-4 left-4">
+                          <span className="inline-block px-3 py-1 bg-yellow-400 text-gray-900 text-xs font-bold uppercase tracking-wide">
+                            Spotlight
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mb-3 text-sm">
+                        <span className="text-[#3e6461] font-semibold uppercase tracking-wide">
+                          {editorsPicks[0].category}
+                        </span>
+                        <span className="text-gray-400">•</span>
+                        <span className="text-gray-500">
+                          {formatDate(editorsPicks[0].published_at)}
+                        </span>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#3e6461] transition-colors">
+                        {editorsPicks[0].title}
+                      </h3>
+                      <p className="text-gray-600 leading-relaxed line-clamp-3">
+                        {editorsPicks[0].excerpt}
+                      </p>
+                    </article>
+                  </Link>
+                )}
+
+                {/* Regular Cards - Rest of Articles */}
+                {editorsPicks.slice(1).map((article, index) => (
+                  <Link 
+                    key={article.id}
+                    href={`/artikel/${article.slug}`}
+                    className="group cursor-pointer"
+                  >
+                    <article className="flex gap-4">
+                      <div className="relative w-32 h-32 shrink-0 overflow-hidden rounded-lg">
+                        <img 
+                          src={article.content.hero_image.url}
+                          alt={article.content.hero_image.alt}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
+                        {index === 0 && (
+                          <div className="absolute top-2 left-2">
+                            <span className="inline-block px-2 py-0.5 bg-yellow-400 text-gray-900 text-xs font-bold">
+                              ★
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 text-xs">
+                          <span className="text-[#3e6461] font-semibold uppercase tracking-wide">
+                            {article.category}
+                          </span>
+                          <span className="text-gray-400">•</span>
+                          <span className="text-gray-500">
+                            {new Date(article.published_at).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                        <h3 className="text-base font-bold text-gray-900 mb-2 group-hover:text-[#3e6461] transition-colors line-clamp-2">
+                          {article.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {article.excerpt}
+                        </p>
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Belum ada artikel yang tersedia.</p>
+              </div>
+            )}
+          </section>
+
+          {/* CTA Section */}
+          <section className="bg-linear-to-r from-[#1e4843] to-[#3e6461] py-20">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+              <h2 className="text-4xl font-bold text-white mb-4">
+                Bergabunglah dengan Komunitas DLOB
+              </h2>
+              <p className="text-lg text-slate-100 mb-8">
+                Jadilah bagian dari komunitas badminton terbesar dan ikuti update terbaru langsung dari DLOB
+              </p>
+              <Link 
+                href="/register"
+                className="inline-block px-8 py-3 bg-white text-[#3e6461] font-semibold rounded-full hover:bg-slate-50 transition-all hover:scale-105"
+              >
+                Daftar Sekarang
+              </Link>
+            </div>
+          </section>
+        </>
+      )}
     </main>
   );
 }
