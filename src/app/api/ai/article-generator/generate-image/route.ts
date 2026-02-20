@@ -168,14 +168,14 @@ async function uploadImageToStorage(
 
 function getFallbackImageUrl(type: 'hero' | 'body' | 'cta', index: number = 0): string {
   const placeholderImages = [
-    'photo-1626224583764-f87db24ac4ea',
-    'photo-1606567595334-d39972c85dbe',
-    'photo-1490645935967-10de6ba17061',
-    'photo-1546069901-ba9599a7e63c',
-    'photo-1612872087720-bb876e2e67d1',
-    'photo-1511688878353-3a2f5be94cd7',
-    'photo-1517649763962-0c623066013b',
-    'photo-1498837167922-ddd27525d352',
+    'photo-1626224583764-f87db24ac4ea',  // Badminton court aerial view
+    'photo-1606567595334-d39972c85dbe',  // Badminton player action
+    'photo-1612872087720-bb876e2e67d1',  // Badminton racket and shuttlecock
+    'photo-1517649763962-0c623066013b',  // Indoor sports facility
+    'photo-1471864190281-a93a3070b6de',  // Badminton shuttlecock close-up
+    'photo-1587280501635-68a0e82cd5ff',  // Sports training equipment
+    'photo-1461896836934-ffe607ba8211',  // Sports and fitness
+    'photo-1434596922112-19c563067271',  // Athletes in action
   ];
 
   const imageIndex = (index + (type === 'hero' ? 0 : type === 'cta' ? 7 : index + 1)) % placeholderImages.length;

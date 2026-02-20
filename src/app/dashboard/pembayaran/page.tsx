@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle, CheckSquare, Square, Sparkles, Send } from 'lucide-react';
+import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle, CheckSquare, Square, Zap, Copy, Check } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
@@ -69,6 +69,7 @@ export default function PembayaranPage() {
   const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'cash'>('bank_transfer');
   const [showPaymentHelpModal, setShowPaymentHelpModal] = useState(false);
   const [showStatusHelpModal, setShowStatusHelpModal] = useState(false);
+  const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
   
   // Bulk payment states
   const [selectedPayments, setSelectedPayments] = useState<Array<{ id: string; type: 'match' | 'membership'; amount: number; matchNumber?: number; label: string }>>([]);
@@ -76,15 +77,34 @@ export default function PembayaranPage() {
   const [bulkProofFile, setBulkProofFile] = useState<File | null>(null);
   const [bulkUploading, setBulkUploading] = useState(false);
   
-  // AI Helper states
-  const [showAIHelper, setShowAIHelper] = useState(false);
-  const [aiQuery, setAiQuery] = useState('');
-  const [aiProcessing, setAiProcessing] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<{
-    action: 'pay_all' | 'pay_revisions' | null;
-    payments: Array<{ id: string; type: 'match' | 'membership'; amount: number; label: string; isRevision?: boolean }>;
+  // Smart Actions states (REPLACING AI Helper)
+  const [smartActions, setSmartActions] = useState<Array<{
+    id: string;
+    type: 'pay-all' | 'pay-revisions' | 'pay-pending' | 'pay-membership';
+    title: string;
     description: string;
-  } | null>(null);
+    count?: number;
+    payments?: Array<{ id: string; type: 'match' | 'membership'; amount: number; label: string; isRevision?: boolean }>;
+    priority: 'high' | 'medium' | 'low';
+    icon: string;
+  }>>([]);
+  
+  const [suggestionCards, setSuggestionCards] = useState<Array<{
+    id: string;
+    type: 'attention' | 'success' | 'info' | 'warning';
+    title: string;
+    description: string;
+    action?: {
+      label: string;
+      actionType: string;
+      data?: any;
+    };
+    dismissible: boolean;
+    priority: number;
+  }>>([]);
+  
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   // Tutorial for member pembayaran
   const tutorialSteps = getTutorialSteps('member-pembayaran');
@@ -93,6 +113,13 @@ export default function PembayaranPage() {
   useEffect(() => {
     fetchPaymentData();
   }, [user, pathname]);
+
+  // Fetch Smart Suggestions when data changes
+  useEffect(() => {
+    if (!loading && memberName && allMatches.length >= 0) {
+      fetchSmartSuggestions();
+    }
+  }, [loading, memberName, allMatches.length, myMembership?.payment_status]);
 
   async function fetchPaymentData() {
     // Show loading while fetching
@@ -245,6 +272,15 @@ export default function PembayaranPage() {
     setShowPaymentModal(false);
     setSelectedPayment(null);
     setPaymentMethod('bank_transfer');
+  }
+
+  function copyToClipboard(accountNumber: string) {
+    navigator.clipboard.writeText(accountNumber.replace(/\s/g, '')).then(() => {
+      setCopiedAccount(accountNumber);
+      setTimeout(() => setCopiedAccount(null), 2000);
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+    });
   }
 
   function openUploadModal() {
@@ -513,122 +549,65 @@ export default function PembayaranPage() {
   }
 
   async function processAIQuery() {
-    if (!aiQuery.trim()) return;
-
-    try {
-      setAiProcessing(true);
-      const query = aiQuery.toLowerCase();
-
-      let action: 'pay_all' | 'pay_revisions' | null = null;
-      let matchingPayments: Array<{ id: string; type: 'match' | 'membership'; amount: number; label: string; isRevision?: boolean }> = [];
-      let description = '';
-
-      // Detect intent
-      if (query.includes('bayar semua') || query.includes('bayar seluruh') || query.includes('semua tagihan') || query.includes('all')) {
-        action = 'pay_all';
-        
-        // Get all non-paid/non-cancelled payments (including unconfirmed, revisions, and rejections)
-        myMatches.forEach(match => {
-          if (match.payment_status !== 'paid' && match.payment_status !== 'cancelled') {
-            if (match.payment_status === 'revision') {
-              matchingPayments.push({
-                id: match.id,
-                type: 'match',
-                amount: match.additional_amount || match.total_amount,
-                label: `Match #${match.matches.match_number} - Revisi`,
-                isRevision: true,
-              });
-            } else if (match.payment_status === 'rejected') {
-              matchingPayments.push({
-                id: match.id,
-                type: 'match',
-                amount: match.total_amount,
-                label: `Match #${match.matches.match_number} - Ditolak (Perlu Upload Ulang)`,
-                isRevision: false,
-              });
-            } else if (!match.payment_proof) {
-              // Pending without proof - needs payment
-              matchingPayments.push({
-                id: match.id,
-                type: 'match',
-                amount: match.total_amount,
-                label: `Match #${match.matches.match_number} - Belum Bayar`,
-                isRevision: false,
-              });
-            }
-            // Skip pending with proof (already uploaded, waiting for admin confirmation)
-          }
-        });
-
-        if (myMembership && myMembership.payment_status !== 'paid' && myMembership.payment_status !== 'cancelled') {
-          if (myMembership.payment_status === 'rejected' || !myMembership.payment_proof) {
-            matchingPayments.push({
-              id: myMembership.id,
-              type: 'membership',
-              amount: myMembership.amount,
-              label: `Membership ${new Date(0, myMembership.month - 1).toLocaleString('id-ID', { month: 'long' })} ${myMembership.year}${myMembership.payment_status === 'rejected' ? ' - Ditolak' : ''}`,
-              isRevision: false,
-            });
-          }
-        }
-
-        const totalAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
-        description = matchingPayments.length > 0
-          ? `Ditemukan ${matchingPayments.length} tagihan yang belum dibayar dengan total Rp ${totalAmount.toLocaleString('id-ID')}. Upload bukti transfer untuk melunasi semua tagihan sekaligus.`
-          : 'Tidak ada tagihan yang perlu dibayar saat ini.';
-
-      } else if (query.includes('revisi') || query.includes('revision') || query.includes('tambahan')) {
-        action = 'pay_revisions';
-        
-        // Get only revision payments
-        myMatches.forEach(match => {
-          if (match.payment_status === 'revision' && !match.payment_proof) {
-            matchingPayments.push({
-              id: match.id,
-              type: 'match',
-              amount: match.additional_amount || 0,
-              label: `Match #${match.matches.match_number} - Revisi`,
-              isRevision: true,
-            });
-          }
-        });
-
-        const totalAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
-        description = matchingPayments.length > 0
-          ? `Ditemukan ${matchingPayments.length} revisi pembayaran dengan total tambahan Rp ${totalAmount.toLocaleString('id-ID')}. Upload bukti transfer untuk melunasi semua revisi sekaligus.`
-          : 'Tidak ada revisi pembayaran yang perlu dibayar saat ini.';
-      } else {
-        description = 'Maaf, saya tidak mengerti permintaan Anda. Coba gunakan:\n• "Bayar semua tagihan"\n• "Bayar revisi"';
-      }
-
-      setAiSuggestion({
-        action: matchingPayments.length > 0 ? action : null,
-        payments: matchingPayments,
-        description,
-      });
-    } catch (error) {
-      console.error('Error processing AI query:', error);
-      setAiSuggestion({
-        action: null,
-        payments: [],
-        description: 'Terjadi kesalahan saat memproses permintaan.',
-      });
-    } finally {
-      setAiProcessing(false);
-    }
+    // REMOVED: AI Helper functionality replaced by Smart Actions
   }
 
   function executeAISuggestion() {
-    if (!aiSuggestion?.payments || aiSuggestion.payments.length === 0) return;
+    // REMOVED: AI Helper functionality replaced by Smart Actions
+  }
+
+  // Fetch Smart Suggestions (REPLACES AI Helper)
+  async function fetchSmartSuggestions() {
+    if (loadingSuggestions || !memberName) return;
     
-    // Set selected payments and open bulk upload modal
-    setSelectedPayments(aiSuggestion.payments);
-    setShowAIHelper(false);
-    setShowBulkUploadModal(true);
+    setLoadingSuggestions(true);
+    try {
+      const now = new Date();
+      const response = await fetch('/api/ai/member-payment-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberName,
+          month: now.getMonth() + 1,
+          year: now.getFullYear()
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSmartActions(data.smartActions || []);
+        setSuggestionCards(data.suggestionCards || []);
+        console.log('✅ Smart suggestions loaded:', data.smartActions?.length || 0, 'actions,', data.suggestionCards?.length || 0, 'cards');
+      }
+    } catch (error) {
+      console.error('Error fetching smart suggestions:', error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  }
+
+  // Handle smart action execution
+  async function executeSmartAction(action: typeof smartActions[0]) {
+    if (action.payments && action.payments.length > 0) {
+      setSelectedPayments(action.payments);
+      setShowBulkUploadModal(true);
+    }
+  }
+
+  // Handle suggestion card action
+  async function executeSuggestionAction(card: typeof suggestionCards[0]) {
+    if (!card.action) return;
     
-    // Reset AI state
-    setAiQuery('');
-    setAiSuggestion(null);
+    if (card.action.data?.payments) {
+      setSelectedPayments(card.action.data.payments);
+      setShowBulkUploadModal(true);
+      dismissSuggestion(card.id);
+    }
+  }
+
+  // Dismiss suggestion card
+  function dismissSuggestion(id: string) {
+    setDismissedSuggestions(prev => [...prev, id]);
   }
 
   // Calculate total bills (exclude only 'paid' and 'cancelled')
@@ -704,14 +683,6 @@ export default function PembayaranPage() {
             </button>
             
             <button
-              onClick={() => setShowAIHelper(true)}
-              className="member-payment-ai-helper flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-purple-500/20"
-            >
-              <Sparkles className="w-5 h-5" />
-              <span className="hidden sm:inline">AI Helper</span>
-              <span className="sm:hidden">AI</span>
-            </button>
-            <button
               onClick={() => setShowPaymentHelpModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
             >
@@ -721,6 +692,112 @@ export default function PembayaranPage() {
             </button>
           </div>
         </div>
+
+        {/* Smart Actions Section */}
+        {smartActions.length > 0 && (
+          <div className="smart-actions-section mb-6 bg-gradient-to-br from-emerald-900/20 to-cyan-900/20 border border-emerald-500/30 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-emerald-400" />
+                <h2 className="text-xl font-bold text-white">Smart Actions</h2>
+                <span className="text-xs text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                  {smartActions.length} tersedia
+                </span>
+              </div>
+              {loadingSuggestions && (
+                <div className="flex items-center gap-2 text-sm text-zinc-400">
+                  <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+                  Updating...
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {smartActions.map((action) => (
+                <button
+                  key={action.id}
+                  onClick={() => executeSmartAction(action)}
+                  className={`text-left p-4 rounded-lg border transition-all hover:scale-105 ${
+                    action.priority === 'high'
+                      ? 'bg-emerald-500/10 border-emerald-500/40 hover:bg-emerald-500/20'
+                      : action.priority === 'medium'
+                      ? 'bg-amber-500/10 border-amber-500/40 hover:bg-amber-500/20'
+                      : 'bg-blue-500/10 border-blue-500/40 hover:bg-blue-500/20'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-2xl">{action.icon}</span>
+                    {action.count && (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        action.priority === 'high'
+                          ? 'bg-emerald-500 text-white'
+                          : action.priority === 'medium'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-blue-500 text-white'
+                      }`}>
+                        {action.count}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-semibold text-white mb-1">{action.title}</h3>
+                  <p className="text-xs text-zinc-400">{action.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Suggestion Cards Section */}
+        {suggestionCards.filter(card => !dismissedSuggestions.includes(card.id)).length > 0 && (
+          <div className="suggestion-cards-section mb-6 space-y-3">
+            {suggestionCards
+              .filter(card => !dismissedSuggestions.includes(card.id))
+              .sort((a, b) => a.priority - b.priority)
+              .map((card) => (
+              <div
+                key={card.id}
+                className={`p-4 rounded-lg border-l-4 flex items-start justify-between gap-4 ${
+                  card.type === 'success'
+                    ? 'bg-green-500/10 border-green-500'
+                    : card.type === 'attention'
+                    ? 'bg-red-500/10 border-red-500'
+                    : card.type === 'warning'
+                    ? 'bg-amber-500/10 border-amber-500'
+                    : 'bg-blue-500/10 border-blue-500'
+                }`}
+              >
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-white mb-1">{card.title}</h3>
+                  <p className="text-xs text-zinc-300 mb-3">{card.description}</p>
+                  {card.action && (
+                    <button
+                      onClick={() => executeSuggestionAction(card)}
+                      className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                        card.type === 'success'
+                          ? 'bg-green-500 hover:bg-green-600 text-white'
+                          : card.type === 'attention'
+                          ? 'bg-red-500 hover:bg-red-600 text-white'
+                          : card.type === 'warning'
+                          ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                          : 'bg-blue-500 hover:bg-blue-600 text-white'
+                      }`}
+                    >
+                      {card.action.label}
+                    </button>
+                  )}
+                </div>
+                {card.dismissible && (
+                  <button
+                    onClick={() => dismissSuggestion(card.id)}
+                    className="text-zinc-400 hover:text-white transition-colors p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Bulk Upload Info Banner */}
         {(myMatches.some(m => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected') || 
@@ -1249,19 +1326,171 @@ export default function PembayaranPage() {
                       <Building2 className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-white mb-3">Informasi Rekening</h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-blue-300">Bank</span>
-                          <span className="font-semibold text-white">BCA</span>
+                      <h4 className="text-lg font-semibold text-white mb-2">Pilih Rekening Tujuan Transfer</h4>
+                      <p className="text-xs text-blue-300 mb-1">Semua rekening a.n. <strong>Septian Dwiyo Rifalda</strong></p>
+                      <p className="text-xs text-amber-300 mb-4">💡 Pilih salah satu rekening di bawah untuk melakukan transfer</p>
+                      
+                      {/* Bank Accounts Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                          <p className="text-xs text-blue-300 mb-1">Permata Bank</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-mono font-semibold text-white text-sm">9937 296 220</p>
+                            <button
+                              onClick={() => copyToClipboard('9937 296 220')}
+                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                              title="Salin nomor rekening"
+                            >
+                              {copiedAccount === '9937 296 220' ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-blue-400" />
+                              )}
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-blue-300">Nomor Rekening</span>
-                          <span className="font-semibold text-white">1234567890</span>
+                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                          <p className="text-xs text-blue-300 mb-1">Jenius</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-mono font-semibold text-white text-sm">90012823396</p>
+                            <button
+                              onClick={() => copyToClipboard('90012823396')}
+                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                              title="Salin nomor rekening"
+                            >
+                              {copiedAccount === '90012823396' ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-blue-400" />
+                              )}
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-blue-300">Nama Penerima</span>
-                          <span className="font-semibold text-white">DLOB Community</span>
+                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                          <p className="text-xs text-blue-300 mb-1">Mandiri</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-mono font-semibold text-white text-sm">1700 1093 5998 56</p>
+                            <button
+                              onClick={() => copyToClipboard('1700 1093 5998 56')}
+                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                              title="Salin nomor rekening"
+                            >
+                              {copiedAccount === '1700 1093 5998 56' ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-blue-400" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                          <p className="text-xs text-blue-300 mb-1">BNI</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-mono font-semibold text-white text-sm">0389 125635</p>
+                            <button
+                              onClick={() => copyToClipboard('0389 125635')}
+                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                              title="Salin nomor rekening"
+                            >
+                              {copiedAccount === '0389 125635' ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-blue-400" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                          <p className="text-xs text-blue-300 mb-1">Blu (BCA Digital)</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-mono font-semibold text-white text-sm">0022 2208 9889</p>
+                            <button
+                              onClick={() => copyToClipboard('0022 2208 9889')}
+                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                              title="Salin nomor rekening"
+                            >
+                              {copiedAccount === '0022 2208 9889' ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-blue-400" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                          <p className="text-xs text-blue-300 mb-1">BCA</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-mono font-semibold text-white text-sm">5871 788 087</p>
+                            <button
+                              onClick={() => copyToClipboard('5871 788 087')}
+                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                              title="Salin nomor rekening"
+                            >
+                              {copiedAccount === '5871 788 087' ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4 text-blue-400" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* E-Wallets */}
+                      <div className="border-t border-blue-500/20 pt-4">
+                        <p className="text-sm font-semibold text-white mb-3">E-Wallet (Transfer/QRIS)</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                            <p className="text-xs text-blue-300 mb-1">DANA</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-mono font-semibold text-white text-sm">0821 1113 4140</p>
+                              <button
+                                onClick={() => copyToClipboard('0821 1113 4140')}
+                                className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                                title="Salin nomor"
+                              >
+                                {copiedAccount === '0821 1113 4140' ? (
+                                  <Check className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <Copy className="w-4 h-4 text-blue-400" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                            <p className="text-xs text-blue-300 mb-1">Gopay</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-mono font-semibold text-white text-sm">0812 7073 272</p>
+                              <button
+                                onClick={() => copyToClipboard('0812 7073 272')}
+                                className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                                title="Salin nomor"
+                              >
+                                {copiedAccount === '0812 7073 272' ? (
+                                  <Check className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <Copy className="w-4 h-4 text-blue-400" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                            <p className="text-xs text-blue-300 mb-1">ShopeePay</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-mono font-semibold text-white text-sm">0821 1113 4140</p>
+                              <button
+                                onClick={() => copyToClipboard('08211113414')}
+                                className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                                title="Salin nomor"
+                              >
+                                {copiedAccount === '08211113414' ? (
+                                  <Check className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <Copy className="w-4 h-4 text-blue-400" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1562,149 +1791,6 @@ export default function PembayaranPage() {
         </div>
       )}
 
-      {/* AI Helper Modal */}
-      {showAIHelper && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 border border-purple-500/30 rounded-2xl max-w-2xl w-full shadow-2xl shadow-purple-500/20">
-            <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-b border-purple-500/30 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl shadow-lg">
-                    <Sparkles className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white">AI Helper Pembayaran</h3>
-                    <p className="text-sm text-purple-200">Asisten pintar untuk pembayaran Anda</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowAIHelper(false);
-                    setAiQuery('');
-                    setAiSuggestion(null);
-                  }}
-                  className="text-zinc-400 hover:text-zinc-300 p-2 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {/* Query Input */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Apa yang ingin Anda lakukan?
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={aiQuery}
-                    onChange={(e) => setAiQuery(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !aiProcessing) {
-                        processAIQuery();
-                      }
-                    }}
-                    placeholder="Contoh: Bayar semua tagihan saya, Bayar revisi..."
-                    className="w-full bg-zinc-800/50 border border-purple-500/30 rounded-lg px-4 py-3 pr-12 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20"
-                  />
-                  <button
-                    onClick={processAIQuery}
-                    disabled={!aiQuery.trim() || aiProcessing}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {aiProcessing ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Help Text */}
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                <p className="text-xs text-blue-300">
-                  <strong>💡 Contoh perintah:</strong>
-                </p>
-                <ul className="text-xs text-blue-200 mt-1 space-y-1 ml-4">
-                  <li>• <strong>Bayar semua tagihan</strong> - Untuk membayar semua tagihan pending dan revisi sekaligus</li>
-                  <li>• <strong>Bayar revisi</strong> - Untuk membayar hanya tagihan revisi (pembayaran tambahan)</li>
-                </ul>
-              </div>
-
-              {/* AI Suggestion Result */}
-              {aiSuggestion && (
-                <div className="mt-4 space-y-3">
-                  <div className={`border rounded-lg p-4 ${
-                    aiSuggestion.action 
-                      ? 'bg-green-500/10 border-green-500/30' 
-                      : 'bg-amber-500/10 border-amber-500/30'
-                  }`}>
-                    <p className={`text-sm ${
-                      aiSuggestion.action ? 'text-green-300' : 'text-amber-300'
-                    } whitespace-pre-line`}>
-                      {aiSuggestion.description}
-                    </p>
-                  </div>
-
-                  {aiSuggestion.action && aiSuggestion.payments.length > 0 && (
-                    <>
-                      {/* Payment List */}
-                      <div className="bg-zinc-800/50 border border-purple-500/20 rounded-lg p-4">
-                        <p className="text-sm font-medium text-purple-300 mb-3">
-                          {aiSuggestion.action === 'pay_revisions' 
-                            ? 'Revisi yang akan dibayar:' 
-                            : 'Tagihan yang akan dibayar:'}
-                        </p>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {aiSuggestion.payments.map((payment, index) => (
-                            <div key={`${payment.type}-${payment.id}`} className="flex items-center justify-between bg-zinc-900/70 rounded px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-zinc-500">{index + 1}.</span>
-                                {payment.isRevision && (
-                                  <span className="text-xs px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 rounded text-amber-400 font-medium">
-                                    Revisi
-                                  </span>
-                                )}
-                                <span className="text-sm text-white">{payment.label}</span>
-                              </div>
-                              <span className="text-sm font-semibold text-purple-400">
-                                Rp {payment.amount.toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-purple-500/20">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-purple-300">
-                              {aiSuggestion.action === 'pay_revisions' ? 'Total Tambahan:' : 'Total Pembayaran:'}
-                            </span>
-                            <span className="text-xl font-bold text-white">
-                              Rp {aiSuggestion.payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('id-ID')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action Button */}
-                      <button
-                        onClick={executeAISuggestion}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
-                      >
-                        <Upload className="w-5 h-5" />
-                        Lanjut Upload Bukti Pembayaran
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Payment Help Modal */}
       {showPaymentHelpModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1776,18 +1862,188 @@ export default function PembayaranPage() {
                   <Building2 className="w-5 h-5 text-green-400" />
                   Rekening Pembayaran
                 </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-300">Bank:</span>
-                    <span className="text-white font-semibold">BCA</span>
+                <p className="text-xs text-green-300 mb-2">Semua rekening a.n. <strong>Septian Dwiyo Rifalda</strong></p>
+                <p className="text-xs text-amber-300 mb-3">💡 Pilih salah satu rekening untuk transfer</p>
+                
+                {/* Bank Accounts */}
+                <div className="space-y-2 text-sm mb-4">
+                  <div className="bg-white/5 rounded p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-300">Permata Bank</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-semibold font-mono">9937 296 220</span>
+                        <button
+                          onClick={() => copyToClipboard('9937 296 220')}
+                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                          title="Salin nomor rekening"
+                        >
+                          {copiedAccount === '9937 296 220' ? (
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 text-green-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-300">Nomor Rekening:</span>
-                    <span className="text-white font-semibold font-mono">1234567890</span>
+                  <div className="bg-white/5 rounded p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-300">Jenius</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-semibold font-mono">90012823396</span>
+                        <button
+                          onClick={() => copyToClipboard('90012823396')}
+                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                          title="Salin nomor rekening"
+                        >
+                          {copiedAccount === '90012823396' ? (
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 text-green-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-300">Atas Nama:</span>
-                    <span className="text-white font-semibold">DLOB Community</span>
+                  <div className="bg-white/5 rounded p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-300">Mandiri</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-semibold font-mono">1700 1093 5998 56</span>
+                        <button
+                          onClick={() => copyToClipboard('1700 1093 5998 56')}
+                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                          title="Salin nomor rekening"
+                        >
+                          {copiedAccount === '1700 1093 5998 56' ? (
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 text-green-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-300">BNI</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-semibold font-mono">0389 125635</span>
+                        <button
+                          onClick={() => copyToClipboard('0389 125635')}
+                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                          title="Salin nomor rekening"
+                        >
+                          {copiedAccount === '0389 125635' ? (
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 text-green-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-300">Blu (BCA Digital)</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-semibold font-mono">0022 2208 9889</span>
+                        <button
+                          onClick={() => copyToClipboard('0022 2208 9889')}
+                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                          title="Salin nomor rekening"
+                        >
+                          {copiedAccount === '0022 2208 9889' ? (
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 text-green-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-300">BCA</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-semibold font-mono">5871 788 087</span>
+                        <button
+                          onClick={() => copyToClipboard('5871 788 087')}
+                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                          title="Salin nomor rekening"
+                        >
+                          {copiedAccount === '5871 788 087' ? (
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 text-green-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* E-Wallets */}
+                <div className="border-t border-green-500/30 pt-3 mt-3">
+                  <p className="text-xs text-green-300 font-semibold mb-2">E-Wallet:</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="bg-white/5 rounded p-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-300">DANA</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-semibold font-mono">0821 1113 4140</span>
+                          <button
+                            onClick={() => copyToClipboard('0821 1113 4140')}
+                            className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                            title="Salin nomor"
+                          >
+                            {copiedAccount === '0821 1113 4140' ? (
+                              <Check className="w-3.5 h-3.5 text-green-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5 text-green-400" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white/5 rounded p-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-300">Gopay</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-semibold font-mono">0812 7073 272</span>
+                          <button
+                            onClick={() => copyToClipboard('0812 7073 272')}
+                            className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                            title="Salin nomor"
+                          >
+                            {copiedAccount === '0812 7073 272' ? (
+                              <Check className="w-3.5 h-3.5 text-green-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5 text-green-400" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white/5 rounded p-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-300">ShopeePay</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-semibold font-mono">0821 1113 4140</span>
+                          <button
+                            onClick={() => copyToClipboard('08211113414')}
+                            className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                            title="Salin nomor"
+                          >
+                            {copiedAccount === '08211113414' ? (
+                              <Check className="w-3.5 h-3.5 text-green-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5 text-green-400" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
