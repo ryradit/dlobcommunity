@@ -8,6 +8,8 @@ import { motion } from 'framer-motion';
 export default function KontakPage() {
   const [formData, setFormData] = useState({ nama: '', email: '', pesan: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -16,11 +18,38 @@ export default function KontakPage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
-    setFormData({ nama: '', email: '', pesan: '' });
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.nama,
+          email: formData.email,
+          message: formData.pesan,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Gagal mengirim pesan');
+      }
+
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 5000);
+      setFormData({ nama: '', email: '', pesan: '' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactInfo = [
@@ -39,7 +68,7 @@ export default function KontakPage() {
     {
       icon: Mail,
       title: 'Email',
-      value: 'info@dlobcommunity.com',
+      value: 'support@dlobcommunity.com',
       detail: 'Respon cepat dalam 24 jam'
     },
     {
@@ -206,10 +235,11 @@ export default function KontakPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     type="submit"
-                    className="w-full bg-gradient-to-r from-[#3e6461] to-[#1e4843] text-white font-bold py-3.5 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group"
+                    disabled={isSubmitting}
+                    className="w-full bg-gradient-to-r from-[#3e6461] to-[#1e4843] text-white font-bold py-3.5 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Send className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    Kirim Pesan
+                    {isSubmitting ? 'Mengirim...' : 'Kirim Pesan'}
                   </motion.button>
 
                   {submitted && (
@@ -220,6 +250,17 @@ export default function KontakPage() {
                       className="p-4 bg-green-100/50 border border-green-300 rounded-xl text-green-800 text-sm font-medium backdrop-blur-sm"
                     >
                       ✓ Terima kasih! Pesan Anda telah dikirim.
+                    </motion.div>
+                  )}
+
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="p-4 bg-red-100/50 border border-red-300 rounded-xl text-red-800 text-sm font-medium backdrop-blur-sm"
+                    >
+                      ✗ {error}
                     </motion.div>
                   )}
                 </form>

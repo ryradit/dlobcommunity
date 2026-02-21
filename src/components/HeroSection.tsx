@@ -31,7 +31,7 @@ const CLIENTS = [
 const StatItem = ({ value, label }: { value: string; label: string }) => (
   <div className="flex flex-col items-center justify-center transition-transform hover:-translate-y-1 cursor-default">
     <span className="text-xl font-bold text-white sm:text-2xl">{value}</span>
-    <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium sm:text-xs">{label}</span>
+    <span className="text-[10px] uppercase tracking-wider text-zinc-200 font-semibold sm:text-xs">{label}</span>
   </div>
 );
 
@@ -150,15 +150,15 @@ export default function HeroSection() {
                   </div>
                   <div>
                   <div className="text-3xl font-bold tracking-tight text-white">50+</div>
-                  <div className="text-sm text-zinc-400">Pemain Aktif</div>
+                  <div className="text-sm text-zinc-200 font-medium">Pemain Aktif</div>
                   </div>
                 </div>
 
                 {/* Progress Bar Section */}
                 <div className="space-y-3 mb-8">
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-400">Tingkat Kepuasan</span>
-                    <span className="text-white font-medium">98%</span>
+                    <span className="text-zinc-200 font-medium">Tingkat Kepuasan</span>
+                    <span className="text-white font-semibold">98%</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800/50">
                     <div className="h-full w-[99%] rounded-full bg-gradient-to-r from-white to-zinc-400" />
@@ -195,7 +195,7 @@ export default function HeroSection() {
 
             {/* Features Card */}
             <div className="animate-fade-in delay-500 relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-              <h3 className="mb-6 text-xs font-medium text-zinc-400">Fitur Unggulan Platform</h3>
+              <h3 className="mb-6 text-xs font-semibold text-zinc-200 uppercase tracking-wide">Fitur Unggulan Platform</h3>
               
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
@@ -204,7 +204,7 @@ export default function HeroSection() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-white">Pelacakan Kehadiran</p>
-                    <p className="text-[10px] text-zinc-500">Sistem AI real-time</p>
+                    <p className="text-[10px] text-zinc-300 font-medium">Sistem AI real-time</p>
                   </div>
                 </div>
                 
@@ -214,7 +214,7 @@ export default function HeroSection() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-white">Penjadwalan Cerdas</p>
-                    <p className="text-[10px] text-zinc-500">Algoritma pintar</p>
+                    <p className="text-[10px] text-zinc-300 font-medium">Algoritma pintar</p>
                   </div>
                 </div>
                 
@@ -224,7 +224,7 @@ export default function HeroSection() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-white">Manajemen Pembayaran</p>
-                    <p className="text-[10px] text-zinc-500">Sistem terintegrasi</p>
+                    <p className="text-[10px] text-zinc-300 font-medium">Sistem terintegrasi</p>
                   </div>
                 </div>
 
@@ -234,7 +234,7 @@ export default function HeroSection() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-white">Analitik AI</p>
-                    <p className="text-[10px] text-zinc-500">Wawasan mendalam</p>
+                    <p className="text-[10px] text-zinc-300 font-medium">Wawasan mendalam</p>
                   </div>
                 </div>
               </div>

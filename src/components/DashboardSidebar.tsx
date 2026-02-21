@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, User, Users, Shield, Sparkles, Dumbbell, FileText } from 'lucide-react';
+import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, User, Users, Shield, Sparkles, Dumbbell, FileText, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 import ViewSwitcher from './ViewSwitcher';
 
@@ -61,6 +61,11 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
       label: 'Analitik',
       href: '/admin/analitik',
       icon: BarChart3,
+    },
+    {
+      label: 'Survey Member',
+      href: '/admin/survey',
+      icon: MessageSquare,
     },
     {
       label: 'AI Artikel Generator',

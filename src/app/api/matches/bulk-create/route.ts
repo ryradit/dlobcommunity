@@ -131,12 +131,35 @@ export async function POST(request: NextRequest) {
           (activeMemberships || []).map(m => m.member_name.toLowerCase().trim())
         );
 
+        // Check which members already paid attendance fee TODAY (not per match!)
+        // by looking at existing match_members for this date
+        const matchDateString = matchDateObj.toISOString().split('T')[0];
+        const { data: existingMatchMembers } = await supabase
+          .from('match_members')
+          .select('member_name, attendance_paid_this_entry, matches!inner(match_date)')
+          .eq('matches.match_date', matchDateString)
+          .eq('attendance_paid_this_entry', true);
+
+        const attendancePaidTodaySet = new Set(
+          (existingMatchMembers || []).map(mm => mm.member_name.toLowerCase().trim())
+        );
+
+        console.log(`📅 Date: ${matchDateString}, Already paid attendance today:`, Array.from(attendancePaidTodaySet));
+
+        // Get next match number for this date
+        const { data: matchNumberData } = await supabase
+          .rpc('get_next_match_number', { p_date: matchDateObj.toISOString() });
+
+        const matchNumber = matchNumberData || 1;
+        console.log(`🔢 Creating match #${matchNumber} for ${matchDateString}`);
+
         // Create match
         const { data: createdMatch, error: matchError } = await supabase
           .from('matches')
           .insert({
             shuttlecock_count: parseInt(match.shuttlecock_amount) || 4,
             match_date: matchDateObj.toISOString(),
+            match_number: matchNumber,
           })
           .select()
           .single();
@@ -149,10 +172,22 @@ export async function POST(request: NextRequest) {
         }
 
         // Create match_members entries with proper cost calculations
-        // Use validated profile full_names (not extracted names) to ensure exact match with user accounts
+        // Use validated profile full_names to ensure exact match with user accounts
         const matchMembers = profiles.map(profile => {
           const hasMembership = membershipSet.has(profile.full_name.toLowerCase().trim());
-          const attendanceFee = hasMembership ? 0 : 18000;
+          const alreadyPaidToday = attendancePaidTodaySet.has(profile.full_name.toLowerCase().trim());
+          
+          // Determine attendance fee:
+          // - Has membership: no fee (0)
+          // - No membership && first match today: charge 18000 and mark as paid
+          // - No membership && already played today: don't charge (already paid)
+          const shouldChargeAttendance = !hasMembership && !alreadyPaidToday;
+          const attendanceFee = hasMembership ? 0 : (shouldChargeAttendance ? 18000 : 0);
+          
+          // Mark in set so next profile in this same match doesn't get charged again
+          if (shouldChargeAttendance) {
+            attendancePaidTodaySet.add(profile.full_name.toLowerCase().trim());
+          }
           
           return {
             match_id: createdMatch.id,
@@ -161,6 +196,7 @@ export async function POST(request: NextRequest) {
             attendance_fee: attendanceFee,
             has_membership: hasMembership,
             payment_status: 'pending',
+            attendance_paid_this_entry: shouldChargeAttendance, // TRUE only if charging attendance in this entry
           };
         });
 
@@ -175,6 +211,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        console.log(`✅ Match #${matchNumber} created successfully for ${matchDateString}`);
         successCount++;
       } catch (err) {
         console.error(`Error processing match #${i + 1}:`, err);
