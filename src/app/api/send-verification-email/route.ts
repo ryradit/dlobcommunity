@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Send email using Resend
     const { data, error } = await resend.emails.send({
-      from: 'DLOB System <noreply@dlobcommunity.online>',
+      from: 'DLOB System <noreply@dlobcommunity.com>',
       to: [email],
       subject: 'Verifikasi Email Anda - DLOB',
       html: `
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
                     <!-- Header -->
                     <tr>
                       <td style="padding: 40px 40px 20px 40px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
-                        <img src="https://dlobcommunity.online/dlob.png" alt="DLOB Logo" style="width: 80px; height: auto; margin-bottom: 20px;" />
+                        <img src="https://dlobcommunity.com/dlob.png" alt="DLOB Logo" style="width: 80px; height: auto; margin-bottom: 20px;" />
                         <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">DLOB</h1>
                         <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 14px;">Badminton Community</p>
                       </td>

@@ -2,6 +2,14 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // Redirect old domain to new domain (301 permanent redirect)
+  const hostname = request.nextUrl.hostname;
+  if (hostname === 'dlobcommunity.online' || hostname === 'www.dlobcommunity.online') {
+    const newUrl = new URL(request.nextUrl);
+    newUrl.hostname = 'dlobcommunity.com';
+    return NextResponse.redirect(newUrl, { status: 301 });
+  }
+
   // Skip session check for static assets and API routes that don't need auth
   const path = request.nextUrl.pathname;
   if (
