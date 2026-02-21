@@ -62,11 +62,11 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
       href: '/admin/analitik',
       icon: BarChart3,
     },
-    {
-      label: 'Survey Member',
-      href: '/admin/survey',
-      icon: MessageSquare,
-    },
+    // {
+    //   label: 'Survey Member',
+    //   href: '/admin/survey',
+    //   icon: MessageSquare,
+    // },
     {
       label: 'AI Artikel Generator',
       href: '/admin/artikel',
