@@ -276,6 +276,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign up with email and password
   const signUp = async (email: string, password: string, fullName: string) => {
+    // Disable Supabase's automatic confirmation email
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -283,13 +284,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: undefined, // Disable auto-email
       },
     });
 
     if (error) throw error;
 
     // Profile is automatically created by database trigger (handle_new_user)
-    // No need to manually insert into profiles table
+    // Send custom verification email using our DreamHost SMTP
+    if (data?.user?.id) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/send-verification-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: data.user.id,
+            email: email,
+          }),
+        });
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        // Don't throw - user is created, they can resend email later
+      }
+    }
     
     return data;
   };
