@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import nodemailer from 'nodemailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Create SMTP transporter using DreamHost email
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.dreamhost.com',
+  port: parseInt(process.env.SMTP_PORT || '465'),
+  secure: true, // Use SSL
+  auth: {
+    user: process.env.SMTP_USER, // e.g., support@dlobcommunity.com
+    pass: process.env.SMTP_PASS, // Your email password
+  },
+});
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,10 +44,10 @@ export async function POST(request: NextRequest) {
     console.log('[Send Verification] Sending email to:', email);
     console.log('[Send Verification] Verification link:', verificationLink);
 
-    // Send email using Resend
-    const { data, error } = await resend.emails.send({
-      from: 'DLOB System <noreply@dlobcommunity.com>',
-      to: [email],
+    // Send email using DreamHost SMTP
+    const mailOptions = {
+      from: `DLOB System <${process.env.SMTP_USER || 'support@dlobcommunity.com'}>`,
+      to: email,
       subject: 'Verifikasi Email Anda - DLOB',
       html: `
         <!DOCTYPE html>
@@ -108,7 +117,7 @@ export async function POST(request: NextRequest) {
                           © ${new Date().getFullYear()} DLOB Badminton Community. All rights reserved.
                         </p>
                         <p style="margin: 10px 0 0 0; color: #999999; font-size: 12px;">
-                          Email ini dikirim secara otomatis, mohon tidak membalas.
+                          Email ini dikirim secara otomatis, mohon  tidak membalas.
                         </p>
                       </td>
                     </tr>
@@ -119,23 +128,24 @@ export async function POST(request: NextRequest) {
           </body>
         </html>
       `,
-    });
+    };
 
-    if (error) {
-      console.error('[Send Verification] Resend error:', error);
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log('[Send Verification] ✅ Email sent successfully!', info.messageId);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Email verifikasi berhasil dikirim',
+        emailId: info.messageId
+      });
+    } catch (error: any) {
+      console.error('[Send Verification] SMTP error:', error);
       return NextResponse.json(
         { error: 'Gagal mengirim email verifikasi', details: error.message },
         { status: 500 }
       );
     }
-
-    console.log('[Send Verification] ✅ Email sent successfully!', data);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Email verifikasi berhasil dikirim',
-      emailId: data?.id
-    });
 
   } catch (error: any) {
     console.error('[Send Verification] Unexpected error:', error);

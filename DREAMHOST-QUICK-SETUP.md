@@ -1,26 +1,29 @@
-# 🚀 DreamHost + Vercel Quick Setup Guide
+# 🚀 DreamHost Domain Migration (Existing Vercel Setup)
 
-**Goal:** Use dlobcommunity.com domain from DreamHost with Vercel hosting
+**Current Setup:** Vercel hosting with dlobcommunity.online  
+**Goal:** Add dlobcommunity.com domain and migrate traffic
 
-**Time Required:** ~1 hour  
-**Cost:** $15.99/year (domain only, Vercel is free)
+**Time Required:** ~30 minutes  
+**Cost:** $15.99/year (domain registration only)
+
+**Note:** Your current site at dlobcommunity.online will continue working during this process. Both domains will work simultaneously until you decide to phase out the old one.
 
 ---
 
-## 📋 Quick Checklist
+## 📋 Simplified Checklist (You Already Have Vercel!)
 
 - [ ] Register dlobcommunity.com at DreamHost
-- [ ] Set domain to "DNS Only" mode
-- [ ] Deploy code to Vercel
-- [ ] Add domain in Vercel dashboard
-- [ ] Update DNS records in DreamHost
+- [ ] Add new domain in your existing Vercel project
+- [ ] Update DNS records in DreamHost to point to Vercel
+- [ ] Update environment variables in Vercel
 - [ ] Verify email domain in Resend
 - [ ] Update Supabase redirect URLs
-- [ ] Test the site
+- [ ] Redeploy on Vercel
+- [ ] Test the new domain
 
 ---
 
-## Step 1: Register Domain (5 minutes)
+## Step 1: Register Domain at DreamHost (5 minutes)
 
 1. **Login to DreamHost Panel:**
    - Go to https://panel.dreamhost.com/
@@ -45,48 +48,48 @@
 
 ---
 
-## Step 3: Deploy to Vercel (10 minutes)
+## Step 3: Add New Domain in Vercel (3 minutes)
 
-1. **Create Vercel Account:**
-   - Go to https://vercel.com/signup
-   - Sign up with GitHub
+Since you already have your project on Vercel with dlobcommunity.online:
 
-2. **Import Project:**
-   - Click **Add New** → **Project**
-   - Select your GitHub repository: `ryradit/dlobcommunity`
-   - Click **Import**
+1. **Login to Vercel:**
+   - Go to https://vercel.com/dashboard
+   - Select your existing DLOB project
 
-3. **Configure Build Settings:**
-   - Framework Preset: **Next.js** (auto-detected)
-   - Build Command: `npm run build`
-   - Output Directory: `.next`
-   - Click **Deploy**
-
-4. **Wait for Deployment:**
-   - First deploy takes ~3-5 minutes
-   - You'll get a URL like: `dlobcommunity.vercel.app`
-
-5. **Add Environment Variables:**
-   - Go to **Project Settings** → **Environment Variables**
-   - Copy all variables from `.env.production.example`
-   - **Important:** Set `NEXT_PUBLIC_SITE_URL=https://dlobcommunity.com`
-   - Click **Save**
-   - Redeploy if needed: **Deployments** → **...** → **Redeploy**
-
----
-
-## Step 4: Connect Domain in Vercel (5 minutes)
-
-1. **In Vercel Dashboard:**
-   - Go to your project
+2. **Add New Domain:**
    - Click **Settings** → **Domains**
-   - Click **Add Domain**
+   - You should see `dlobcommunity.online` already listed
+   - Click **Add Domain** button
    - Enter: `dlobcommunity.com`
    - Click **Add**
 
-2. **Vercel Will Show DNS Records:**
-   - Note down the A record IP: `76.76.21.21`
-   - Note down the CNAME: `cname.vercel-dns.com`
+3. **Vercel Shows DNS Instructions:**
+   - Note the A record: `76.76.21.21`
+   - Note the CNAME: `cname.vercel-dns.com`
+   - Keep this page open for Step 5
+
+4. **Optional - Set as Primary:**
+   - Click the **•••** menu next to `dlobcommunity.com`
+   - Select **Set as Primary Domain**
+   - This makes it the default (recommended)
+
+---
+
+## Step 4: Update Environment Variables (2 minutes)
+
+Update your production environment to use the new domain:
+
+1. **In Vercel Dashboard:**
+   - Still in your project
+   - Click **Settings** → **Environment Variables**
+
+2. **Update Site URL:**
+   - Find `NEXT_PUBLIC_SITE_URL`
+   - Click **Edit**
+   - Change value to: `https://dlobcommunity.com`
+   - Click **Save**
+
+3. **Note:** Other environment variables stay the same (Supabase, APIs, etc.)
 
 ---
 
@@ -191,16 +194,30 @@
 
 ---
 
-## Step 8: Push Code to GitHub (3 minutes)
+## Step 8: Redeploy on Vercel (2 minutes)
 
-```bash
-# In your local terminal (VS Code)
-git add .
-git commit -m "chore: migrate to dlobcommunity.com with DreamHost DNS + Vercel hosting"
-git push origin new-dlob-web-2026
-```
+The code changes are already in your GitHub repo, just trigger a new deployment:
 
-Vercel will automatically detect the push and redeploy (~2 minutes).
+1. **Option A: Automatic (Recommended)**
+   ```bash
+   # Already done - your latest push will trigger auto-deployment
+   # Vercel detects the push and deploys automatically
+   ```
+
+2. **Option B: Manual Redeploy**
+   - In Vercel Dashboard → **Deployments**
+   - Click **•••** on the latest deployment
+   - Select **Redeploy**
+   - Confirm
+
+3. **Wait for Deployment:**
+   - Takes ~2-3 minutes
+   - Status should show ✅ Ready
+
+4. **Check Deployment:**
+   - Click on the deployment
+   - Should show your updated code
+   - Environment variable should show new SITE_URL
 
 ---
 
@@ -301,3 +318,73 @@ When everything is working, you should have:
 - ✅ All API routes functional
 
 **Congratulations! Your migration is complete! 🎉**
+
+---
+
+## 🔄 Managing Both Domains During Transition
+
+After migration, both domains will work simultaneously:
+
+### Current State:
+- ✅ `dlobcommunity.com` - New primary domain (SSL active)
+- ✅ `dlobcommunity.online` - Old domain (auto-redirects to .com via middleware)
+- Both point to the same Vercel deployment
+
+### Recommended Transition Timeline:
+
+**Week 1-2: Soft Launch**
+- Announce new domain to members
+- Keep old domain fully functional
+- Monitor traffic in Vercel Analytics
+
+**Week 3-4: Active Migration**
+- Update all external links to use .com
+- Update social media profiles and descriptions
+- Update email signatures
+- Inform partners and sponsors
+- Update any printed materials
+
+**Month 2+: Maintain Redirect**
+- Keep dlobcommunity.online as permanent redirect
+- This prevents breaking external links (social media posts, bookmarks, etc.)
+- Minimal cost to maintain (~$10/year)
+
+### In Your Vercel Dashboard:
+**Settings → Domains** will show:
+- `dlobcommunity.com` ⭐ (Primary Domain)
+- `dlobcommunity.online` (Redirects to primary)
+
+### If You Want to Remove Old Domain Later:
+1. In Vercel: Settings → Domains
+2. Find `dlobcommunity.online`
+3. Click **•••** → **Remove Domain**
+4. Let domain registration expire at your registrar
+
+**💡 Best Practice:** Keep the old domain active for at least 12 months as a redirect. This ensures no broken links from search engines, social media, or user bookmarks.
+
+---
+
+## 📊 Post-Migration Monitoring
+
+Monitor your migration success in Vercel Dashboard:
+
+### Traffic Analysis:
+- Go to **Analytics** tab
+- Watch traffic shift from .online → .com
+- Most users should migrate within 2-4 weeks
+
+### Check Redirect Logs:
+- Go to **Logs** or **Functions**
+- Filter for domain redirects
+- Verify 301 status codes are working
+
+### Email Verification:
+- Test with new user registration
+- Confirm emails come from `noreply@dlobcommunity.com`
+- Verify links use new domain
+
+### SEO Consideration:
+- 301 redirects preserve SEO rankings
+- Google will eventually recognize the domain change
+- Submit new domain to Google Search Console
+
