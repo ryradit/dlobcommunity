@@ -1884,7 +1884,7 @@ export default function AdminPembayaranPage() {
                       <>
                         <div className="text-right mr-4">
                           <p className="text-sm text-zinc-400">Shuttlecock: {match.shuttlecock_count}</p>
-                          <p className="text-sm text-zinc-400">Total: Rp {((match.shuttlecock_count * 12000) / 4).toLocaleString('id-ID')}</p>
+                          <p className="text-sm text-zinc-400">Total Per Orang: Rp {((match.shuttlecock_count * 12000) / 4).toLocaleString('id-ID')}</p>
                         </div>
                         <button
                           onClick={() => startEditingMatch(match)}
