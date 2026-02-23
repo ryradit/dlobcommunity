@@ -69,6 +69,7 @@ export default function PembayaranPage() {
   const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'cash'>('bank_transfer');
   const [showPaymentHelpModal, setShowPaymentHelpModal] = useState(false);
   const [showStatusHelpModal, setShowStatusHelpModal] = useState(false);
+  const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
   
   // Bulk payment states
@@ -1060,7 +1061,16 @@ export default function PembayaranPage() {
                       Shuttlecock
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
-                      Kehadiran
+                      <div className="flex items-center gap-1">
+                        Kehadiran
+                        <button
+                          onClick={() => setShowAttendanceInfoModal(true)}
+                          className="p-0.5 hover:bg-zinc-700 rounded transition-colors"
+                          title="Info Biaya Kehadiran"
+                        >
+                          <HelpCircle className="w-3.5 h-3.5 text-zinc-500" />
+                        </button>
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
                       Total
@@ -1135,7 +1145,11 @@ export default function PembayaranPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {match.attendance_fee === 0 ? (
-                            <span className="text-green-400 font-medium">GRATIS</span>
+                            match.has_membership ? (
+                              <span className="text-purple-400 font-medium">GRATIS</span>
+                            ) : (
+                              <span className="text-zinc-500">-</span>
+                            )
                           ) : (
                             <span className="text-white">
                               Rp {match.attendance_fee.toLocaleString('id-ID')}
@@ -2203,6 +2217,79 @@ export default function PembayaranPage() {
                   <p><strong className="text-white">Yang harus dilakukan:</strong> Tidak ada - tagihan sudah dibatalkan dan tidak perlu dibayar</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attendance Fee Info Modal */}
+      {showAttendanceInfoModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl border border-white/10 max-w-md w-full p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-blue-400" />
+                <h3 className="text-lg font-semibold text-white">Status Biaya Kehadiran</h3>
+              </div>
+              <button
+                onClick={() => setShowAttendanceInfoModal(false)}
+                className="p-1 hover:bg-zinc-800 rounded transition-colors"
+              >
+                <X className="w-5 h-5 text-zinc-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-zinc-400 mb-4">
+                Biaya kehadiran Rp 18.000 dibayar <span className="text-white font-semibold">sekali per hari</span> (bukan per pertandingan):
+              </p>
+
+              <div className="space-y-3">
+                {/* Rp 18.000 */}
+                <div className="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-white font-mono font-semibold">Rp 18.000</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Kamu <span className="text-white">bayar biaya kehadiran</span> di pertandingan ini (pertama kali hari itu)
+                  </p>
+                </div>
+
+                {/* Dash - */}
+                <div className="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-zinc-500 font-mono font-semibold text-lg">-</span>
+                    <span className="text-xs text-zinc-500">(dash)</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Kamu <span className="text-white">sudah bayar</span> di pertandingan lain hari ini (tidak dikenakan lagi)
+                  </p>
+                </div>
+
+                {/* Gratis */}
+                <div className="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-purple-400 font-semibold">GRATIS</span>
+                    <Award className="w-3.5 h-3.5 text-purple-400" />
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Kamu <span className="text-white">punya membership</span> bulan ini (tidak perlu bayar kehadiran)
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <p className="text-xs text-zinc-500 italic">
+                  💡 Contoh: Kamu main 3 pertandingan hari ini → hanya bayar kehadiran Rp 18.000 di pertandingan pertama
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowAttendanceInfoModal(false)}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                Mengerti
+              </button>
             </div>
           </div>
         </div>

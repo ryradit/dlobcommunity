@@ -158,6 +158,9 @@ export default function AdminPembayaranPage() {
   // Report generation
   const { generateFinancialReport, isGenerating: isGeneratingReport } = useReportGenerator();
 
+  // Attendance info modal
+  const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
+
   // Utility function to calculate weeks in current month
   const calculateWeeksInMonth = (date: Date = new Date()): number => {
     return getSaturdaysInMonth(date);
@@ -1919,7 +1922,18 @@ export default function AdminPembayaranPage() {
                         </th>
                         <th className="text-left py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Nama</th>
                         <th className="text-right py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Shuttlecock</th>
-                        <th className="text-right py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Kehadiran</th>
+                        <th className="text-right py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            Kehadiran
+                            <button
+                              onClick={() => setShowAttendanceInfoModal(true)}
+                              className="p-0.5 hover:bg-zinc-700 rounded transition-colors"
+                              title="Info Biaya Kehadiran"
+                            >
+                              <HelpCircle className="w-3.5 h-3.5 text-zinc-500" />
+                            </button>
+                          </div>
+                        </th>
                         <th className="text-right py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Total</th>
                         <th className="text-center py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Status</th>
                         <th className="text-right py-3 px-4 text-xs sm:text-sm font-medium text-zinc-400 whitespace-nowrap">Aksi</th>
@@ -1989,8 +2003,10 @@ export default function AdminPembayaranPage() {
                           <td className="py-3 px-4 text-right">
                             {member.attendance_fee > 0 ? (
                               <span className="text-yellow-400">Rp {member.attendance_fee.toLocaleString('id-ID')}</span>
-                            ) : (
+                            ) : member.has_membership ? (
                               <span className="text-purple-400">Gratis</span>
+                            ) : (
+                              <span className="text-zinc-500">-</span>
                             )}
                           </td>
                           <td className="py-3 px-4 text-right font-semibold">Rp {member.total_amount.toLocaleString('id-ID')}</td>
@@ -3108,6 +3124,79 @@ export default function AdminPembayaranPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attendance Fee Info Modal */}
+      {showAttendanceInfoModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl border border-white/10 max-w-md w-full p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-blue-400" />
+                <h3 className="text-lg font-semibold text-white">Status Biaya Kehadiran</h3>
+              </div>
+              <button
+                onClick={() => setShowAttendanceInfoModal(false)}
+                className="p-1 hover:bg-zinc-800 rounded transition-colors"
+              >
+                <X className="w-5 h-5 text-zinc-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-zinc-400 mb-4">
+                Biaya kehadiran Rp 18.000 dibayar <span className="text-white font-semibold">sekali per hari</span> (bukan per pertandingan):
+              </p>
+
+              <div className="space-y-3">
+                {/* Rp 18.000 */}
+                <div className="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-yellow-400 font-mono font-semibold">Rp 18.000</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Member <span className="text-white">bayar biaya kehadiran</span> di pertandingan ini (pertama kali hari itu)
+                  </p>
+                </div>
+
+                {/* Dash - */}
+                <div className="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-zinc-500 font-mono font-semibold text-lg">-</span>
+                    <span className="text-xs text-zinc-500">(dash)</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Member <span className="text-white">sudah bayar</span> di pertandingan lain hari ini (tidak dikenakan lagi)
+                  </p>
+                </div>
+
+                {/* Gratis */}
+                <div className="bg-zinc-800/50 rounded-lg p-3 border border-white/5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-purple-400 font-semibold">Gratis</span>
+                    <Award className="w-3.5 h-3.5 text-purple-400" />
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Member <span className="text-white">punya membership</span> bulan ini (tidak perlu bayar kehadiran)
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <p className="text-xs text-zinc-500 italic">
+                  💡 Contoh: Peno main 3 pertandingan → hanya bayar kehadiran Rp 18.000 di pertandingan pertama
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowAttendanceInfoModal(false)}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                Mengerti
+              </button>
             </div>
           </div>
         </div>
