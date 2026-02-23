@@ -56,6 +56,7 @@ export default function PembayaranPage() {
   const [myMembership, setMyMembership] = useState<Membership | null>(null);
   const [loading, setLoading] = useState(true);
   const [memberName, setMemberName] = useState('');
+  const [isPaymentExempt, setIsPaymentExempt] = useState(false); // VIP/free access flag
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<{
@@ -145,7 +146,7 @@ export default function PembayaranPage() {
           async () => {
             const result = await supabase
               .from('profiles')
-              .select('full_name, email')
+              .select('full_name, email, is_payment_exempt')
               .eq('id', user.id)
               .single();
             return result;
@@ -208,13 +209,20 @@ export default function PembayaranPage() {
       ]);
       
       let name = '';
+      let isExempt = false;
       
       // Process profile
       if (profileResult.status === 'fulfilled') {
-        const res = profileResult.value as { data: { full_name: string; email: string } | null; error: any };
+        const res = profileResult.value as { data: { full_name: string; email: string; is_payment_exempt?: boolean } | null; error: any };
         if (!res.error && res.data) {
           name = res.data.full_name || res.data.email?.split('@')[0] || '';
+          isExempt = res.data.is_payment_exempt === true;
           setMemberName(name);
+          setIsPaymentExempt(isExempt);
+          
+          if (isExempt) {
+            console.log('💎 Member has FREE ACCESS (payment exempt)');
+          }
         }
       }
       
@@ -612,7 +620,8 @@ export default function PembayaranPage() {
   }
 
   // Calculate total bills (exclude only 'paid' and 'cancelled')
-  const totalPending = myMatches
+  // VIP members always have 0 for all amounts
+  const totalPending = isPaymentExempt ? 0 : myMatches
     .filter(m => m.payment_status !== 'paid' && m.payment_status !== 'cancelled')
     .reduce((sum, m) => {
       if (m.payment_status === 'revision' && m.additional_amount) {
@@ -623,18 +632,18 @@ export default function PembayaranPage() {
     }, 0) +
     (myMembership && myMembership.payment_status !== 'paid' && myMembership.payment_status !== 'cancelled' ? myMembership.amount : 0);
 
-  const revisionCount = myMatches.filter(m => m.payment_status === 'revision').length;
-  const revisionAmount = myMatches
+  const revisionCount = isPaymentExempt ? 0 : myMatches.filter(m => m.payment_status === 'revision').length;
+  const revisionAmount = isPaymentExempt ? 0 : myMatches
     .filter(m => m.payment_status === 'revision')
     .reduce((sum, m) => sum + (m.additional_amount || 0), 0);
 
-  const totalUnconfirmed = allMatches.filter(m => m.payment_proof && m.payment_status === 'pending').length +
+  const totalUnconfirmed = isPaymentExempt ? 0 : allMatches.filter(m => m.payment_proof && m.payment_status === 'pending').length +
     (myMembership?.payment_proof && myMembership.payment_status === 'pending' ? 1 : 0);
 
-  const totalPaid = allMatches.filter(m => m.payment_status === 'paid').reduce((sum, m) => sum + m.total_amount, 0) +
+  const totalPaid = isPaymentExempt ? 0 : allMatches.filter(m => m.payment_status === 'paid').reduce((sum, m) => sum + m.total_amount, 0) +
     (myMembership?.payment_status === 'paid' ? myMembership.amount : 0);
 
-  const unpaidCount = myMatches.filter(m => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected').length +
+  const unpaidCount = isPaymentExempt ? 0 : myMatches.filter(m => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected').length +
     ((myMembership?.payment_status === 'pending' && !myMembership.payment_proof) || myMembership?.payment_status === 'rejected' ? 1 : 0);
 
   function getPaymentStatus(paymentStatus: string, paymentProof: string | null) {
@@ -671,7 +680,10 @@ export default function PembayaranPage() {
           <div>
             <h1 className="text-3xl font-bold text-white">Pembayaran Saya</h1>
             <p className="text-zinc-300 mt-2">
-              Kelola pembayaran pertandingan dan membership Anda
+              {isPaymentExempt 
+                ? 'Anda memiliki akses gratis - riwayat pertandingan Anda'
+                : 'Kelola pembayaran pertandingan dan membership Anda'
+              }
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -683,19 +695,65 @@ export default function PembayaranPage() {
               <HelpCircle className="w-5 h-5" />
             </button>
             
-            <button
-              onClick={() => setShowPaymentHelpModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-            >
-              <HelpCircle className="w-5 h-5" />
-              <span className="hidden sm:inline">Panduan Pembayaran</span>
-              <span className="sm:hidden">Panduan</span>
-            </button>
+            {!isPaymentExempt && (
+              <button
+                onClick={() => setShowPaymentHelpModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                <HelpCircle className="w-5 h-5" />
+                <span className="hidden sm:inline">Panduan Pembayaran</span>
+                <span className="sm:hidden">Panduan</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Smart Actions Section */}
-        {smartActions.length > 0 && (
+        {/* VIP/Free Access Card - Only show for payment exempt members */}
+        {isPaymentExempt && (
+          <>
+            <div className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-purple-500/50 rounded-2xl p-8 text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-purple-500/20 rounded-full mb-6">
+                <Award className="w-10 h-10 text-purple-400" />
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-3">🎉 Akses VIP/Gratis</h2>
+              <p className="text-lg text-zinc-300 mb-6 max-w-2xl mx-auto">
+                Selamat <span className="font-semibold text-purple-400">{memberName}</span>! Anda memiliki akses khusus untuk bermain secara GRATIS. 
+                Tidak ada pembayaran yang diperlukan untuk pertandingan atau membership.
+              </p>
+              <div className="flex items-center justify-center gap-8 text-sm text-zinc-400">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <span>Biaya Shuttlecock: GRATIS</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <span>Biaya Kehadiran: GRATIS</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <span>Membership: GRATIS</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Informasi Akses Gratis</h3>
+                  <p className="text-sm text-zinc-300">
+                    Status akses gratis Anda memungkinkan Anda untuk bermain tanpa biaya apapun. 
+                    Anda tidak perlu melakukan pembayaran atau upload bukti transfer. 
+                    Nikmati permainan Anda! 🏸✨
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Smart Actions Section - Hide for VIP members */}
+        {!isPaymentExempt && smartActions.length > 0 && (
           <div className="smart-actions-section mb-6 bg-gradient-to-br from-emerald-900/20 to-cyan-900/20 border border-emerald-500/30 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -748,8 +806,8 @@ export default function PembayaranPage() {
           </div>
         )}
 
-        {/* Suggestion Cards Section */}
-        {suggestionCards.filter(card => !dismissedSuggestions.includes(card.id)).length > 0 && (
+        {/* Suggestion Cards Section - Hide for VIP members */}
+        {!isPaymentExempt && suggestionCards.filter(card => !dismissedSuggestions.includes(card.id)).length > 0 && (
           <div className="suggestion-cards-section mb-6 space-y-3">
             {suggestionCards
               .filter(card => !dismissedSuggestions.includes(card.id))
@@ -800,8 +858,8 @@ export default function PembayaranPage() {
           </div>
         )}
 
-        {/* Bulk Upload Info Banner */}
-        {(myMatches.some(m => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected') || 
+        {/* Bulk Upload Info Banner - Hide for VIP members */}
+        {!isPaymentExempt && (myMatches.some(m => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected') || 
           (myMembership && ((myMembership.payment_status === 'pending' && !myMembership.payment_proof) || myMembership.payment_status === 'rejected'))) && (
           <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-xl p-4">
             <div className="flex items-start gap-3">
@@ -911,7 +969,7 @@ export default function PembayaranPage() {
               </div>
             </div>
 
-            {myMembership.payment_status === 'pending' && !myMembership.payment_proof && (
+            {!isPaymentExempt && myMembership.payment_status === 'pending' && !myMembership.payment_proof && (
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => togglePaymentSelection({
@@ -1011,8 +1069,8 @@ export default function PembayaranPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">Riwayat Pembayaran Pertandingan</h2>
               
-              {/* Bulk Upload Banner */}
-              {selectedPayments.length > 0 && (
+              {/* Bulk Upload Banner - Hide for VIP members */}
+              {!isPaymentExempt && selectedPayments.length > 0 && (
                 <div className="flex items-center gap-4 bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-2">
                   <span className="text-sm text-blue-400 font-medium">
                     {selectedPayments.length} item dipilih
@@ -1048,9 +1106,11 @@ export default function PembayaranPage() {
               <table className="w-full">
                 <thead className="bg-zinc-800/50">
                   <tr>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-12">
-                      <CheckSquare className="w-4 h-4 text-zinc-500" />
-                    </th>
+                    {!isPaymentExempt && (
+                      <th className="px-3 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-12">
+                        <CheckSquare className="w-4 h-4 text-zinc-500" />
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
                       Pertandingan
                     </th>
@@ -1078,9 +1138,11 @@ export default function PembayaranPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
-                      Aksi
-                    </th>
+                    {!isPaymentExempt && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
+                        Aksi
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-zinc-900 divide-y divide-white/5">
@@ -1093,26 +1155,28 @@ export default function PembayaranPage() {
                     return (
                       <React.Fragment key={match.id}>
                       <tr className="hover:bg-zinc-800/50 transition-colors">
-                        <td className="px-3 py-4 whitespace-nowrap">
-                          {canSelect && (
-                            <button
-                              onClick={() => togglePaymentSelection({
-                                id: match.id,
-                                type: 'match',
-                                amount: match.total_amount,
-                                matchNumber: match.matches.match_number,
-                                label: `Match #${match.matches.match_number}`
-                              })}
-                              className="text-zinc-400 hover:text-blue-400 transition-colors"
-                            >
-                              {isSelected ? (
-                                <CheckSquare className="w-5 h-5 text-blue-400" />
-                              ) : (
-                                <Square className="w-5 h-5" />
-                              )}
-                            </button>
-                          )}
-                        </td>
+                        {!isPaymentExempt && (
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            {canSelect && (
+                              <button
+                                onClick={() => togglePaymentSelection({
+                                  id: match.id,
+                                  type: 'match',
+                                  amount: match.total_amount,
+                                  matchNumber: match.matches.match_number,
+                                  label: `Match #${match.matches.match_number}`
+                                })}
+                                className="text-zinc-400 hover:text-blue-400 transition-colors"
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-5 h-5 text-blue-400" />
+                                ) : (
+                                  <Square className="w-5 h-5" />
+                                )}
+                              </button>
+                            )}
+                          </td>
+                        )}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-zinc-400" />
@@ -1173,58 +1237,60 @@ export default function PembayaranPage() {
                             {status.label}
                           </span>
                         </td>
-                        <td className="member-payment-actions px-6 py-4 whitespace-nowrap text-sm">
-                          {match.payment_status === 'rejected' && (
-                            <button
-                              onClick={() => openPaymentModal(match.id, 'match', match.total_amount, match.matches.match_number)}
-                              className="text-red-600 hover:text-red-700 font-medium"
-                            >
-                              Upload Ulang
-                            </button>
-                          )}
-                          {match.payment_status === 'revision' && (
-                            <div className="space-y-1">
+                        {!isPaymentExempt && (
+                          <td className="member-payment-actions px-6 py-4 whitespace-nowrap text-sm">
+                            {match.payment_status === 'rejected' && (
                               <button
-                                onClick={() => openPaymentModal(match.id, 'match', match.additional_amount || match.total_amount, match.matches.match_number)}
-                                className="text-blue-600 hover:text-blue-700 font-medium block"
+                                onClick={() => openPaymentModal(match.id, 'match', match.total_amount, match.matches.match_number)}
+                                className="text-red-600 hover:text-red-700 font-medium"
                               >
-                                Bayar Revisi
+                                Upload Ulang
                               </button>
-                              <p className="text-xs text-zinc-400">Pembayaran tambahan</p>
-                            </div>
-                          )}
-                          {match.payment_status === 'pending' && !match.payment_proof && (
-                            <button
-                              onClick={() => openPaymentModal(match.id, 'match', match.total_amount, match.matches.match_number)}
-                              className="text-blue-600 hover:text-blue-700 font-medium"
-                            >
-                              Bayar
-                            </button>
-                          )}
-                          {match.payment_proof && match.payment_status === 'pending' && (
-                            <a
-                              href={match.payment_proof === 'CASH_PAYMENT' ? '#' : match.payment_proof}
-                              target={match.payment_proof === 'CASH_PAYMENT' ? '_self' : '_blank'}
-                              rel="noopener noreferrer"
-                              className={`font-medium ${match.payment_proof === 'CASH_PAYMENT' ? 'text-yellow-600 cursor-default' : 'text-blue-600 hover:text-blue-700'}`}
-                              onClick={(e) => {
-                                if (match.payment_proof === 'CASH_PAYMENT') {
-                                  e.preventDefault();
-                                }
-                              }}
-                            >
-                              {match.payment_proof === 'CASH_PAYMENT' ? 'Cash' : 'Lihat Bukti'}
-                            </a>
-                          )}
-                          {match.payment_status === 'paid' && (
-                            <span className="text-green-600 font-medium">✓ Lunas</span>
-                          )}
-                        </td>
+                            )}
+                            {match.payment_status === 'revision' && (
+                              <div className="space-y-1">
+                                <button
+                                  onClick={() => openPaymentModal(match.id, 'match', match.additional_amount || match.total_amount, match.matches.match_number)}
+                                  className="text-blue-600 hover:text-blue-700 font-medium block"
+                                >
+                                  Bayar Revisi
+                                </button>
+                                <p className="text-xs text-zinc-400">Pembayaran tambahan</p>
+                              </div>
+                            )}
+                            {match.payment_status === 'pending' && !match.payment_proof && (
+                              <button
+                                onClick={() => openPaymentModal(match.id, 'match', match.total_amount, match.matches.match_number)}
+                                className="text-blue-600 hover:text-blue-700 font-medium"
+                              >
+                                Bayar
+                              </button>
+                            )}
+                            {match.payment_proof && match.payment_status === 'pending' && (
+                              <a
+                                href={match.payment_proof === 'CASH_PAYMENT' ? '#' : match.payment_proof}
+                                target={match.payment_proof === 'CASH_PAYMENT' ? '_self' : '_blank'}
+                                rel="noopener noreferrer"
+                                className={`font-medium ${match.payment_proof === 'CASH_PAYMENT' ? 'text-yellow-600 cursor-default' : 'text-blue-600 hover:text-blue-700'}`}
+                                onClick={(e) => {
+                                  if (match.payment_proof === 'CASH_PAYMENT') {
+                                    e.preventDefault();
+                                  }
+                                }}
+                              >
+                                {match.payment_proof === 'CASH_PAYMENT' ? 'Cash' : 'Lihat Bukti'}
+                              </a>
+                            )}
+                            {match.payment_status === 'paid' && (
+                              <span className="text-green-600 font-medium">✓ Lunas</span>
+                            )}
+                          </td>
+                        )}
                       </tr>
                       {/* Rejection Alert Row */}
                       {match.payment_status === 'rejected' && match.rejection_reason && (
                         <tr className="bg-red-50 border-l-4 border-red-500">
-                          <td colSpan={8} className="px-6 py-4">
+                          <td colSpan={isPaymentExempt ? 6 : 8} className="px-6 py-4">
                             <div className="flex items-start gap-3">
                               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                               <div className="flex-1">

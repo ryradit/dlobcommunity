@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
-import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle } from 'lucide-react';
+import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle, Ban, X } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -27,6 +27,7 @@ interface Member {
   partner_preferences?: string;
   instagram_url?: string;
   has_membership?: boolean;
+  is_payment_exempt?: boolean;
 }
 
 export default function AdminMembersPage() {
@@ -39,6 +40,25 @@ export default function AdminMembersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Payment exemption states
+  const [showExemptionModal, setShowExemptionModal] = useState(false);
+  const [exemptionMember, setExemptionMember] = useState<{
+    id: string;
+    name: string;
+    currentStatus: boolean;
+    pendingMatches: number;
+  } | null>(null);
+  const [isProcessingExemption, setIsProcessingExemption] = useState(false);
+  const [confirmExemptionText, setConfirmExemptionText] = useState('');
+  const [exemptionHistory, setExemptionHistory] = useState<Array<{
+    action: string;
+    granted_by_name: string;
+    granted_by_email: string;
+    pending_matches_affected: number;
+    created_at: string;
+  }>>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Tutorial for members page
   const tutorialSteps = getTutorialSteps('members');
@@ -196,6 +216,164 @@ export default function AdminMembersPage() {
       alert('Gagal menghapus anggota. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
+    }
+  }
+
+  // Open exemption modal
+  async function openExemptionModal(member: Member) {
+    try {
+      const isCurrentlyExempt = member.is_payment_exempt === true;
+
+      // Count pending matches
+      const { count, error: countError } = await supabase
+        .from('match_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('member_name', member.full_name)
+        .eq('payment_status', 'pending');
+
+      if (countError) throw countError;
+
+      setExemptionMember({
+        id: member.id,
+        name: member.full_name,
+        currentStatus: isCurrentlyExempt,
+        pendingMatches: count || 0,
+      });
+      setConfirmExemptionText('');
+      setShowExemptionModal(true);
+    } catch (error) {
+      console.error('Error fetching exemption data:', error);
+      alert('Gagal mengambil data member: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  }
+
+  // Execute exemption toggle
+  async function executeExemption() {
+    if (!exemptionMember) return;
+
+    // Require confirmation text
+    const expectedText = exemptionMember.currentStatus ? 'BAYAR' : 'GRATIS';
+    if (confirmExemptionText !== expectedText) {
+      alert(`Ketik "${expectedText}" untuk konfirmasi`);
+      return;
+    }
+
+    try {
+      setIsProcessingExemption(true);
+
+      const newStatus = !exemptionMember.currentStatus;
+
+      // Get current admin's info for audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .single();
+
+      if (!adminProfile) throw new Error('Admin profile not found');
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ is_payment_exempt: newStatus })
+        .eq('id', exemptionMember.id);
+
+      if (updateError) throw updateError;
+
+      // If setting to exempt (free), set all pending matches to 0
+      if (newStatus) {
+        const { error: matchError } = await supabase
+          .from('match_members')
+          .update({
+            amount_due: 0,
+            attendance_fee: 0,
+            // Note: total_amount is GENERATED column, will auto-update to 0
+          })
+          .eq('member_name', exemptionMember.name)
+          .eq('payment_status', 'pending');
+
+        if (matchError) throw matchError;
+
+        // Log exemption grant in audit table
+        const { error: auditError } = await supabase
+          .from('payment_exemption_audit')
+          .insert({
+            member_id: exemptionMember.id,
+            member_name: exemptionMember.name,
+            action: 'granted',
+            granted_by_id: user.id,
+            granted_by_name: adminProfile.full_name,
+            granted_by_email: adminProfile.email,
+            pending_matches_affected: exemptionMember.pendingMatches,
+          });
+
+        if (auditError) console.error('Failed to log exemption grant:', auditError);
+
+        alert(`✅ ${exemptionMember.name} sekarang memiliki AKSES GRATIS!\n\n` +
+          `- Status: VIP/Payment Exempt\n` +
+          `- ${exemptionMember.pendingMatches} pending matches diupdate ke Rp 0\n` +
+          `- Semua pertandingan baru akan otomatis gratis\n` +
+          `- Member akan melihat VIP card di dashboard mereka\n` +
+          `- Perubahan dicatat oleh: ${adminProfile.full_name}`);
+      } else {
+        // Log exemption removal in audit table
+        const { error: auditError } = await supabase
+          .from('payment_exemption_audit')
+          .insert({
+            member_id: exemptionMember.id,
+            member_name: exemptionMember.name,
+            action: 'removed',
+            granted_by_id: user.id,
+            granted_by_name: adminProfile.full_name,
+            granted_by_email: adminProfile.email,
+            pending_matches_affected: 0,
+          });
+
+        if (auditError) console.error('Failed to log exemption removal:', auditError);
+
+        // Removing exemption - need to recalculate amounts
+        alert(`⚠️ ${exemptionMember.name} kembali ke status REGULAR MEMBER\n\n` +
+          `- Pending matches perlu direcalculate manual\n` +
+          `- Pertandingan baru akan dikenakan biaya normal\n` +
+          `- Silakan refresh dan buat pertandingan baru untuk test\n` +
+          `- Perubahan dicatat oleh: ${adminProfile.full_name}`);
+      }
+
+      setShowExemptionModal(false);
+      setExemptionMember(null);
+      setConfirmExemptionText('');
+
+      // Refresh data
+      queryCache.clear();
+      await fetchMembers();
+    } catch (error) {
+      console.error('Error toggling exemption:', error);
+      alert('Gagal mengubah status exemption: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsProcessingExemption(false);
+    }
+  }
+
+  // Fetch exemption history for a member (admin only)
+  async function fetchExemptionHistory(memberId: string) {
+    try {
+      setLoadingHistory(true);
+      const { data, error } = await supabase
+        .from('payment_exemption_audit')
+        .select('action, granted_by_name, granted_by_email, pending_matches_affected, created_at')
+        .eq('member_id', memberId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setExemptionHistory(data || []);
+    } catch (error) {
+      console.error('Error fetching exemption history:', error);
+      setExemptionHistory([]);
+    } finally {
+      setLoadingHistory(false);
     }
   }
 
@@ -369,6 +547,14 @@ export default function AdminMembersPage() {
                             </span>
                           </div>
                         )}
+                        {member.is_payment_exempt && (
+                          <div className="flex items-center gap-1 sm:gap-1.5">
+                            <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-400 flex-shrink-0" />
+                            <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold bg-pink-500/20 text-pink-400 border border-pink-500/30">
+                              VIP - Gratis
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
@@ -404,10 +590,25 @@ export default function AdminMembersPage() {
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-1.5 sm:gap-2">
+                        {/* VIP/Payment Exemption Button */}
+                        <button
+                          onClick={() => openExemptionModal(member)}
+                          className={`p-1 sm:p-1.5 rounded-lg transition-colors border ${
+                            member.is_payment_exempt
+                              ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border-purple-500/30'
+                              : 'bg-purple-500/10 text-purple-400/50 hover:bg-purple-500/20 border-purple-500/20'
+                          }`}
+                          title={member.is_payment_exempt ? 'VIP - Hapus Akses Gratis' : 'Berikan Akses Gratis (VIP)'}
+                        >
+                          <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+
                         <button
                           onClick={() => {
                             setSelectedMember(member);
                             setShowDetailModal(true);
+                            // Fetch exemption history if member has VIP or might have history
+                            fetchExemptionHistory(member.id);
                           }}
                           className="p-1 sm:p-1.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors border border-purple-500/30"
                           title="Lihat Detail"
@@ -879,6 +1080,109 @@ export default function AdminMembersPage() {
                   )}
                 </>
               )}
+
+              {/* VIP/Payment Exemption History */}
+              {(selectedMember.is_payment_exempt || exemptionHistory.length > 0) && (
+                <>
+                  <div className="pt-4 border-t border-white/10">
+                    <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                      <Award className="w-5 h-5 text-pink-400" />
+                      Riwayat VIP/Akses Gratis
+                    </h4>
+                  </div>
+
+                  {loadingHistory ? (
+                    <div className="bg-zinc-800/50 rounded-xl p-8 border border-white/10 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pink-400 mb-3"></div>
+                        <p className="text-sm text-zinc-400">Memuat riwayat...</p>
+                      </div>
+                    </div>
+                  ) : exemptionHistory.length === 0 ? (
+                    <div className="bg-zinc-800/50 rounded-xl p-6 border border-white/10 text-center">
+                      <Award className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
+                      <p className="text-sm text-zinc-500">Tidak ada riwayat perubahan VIP</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {exemptionHistory.map((record, index) => {
+                        const isGranted = record.action === 'granted';
+                        const date = new Date(record.created_at);
+                        const formattedDate = date.toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        });
+                        const formattedTime = date.toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+
+                        return (
+                          <div key={index} className="bg-zinc-800/50 rounded-xl p-4 border border-white/10">
+                            <div className="flex items-start gap-3">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                isGranted ? 'bg-green-500/20' : 'bg-red-500/20'
+                              }`}>
+                                {isGranted ? (
+                                  <CheckCircle className="w-5 h-5 text-green-400" />
+                                ) : (
+                                  <XCircle className="w-5 h-5 text-red-400" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                    isGranted 
+                                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                  }`}>
+                                    {isGranted ? '✅ Akses VIP Diberikan' : '❌ Akses VIP Dihapus'}
+                                  </span>
+                                  <span className="text-xs text-zinc-500 whitespace-nowrap">{formattedDate}</span>
+                                </div>
+                                
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <User className="w-3.5 h-3.5 text-zinc-500" />
+                                    <div className="text-xs">
+                                      <span className="text-zinc-500">Oleh:</span>
+                                      <span className="text-white font-medium ml-1">{record.granted_by_name || 'Admin'}</span>
+                                    </div>
+                                  </div>
+                                  
+                                  {record.granted_by_email && (
+                                    <div className="flex items-center gap-2">
+                                      <Mail className="w-3.5 h-3.5 text-zinc-500" />
+                                      <div className="text-xs">
+                                        <span className="text-zinc-400">{record.granted_by_email}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                                    <div className="text-xs text-zinc-400">{formattedTime}</div>
+                                  </div>
+
+                                  {record.pending_matches_affected > 0 && (
+                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/5">
+                                      <div className="text-xs">
+                                        <span className="text-zinc-500">Pertandingan terpengaruh:</span>
+                                        <span className="text-pink-400 font-semibold ml-1">{record.pending_matches_affected}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Close Button */}
@@ -892,6 +1196,199 @@ export default function AdminMembersPage() {
               >
                 Tutup
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Exemption Modal */}
+      {showExemptionModal && exemptionMember && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl border border-purple-500/30 max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Award className="w-6 h-6 text-purple-400" />
+                <h3 className="text-xl font-semibold text-white">
+                  {exemptionMember.currentStatus ? 'Hapus Akses Gratis (VIP)' : 'Berikan Akses Gratis (VIP)'}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowExemptionModal(false);
+                  setExemptionMember(null);
+                  setConfirmExemptionText('');
+                }}
+                className="p-1 hover:bg-zinc-800 rounded transition-colors"
+                disabled={isProcessingExemption}
+              >
+                <X className="w-5 h-5 text-zinc-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Warning Section */}
+              <div className={`border rounded-lg p-4 ${
+                exemptionMember.currentStatus 
+                  ? 'bg-orange-500/10 border-orange-500/30' 
+                  : 'bg-purple-500/10 border-purple-500/30'
+              }`}>
+                <p className="text-sm font-medium mb-2">
+                  {exemptionMember.currentStatus ? '⚠️ Peringatan:' : '💎 Akses VIP/Gratis:'}
+                </p>
+                <p className="text-xs text-zinc-300">
+                  {exemptionMember.currentStatus ? (
+                    <>Member akan kembali ke status REGULAR dan harus membayar untuk pertandingan.</>
+                  ) : (
+                    <>Member akan mendapat akses GRATIS SELAMANYA - tidak perlu bayar apapun.</>
+                  )}
+                </p>
+              </div>
+
+              {/* Member Info */}
+              <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Member:</span>
+                  <span className="text-white font-medium">{exemptionMember.name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Status saat ini:</span>
+                  <span className={`font-medium ${
+                    exemptionMember.currentStatus ? 'text-purple-400' : 'text-white'
+                  }`}>
+                    {exemptionMember.currentStatus ? '💎 VIP/Gratis' : 'Regular Member'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Pending matches:</span>
+                  <span className="text-white font-medium">{exemptionMember.pendingMatches} match</span>
+                </div>
+              </div>
+
+              {/* Considerations */}
+              <div className="bg-zinc-800/50 rounded-lg p-4">
+                <p className="text-sm font-medium text-white mb-3">
+                  {exemptionMember.currentStatus ? '📋 Yang Akan Terjadi:' : '📋 Pertimbangan Sebelum Memberikan:'}
+                </p>
+                <ul className="space-y-2 text-xs text-zinc-300">
+                  {exemptionMember.currentStatus ? (
+                    <>
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-400 mt-0.5">•</span>
+                        <span>Member kembali ke status <strong>REGULAR</strong></span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-400 mt-0.5">•</span>
+                        <span>Pertandingan baru akan dikenakan <strong>biaya normal</strong> (shuttlecock + kehadiran)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-400 mt-0.5">•</span>
+                        <span>Pending matches yang gratis akan tetap Rp 0 (tidak otomatis recalculate)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-400 mt-0.5">•</span>
+                        <span>Member akan melihat <strong>dashboard pembayaran normal</strong> (bukan VIP card)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-red-400 mt-0.5">⚠️</span>
+                        <span className="text-red-300"><strong>PENTING:</strong> Pastikan member sudah tidak berhak mendapat akses gratis!</span>
+                      </li>
+                    </>
+                  ) : (
+                    <>
+                      <li className="flex items-start gap-2">
+                        <span className="text-purple-400 mt-0.5">✓</span>
+                        <span><strong>SEMUA</strong> biaya akan Rp 0 (shuttlecock + kehadiran + membership)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-purple-400 mt-0.5">✓</span>
+                        <span>{exemptionMember.pendingMatches} pending match akan diupdate ke <strong>Rp 0</strong></span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-purple-400 mt-0.5">✓</span>
+                        <span>Pertandingan baru akan <strong>otomatis gratis</strong></span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-purple-400 mt-0.5">✓</span>
+                        <span>Member <strong>tidak akan muncul</strong> di daftar pembayaran admin</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-purple-400 mt-0.5">✓</span>
+                        <span>Member akan melihat <strong>VIP card khusus</strong> di dashboard mereka</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-yellow-400 mt-0.5">⚠️</span>
+                        <span className="text-yellow-300">Gunakan untuk: <strong>Sponsor, Admin, atau Tamu Khusus</strong></span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-red-400 mt-0.5">⚠️</span>
+                        <span className="text-red-300"><strong>PERMANEN:</strong> Flag ini akan berlaku untuk semua waktu sampai dihapus manual</span>
+                      </li>
+                    </>
+                  )}
+                </ul>
+              </div>
+
+              {/* Confirmation Input */}
+              <div className="bg-zinc-800/50 rounded-lg p-4">
+                <p className="text-sm text-zinc-300 mb-2">
+                  Ketik <strong className={exemptionMember.currentStatus ? 'text-orange-400' : 'text-purple-400'}>
+                    {exemptionMember.currentStatus ? 'BAYAR' : 'GRATIS'}
+                  </strong> untuk konfirmasi:
+                </p>
+                <input
+                  type="text"
+                  value={confirmExemptionText}
+                  onChange={(e) => setConfirmExemptionText(e.target.value.toUpperCase())}
+                  placeholder={exemptionMember.currentStatus ? 'BAYAR' : 'GRATIS'}
+                  className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+                  disabled={isProcessingExemption}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowExemptionModal(false);
+                    setExemptionMember(null);
+                    setConfirmExemptionText('');
+                  }}
+                  disabled={isProcessingExemption}
+                  className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={executeExemption}
+                  disabled={isProcessingExemption || confirmExemptionText !== (exemptionMember.currentStatus ? 'BAYAR' : 'GRATIS')}
+                  className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2 ${
+                    exemptionMember.currentStatus
+                      ? 'bg-orange-600 hover:bg-orange-700'
+                      : 'bg-purple-600 hover:bg-purple-700'
+                  }`}
+                >
+                  {isProcessingExemption ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Memproses...
+                    </>
+                  ) : (
+                    <>
+                      {exemptionMember.currentStatus ? (
+                        <>
+                          <Ban className="w-4 h-4" />
+                          Hapus Akses Gratis
+                        </>
+                      ) : (
+                        <>
+                          <Award className="w-4 h-4" />
+                          Berikan Akses Gratis
+                        </>
+                      )}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

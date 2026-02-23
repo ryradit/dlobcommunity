@@ -161,6 +161,19 @@ export default function AdminPembayaranPage() {
   // Attendance info modal
   const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
 
+  // Membership rollback states
+  const [showRollbackModal, setShowRollbackModal] = useState(false);
+  const [rollbackMembership, setRollbackMembership] = useState<Membership | null>(null);
+  const [rollbackPreview, setRollbackPreview] = useState<{
+    member_name: string;
+    month: number;
+    year: number;
+    total_pending_matches: number;
+    matches_will_get_attendance_fee: number;
+    total_attendance_fees_to_add: number;
+  } | null>(null);
+  const [isLoadingRollback, setIsLoadingRollback] = useState(false);
+
   // Utility function to calculate weeks in current month
   const calculateWeeksInMonth = (date: Date = new Date()): number => {
     return getSaturdaysInMonth(date);
@@ -1299,6 +1312,65 @@ export default function AdminPembayaranPage() {
     }
   }
 
+  // Rollback membership functions
+  async function openRollbackModal(membership: Membership) {
+    setRollbackMembership(membership);
+    setIsLoadingRollback(true);
+    setShowRollbackModal(true);
+
+    try {
+      // Preview what will be affected
+      const { data, error } = await supabase.rpc('preview_membership_rollback', {
+        p_membership_id: membership.id
+      });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setRollbackPreview(data[0]);
+      }
+    } catch (error) {
+      console.error('Error previewing rollback:', error);
+      alert('Gagal memuat preview rollback');
+      setShowRollbackModal(false);
+    } finally {
+      setIsLoadingRollback(false);
+    }
+  }
+
+  async function executeRollback() {
+    if (!rollbackMembership) return;
+
+    setIsLoadingRollback(true);
+    try {
+      const { data, error } = await supabase.rpc('rollback_membership', {
+        p_membership_id: rollbackMembership.id
+      });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const result = data[0];
+        alert(`✅ Rollback berhasil!\n\n` +
+          `Member: ${result.member_name}\n` +
+          `Bulan: ${result.month}/${result.year}\n` +
+          `Match records diupdate: ${result.updated_match_records}\n\n` +
+          `Member sekarang kembali ke non-membership dan akan dikenakan biaya kehadiran.`);
+      }
+
+      // Refresh data
+      await Promise.all([fetchMemberships(), fetchMatches()]);
+      setShowRollbackModal(false);
+      setRollbackMembership(null);
+      setRollbackPreview(null);
+    } catch (error) {
+      console.error('Error executing rollback:', error);
+      alert('Gagal rollback membership');
+    } finally {
+      setIsLoadingRollback(false);
+    }
+  }
+
   const filteredMatches = matches.filter(match =>
     matchMembers[match.id]?.some(member =>
       member.member_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1942,7 +2014,7 @@ export default function AdminPembayaranPage() {
                     <tbody>
                       {matchMembers[match.id]
                         ?.filter(member => 
-                          !searchTerm || member.member_name.toLowerCase().includes(searchTerm.toLowerCase())
+                          (!searchTerm || member.member_name.toLowerCase().includes(searchTerm.toLowerCase()))
                         )
                         .map((member) => {
                         const canSelect = member.payment_status === 'pending' && member.payment_proof && member.payment_proof !== 'CASH_PAYMENT';
@@ -2301,6 +2373,19 @@ export default function AdminPembayaranPage() {
                               title="Batalkan"
                             >
                               <Ban className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        {membership.payment_status === 'paid' && (
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => openRollbackModal(membership)}
+                              className="p-1 bg-orange-600 hover:bg-orange-700 rounded text-white transition-colors flex items-center gap-1"
+                              title="Rollback Membership (Kembalikan ke Non-Member)"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
                             </button>
                           </div>
                         )}
@@ -3197,6 +3282,117 @@ export default function AdminPembayaranPage() {
               >
                 Mengerti
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Membership Rollback Confirmation Modal */}
+      {showRollbackModal && rollbackMembership && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl border border-orange-500/30 max-w-md w-full p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-6 h-6 text-orange-400" />
+                <h3 className="text-xl font-semibold text-white">Rollback Membership?</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRollbackModal(false);
+                  setRollbackMembership(null);
+                  setRollbackPreview(null);
+                }}
+                className="p-1 hover:bg-zinc-800 rounded transition-colors"
+                disabled={isLoadingRollback}
+              >
+                <X className="w-5 h-5 text-zinc-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
+                <p className="text-sm text-orange-200 font-medium mb-2">⚠️ Peringatan:</p>
+                <p className="text-xs text-zinc-300">
+                  Tindakan ini akan menghapus membership dan mengembalikan member ke status non-membership. 
+                  Member akan dikenakan biaya kehadiran Rp 18.000 per hari untuk pertandingan yang belum dibayar.
+                </p>
+              </div>
+
+              <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Member:</span>
+                  <span className="text-white font-medium">{rollbackMembership.member_name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Bulan:</span>
+                  <span className="text-white">
+                    {['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][rollbackMembership.month - 1]} {rollbackMembership.year}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Status:</span>
+                  <span className="text-green-400 font-medium">Lunas</span>
+                </div>
+              </div>
+
+              {isLoadingRollback ? (
+                <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400 mx-auto mb-2"></div>
+                  <p className="text-sm text-zinc-400">Memuat preview...</p>
+                </div>
+              ) : rollbackPreview ? (
+                <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium text-white mb-2">Dampak Rollback:</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-400">Pertandingan pending:</span>
+                    <span className="text-white font-medium">{rollbackPreview.total_pending_matches} match</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-400">Hari yang terpengaruh:</span>
+                    <span className="text-white font-medium">{rollbackPreview.matches_will_get_attendance_fee} hari</span>
+                  </div>
+                  <div className="flex justify-between text-sm border-t border-white/10 pt-2 mt-2">
+                    <span className="text-zinc-400">Total biaya kehadiran ditambahkan:</span>
+                    <span className="text-orange-400 font-bold">+ Rp {rollbackPreview.total_attendance_fees_to_add.toLocaleString('id-ID')}</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-2 italic">
+                    * Biaya kehadiran akan dikenakan sekali per hari pertandingan
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowRollbackModal(false);
+                    setRollbackMembership(null);
+                    setRollbackPreview(null);
+                  }}
+                  disabled={isLoadingRollback}
+                  className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={executeRollback}
+                  disabled={isLoadingRollback || !rollbackPreview}
+                  className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoadingRollback ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Memproses...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                      </svg>
+                      Rollback Membership
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

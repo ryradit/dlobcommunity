@@ -73,11 +73,11 @@ export async function POST(request: NextRequest) {
 
         console.log(`Processing match #${i + 1}, players:`, playerNames);
 
-        // Validate that all player names exist in profiles table
+        // Validate that all player names exist in profiles table AND get payment_exempt flag
         const profilePromises = playerNames.map(name => 
           supabase
             .from('profiles')
-            .select('id, full_name')
+            .select('id, full_name, is_payment_exempt')
             .ilike('full_name', name)
             .single()
         );
@@ -174,6 +174,24 @@ export async function POST(request: NextRequest) {
         // Create match_members entries with proper cost calculations
         // Use validated profile full_names to ensure exact match with user accounts
         const matchMembers = profiles.map(profile => {
+          // Check if member is payment exempt (VIP/sponsor/special access)
+          const isExempt = profile.is_payment_exempt === true;
+          
+          if (isExempt) {
+            console.log(`🎁 ${profile.full_name} is payment exempt - all costs = 0`);
+            // Exempt members: everything is free
+            return {
+              match_id: createdMatch.id,
+              member_name: profile.full_name,
+              amount_due: 0,
+              attendance_fee: 0,
+              has_membership: true, // Mark as membership to avoid confusion
+              payment_status: 'pending',
+              attendance_paid_this_entry: false,
+            };
+          }
+          
+          // Normal payment calculation for non-exempt members
           const hasMembership = membershipSet.has(profile.full_name.toLowerCase().trim());
           const alreadyPaidToday = attendancePaidTodaySet.has(profile.full_name.toLowerCase().trim());
           
