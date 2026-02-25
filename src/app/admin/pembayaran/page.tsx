@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, CheckSquare, Square, Sparkles, Send, Zap, HelpCircle } from 'lucide-react';
+import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, CheckSquare, Square, Sparkles, Send, Zap, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -57,6 +57,7 @@ interface Membership {
 export default function AdminPembayaranPage() {
   const { user } = useAuth();
   const pathname = usePathname();
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchMembers, setMatchMembers] = useState<Record<string, MatchMember[]>>({});
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -64,6 +65,8 @@ export default function AdminPembayaranPage() {
   const [allMembers, setAllMembers] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showNextMonthConfirm, setShowNextMonthConfirm] = useState(false);
+  const [pendingCreateAction, setPendingCreateAction] = useState<'match' | 'membership' | null>(null);
   const [expandedMatches, setExpandedMatches] = useState<Record<string, boolean>>({});
   const [editingMatch, setEditingMatch] = useState<{
     matchId: string;
@@ -82,6 +85,8 @@ export default function AdminPembayaranPage() {
     member4: '',
     match_date: '',
   });
+  const [matchDateMembershipMap, setMatchDateMembershipMap] = useState<Record<string, Membership>>({});
+  const [paymentExemptMembers, setPaymentExemptMembers] = useState<Set<string>>(new Set());
   const [newMembership, setNewMembership] = useState({
     member_name: '',
     weeks_in_month: 4,
@@ -193,120 +198,187 @@ export default function AdminPembayaranPage() {
     }
   }, [showMembershipModal]);
 
+  // Fetch memberships for match date's month when creating a match
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      
-      // Fetch all data in parallel for faster loading
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
-      
-      const [matchesResult, membershipsResult, profilesResult] = await Promise.allSettled([
-        // Fetch matches with caching
-        cachedQuery(
-          'admin-payment-matches',
-          async () => {
-            const result = await supabase
-              .from('matches')
-              .select('*')
-              .order('match_number', { ascending: false });
-            return result;
-          },
-          30000 // 30 seconds cache
-        ),
-        // Fetch memberships with caching
-        cachedQuery(
-          `admin-memberships-${currentMonth}-${currentYear}`,
-          async () => {
-            const result = await supabase
-              .from('memberships')
-              .select('*')
-              .eq('month', currentMonth)
-              .eq('year', currentYear)
-              .order('created_at', { ascending: false });
-            return result;
-          },
-          30000
-        ),
-        // Fetch all profiles for member list
-        cachedQuery(
-          'admin-all-profiles',
-          async () => {
-            const result = await supabase
-              .from('profiles')
-              .select('id, full_name')
-              .order('full_name', { ascending: true });
-            return result;
-          },
-          60000 // 1 minute cache
-        ),
-      ]);
-      
-      // Process matches
-      if (matchesResult.status === 'fulfilled') {
-        const matchesRes = matchesResult.value as { data: Match[] | null; error: any };
-        if (!matchesRes.error && matchesRes.data) {
-          setMatches(matchesRes.data);
-          
-          // Fetch match members in parallel for all matches
-          const memberQueries = matchesRes.data.map(match =>
-            supabase
-              .from('match_members')
-              .select('*')
-              .eq('match_id', match.id)
-          );
-          
-          const membersResults = await Promise.allSettled(memberQueries);
-          const membersMap: Record<string, MatchMember[]> = {};
-          
-          membersResults.forEach((result, index) => {
-            if (result.status === 'fulfilled') {
-              const res = result.value as { data: MatchMember[] | null; error: any };
-              if (!res.error && res.data) {
-                membersMap[matchesRes.data![index].id] = res.data;
-              }
-            }
-          });
-          
-          setMatchMembers(membersMap);
-        }
+    async function fetchMatchDateMemberships() {
+      if (!newMatch.match_date) {
+        setMatchDateMembershipMap({});
+        setPaymentExemptMembers(new Set());
+        return;
       }
-      
-      // Process memberships
-      if (membershipsResult.status === 'fulfilled') {
-        const membershipsRes = membershipsResult.value as { data: Membership[] | null; error: any };
-        if (!membershipsRes.error && membershipsRes.data) {
-          setMemberships(membershipsRes.data);
-          
+
+      const matchDate = new Date(newMatch.match_date);
+      const matchMonth = matchDate.getMonth() + 1;
+      const matchYear = matchDate.getFullYear();
+
+      try {
+        // Fetch PAID memberships only
+        const { data: memberships, error } = await supabase
+          .from('memberships')
+          .select('*')
+          .eq('month', matchMonth)
+          .eq('year', matchYear)
+          .eq('payment_status', 'paid'); // Only PAID memberships
+
+        if (error) {
+          console.error('Error fetching match date memberships:', error);
+          setMatchDateMembershipMap({});
+        } else {
           const map: Record<string, Membership> = {};
-          membershipsRes.data.forEach((m) => {
-            map[m.member_name.toLowerCase()] = m;
-          });
-          setMembershipMap(map);
+          if (memberships) {
+            memberships.forEach((m) => {
+              map[m.member_name.toLowerCase()] = m;
+            });
+          }
+          setMatchDateMembershipMap(map);
         }
-      }
-      
-      // Process profiles for member list
-      if (profilesResult.status === 'fulfilled') {
-        const profilesRes = profilesResult.value as { data: Array<{ id: string; full_name: string }> | null; error: any };
-        if (!profilesRes.error && profilesRes.data) {
-          setAllMembers(
-            profilesRes.data.map((p) => ({
-              id: p.id,
-              name: p.full_name || 'Unnamed',
-            }))
-          );
+
+        // Fetch payment exempt members (VIP status)
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('is_payment_exempt', true);
+
+        if (profileError) {
+          console.error('Error fetching payment exempt members:', profileError);
+          setPaymentExemptMembers(new Set());
+        } else {
+          const exemptSet = new Set<string>();
+          if (profiles) {
+            profiles.forEach(p => exemptSet.add(p.full_name.toLowerCase()));
+          }
+          setPaymentExemptMembers(exemptSet);
         }
+      } catch (error) {
+        console.error('Error fetching match date memberships:', error);
+        setMatchDateMembershipMap({});
+        setPaymentExemptMembers(new Set());
       }
-      
-      // Recalculate attendance fees after data is loaded
-      await recalculateAttendanceFees();
-      
-      setLoading(false);
-    };
+    }
+
+    fetchMatchDateMemberships();
+  }, [newMatch.match_date]);
+
+  // Load data function - defined outside useEffect so it can be called from other functions
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    
+    // Use selected month instead of current month
+    const targetMonth = selectedMonth.getMonth() + 1;
+    const targetYear = selectedMonth.getFullYear();
+    
+    const [matchesResult, membershipsResult, profilesResult] = await Promise.allSettled([
+      // Fetch matches for selected month
+      cachedQuery(
+        `admin-payment-matches-${targetMonth}-${targetYear}`,
+        async () => {
+          const monthStart = new Date(targetYear, targetMonth - 1, 1);
+          const monthEnd = new Date(targetYear, targetMonth, 0, 23, 59, 59);
+          
+          const result = await supabase
+            .from('matches')
+            .select('*')
+            .gte('match_date', monthStart.toISOString())
+            .lte('match_date', monthEnd.toISOString())
+            .order('match_date', { ascending: true });
+          return result;
+        },
+        30000 // 30 seconds cache
+      ),
+      // Fetch memberships for selected month
+      cachedQuery(
+        `admin-memberships-${targetMonth}-${targetYear}`,
+        async () => {
+          const result = await supabase
+            .from('memberships')
+            .select('*')
+            .eq('month', targetMonth)
+            .eq('year', targetYear)
+            .order('created_at', { ascending: false });
+          return result;
+        },
+        30000
+      ),
+      // Fetch all profiles for member list
+      cachedQuery(
+        'admin-all-profiles',
+        async () => {
+          const result = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .order('full_name', { ascending: true });
+          return result;
+        },
+        60000 // 1 minute cache
+      ),
+    ]);
+    
+    // Process matches
+    if (matchesResult.status === 'fulfilled') {
+      const matchesRes = matchesResult.value as { data: Match[] | null; error: any };
+      if (!matchesRes.error && matchesRes.data) {
+        setMatches(matchesRes.data);
+        
+        // Fetch match members in parallel for all matches
+        const memberQueries = matchesRes.data.map(match =>
+          supabase
+            .from('match_members')
+            .select('*')
+            .eq('match_id', match.id)
+        );
+        
+        const membersResults = await Promise.allSettled(memberQueries);
+        const membersMap: Record<string, MatchMember[]> = {};
+        
+        membersResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const res = result.value as { data: MatchMember[] | null; error: any };
+            if (!res.error && res.data) {
+              membersMap[matchesRes.data![index].id] = res.data;
+            }
+          }
+        });
+        
+        setMatchMembers(membersMap);
+      }
+    }
+    
+    // Process memberships
+    if (membershipsResult.status === 'fulfilled') {
+      const membershipsRes = membershipsResult.value as { data: Membership[] | null; error: any };
+      if (!membershipsRes.error && membershipsRes.data) {
+        setMemberships(membershipsRes.data);
+        
+        const map: Record<string, Membership> = {};
+        membershipsRes.data.forEach((m) => {
+          map[m.member_name.toLowerCase()] = m;
+        });
+        setMembershipMap(map);
+      }
+    }
+    
+    // Process profiles for member list
+    if (profilesResult.status === 'fulfilled') {
+      const profilesRes = profilesResult.value as { data: Array<{ id: string; full_name: string }> | null; error: any };
+      if (!profilesRes.error && profilesRes.data) {
+        setAllMembers(
+          profilesRes.data.map((p) => ({
+            id: p.id,
+            name: p.full_name || 'Unnamed',
+          }))
+        );
+      }
+    }
+    
+    // Recalculate attendance fees after data is loaded
+    await recalculateAttendanceFees();
+    
+    setLoading(false);
+  }, [selectedMonth]);
+
+  useEffect(() => {
     loadData();
-  }, [pathname]);
+  }, [pathname, selectedMonth]);
 
   async function fetchMatches() {
     try {
@@ -368,38 +440,25 @@ export default function AdminPembayaranPage() {
 
   async function recalculateAttendanceFees() {
     try {
-      // Get all paid memberships for current month
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
-
-      const { data: paidMemberships, error: membershipError } = await supabase
-        .from('memberships')
-        .select('member_name')
-        .eq('month', currentMonth)
-        .eq('year', currentYear)
-        .eq('payment_status', 'paid');
-
-      if (membershipError) throw membershipError;
-
-      if (paidMemberships && paidMemberships.length > 0) {
-        // Update all pending matches for members with paid membership
-        const memberNames = paidMemberships.map(m => m.member_name);
-        
-        const { data: updated, error: updateError } = await supabase
-          .from('match_members')
-          .update({
-            attendance_fee: 0,
-            has_membership: true,
-          })
-          .in('member_name', memberNames)
-          .eq('payment_status', 'pending')
-          .select();
-
-        if (updateError) {
-          console.error('Error recalculating attendance fees:', updateError);
-        }
-      }
+      console.log('🔄 Recalculating attendance fees - DISABLED');
+      console.log('   Reason: This function was incorrectly updating match_members');
+      console.log('   across different months. Membership should be checked at match');
+      console.log('   creation time only, not recalculated later.');
+      
+      // IMPORTANT: This function is now disabled because it was causing incorrect
+      // membership detection across months. For example, it would mark March matches
+      // as having membership if the member has February membership, which is wrong.
+      // 
+      // Membership status should ONLY be set when the match is created, based on
+      // the membership for that specific match's month.
+      //
+      // If we need to recalculate in the future, we must:
+      // 1. Fetch each match with its match_date
+      // 2. Extract the month/year from match_date
+      // 3. Query memberships for that specific month
+      // 4. Only update match_members for that specific match_id
+      
+      return; // Exit early - do not recalculate
     } catch (error) {
       console.error('Error in recalculateAttendanceFees:', error);
     }
@@ -431,19 +490,22 @@ export default function AdminPembayaranPage() {
     return membershipMap[memberName.toLowerCase()]?.payment_status === 'paid';
   }
 
-  // Fetch Smart Suggestions (MVP Feature)
+  // Fetch Smart Suggestions (MVP Feature) - Month-aware
   async function fetchSmartSuggestions() {
     if (loadingSuggestions) return;
     
     setLoadingSuggestions(true);
     try {
-      const now = new Date();
+      // Use selected month instead of current month
+      const targetMonth = selectedMonth.getMonth() + 1;
+      const targetYear = selectedMonth.getFullYear();
+      
       const response = await fetch('/api/ai/payment-suggestions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          month: now.getMonth() + 1,
-          year: now.getFullYear()
+          month: targetMonth,
+          year: targetYear
         })
       });
 
@@ -460,12 +522,14 @@ export default function AdminPembayaranPage() {
     }
   }
 
-  // Load smart suggestions when data changes
+  // Load smart suggestions when data changes or month changes
   useEffect(() => {
-    if (!loading && matches.length > 0) {
+    if (!loading) {
+      // Always fetch suggestions even when no matches/memberships
+      // This ensures we clear stale data when switching to empty months
       fetchSmartSuggestions();
     }
-  }, [loading, matches.length, memberships.length]);
+  }, [loading, matches.length, memberships.length, selectedMonth]);
 
   // Handle smart action execution
   async function executeSmartAction(action: typeof smartActions[0]) {
@@ -537,12 +601,13 @@ export default function AdminPembayaranPage() {
     }> = [];
 
     // Add match payments
-    matches.forEach(match => {
+    matches.forEach((match, matchIndex) => {
+      const monthlyMatchNumber = matchIndex + 1; // Calculate monthly match number
       const members = matchMembers[match.id] || [];
       members.forEach(member => {
         allPayments.push({
           memberName: member.member_name,
-          type: `Match #${match.match_number}`,
+          type: `Match #${monthlyMatchNumber}`,
           amount: member.total_amount,
           status: member.payment_status === 'paid' ? 'paid' : 
                   member.payment_status === 'pending' ? 'pending' : 
@@ -601,6 +666,64 @@ export default function AdminPembayaranPage() {
     }
   }
 
+  // Helper: Check if creation is allowed based on selected month
+  const getCreationPermission = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const selectedMonthNum = selectedMonth.getMonth();
+    const selectedYear = selectedMonth.getFullYear();
+    
+    // Calculate month difference
+    const monthDiff = (selectedYear - currentYear) * 12 + (selectedMonthNum - currentMonth);
+    
+    if (monthDiff < 0) {
+      // Past month - view only
+      return { allowed: false, reason: 'past', message: 'Tidak bisa membuat data untuk bulan lalu. Kembali ke bulan ini untuk membuat data baru.' };
+    } else if (monthDiff === 0) {
+      // Current month - full access
+      return { allowed: true, reason: 'current' };
+    } else if (monthDiff === 1) {
+      // Next month - needs confirmation
+      return { allowed: true, reason: 'next', needsConfirmation: true };
+    } else {
+      // Future months (2+) - disabled
+      return { allowed: false, reason: 'future', message: 'Terlalu jauh ke depan. Maksimal 1 bulan ke depan.' };
+    }
+  };
+
+  const handleCreateClick = (type: 'match' | 'membership') => {
+    const permission = getCreationPermission();
+    
+    if (!permission.allowed) {
+      alert(permission.message);
+      return;
+    }
+    
+    if (permission.needsConfirmation) {
+      // Next month - show confirmation
+      setPendingCreateAction(type);
+      setShowNextMonthConfirm(true);
+    } else {
+      // Current month - proceed directly
+      if (type === 'match') {
+        setShowCreateModal(true);
+      } else {
+        setShowMembershipModal(true);
+      }
+    }
+  };
+
+  const confirmNextMonthCreation = () => {
+    setShowNextMonthConfirm(false);
+    if (pendingCreateAction === 'match') {
+      setShowCreateModal(true);
+    } else if (pendingCreateAction === 'membership') {
+      setShowMembershipModal(true);
+    }
+    setPendingCreateAction(null);
+  };
+
   // Create new match
   async function createMatch() {
     try {
@@ -616,8 +739,26 @@ export default function AdminPembayaranPage() {
         return;
       }
 
-      // Validate that selected date is a Saturday
+      // Check if date is in next month and needs confirmation
       const selectedDate = new Date(newMatch.match_date);
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const selectedMonth = selectedDate.getMonth();
+      const selectedYear = selectedDate.getFullYear();
+      
+      const monthDiff = (selectedYear - currentYear) * 12 + (selectedMonth - currentMonth);
+      
+      if (monthDiff > 0) {
+        const confirmed = confirm(
+          `Anda akan membuat pertandingan untuk ${selectedDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })} (bulan depan).\\n\\nApakah Anda yakin ingin melanjutkan?`
+        );
+        if (!confirmed) {
+          return; // User cancelled
+        }
+      }
+
+      // Validate that selected date is a Saturday
       if (selectedDate.getDay() !== 6) {
         alert('Tanggal pertandingan harus hari Sabtu!');
         return;
@@ -634,6 +775,49 @@ export default function AdminPembayaranPage() {
       const totalCost = newMatch.shuttlecock_count * costPerShuttlecock;
       const costPerMember = totalCost / 4;
 
+      // Get membership status for the match date's month (not selected month)
+      const matchDate = new Date(newMatch.match_date);
+      const matchMonth = matchDate.getMonth() + 1;
+      const matchYear = matchDate.getFullYear();
+
+      // Fetch PAID memberships for the match's month (only paid memberships count!)
+      const { data: matchMonthMemberships, error: membershipQueryError } = await supabase
+        .from('memberships')
+        .select('*')
+        .eq('month', matchMonth)
+        .eq('year', matchYear)
+        .eq('payment_status', 'paid'); // Only consider PAID memberships
+
+      if (membershipQueryError) {
+        console.error('Error fetching memberships for match month:', membershipQueryError);
+      }
+
+      // Create a membership map for the match month (only PAID memberships)
+      const matchMonthMembershipMap: Record<string, Membership> = {};
+      if (matchMonthMemberships) {
+        matchMonthMemberships.forEach((m) => {
+          matchMonthMembershipMap[m.member_name.toLowerCase()] = m;
+        });
+      }
+
+      // Fetch member profiles to check payment_exempt status (VIP members)
+      const { data: memberProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('full_name, is_payment_exempt')
+        .in('full_name', members);
+
+      if (profilesError) {
+        console.error('Error fetching member profiles:', profilesError);
+      }
+
+      // Create payment exempt map
+      const paymentExemptMap: Record<string, boolean> = {};
+      if (memberProfiles) {
+        memberProfiles.forEach((p) => {
+          paymentExemptMap[p.full_name.toLowerCase()] = p.is_payment_exempt === true;
+        });
+      }
+
       // Create match
       const { data: match, error: matchError } = await supabase
         .from('matches')
@@ -648,9 +832,26 @@ export default function AdminPembayaranPage() {
 
       if (matchError) throw matchError;
 
-      // Create match members
+      // Create match members with membership check for match's month
       const membersData = members.map(memberName => {
-        const hasMembershipStatus = hasMembership(memberName);
+        // Check if member is payment exempt (VIP/sponsor/special access)
+        const isPaymentExempt = paymentExemptMap[memberName.toLowerCase()] === true;
+        
+        if (isPaymentExempt) {
+          return {
+            match_id: match.id,
+            member_name: memberName,
+            amount_due: 0,
+            attendance_fee: 0,
+            has_membership: true, // Mark as membership to show VIP status
+            payment_status: 'pending',
+          };
+        }
+
+        // Normal payment calculation for non-exempt members
+        // Check membership for the match's month, not the selected month
+        const memberMembership = matchMonthMembershipMap[memberName.toLowerCase()];
+        const hasMembershipStatus = !!memberMembership; // Already filtered by paid status in query
         const attendanceFee = hasMembershipStatus ? 0 : 18000;
         
         return {
@@ -678,7 +879,7 @@ export default function AdminPembayaranPage() {
         member4: '',
         match_date: '',
       });
-      fetchMatches();
+      loadData();
     } catch (error) {
       console.error('Error creating match:', error);
       alert('Gagal membuat pertandingan');
@@ -692,17 +893,17 @@ export default function AdminPembayaranPage() {
         return;
       }
 
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
+      // Use selectedMonth instead of current month
+      const targetMonth = selectedMonth.getMonth() + 1;
+      const targetYear = selectedMonth.getFullYear();
       const amount = newMembership.weeks_in_month === 4 ? 40000 : 45000;
 
       const { error } = await supabase
         .from('memberships')
         .insert({
           member_name: newMembership.member_name,
-          month: currentMonth,
-          year: currentYear,
+          month: targetMonth,
+          year: targetYear,
           weeks_in_month: newMembership.weeks_in_month,
           amount: amount,
           payment_status: 'pending',
@@ -781,10 +982,69 @@ export default function AdminPembayaranPage() {
       const oldCostPerMember = oldTotalCost / 4;
       const additionalCost = newCostPerMember - oldCostPerMember;
 
+      // Get membership status for the match date's month (not selected month)
+      const matchDate = editingMatch.match_date ? new Date(editingMatch.match_date) : (originalMatch?.match_date ? new Date(originalMatch.match_date) : new Date());
+      const matchMonth = matchDate.getMonth() + 1;
+      const matchYear = matchDate.getFullYear();
+
+      // Fetch PAID memberships for the match's month (only paid memberships count!)
+      const { data: matchMonthMemberships, error: membershipQueryError } = await supabase
+        .from('memberships')
+        .select('*')
+        .eq('month', matchMonth)
+        .eq('year', matchYear)
+        .eq('payment_status', 'paid'); // Only consider PAID memberships
+
+      if (membershipQueryError) {
+        console.error('Error fetching memberships for match month:', membershipQueryError);
+      }
+
+      // Create a membership map for the match month (only PAID memberships)
+      const matchMonthMembershipMap: Record<string, Membership> = {};
+      if (matchMonthMemberships) {
+        matchMonthMemberships.forEach((m) => {
+          matchMonthMembershipMap[m.member_name.toLowerCase()] = m;
+        });
+      }
+
+      // Fetch member profiles to check payment_exempt status (VIP members)
+      const memberNames = Object.values(editingMatch.members).map(m => m.name);
+      const { data: memberProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('full_name, is_payment_exempt')
+        .in('full_name', memberNames);
+
+      if (profilesError) {
+        console.error('Error fetching member profiles:', profilesError);
+      }
+
+      // Create payment exempt map
+      const paymentExemptMap: Record<string, boolean> = {};
+      if (memberProfiles) {
+        memberProfiles.forEach((p) => {
+          paymentExemptMap[p.full_name.toLowerCase()] = p.is_payment_exempt === true;
+        });
+      }
+
       // Update members
       for (const [memberId, memberData] of Object.entries(editingMatch.members)) {
-        const hasMembershipStatus = hasMembership(memberData.name);
-        const attendanceFee = hasMembershipStatus ? 0 : 18000;
+        // Check if member is payment exempt (VIP/sponsor/special access)
+        const isPaymentExempt = paymentExemptMap[memberData.name.toLowerCase()] === true;
+        
+        let hasMembershipStatus: boolean;
+        let attendanceFee: number;
+        
+        if (isPaymentExempt) {
+          console.log(`🎁 ${memberData.name} is payment exempt - all costs = 0`);
+          hasMembershipStatus = true; // Mark as membership to show VIP status
+          attendanceFee = 0;
+        } else {
+          // Normal payment calculation for non-exempt members
+          // Check membership for the match's month, not the selected month
+          const memberMembership = matchMonthMembershipMap[memberData.name.toLowerCase()];
+          hasMembershipStatus = !!memberMembership; // Already filtered by paid status in query
+          attendanceFee = hasMembershipStatus ? 0 : 18000;
+        }
         
         // Get current member data
         const currentMember = matchMembers[editingMatch.matchId]?.find(m => m.id === memberId);
@@ -794,7 +1054,7 @@ export default function AdminPembayaranPage() {
           // Try to update with revision status and additional_amount
           let updateData: any = {
             member_name: memberData.name,
-            amount_due: newCostPerMember,
+            amount_due: isPaymentExempt ? 0 : newCostPerMember, // Exempt members pay nothing
             attendance_fee: attendanceFee,
             has_membership: hasMembershipStatus,
           };
@@ -820,7 +1080,7 @@ export default function AdminPembayaranPage() {
               .from('match_members')
               .update({
                 member_name: memberData.name,
-                amount_due: newCostPerMember,
+                amount_due: isPaymentExempt ? 0 : newCostPerMember, // Exempt members pay nothing
                 attendance_fee: attendanceFee,
                 has_membership: hasMembershipStatus,
               })
@@ -834,7 +1094,7 @@ export default function AdminPembayaranPage() {
             .from('match_members')
             .update({
               member_name: memberData.name,
-              amount_due: newCostPerMember,
+              amount_due: isPaymentExempt ? 0 : newCostPerMember, // Exempt members pay nothing
               attendance_fee: attendanceFee,
               has_membership: hasMembershipStatus,
             })
@@ -853,7 +1113,7 @@ export default function AdminPembayaranPage() {
         alert('Perubahan berhasil disimpan!');
       }
       setEditingMatch(null);
-      fetchMatches();
+      loadData();
     } catch (error) {
       console.error('Error saving match changes:', error);
       alert(`Gagal menyimpan perubahan: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
@@ -879,7 +1139,7 @@ export default function AdminPembayaranPage() {
       }
       
       alert('Pertandingan berhasil dihapus');
-      fetchMatches();
+      loadData();
     } catch (error) {
       console.error('Error deleting match:', error);
       alert(`Gagal menghapus pertandingan: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -905,7 +1165,7 @@ export default function AdminPembayaranPage() {
       }
       
       alert('Entri pembayaran berhasil dihapus');
-      fetchMatches();
+      loadData();
     } catch (error) {
       console.error('Error deleting match member:', error);
       alert(`Gagal menghapus entri pembayaran: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -1025,7 +1285,7 @@ export default function AdminPembayaranPage() {
 
       closeBulkConfirmModal();
       clearBulkSelection();
-      await Promise.all([fetchMatches(), fetchMemberships()]);
+      await loadData();
       // Refresh smart suggestions after payment confirmation
       fetchSmartSuggestions();
     } catch (error) {
@@ -1092,7 +1352,7 @@ export default function AdminPembayaranPage() {
 
       closeBulkConfirmModal();
       clearBulkSelection();
-      await Promise.all([fetchMatches(), fetchMemberships()]);
+      await loadData();
       // Refresh smart suggestions after revision confirmation
       fetchSmartSuggestions();
     } catch (error) {
@@ -1154,7 +1414,7 @@ export default function AdminPembayaranPage() {
       setPaymentToReject(null);
       setSelectedProof(null);
       
-      await Promise.all([fetchMatches(), fetchMemberships()]);
+      await loadData();
     } catch (error) {
       console.error('Error rejecting payment:', error);
       alert('Gagal menolak bukti pembayaran');
@@ -1232,7 +1492,7 @@ export default function AdminPembayaranPage() {
 
       closeBulkRevisionModal();
       clearBulkSelection();
-      await Promise.all([fetchMatches(), fetchMemberships()]);
+      await loadData();
     } catch (error) {
       console.error('Error bulk creating revisions:', error);
       alert('Gagal membuat revisi');
@@ -1254,7 +1514,7 @@ export default function AdminPembayaranPage() {
       if (error) throw error;
       setShowProofModal(false);
       setSelectedProof(null);
-      fetchMatches();
+      loadData();
     } catch (error) {
       console.error('Error updating payment status:', error);
       alert('Gagal mengupdate status pembayaran');
@@ -1303,7 +1563,7 @@ export default function AdminPembayaranPage() {
       }
 
       // Refresh both lists
-      await Promise.all([fetchMemberships(), fetchMatches()]);
+      await loadData();
       setShowProofModal(false);
       setSelectedProof(null);
     } catch (error) {
@@ -1359,7 +1619,7 @@ export default function AdminPembayaranPage() {
       }
 
       // Refresh data
-      await Promise.all([fetchMemberships(), fetchMatches()]);
+      await loadData();
       setShowRollbackModal(false);
       setRollbackMembership(null);
       setRollbackPreview(null);
@@ -1466,11 +1726,55 @@ export default function AdminPembayaranPage() {
         {/* Monthly Recap */}
         <div className="mb-8 bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-500/30 rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-1">Rekap Bulan Ini</h2>
-              <p className="text-sm text-zinc-400">
-                {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-              </p>
+            <div className="flex items-center gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-1">
+                  Rekap {selectedMonth.getMonth() === new Date().getMonth() && 
+                         selectedMonth.getFullYear() === new Date().getFullYear() 
+                         ? 'Bulan Ini' : 'Bulan'}
+                </h2>
+                <div className="flex items-center gap-3 mt-1">
+                  {/* Month Navigator */}
+                  <button
+                    onClick={() => {
+                      const prevMonth = new Date(selectedMonth);
+                      prevMonth.setMonth(prevMonth.getMonth() - 1);
+                      setSelectedMonth(prevMonth);
+                    }}
+                    className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                    title="Bulan sebelumnya"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-zinc-400" />
+                  </button>
+                  
+                  <span className="text-sm font-medium text-white min-w-35 text-center">
+                    {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                  </span>
+                  
+                  <button
+                    onClick={() => {
+                      const nextMonth = new Date(selectedMonth);
+                      nextMonth.setMonth(nextMonth.getMonth() + 1);
+                      setSelectedMonth(nextMonth);
+                    }}
+                    className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                    title="Bulan berikutnya"
+                  >
+                    <ChevronRight className="w-5 h-5 text-zinc-400" />
+                  </button>
+
+                  {/* Current Month Button */}
+                  {(selectedMonth.getMonth() !== new Date().getMonth() || 
+                    selectedMonth.getFullYear() !== new Date().getFullYear()) && (
+                    <button
+                      onClick={() => setSelectedMonth(new Date())}
+                      className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors"
+                    >
+                      Bulan Ini
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="text-right">
               <p className="text-sm text-zinc-400 mb-1">Tingkat Penagihan</p>
@@ -1831,7 +2135,7 @@ export default function AdminPembayaranPage() {
           </div>
           {activeTab === 'matches' ? (
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => handleCreateClick('match')}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
             >
               <Plus className="w-5 h-5" />
@@ -1839,7 +2143,7 @@ export default function AdminPembayaranPage() {
             </button>
           ) : (
             <button
-              onClick={() => setShowMembershipModal(true)}
+              onClick={() => handleCreateClick('membership')}
               className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
             >
               <Plus className="w-5 h-5" />
@@ -1862,9 +2166,10 @@ export default function AdminPembayaranPage() {
                 </p>
               </div>
             )}
-            {filteredMatches.map((match) => {
+            {filteredMatches.map((match, matchIndex) => {
               const isExpanded = expandedMatches[match.id] ?? true;
               const isEditing = editingMatch?.matchId === match.id;
+              const monthlyMatchNumber = matchIndex + 1; // Calculate monthly match number
               return (
               <div key={match.id} className={`bg-zinc-900 border rounded-xl p-6 ${isEditing ? 'border-blue-500' : 'border-white/10'}`}>
                 <div className="flex items-center justify-between mb-4">
@@ -1882,7 +2187,7 @@ export default function AdminPembayaranPage() {
                         )}
                       </button>
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold">Pertandingan #{match.match_number}</h3>
+                        <h3 className="text-xl font-bold">Pertandingan #{monthlyMatchNumber}</h3>
                         {isEditing ? (
                           <div className="mt-2 space-y-2">
                             <div>
@@ -1969,7 +2274,7 @@ export default function AdminPembayaranPage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => deleteMatch(match.id, match.match_number)}
+                          onClick={() => deleteMatch(match.id, monthlyMatchNumber)}
                           className="p-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
                           title="Hapus Pertandingan"
                         >
@@ -2467,6 +2772,12 @@ export default function AdminPembayaranPage() {
                     }
                   }}
                   min={new Date().toISOString().split('T')[0]}
+                  max={(() => {
+                    const maxDate = new Date();
+                    maxDate.setMonth(maxDate.getMonth() + 2);
+                    maxDate.setDate(0); // Last day of next month
+                    return maxDate.toISOString().split('T')[0];
+                  })()}
                   className="w-full px-4 py-2 bg-zinc-800 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 />
                 {newMatch.match_date && (
@@ -2505,10 +2816,17 @@ export default function AdminPembayaranPage() {
                   {[1, 2, 3, 4].map((num) => {
                     const memberKey = `member${num}` as keyof typeof newMatch;
                     const memberName = newMatch[memberKey] as string;
-                    const hasMembershipStatus = memberName && hasMembership(memberName);
+                    
+                    // Check if member is payment exempt (VIP)
+                    const isPaymentExempt = memberName ? paymentExemptMembers.has(memberName.toLowerCase()) : false;
+                    
+                    // Check membership for the match date's month, not the selected month
+                    const memberMembership = memberName ? matchDateMembershipMap[memberName.toLowerCase()] : null;
+                    const hasMembershipStatus = isPaymentExempt || !!memberMembership; // Exempt or has PAID membership
+                    
                     const costBreakdown = {
-                      shuttlecock: (newMatch.shuttlecock_count * 12000) / 4,
-                      attendance: hasMembershipStatus ? 0 : 18000,
+                      shuttlecock: isPaymentExempt ? 0 : (newMatch.shuttlecock_count * 12000) / 4,
+                      attendance: (isPaymentExempt || memberMembership) ? 0 : 18000,
                     };
                     const total = costBreakdown.shuttlecock + costBreakdown.attendance;
 
@@ -2528,23 +2846,37 @@ export default function AdminPembayaranPage() {
                         </select>
                         {memberName && (
                           <div className="mt-1 text-xs space-y-1">
-                            <p className="text-zinc-400">
-                              Shuttlecock: Rp {costBreakdown.shuttlecock.toLocaleString('id-ID')}
-                            </p>
-                            {costBreakdown.attendance > 0 ? (
+                            {isPaymentExempt ? (
                               <>
-                                <p className="text-yellow-400">
-                                  + Kehadiran: Rp {costBreakdown.attendance.toLocaleString('id-ID')} (Bukan Member)
+                                <p className="text-pink-400 flex items-center gap-1">
+                                  <Award className="w-3 h-3" />
+                                  VIP - Gratis (Bebas Biaya)
                                 </p>
                                 <p className="text-white font-semibold">
-                                  Total: Rp {total.toLocaleString('id-ID')}
+                                  Total: Rp 0
                                 </p>
                               </>
                             ) : (
-                              <p className="text-purple-400 flex items-center gap-1">
-                                <Award className="w-3 h-3" />
-                                Member - Total: Rp {total.toLocaleString('id-ID')}
-                              </p>
+                              <>
+                                <p className="text-zinc-400">
+                                  Shuttlecock: Rp {costBreakdown.shuttlecock.toLocaleString('id-ID')}
+                                </p>
+                                {costBreakdown.attendance > 0 ? (
+                                  <>
+                                    <p className="text-yellow-400">
+                                      + Kehadiran: Rp {costBreakdown.attendance.toLocaleString('id-ID')} (Belum Member {new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' })})
+                                    </p>
+                                    <p className="text-white font-semibold">
+                                      Total: Rp {total.toLocaleString('id-ID')}
+                                    </p>
+                                  </>
+                                ) : (
+                                  <p className="text-purple-400 flex items-center gap-1">
+                                    <Award className="w-3 h-3" />
+                                    Member {new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' })} - Total: Rp {total.toLocaleString('id-ID')}
+                                  </p>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
@@ -3393,6 +3725,44 @@ export default function AdminPembayaranPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Next Month Creation Confirmation Modal */}
+      {showNextMonthConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-yellow-500/30 rounded-xl p-6 max-w-md w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-yellow-500/20 rounded-lg">
+                <AlertCircle className="w-6 h-6 text-yellow-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white">Konfirmasi Pembuatan</h3>
+            </div>
+            <p className="text-zinc-300 mb-6">
+              Anda akan membuat {pendingCreateAction === 'match' ? 'pertandingan' : 'membership'} untuk{' '}
+              <span className="font-semibold text-white">
+                {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+              </span>{' '}
+              (bulan depan). Apakah Anda yakin?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowNextMonthConfirm(false);
+                  setPendingCreateAction(null);
+                }}
+                className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmNextMonthCreation}
+                className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Ya, Lanjutkan
+              </button>
             </div>
           </div>
         </div>

@@ -274,6 +274,24 @@ export default function MatchImageExtractionPage() {
       return;
     }
 
+    // Check if date is in next month and needs confirmation
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const selectedMonth = selectedDate.getMonth();
+    const selectedYear = selectedDate.getFullYear();
+    
+    const monthDiff = (selectedYear - currentYear) * 12 + (selectedMonth - currentMonth);
+    
+    if (monthDiff > 0) {
+      const confirmed = confirm(
+        `Anda akan membuat ${extractedData.matches.length} pertandingan untuk ${selectedDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })} (bulan depan).\n\nApakah Anda yakin ingin melanjutkan?`
+      );
+      if (!confirmed) {
+        return; // User cancelled
+      }
+    }
+
     setIsSaving(true);
     setError('');
 
@@ -617,6 +635,12 @@ export default function MatchImageExtractionPage() {
                       }
                     }}
                     min={new Date().toISOString().split('T')[0]}
+                    max={(() => {
+                      const maxDate = new Date();
+                      maxDate.setMonth(maxDate.getMonth() + 2);
+                      maxDate.setDate(0); // Last day of next month
+                      return maxDate.toISOString().split('T')[0];
+                    })()}
                     className="w-full px-4 py-2 bg-white/5 border border-blue-400/30 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
                   {matchDate && (

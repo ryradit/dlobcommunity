@@ -40,6 +40,7 @@ export default function AdminMembersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [currentMonthYear, setCurrentMonthYear] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
 
   // Payment exemption states
   const [showExemptionModal, setShowExemptionModal] = useState(false);
@@ -72,10 +73,19 @@ export default function AdminMembersPage() {
     try {
       setLoading(true);
       
-      // Get current month/year for membership check
+      // Get current month/year for membership check (always use fresh date)
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth() + 1;
       const currentYear = currentDate.getFullYear();
+      
+      // Update state to track current month
+      setCurrentMonthYear({ month: currentMonth, year: currentYear });
+      
+      // Clear cache for previous months to ensure fresh data
+      // This ensures when a new month starts, old membership data is not shown
+      const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+      const previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+      queryCache.invalidate(`admin-active-memberships-${previousMonth}-${previousYear}`);
       
       // Fetch profiles and memberships in parallel (skip slow auth.admin call)
       const [profilesResult, membershipsResult] = await Promise.allSettled([
@@ -127,13 +137,16 @@ export default function AdminMembersPage() {
         }
       }
       
-      // Merge membership status with profiles (avatar_url already in profiles table)
+      // Merge membership status with profiles
+      // IMPORTANT: has_membership is based on CURRENT MONTH only
+      // When a new month starts, members without paid membership for the new month
+      // will NOT have the membership badge, even if they had it last month
       if (profilesData.length > 0) {
         const mergedData = profilesData.map(profile => {
           const hasMembership = membershipNames.has((profile.full_name || '').toLowerCase());
           return {
             ...profile,
-            has_membership: hasMembership,
+            has_membership: hasMembership, // Only true if member has PAID membership for current month
           };
         });
         setMembers(mergedData);
@@ -444,6 +457,21 @@ export default function AdminMembersPage() {
         </div>
       </div>
 
+      {/* Membership Month Indicator */}
+      <div className="mb-4 sm:mb-6 bg-purple-500/10 border border-purple-500/30 rounded-xl p-3 sm:p-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Crown className="w-5 h-5 text-purple-400 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-purple-300">
+              Status Membership: {new Date(currentMonthYear.year, currentMonthYear.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+            </p>
+            <p className="text-xs text-purple-400/70 mt-0.5">
+              Badge membership hanya ditampilkan untuk member yang sudah membayar membership bulan ini
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Search */}
       <div className="members-search mb-6">
         <div className="relative">
@@ -540,7 +568,10 @@ export default function AdminMembersPage() {
                           </span>
                         </div>
                         {member.has_membership && (
-                          <div className="flex items-center gap-1 sm:gap-1.5">
+                          <div 
+                            className="flex items-center gap-1 sm:gap-1.5"
+                            title={`Membership aktif untuk ${new Date(currentMonthYear.year, currentMonthYear.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
+                          >
                             <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
                             <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30">
                               Membership

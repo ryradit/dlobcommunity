@@ -67,7 +67,7 @@ export const ADMIN_PEMBAYARAN_TUTORIAL: TutorialStep[] = [
   {
     element: '.action-buttons',
     title: '➕ Tombol Aksi',
-    description: 'Buat pertandingan baru atau tambah membership. Smart detection akan membantu menentukan jumlah minggu.',
+    description: 'Buat pertandingan baru atau tambah membership. Smart detection akan membantu menentukan jumlah minggu. PENTING: Saat melihat bulan lalu = disabled. Bulan ini = full access. Bulan depan = muncul konfirmasi sebelum create.',
     position: 'bottom',
   },
   {
@@ -85,7 +85,7 @@ export const ADMIN_PEMBAYARAN_TUTORIAL: TutorialStep[] = [
   {
     element: '.payment-table',
     title: '📋 Tabel Pembayaran',
-    description: 'Lihat status pembayaran, lihat bukti pembayaran, dan kelola konfirmasi pembayaran member di sini.',
+    description: 'Lihat status pembayaran, lihat bukti pembayaran, dan kelola konfirmasi pembayaran member di sini. Data difilter otomatis sesuai bulan yang dipilih.',
     position: 'top',
   },
 ];
@@ -131,27 +131,33 @@ export const ADMIN_MEMBERS_TUTORIAL: TutorialStep[] = [
  */
 export const ADMIN_ANALITIK_TUTORIAL: TutorialStep[] = [
   {
+    element: '.analitik-monthly-summary',
+    title: 'Rekap Bulanan',
+    description: 'Lihat statistik pertandingan per bulan. Gunakan panah kiri/kanan untuk navigasi antar bulan, atau klik "Bulan Ini" untuk kembali ke bulan berjalan.',
+    position: 'bottom',
+  },
+  {
     element: '.analitik-matches-list',
-    title: '📊 Daftar Pertandingan',
-    description: 'Lihat semua pertandingan yang telah dimainkan dengan urutan terbaru. Klik untuk melihat detail member yang bermain.',
+    title: 'Daftar Pertandingan',
+    description: 'Lihat semua pertandingan dalam bulan yang dipilih. Klik pertandingan untuk melihat detail lengkap tim dan skor.',
     position: 'bottom',
   },
   {
     element: '.analitik-match-stats',
-    title: '⚽ Statistik Pertandingan',
-    description: 'Analisis detail untuk setiap pertandingan termasuk score, team composition, dan hasil akhir.',
+    title: 'Detail Pertandingan',
+    description: 'Analisis lengkap untuk setiap pertandingan: nama pemain, score tim, status pemenang, dan informasi tanggal pertandingan.',
     position: 'bottom',
   },
   {
     element: '.analitik-edit-scores',
-    title: '✏️ Edit Score',
-    description: 'Perbarui score dan hasil pertandingan jika ada kesalahan input. Klik tombol Edit untuk mengubah data.',
+    title: 'Edit Pertandingan',
+    description: 'Klik tombol Edit untuk mengubah pemain, score, atau informasi pertandingan. Pastikan data akurat untuk laporan statistik.',
     position: 'top',
   },
   {
     element: '.analitik-member-selection',
-    title: '👥 Pemilihan Member',
-    description: 'Lihat member mana saja yang bermain di setiap pertandingan. Gunakan untuk tracking kehadiran dan partner preferences.',
+    title: 'Pemain Terdaftar',
+    description: 'Daftar pemain yang terdaftar di pertandingan ini. Gunakan dropdown untuk mengatur tim saat mode edit aktif.',
     position: 'top',
   },
 ];
@@ -433,14 +439,58 @@ export const ADMIN_ARTIKEL_TUTORIAL: TutorialStep[] = [
 ];
 
 /**
+ * Tutorial steps for Admin Keuangan page
+ */
+export const ADMIN_KEUANGAN_TUTORIAL: TutorialStep[] = [
+  {
+    element: '.keuangan-month-navigator',
+    title: '📅 Navigasi Bulan',
+    description: 'Gunakan panah ← → untuk melihat rekap keuangan bulan lain (historis atau masa depan). Klik "Bulan Ini" untuk kembali ke bulan sekarang. Semua data (pendapatan, pengeluaran, profit) otomatis terupdate sesuai bulan yang dipilih!',
+    position: 'bottom',
+  },
+  {
+    element: '.keuangan-card-pendapatan',
+    title: '💰 Pendapatan (Revenue)',
+    description: 'Total revenue otomatis dari pembayaran pertandingan + membership yang sudah confirmed untuk bulan yang dipilih. Data diambil langsung dari halaman Pembayaran.',
+    position: 'bottom',
+  },
+  {
+    element: '.keuangan-card-pengeluaran',
+    title: '💸 Pengeluaran (Expenses)',
+    description: 'Total semua pengeluaran operasional dengan breakdown per kategori: Sewa Lapangan, Shuttlecock, dan Lainnya. Klik "Tambah Pengeluaran" untuk menambah data baru.',
+    position: 'bottom',
+  },
+  {
+    element: '.keuangan-card-keuntungan',
+    title: '📊 Keuntungan (Net Profit)',
+    description: 'Dihitung otomatis: Pendapatan - Pengeluaran. Menampilkan profit/loss dan margin dalam persen. Merah = rugi, Hijau = untung. Monitor performa bisnis bulanan di sini!',
+    position: 'bottom',
+  },
+  {
+    element: '.keuangan-expense-table',
+    title: '📋 Rincian Pengeluaran',
+    description: 'Daftar lengkap semua pengeluaran dengan tanggal, kategori, jumlah, dan catatan. Gunakan tombol Edit (✏️) untuk mengubah atau Hapus (🗑️) untuk menghapus data.',
+    position: 'top',
+  },
+  {
+    element: '.keuangan-add-button',
+    title: '➕ Tambah Pengeluaran',
+    description: 'Klik untuk menambah pengeluaran baru. Isi: Kategori (Sewa/Shuttlecock/Lainnya), Nama pengeluaran, Jumlah (Rp), Tanggal, dan Catatan opsional. Semua perubahan langsung update ringkasan!',
+    position: 'left',
+  },
+];
+
+/**
  * Get tutorial for a specific page
  */
-export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'members' | 'analitik' | 'team-optimizer' | 'artikel' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings' | 'member-training'): TutorialStep[] {
+export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'keuangan' | 'members' | 'analitik' | 'team-optimizer' | 'artikel' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings' | 'member-training'): TutorialStep[] {
   switch (page) {
     case 'dashboard':
       return ADMIN_DASHBOARD_TUTORIAL;
     case 'pembayaran':
       return ADMIN_PEMBAYARAN_TUTORIAL;
+    case 'keuangan':
+      return ADMIN_KEUANGAN_TUTORIAL;
     case 'artikel':
       return ADMIN_ARTIKEL_TUTORIAL;
     case 'members':

@@ -63,12 +63,24 @@ export async function POST(request: NextRequest) {
     const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString();
     const endDate = new Date(currentYear, currentMonth, 0, 23, 59, 59).toISOString();
 
+    // First, fetch matches filtered by match_date (not created_at)
+    const matchesResult = await supabase
+      .from('matches')
+      .select('id')
+      .gte('match_date', startDate)
+      .lte('match_date', endDate);
+
+    const matchesInMonth = matchesResult.data || [];
+    const matchIds = matchesInMonth.map(m => m.id);
+
+    // Then fetch match_members only for matches in this month
     const [matchMembersResult, membershipsResult] = await Promise.all([
-      supabase
-        .from('match_members')
-        .select('id, member_name, total_amount, payment_status, paid_at, payment_proof, match_id, created_at')
-        .gte('created_at', startDate)
-        .lte('created_at', endDate),
+      matchIds.length > 0
+        ? supabase
+            .from('match_members')
+            .select('id, member_name, total_amount, payment_status, paid_at, payment_proof, match_id, created_at')
+            .in('match_id', matchIds)
+        : Promise.resolve({ data: [] }),
       supabase
         .from('memberships')
         .select('id, member_name, amount, payment_status, paid_at, payment_proof, created_at')
