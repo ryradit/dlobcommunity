@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Image as ImageIcon, Loader2, CheckCircle, XCircle, AlertCircle, ChevronDown, Save } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface MatchData {
   team1_player1: string;
@@ -50,6 +51,9 @@ export default function MatchImageExtractionPage() {
   const [playerValidation, setPlayerValidation] = useState<PlayerValidation>({});
   const [showSuggestions, setShowSuggestions] = useState<{[key: string]: boolean}>({});
   const [matchDate, setMatchDate] = useState<string>('');
+  const [creatingPlayer, setCreatingPlayer] = useState<{[key: string]: boolean}>({});
+  const [notifStatus, setNotifStatus] = useState<'idle' | 'sending' | 'done'>('idle');
+  const [notifSummary, setNotifSummary] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper function to parse date string as local date (not UTC)
@@ -269,10 +273,6 @@ export default function MatchImageExtractionPage() {
     }
 
     const selectedDate = getLocalDateFromString(matchDate);
-    if (selectedDate.getDay() !== 6) {
-      alert('Tanggal harus hari Sabtu!');
-      return;
-    }
 
     // Check if date is in next month and needs confirmation
     const now = new Date();
@@ -328,6 +328,66 @@ export default function MatchImageExtractionPage() {
         
         alert(message);
         
+        // --- Send grouped WA + email notifications ---
+        const summary = data.memberSummary as Array<{
+          name: string; phone: string | null; email: string | null;
+          matchCount: number; totalAmountDue: number; totalAttendanceFee: number;
+          hasMembership: boolean; isPaymentExempt: boolean;
+        }>;
+
+        console.log('[Notif] memberSummary from bulk-create:', JSON.stringify(summary));
+
+        if (summary && summary.length > 0) {
+          setNotifStatus('sending');
+
+          const buildMember = (s: typeof summary[0]) => ({
+            name: s.name,
+            phone: s.phone || '',
+            email: s.email || '',
+            amountDue: s.matchCount > 0 ? Math.round(s.totalAmountDue / s.matchCount) : 0,
+            attendanceFee: s.totalAttendanceFee,
+            hasMembership: s.hasMembership,
+            isPaymentExempt: s.isPaymentExempt,
+            matchCount: s.matchCount,
+            totalAmountDue: s.totalAmountDue,
+          });
+
+          const waMembers = summary.filter(s => s.phone && s.phone.trim()).map(buildMember);
+          console.log('[Notif] waMembers count:', waMembers.length, waMembers.map(m => `${m.name}:${m.phone}`));
+          const emailMembers = summary
+            .filter(s => s.email && !s.email.endsWith('@temp.dlob.local'))
+            .map(buildMember);
+
+          const [waRes, emailRes] = await Promise.allSettled([
+            waMembers.length > 0
+              ? fetch('/api/send-wa-notification', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ matchDate, members: waMembers, quickSend: true }),
+                }).then(r => r.json())
+              : Promise.resolve({ summary: { sent: 0, failed: 0, skipped: 0 } }),
+            emailMembers.length > 0
+              ? fetch('/api/send-match-notification', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ matchDate, members: emailMembers }),
+                }).then(r => r.json())
+              : Promise.resolve({ summary: { sent: 0, failed: 0, skipped: 0 } }),
+          ]);
+
+          const waSummary = waRes.status === 'fulfilled' ? waRes.value?.summary : null;
+          const mailSummary = emailRes.status === 'fulfilled' ? emailRes.value?.summary : null;
+
+          if (waRes.status === 'rejected') console.error('[WA notif failed]', waRes.reason);
+          if (emailRes.status === 'rejected') console.error('[Email notif failed]', emailRes.reason);
+
+          const parts: string[] = [];
+          if (waSummary) parts.push(`WA: ${waSummary.sent} terkirim${waSummary.failed > 0 ? `, ${waSummary.failed} gagal` : ''}`);
+          if (mailSummary) parts.push(`Email: ${mailSummary.sent} terkirim${mailSummary.failed > 0 ? `, ${mailSummary.failed} gagal` : ''}`);
+          setNotifSummary(parts.join(' · ') || 'Notifikasi dikirim');
+          setNotifStatus('done');
+        }
+        
         // Reset form
         setExtractedData(null);
         setSelectedImage(null);
@@ -344,6 +404,35 @@ export default function MatchImageExtractionPage() {
       console.error('Save error:', error);
       setError(error instanceof Error ? error.message : 'Gagal menyimpan pertandingan');
       setIsSaving(false);
+    }
+  };
+
+  const createTempPlayerAccount = async (matchIndex: number, field: PlayerField, name: string) => {
+    if (!name.trim()) return;
+    const key = `${matchIndex}-${field}`;
+    setCreatingPlayer(prev => ({ ...prev, [key]: true }));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/create-temp-member', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ full_name: name.trim() }),
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      // Mark as exact match now
+      setPlayerValidation(prev => ({
+        ...prev,
+        [matchIndex]: {
+          ...prev[matchIndex],
+          [field]: { isExactMatch: true, suggestions: [] },
+        },
+      }));
+    } finally {
+      setCreatingPlayer(prev => ({ ...prev, [key]: false }));
     }
   };
 
@@ -409,6 +498,21 @@ export default function MatchImageExtractionPage() {
           </div>
         </div>
         
+        {/* No match or unresolved — offer to create temp account */}
+        {validation && !validation.isExactMatch && value.trim() && (
+          <button
+            onClick={() => createTempPlayerAccount(matchIndex, field, value)}
+            disabled={creatingPlayer[suggestionKey]}
+            className="mt-1 w-full flex items-center justify-center gap-1.5 px-2 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-xs text-purple-300 hover:text-white transition-colors disabled:opacity-50"
+          >
+            {creatingPlayer[suggestionKey] ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <>+ Buat akun temp untuk &quot;{value}&quot;</>
+            )}
+          </button>
+        )}
+
         {/* Suggestions Dropdown */}
         {hasSuggestions && showSuggestions[suggestionKey] && (
           <div className="absolute z-10 mt-1 w-full bg-slate-800 border border-yellow-400/30 rounded-lg shadow-xl max-h-40 overflow-y-auto">
@@ -627,14 +731,14 @@ export default function MatchImageExtractionPage() {
                         setMatchDate(e.target.value);
                         return;
                       }
-                      const selectedDate = getLocalDateFromString(e.target.value);
-                      if (selectedDate.getDay() === 6) {
-                        setMatchDate(e.target.value);
-                      } else {
-                        alert('Harap pilih hari Sabtu!');
-                      }
+                      setMatchDate(e.target.value);
                     }}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={(() => {
+                      const minDate = new Date();
+                      minDate.setMonth(minDate.getMonth() - 2);
+                      minDate.setDate(1);
+                      return minDate.toISOString().split('T')[0];
+                    })()}
                     max={(() => {
                       const maxDate = new Date();
                       maxDate.setMonth(maxDate.getMonth() + 2);
@@ -716,7 +820,7 @@ export default function MatchImageExtractionPage() {
                 <div className="flex gap-3 mt-4">
                   <button 
                     onClick={handleSaveAllMatches}
-                    disabled={isSaving || !matchDate}
+                    disabled={isSaving || notifStatus === 'sending' || !matchDate}
                     className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
                   >
                     {isSaving ? (
@@ -736,12 +840,16 @@ export default function MatchImageExtractionPage() {
                       setExtractedData(null);
                       setMatchDate('');
                       setPlayerValidation({});
+                      setNotifStatus('idle');
+                      setNotifSummary('');
                     }}
-                    disabled={isSaving}
+                    disabled={isSaving || notifStatus === 'sending'}
                     className="flex-1 bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white py-3 rounded-lg font-semibold border border-white/20 transition-all">
                     Reset
                   </button>
                 </div>
+
+                {/* Notification status banner - inside extractedData block removed, shown globally below */}
               </div>
             )}
 
@@ -754,6 +862,20 @@ export default function MatchImageExtractionPage() {
                 <p className="text-purple-200">
                   Unggah gambar dengan beberapa baris pertandingan (biasanya 15-20 pertandingan) dan klik "Ekstrak Data Pertandingan"
                 </p>
+              </div>
+            )}
+
+            {/* Notification status banner - shown globally, persists after form reset */}
+            {notifStatus === 'sending' && (
+              <div className="mt-4 flex items-center gap-2 bg-blue-500/20 border border-blue-400/40 rounded-lg px-4 py-3 text-blue-200 text-sm">
+                <Loader2 className="animate-spin shrink-0" size={16} />
+                <span>Mengirim notifikasi WA &amp; email ke anggota... (jangan tutup halaman)</span>
+              </div>
+            )}
+            {notifStatus === 'done' && notifSummary && (
+              <div className="mt-4 flex items-center gap-2 bg-green-500/20 border border-green-400/40 rounded-lg px-4 py-3 text-green-200 text-sm">
+                <CheckCircle className="shrink-0" size={16} />
+                <span>Notifikasi terkirim · {notifSummary}</span>
               </div>
             )}
           </div>

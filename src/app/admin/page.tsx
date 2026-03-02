@@ -113,11 +113,11 @@ export default function AdminDashboardPage() {
         ),
         // Revenue data
         cachedQuery(
-          'admin-revenue-monthly',
+          'admin-revenue-monthly-v2',
           async () => {
             const matchMembersResult = await supabase
               .from('match_members')
-              .select('total_amount, paid_at')
+              .select('total_amount, paid_at, matches(match_date)')
               .eq('payment_status', 'paid');
             
             const membershipsResult = await supabase
@@ -415,7 +415,11 @@ export default function AdminDashboardPage() {
     
     // Aggregate revenue by month
     const allRevenue = [
-      ...matchMembers.map(m => ({ date: m.paid_at, amount: m.total_amount || 0 })),
+      ...matchMembers.map(m => ({
+        // Use match_date for match revenue (the month the match was played, not when paid)
+        date: (m.matches as any)?.match_date || m.paid_at,
+        amount: m.total_amount || 0
+      })),
       ...memberships.map(m => ({ date: m.paid_at, amount: m.amount || 0 }))
     ].filter(r => r.date);
     

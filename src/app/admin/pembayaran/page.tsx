@@ -63,6 +63,8 @@ export default function AdminPembayaranPage() {
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [membershipMap, setMembershipMap] = useState<Record<string, Membership>>({});
   const [allMembers, setAllMembers] = useState<Array<{ id: string; name: string }>>([]);
+  const [newMemberInputs, setNewMemberInputs] = useState<Record<string, string>>({});
+  const [creatingMember, setCreatingMember] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNextMonthConfirm, setShowNextMonthConfirm] = useState(false);
@@ -87,6 +89,10 @@ export default function AdminPembayaranPage() {
   });
   const [matchDateMembershipMap, setMatchDateMembershipMap] = useState<Record<string, Membership>>({});
   const [paymentExemptMembers, setPaymentExemptMembers] = useState<Set<string>>(new Set());
+  const [waNotificationResult, setWaNotificationResult] = useState<{
+    wa: { results: { name: string; phone: string; status: string; error?: string }[]; summary: { sent: number; failed: number; skipped: number } } | null;
+    email: { results: { name: string; email: string; status: string; error?: string }[]; summary: { sent: number; failed: number; skipped: number } } | null;
+  } | null>(null);
   const [newMembership, setNewMembership] = useState({
     member_name: '',
     weeks_in_month: 4,
@@ -486,6 +492,32 @@ export default function AdminPembayaranPage() {
     }
   }
 
+  async function createTempMemberInline(memberKey: string) {
+    const name = newMemberInputs[memberKey]?.trim();
+    if (!name) return;
+    setCreatingMember(prev => ({ ...prev, [memberKey]: true }));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/create-temp-member', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ full_name: name }),
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      if (!data.existed) {
+        setAllMembers(prev => [...prev, { id: data.id, name: data.full_name }].sort((a, b) => a.name.localeCompare(b.name)));
+      }
+      setNewMatch(prev => ({ ...prev, [memberKey]: data.full_name }));
+      setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' }));
+    } finally {
+      setCreatingMember(prev => ({ ...prev, [memberKey]: false }));
+    }
+  }
+
   function hasMembership(memberName: string): boolean {
     return membershipMap[memberName.toLowerCase()]?.payment_status === 'paid';
   }
@@ -677,9 +709,12 @@ export default function AdminPembayaranPage() {
     // Calculate month difference
     const monthDiff = (selectedYear - currentYear) * 12 + (selectedMonthNum - currentMonth);
     
-    if (monthDiff < 0) {
-      // Past month - view only
-      return { allowed: false, reason: 'past', message: 'Tidak bisa membuat data untuk bulan lalu. Kembali ke bulan ini untuk membuat data baru.' };
+    if (monthDiff < -2) {
+      // More than 2 months ago - view only
+      return { allowed: false, reason: 'past', message: 'Tidak bisa membuat data lebih dari 2 bulan lalu.' };
+    } else if (monthDiff < 0) {
+      // Past month (within 2 months) - allowed with note
+      return { allowed: true, reason: 'past_allowed' };
     } else if (monthDiff === 0) {
       // Current month - full access
       return { allowed: true, reason: 'current' };
@@ -758,12 +793,6 @@ export default function AdminPembayaranPage() {
         }
       }
 
-      // Validate that selected date is a Saturday
-      if (selectedDate.getDay() !== 6) {
-        alert('Tanggal pertandingan harus hari Sabtu!');
-        return;
-      }
-
       // Check for duplicate members
       const uniqueMembers = new Set(members.map(m => m.toLowerCase().trim()));
       if (uniqueMembers.size !== members.length) {
@@ -803,18 +832,22 @@ export default function AdminPembayaranPage() {
       // Fetch member profiles to check payment_exempt status (VIP members)
       const { data: memberProfiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('full_name, is_payment_exempt')
+        .select('full_name, is_payment_exempt, phone, email')
         .in('full_name', members);
 
       if (profilesError) {
         console.error('Error fetching member profiles:', profilesError);
       }
 
-      // Create payment exempt map
+      // Create payment exempt map, phone map, and email map
       const paymentExemptMap: Record<string, boolean> = {};
+      const phoneMap: Record<string, string> = {};
+      const emailMap: Record<string, string> = {};
       if (memberProfiles) {
         memberProfiles.forEach((p) => {
           paymentExemptMap[p.full_name.toLowerCase()] = p.is_payment_exempt === true;
+          if (p.phone) phoneMap[p.full_name.toLowerCase()] = p.phone;
+          if (p.email) emailMap[p.full_name.toLowerCase()] = p.email;
         });
       }
 
@@ -880,6 +913,41 @@ export default function AdminPembayaranPage() {
         match_date: '',
       });
       loadData();
+
+      // Send WA + Email notifications in parallel
+      try {
+        const notifMembers = membersData.map(m => ({
+          name: m.member_name,
+          phone: phoneMap[m.member_name.toLowerCase()] || '',
+          email: emailMap[m.member_name.toLowerCase()] || '',
+          amountDue: m.amount_due,
+          attendanceFee: m.attendance_fee,
+          hasMembership: m.has_membership,
+          isPaymentExempt: paymentExemptMap[m.member_name.toLowerCase()] || false,
+        }));
+
+        const [waRes, emailRes] = await Promise.all([
+          fetch('/api/send-wa-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ matchDate: match.match_date, members: notifMembers }),
+          }),
+          fetch('/api/send-match-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ matchDate: match.match_date, members: notifMembers }),
+          }),
+        ]);
+
+        const waData = waRes.ok ? await waRes.json() : null;
+        const emailData = emailRes.ok ? await emailRes.json() : null;
+        if (waData || emailData) {
+          setWaNotificationResult({ wa: waData, email: emailData });
+        }
+      } catch (notifErr) {
+        console.error('Notification error:', notifErr);
+        // Non-blocking — match was already created successfully
+      }
     } catch (error) {
       console.error('Error creating match:', error);
       alert('Gagal membuat pertandingan');
@@ -946,15 +1014,6 @@ export default function AdminPembayaranPage() {
     if (!editingMatch) return;
 
     try {
-      // Validate date is Saturday if provided
-      if (editingMatch.match_date) {
-        const selectedDate = new Date(editingMatch.match_date);
-        if (selectedDate.getDay() !== 6) {
-          alert('Tanggal pertandingan harus hari Sabtu!');
-          return;
-        }
-      }
-
       // Get original match data to compare shuttlecock count
       const originalMatch = matches.find(m => m.id === editingMatch.matchId);
       const shuttlecockIncreased = originalMatch && editingMatch.shuttlecock_count > originalMatch.shuttlecock_count;
@@ -2196,12 +2255,7 @@ export default function AdminPembayaranPage() {
                                 type="date"
                                 value={editingMatch.match_date}
                                 onChange={(e) => {
-                                  const selectedDate = new Date(e.target.value);
-                                  if (selectedDate.getDay() === 6 || !e.target.value) {
-                                    setEditingMatch({ ...editingMatch, match_date: e.target.value });
-                                  } else {
-                                    alert('Harap pilih hari Sabtu!');
-                                  }
+                                  setEditingMatch({ ...editingMatch, match_date: e.target.value });
                                 }}
                                 className="w-full px-3 py-1 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 rounded text-gray-900 dark:text-white text-sm mt-1 transition-colors duration-300"
                               />
@@ -2764,14 +2818,14 @@ export default function AdminPembayaranPage() {
                   type="date"
                   value={newMatch.match_date}
                   onChange={(e) => {
-                    const selectedDate = new Date(e.target.value);
-                    if (selectedDate.getDay() === 6 || !e.target.value) {
-                      setNewMatch({ ...newMatch, match_date: e.target.value });
-                    } else {
-                      alert('Harap pilih hari Sabtu!');
-                    }
+                    setNewMatch({ ...newMatch, match_date: e.target.value });
                   }}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={(() => {
+                    const minDate = new Date();
+                    minDate.setMonth(minDate.getMonth() - 2);
+                    minDate.setDate(1);
+                    return minDate.toISOString().split('T')[0];
+                  })()}
                   max={(() => {
                     const maxDate = new Date();
                     maxDate.setMonth(maxDate.getMonth() + 2);
@@ -2833,8 +2887,16 @@ export default function AdminPembayaranPage() {
                     return (
                       <div key={num}>
                         <select
-                          value={memberName}
-                          onChange={(e) => setNewMatch({ ...newMatch, [memberKey]: e.target.value })}
+                          value={memberName === '__new__' ? '__new__' : memberName}
+                          onChange={(e) => {
+                            if (e.target.value === '__new__') {
+                              setNewMatch({ ...newMatch, [memberKey]: '__new__' });
+                              setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' }));
+                            } else {
+                              setNewMatch({ ...newMatch, [memberKey]: e.target.value });
+                              setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' }));
+                            }
+                          }}
                           className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors duration-300"
                         >
                           <option value="">Pilih Anggota {num}</option>
@@ -2843,7 +2905,36 @@ export default function AdminPembayaranPage() {
                               {member.name}
                             </option>
                           ))}
+                          <option value="__new__">+ Buat Anggota Baru...</option>
                         </select>
+                        {memberName === '__new__' && (
+                          <div className="flex gap-2 mt-2">
+                            <input
+                              type="text"
+                              placeholder="Ketik nama anggota baru"
+                              value={newMemberInputs[memberKey] || ''}
+                              onChange={(e) => setNewMemberInputs(prev => ({ ...prev, [memberKey]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === 'Enter') createTempMemberInline(memberKey); }}
+                              className="flex-1 px-3 py-1.5 bg-white dark:bg-zinc-800 border border-blue-400 dark:border-blue-400/50 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => createTempMemberInline(memberKey)}
+                              disabled={creatingMember[memberKey] || !newMemberInputs[memberKey]?.trim()}
+                              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                              {creatingMember[memberKey] ? '...' : 'Buat'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setNewMatch({ ...newMatch, [memberKey]: '' }); setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' })); }}
+                              className="px-3 py-1.5 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg text-sm transition-colors"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
                         {memberName && (
                           <div className="mt-1 text-xs space-y-1">
                             {isPaymentExempt ? (
@@ -3775,6 +3866,84 @@ export default function AdminPembayaranPage() {
         onClose={closeTutorial}
         tutorialKey="admin-pembayaran"
       />
+
+      {/* WA + Email Notification Result Modal */}
+      {waNotificationResult && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl w-full max-w-lg p-6 transition-colors duration-300 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center shrink-0">
+                <span className="text-xl">🔔</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-lg">Hasil Notifikasi</h3>
+                <p className="text-sm text-gray-500 dark:text-zinc-400">WhatsApp &amp; Email telah dikirim ke anggota</p>
+              </div>
+            </div>
+
+            {/* WA Section */}
+            {waNotificationResult.wa && (
+              <div className="mb-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-base">📱</span>
+                  <span className="font-semibold text-gray-800 dark:text-zinc-200 text-sm">WhatsApp</span>
+                  <div className="flex gap-1.5 ml-auto">
+                    <span className="text-xs bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">{waNotificationResult.wa.summary.sent} terkirim</span>
+                    {waNotificationResult.wa.summary.failed > 0 && <span className="text-xs bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">{waNotificationResult.wa.summary.failed} gagal</span>}
+                    {waNotificationResult.wa.summary.skipped > 0 && <span className="text-xs bg-gray-100 dark:bg-zinc-700 text-gray-500 dark:text-zinc-400 px-2 py-0.5 rounded-full font-medium">{waNotificationResult.wa.summary.skipped} dilewati</span>}
+                  </div>
+                </div>
+                <div className="bg-gray-50 dark:bg-zinc-800 rounded-lg divide-y divide-gray-100 dark:divide-white/5">
+                  {waNotificationResult.wa.results.map((r, i) => (
+                    <div key={i} className="flex items-start justify-between text-sm px-3 py-2 gap-2">
+                      <span className="font-medium text-gray-800 dark:text-zinc-200 shrink-0">{r.name}</span>
+                      <div className="flex flex-col items-end text-right">
+                        {r.status === 'sent' && <span className="text-green-600 dark:text-green-400">✓ Terkirim</span>}
+                        {r.status === 'failed' && <><span className="text-red-500">✗ Gagal</span>{r.error && <span className="text-xs text-red-400 mt-0.5">{r.error}</span>}</>}
+                        {r.status === 'skipped' && <span className="text-gray-400">— No HP kosong</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Email Section */}
+            {waNotificationResult.email && (
+              <div className="mb-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-base">✉️</span>
+                  <span className="font-semibold text-gray-800 dark:text-zinc-200 text-sm">Email</span>
+                  <div className="flex gap-1.5 ml-auto">
+                    <span className="text-xs bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">{waNotificationResult.email.summary.sent} terkirim</span>
+                    {waNotificationResult.email.summary.failed > 0 && <span className="text-xs bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">{waNotificationResult.email.summary.failed} gagal</span>}
+                    {waNotificationResult.email.summary.skipped > 0 && <span className="text-xs bg-gray-100 dark:bg-zinc-700 text-gray-500 dark:text-zinc-400 px-2 py-0.5 rounded-full font-medium">{waNotificationResult.email.summary.skipped} dilewati</span>}
+                  </div>
+                </div>
+                <div className="bg-gray-50 dark:bg-zinc-800 rounded-lg divide-y divide-gray-100 dark:divide-white/5">
+                  {waNotificationResult.email.results.map((r, i) => (
+                    <div key={i} className="flex items-start justify-between text-sm px-3 py-2 gap-2">
+                      <span className="font-medium text-gray-800 dark:text-zinc-200 shrink-0">{r.name}</span>
+                      <div className="flex flex-col items-end text-right">
+                        {r.status === 'sent' && <span className="text-green-600 dark:text-green-400">✓ Terkirim</span>}
+                        {r.status === 'failed' && <><span className="text-red-500">✗ Gagal</span>{r.error && <span className="text-xs text-red-400 mt-0.5">{r.error}</span>}</>}
+                        {r.status === 'skipped' && <span className="text-gray-400">— Email kosong</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setWaNotificationResult(null)}
+              className="w-full py-2.5 bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-zinc-200 text-white dark:text-gray-900 rounded-lg font-medium transition-colors"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

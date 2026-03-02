@@ -441,10 +441,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
     if (error) throw error;
     
-    // Sync full_name to auth.users metadata for consistency
-    if (data.full_name) {
+    // Sync full_name and phone to auth.users metadata for consistency
+    if (data.full_name || data.phone !== undefined) {
+      const metaUpdate: Record<string, any> = {};
+      if (data.full_name) metaUpdate.full_name = data.full_name;
+      if (data.phone !== undefined) metaUpdate.phone = data.phone;
+
       const { error: metadataError } = await supabase.auth.updateUser({
-        data: { full_name: data.full_name }
+        data: metaUpdate
       });
       
       if (metadataError) {

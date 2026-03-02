@@ -39,17 +39,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const selectedDate = new Date(matchDate);
-    if (selectedDate.getDay() !== 6) {
-      return NextResponse.json(
-        { error: 'Tanggal harus hari Sabtu' },
-        { status: 400 }
-      );
-    }
-
     let successCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
+
+    // Map to accumulate per-member notification data across all matches
+    const memberSummaryMap: Record<string, {
+      name: string;
+      phone: string | null;
+      email: string | null;
+      matchCount: number;
+      totalAmountDue: number;
+      totalAttendanceFee: number;
+      hasMembership: boolean;
+      isPaymentExempt: boolean;
+    }> = {};
 
     for (let i = 0; i < matches.length; i++) {
       const match: MatchInput = matches[i];
@@ -77,7 +81,7 @@ export async function POST(request: NextRequest) {
         const profilePromises = playerNames.map(name => 
           supabase
             .from('profiles')
-            .select('id, full_name, is_payment_exempt')
+            .select('id, full_name, is_payment_exempt, phone, email')
             .ilike('full_name', name)
             .single()
         );
@@ -231,6 +235,26 @@ export async function POST(request: NextRequest) {
 
         console.log(`✅ Match #${matchNumber} created successfully for ${matchDateString}`);
         successCount++;
+
+        // Accumulate member notification data
+        for (const mm of matchMembers) {
+          const prof = profiles.find(p => p.full_name === mm.member_name);
+          if (!memberSummaryMap[mm.member_name]) {
+            memberSummaryMap[mm.member_name] = {
+              name: mm.member_name,
+              phone: prof?.phone ?? null,
+              email: prof?.email ?? null,
+              matchCount: 0,
+              totalAmountDue: 0,
+              totalAttendanceFee: 0,
+              hasMembership: mm.has_membership,
+              isPaymentExempt: prof?.is_payment_exempt === true,
+            };
+          }
+          memberSummaryMap[mm.member_name].matchCount++;
+          memberSummaryMap[mm.member_name].totalAmountDue += mm.amount_due;
+          memberSummaryMap[mm.member_name].totalAttendanceFee += mm.attendance_fee;
+        }
       } catch (err) {
         console.error(`Error processing match #${i + 1}:`, err);
         errors.push(`Pertandingan #${i + 1}: ${err instanceof Error ? err.message : 'unknown error'}`);
@@ -244,6 +268,7 @@ export async function POST(request: NextRequest) {
       errorCount,
       errors,
       message: `Berhasil menyimpan ${successCount} pertandingan${errorCount > 0 ? `, ${errorCount} gagal` : ''}`,
+      memberSummary: Object.values(memberSummaryMap),
     });
   } catch (error) {
     console.error('Bulk create error:', error);

@@ -32,6 +32,7 @@ export default function SettingsPage() {
   // Personal Info Form States
   const [editFullName, setEditFullName] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [profilePhone, setProfilePhone] = useState(''); // from profiles table
   const [isPersonalLoading, setIsPersonalLoading] = useState(false);
 
   // Badminton Profile Form States
@@ -67,6 +68,13 @@ export default function SettingsPage() {
   const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('member-settings', tutorialSteps);
 
   // Update avatar URL when user data changes
+  useEffect(() => {
+    if (user?.id) {
+      supabase.from('profiles').select('phone').eq('id', user.id).single()
+        .then(({ data }) => { if (data?.phone) setProfilePhone(data.phone); });
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (user?.user_metadata?.avatar_url) {
       const urlWithTimestamp = user.user_metadata.avatar_url.includes('?') 
@@ -272,7 +280,7 @@ export default function SettingsPage() {
   // Open Personal Info Modal
   const openPersonalModal = () => {
     setEditFullName(user?.user_metadata?.full_name || '');
-    setEditPhone(user?.user_metadata?.phone || '');
+    setEditPhone(user?.user_metadata?.phone || profilePhone || '');
     setShowPersonalModal(true);
   };
 
@@ -310,6 +318,7 @@ export default function SettingsPage() {
       await new Promise(resolve => setTimeout(resolve, 100));
       
       setShowPersonalModal(false);
+      setProfilePhone(editPhone); // update display immediately
       setMessage({ type: 'success', text: 'Informasi pribadi berhasil diperbarui!' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
@@ -730,7 +739,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Nomor Telepon</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.phone || 'Belum diisi'}</p>
+                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.phone || profilePhone || 'Belum diisi'}</p>
                 </div>
               </div>
             </div>
