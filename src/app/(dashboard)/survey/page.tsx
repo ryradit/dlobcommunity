@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useRouter } from 'next/navigation';
-import { ClipboardList, Clock, Shield, ChevronRight } from 'lucide-react';
+import { ClipboardList, Clock, Shield, ChevronRight, ChevronLeft } from 'lucide-react';
 
 export default function SurveyWelcomePage() {
   const router = useRouter();
@@ -9,6 +9,14 @@ export default function SurveyWelcomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#3e6461]/5 via-white to-[#3e6461]/10 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
+        {/* Back button */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1 text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white transition-colors text-sm mb-4"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Kembali
+        </button>
         <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-gray-100 dark:border-zinc-800 overflow-hidden">
 
           {/* Header banner */}
