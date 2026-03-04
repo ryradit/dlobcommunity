@@ -226,7 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
           }
         }
-      } else if (event === 'TOKEN_REFRESH_FAILED') {
+      } else if ((event as string) === 'TOKEN_REFRESH_FAILED') {
         // Refresh token expired or invalid — clear stale session silently
         await supabase.auth.signOut();
         if (mounted) {
