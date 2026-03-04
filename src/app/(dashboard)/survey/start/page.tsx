@@ -29,6 +29,7 @@ export default function SurveyStartPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
   const [visible, setVisible] = useState(true);
@@ -60,14 +61,21 @@ export default function SurveyStartPage() {
       const data = await res.json();
 
       if (data.done) {
-        setIsDone(true);
-        setCurrent(null);
+        // Guard: never mark done if no questions were answered yet — treat as an error
+        if (history.length === 0) {
+          setHasError(true);
+          setCurrent(null);
+        } else {
+          setIsDone(true);
+          setCurrent(null);
+        }
       } else {
+        setHasError(false);
         setCurrent(data as AIQuestion);
         setCurrentAnswer(data.type === 'multiple' ? [] : '');
       }
     } catch {
-      setIsDone(true);
+      setHasError(true);
       setCurrent(null);
     } finally {
       setIsLoadingNext(false);
@@ -214,6 +222,37 @@ export default function SurveyStartPage() {
           className="bg-[#3e6461] text-white px-8 py-3 rounded-2xl font-semibold hover:bg-[#2d4a47] transition-colors"
         >
           Kembali
+        </button>
+      </div>
+    );
+  }
+
+  // ── Error / retry screen ────────────────────────────────────────────────
+  if (hasError && !isLoadingNext) {
+    return (
+      <div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
+          <span className="text-3xl">😕</span>
+        </div>
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Gagal memuat pertanyaan</h1>
+        <p className="text-gray-500 max-w-sm mb-8 text-sm leading-relaxed">
+          Terjadi masalah saat mempersiapkan survey. Pastikan koneksimu stabil dan coba lagi.
+        </p>
+        <button
+          onClick={() => {
+            setHasError(false);
+            fetchedRef.current = false;
+            fetchNextQuestion([]);
+          }}
+          className="bg-[#3e6461] text-white px-8 py-3 rounded-2xl font-semibold hover:bg-[#2d4a47] transition-colors"
+        >
+          Coba Lagi
+        </button>
+        <button
+          onClick={() => router.push('/survey')}
+          className="mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          Kembali ke halaman survey
         </button>
       </div>
     );

@@ -4,8 +4,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Users, BarChart3, Eye, X, Calendar, User,
-  TrendingUp, AlertTriangle, Sparkles, Loader2, Search, RefreshCw,
+  TrendingUp, AlertTriangle, Sparkles, Loader2, Search, RefreshCw, HelpCircle,
 } from 'lucide-react';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
 
 type AnswerValue =
   | { q: string; a: string | string[]; section: string; sectionLabel: string }
@@ -118,6 +121,8 @@ const SECTION_LABELS: Record<string, string> = {
 
 export default function AdminSurveyResultsPage() {
   const { session } = useAuth();
+  const tutorialSteps = getTutorialSteps('survey');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-survey', tutorialSteps);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Submission | null>(null);
@@ -206,17 +211,24 @@ export default function AdminSurveyResultsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Hasil Survey DLOB</h1>
-            <p className="text-zinc-400 text-sm mt-1">{completed.length} respons lengkap</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 transition-colors duration-300">Hasil Survey DLOB</h1>
+            <p className="text-gray-500 dark:text-zinc-400 text-sm mt-1 transition-colors duration-300">{completed.length} respons lengkap</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={load} className="p-2 rounded-xl hover:bg-white/10 text-zinc-400 transition-colors" title="Refresh">
+            <button
+              onClick={toggleTutorial}
+              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+              title="Tampilkan panduan fitur"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+            <button onClick={load} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 dark:text-zinc-400 transition-colors" title="Refresh">
               <RefreshCw className="w-4 h-4" />
             </button>
             <button
@@ -238,28 +250,28 @@ export default function AdminSurveyResultsPage() {
               <span className="text-sm font-semibold text-[#3e6461]">Ringkasan AI</span>
             </div>
             {summaryLoading ? (
-              <div className="flex items-center gap-2 text-zinc-400 text-sm">
+              <div className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 text-sm">
                 <Loader2 className="w-4 h-4 animate-spin" /> Menganalisis data survey...
               </div>
             ) : (
-              <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-line">{aiSummary}</p>
+              <p className="text-sm text-gray-700 dark:text-zinc-200 leading-relaxed whitespace-pre-line">{aiSummary}</p>
             )}
           </div>
         )}
 
         {/* KPI stats */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="survey-kpi-cards grid grid-cols-4 gap-4">
           {[
-            { icon: Users, label: 'Total Responden', value: completed.length, color: 'text-white' },
+            { icon: Users, label: 'Total Responden', value: completed.length, color: 'text-gray-900 dark:text-white' },
             {
               icon: TrendingUp, label: 'NPS Score',
               value: nps !== null ? `${nps > 0 ? '+' : ''}${nps}` : '—',
-              color: nps === null ? 'text-zinc-400' : nps >= 30 ? 'text-green-400' : nps >= 0 ? 'text-yellow-400' : 'text-red-400',
+              color: nps === null ? 'text-gray-400 dark:text-zinc-400' : nps >= 30 ? 'text-green-600 dark:text-green-400' : nps >= 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400',
             },
             {
               icon: AlertTriangle, label: 'Risiko Churn',
               value: retentionRisk,
-              color: retentionRisk === 0 ? 'text-zinc-400' : retentionRisk <= 2 ? 'text-yellow-400' : 'text-red-400',
+              color: retentionRisk === 0 ? 'text-gray-400 dark:text-zinc-400' : retentionRisk <= 2 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400',
             },
             {
               icon: Calendar, label: '7 Hari Terakhir',
@@ -267,10 +279,10 @@ export default function AdminSurveyResultsPage() {
               color: 'text-[#3e6461]',
             },
           ].map(({ icon: Icon, label, value, color }) => (
-            <div key={label} className="bg-zinc-900 rounded-2xl p-5 border border-white/5">
+            <div key={label} className="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-200 dark:border-white/5 transition-colors duration-300">
               <Icon className={`w-5 h-5 ${color} mb-2 opacity-80`} />
               <p className={`text-2xl font-bold ${color}`}>{value}</p>
-              <p className="text-xs text-zinc-400 mt-1">{label}</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1">{label}</p>
             </div>
           ))}
         </div>
@@ -279,16 +291,16 @@ export default function AdminSurveyResultsPage() {
         {(painPoints.length > 0 || featureReqs.length > 0) && (
           <div className="grid grid-cols-2 gap-4">
             {painPoints.length > 0 && (
-              <div className="bg-zinc-900 rounded-2xl p-5 border border-white/5">
-                <h2 className="font-semibold text-sm text-zinc-300 mb-4">⚠️ Pain Points Terbanyak</h2>
+              <div className="survey-pain-points bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-200 dark:border-white/5 transition-colors duration-300">
+                <h2 className="font-semibold text-sm text-gray-700 dark:text-zinc-300 mb-4">⚠️ Pain Points Terbanyak</h2>
                 <div className="space-y-3">
                   {painPoints.map(([key, count]) => (
                     <div key={key}>
-                      <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mb-1">
                         <span className="truncate pr-2">{humanize(key)}</span>
                         <span className="shrink-0">{count} ({Math.round((count / completed.length) * 100)}%)</span>
                       </div>
-                      <div className="h-1.5 bg-zinc-800 rounded-full">
+                      <div className="h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full">
                         <div className="h-1.5 rounded-full bg-red-400/70"
                           style={{ width: `${Math.round((count / completed.length) * 100)}%` }} />
                       </div>
@@ -298,16 +310,16 @@ export default function AdminSurveyResultsPage() {
               </div>
             )}
             {featureReqs.length > 0 && (
-              <div className="bg-zinc-900 rounded-2xl p-5 border border-white/5">
-                <h2 className="font-semibold text-sm text-zinc-300 mb-4">💡 Fitur Platform Diminati</h2>
+              <div className="survey-feature-requests bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-200 dark:border-white/5 transition-colors duration-300">
+                <h2 className="font-semibold text-sm text-gray-700 dark:text-zinc-300 mb-4">💡 Fitur Platform Diminati</h2>
                 <div className="space-y-3">
                   {featureReqs.map(([key, count]) => (
                     <div key={key}>
-                      <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-zinc-400 mb-1">
                         <span className="truncate pr-2">{humanize(key)}</span>
                         <span className="shrink-0">{count} ({Math.round((count / completed.length) * 100)}%)</span>
                       </div>
-                      <div className="h-1.5 bg-zinc-800 rounded-full">
+                      <div className="h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full">
                         <div className="h-1.5 rounded-full bg-[#3e6461]"
                           style={{ width: `${Math.round((count / completed.length) * 100)}%` }} />
                       </div>
@@ -321,13 +333,13 @@ export default function AdminSurveyResultsPage() {
 
         {/* AI Features tally */}
         {aiFeatures.length > 0 && (
-          <div className="bg-zinc-900 rounded-2xl p-5 border border-white/5">
-            <h2 className="font-semibold text-sm text-zinc-300 mb-3">🤖 Fitur AI Diminati</h2>
+          <div className="survey-ai-features bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-200 dark:border-white/5 transition-colors duration-300">
+            <h2 className="font-semibold text-sm text-gray-700 dark:text-zinc-300 mb-3">🤖 Fitur AI Diminati</h2>
             <div className="flex flex-wrap gap-2">
               {aiFeatures.map(([key, count]) => (
-                <span key={key} className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 rounded-full text-xs text-zinc-300">
+                <span key={key} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full text-xs text-gray-700 dark:text-zinc-300">
                   {humanize(key)}
-                  <span className="bg-[#3e6461]/60 text-white rounded-full px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
+                  <span className="bg-[#3e6461]/80 text-white rounded-full px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
                 </span>
               ))}
             </div>
@@ -336,19 +348,19 @@ export default function AdminSurveyResultsPage() {
 
         {/* Satisfaction breakdown */}
         {Object.keys(satisfactionCounts).length > 0 && (
-          <div className="bg-zinc-900 rounded-2xl p-5 border border-white/5">
-            <h2 className="font-semibold mb-4 text-sm text-zinc-300 flex items-center gap-2">
+          <div className="survey-satisfaction bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-200 dark:border-white/5 transition-colors duration-300">
+            <h2 className="font-semibold mb-4 text-sm text-gray-700 dark:text-zinc-300 flex items-center gap-2">
               <BarChart3 className="w-4 h-4" /> Distribusi Kepuasan
             </h2>
             <div className="space-y-2">
               {SAT_ORDER.filter(k => satisfactionCounts[k]).map(val => (
                 <div key={val} className="flex items-center gap-3">
-                  <span className="text-xs text-zinc-400 w-44 shrink-0">{SAT_LABELS[val]}</span>
-                  <div className="flex-1 bg-zinc-800 rounded-full h-2">
+                  <span className="text-xs text-gray-500 dark:text-zinc-400 w-44 shrink-0">{SAT_LABELS[val]}</span>
+                  <div className="flex-1 bg-gray-200 dark:bg-zinc-800 rounded-full h-2">
                     <div className="h-2 rounded-full bg-[#3e6461] transition-all"
                       style={{ width: `${Math.round((satisfactionCounts[val] / completed.length) * 100)}%` }} />
                   </div>
-                  <span className="text-xs text-zinc-400 w-8 text-right">{satisfactionCounts[val]}</span>
+                  <span className="text-xs text-gray-500 dark:text-zinc-400 w-8 text-right">{satisfactionCounts[val]}</span>
                 </div>
               ))}
             </div>
@@ -356,20 +368,20 @@ export default function AdminSurveyResultsPage() {
         )}
 
         {/* Search + filter */}
-        <div className="flex gap-3">
+        <div className="survey-search flex gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-zinc-500 pointer-events-none" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Cari nama responden..."
-              className="w-full bg-zinc-900 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#3e6461]/50"
+              className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-[#3e6461]/50 transition-colors duration-300"
             />
           </div>
           <select
             value={filterSat}
             onChange={e => setFilterSat(e.target.value)}
-            className="bg-zinc-900 border border-white/5 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#3e6461]/50"
+            className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/5 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#3e6461]/50 transition-colors duration-300"
           >
             <option value="">Semua kepuasan</option>
             {SAT_ORDER.map(val => <option key={val} value={val}>{SAT_LABELS[val]}</option>)}
@@ -377,21 +389,21 @@ export default function AdminSurveyResultsPage() {
         </div>
 
         {/* Responses table */}
-        <div className="bg-zinc-900 rounded-2xl border border-white/5 overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
-            <h2 className="font-semibold text-sm">Responden</h2>
-            <span className="text-xs text-zinc-500">{filtered.length} dari {completed.length}</span>
+        <div className="survey-responses-table bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-white/5 overflow-hidden transition-colors duration-300">
+          <div className="px-5 py-4 border-b border-gray-200 dark:border-white/5 flex items-center justify-between">
+            <h2 className="font-semibold text-sm text-gray-900 dark:text-white">Responden</h2>
+            <span className="text-xs text-gray-400 dark:text-zinc-500">{filtered.length} dari {completed.length}</span>
           </div>
           {loading ? (
-            <div className="py-12 text-center text-zinc-500 flex items-center justify-center gap-2">
+            <div className="py-12 text-center text-gray-400 dark:text-zinc-500 flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Memuat data...
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-zinc-500">Tidak ada data.</div>
+            <div className="py-12 text-center text-gray-400 dark:text-zinc-500">Tidak ada data.</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-zinc-500 text-xs border-b border-white/5">
+                <tr className="text-gray-500 dark:text-zinc-500 text-xs border-b border-gray-200 dark:border-white/5">
                   <th className="px-5 py-3 text-left font-medium">Nama</th>
                   <th className="px-5 py-3 text-left font-medium">Kepuasan</th>
                   <th className="px-5 py-3 text-left font-medium">Jawaban</th>
@@ -401,17 +413,17 @@ export default function AdminSurveyResultsPage() {
               </thead>
               <tbody>
                 {filtered.map(s => (
-                  <tr key={s.id} className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => openModal(s)}>
-                    <td className="px-5 py-3 font-medium">
+                  <tr key={s.id} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onClick={() => openModal(s)}>
+                    <td className="px-5 py-3 font-medium text-gray-900 dark:text-white">
                       <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-zinc-500" />
+                        <User className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
                         <span>{s.member_name || (s.is_anonymous ? 'Anonim' : 'Tanpa nama')}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-zinc-400 text-xs">{SAT_LABELS[getSatisfaction(s.answers) ?? ''] ?? '—'}</td>
-                    <td className="px-5 py-3 text-zinc-500 text-xs">{Object.keys(s.answers).length} jawaban</td>
-                    <td className="px-5 py-3 text-zinc-400 text-xs">{formatDate(s.completed_at!)}</td>
-                    <td className="px-5 py-3"><Eye className="w-4 h-4 text-zinc-500" /></td>
+                    <td className="px-5 py-3 text-gray-500 dark:text-zinc-400 text-xs">{SAT_LABELS[getSatisfaction(s.answers) ?? ''] ?? '—'}</td>
+                    <td className="px-5 py-3 text-gray-400 dark:text-zinc-500 text-xs">{Object.keys(s.answers).length} jawaban</td>
+                    <td className="px-5 py-3 text-gray-500 dark:text-zinc-400 text-xs">{formatDate(s.completed_at!)}</td>
+                    <td className="px-5 py-3"><Eye className="w-4 h-4 text-gray-400 dark:text-zinc-500" /></td>
                   </tr>
                 ))}
               </tbody>
@@ -423,18 +435,18 @@ export default function AdminSurveyResultsPage() {
       {/* Detail modal */}
       {selected && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="bg-zinc-900 rounded-3xl border border-white/10 w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-white/10 w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-bold">{selected.member_name || (selected.is_anonymous ? 'Anonim' : 'Tanpa nama')}</h3>
-                <p className="text-xs text-zinc-400">{formatDate(selected.completed_at!)} · {Object.keys(selected.answers).length} jawaban</p>
+                <h3 className="font-bold text-gray-900 dark:text-white">{selected.member_name || (selected.is_anonymous ? 'Anonim' : 'Tanpa nama')}</h3>
+                <p className="text-xs text-gray-500 dark:text-zinc-400">{formatDate(selected.completed_at!)} · {Object.keys(selected.answers).length} jawaban</p>
               </div>
-              <button onClick={() => setSelected(null)} className="p-2 rounded-xl hover:bg-white/10"><X className="w-5 h-5" /></button>
+              <button onClick={() => setSelected(null)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"><X className="w-5 h-5 text-gray-500 dark:text-white" /></button>
             </div>
-            <div className="flex gap-1 px-4 py-2.5 border-b border-white/10 shrink-0 overflow-x-auto">
+            <div className="flex gap-1 px-4 py-2.5 border-b border-gray-200 dark:border-white/10 shrink-0 overflow-x-auto">
               {getAvailableSections(selected).map(sec => (
                 <button key={sec} onClick={() => setActiveTab(sec)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${activeTab === sec ? 'bg-[#3e6461] text-white' : 'text-zinc-400 hover:bg-white/10'}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${activeTab === sec ? 'bg-[#3e6461] text-white' : 'text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-white/10'}`}>
                   {SECTION_LABELS[sec] ?? sec}
                 </button>
               ))}
@@ -446,8 +458,8 @@ export default function AdminSurveyResultsPage() {
                   const rich = val as RichAnswer;
                   return (
                     <div key={key}>
-                      <p className="text-sm font-medium text-zinc-300 mb-1.5 leading-snug">{rich.q}</p>
-                      <p className="text-sm text-white bg-white/5 rounded-xl px-3 py-2">
+                      <p className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1.5 leading-snug">{rich.q}</p>
+                      <p className="text-sm text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 rounded-xl px-3 py-2">
                         {Array.isArray(rich.a) ? rich.a.join(', ') : rich.a}
                       </p>
                     </div>
@@ -456,20 +468,28 @@ export default function AdminSurveyResultsPage() {
               {activeTab === (getAvailableSections(selected)[0] ?? 'intro') &&
                 Object.entries(selected.answers).filter(([, val]) => !isRich(val)).map(([key, val]) => (
                   <div key={key}>
-                    <p className="text-xs text-zinc-500 mb-1">{key}</p>
-                    <p className="text-sm text-white bg-white/5 rounded-xl px-3 py-2">
+                    <p className="text-xs text-gray-400 dark:text-zinc-500 mb-1">{key}</p>
+                    <p className="text-sm text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 rounded-xl px-3 py-2">
                       {Array.isArray(val) ? (val as string[]).join(', ') : String(val)}
                     </p>
                   </div>
                 ))}
               {Object.entries(selected.answers).filter(([, val]) => isRich(val) && (val as RichAnswer).section === activeTab).length === 0 &&
                 Object.entries(selected.answers).filter(([, val]) => !isRich(val)).length === 0 && (
-                <p className="text-sm text-zinc-500 text-center py-4">Tidak ada jawaban di seksi ini.</p>
+                <p className="text-sm text-gray-400 dark:text-zinc-500 text-center py-4">Tidak ada jawaban di seksi ini.</p>
               )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="admin-survey"
+      />
     </div>
   );
 }

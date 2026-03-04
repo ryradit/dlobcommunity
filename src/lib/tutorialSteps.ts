@@ -481,9 +481,51 @@ export const ADMIN_KEUANGAN_TUTORIAL: TutorialStep[] = [
 ];
 
 /**
+ * Admin Survey Tutorial Steps
+ */
+export const ADMIN_SURVEY_TUTORIAL: TutorialStep[] = [
+  {
+    element: '.survey-kpi-cards',
+    title: '📊 KPI Overview',
+    description: 'Lihat ringkasan statistik utama survey: total responden, NPS score, risiko churn, dan responden terbaru dalam 7 hari terakhir.',
+    position: 'bottom',
+  },
+  {
+    element: '.survey-ai-features',
+    title: '🤖 Fitur AI Diminati',
+    description: 'Fitur-fitur AI yang paling banyak diminati oleh anggota berdasarkan jawaban survey. Gunakan data ini untuk prioritas pengembangan.',
+    position: 'top',
+  },
+  {
+    element: '.survey-pain-points',
+    title: '⚠️ Pain Points Anggota',
+    description: 'Masalah utama yang paling sering dialami anggota. Data ini membantu mengidentifikasi area yang perlu diperbaiki segera.',
+    position: 'top',
+  },
+  {
+    element: '.survey-satisfaction',
+    title: '📈 Distribusi Kepuasan',
+    description: 'Sebaran tingkat kepuasan anggota terhadap DLOB Community. Pantau tren kepuasan dari waktu ke waktu.',
+    position: 'top',
+  },
+  {
+    element: '.survey-search',
+    title: '🔍 Filter Responden',
+    description: 'Cari responden berdasarkan nama atau filter berdasarkan tingkat kepuasan untuk analisis yang lebih spesifik.',
+    position: 'bottom',
+  },
+  {
+    element: '.survey-responses-table',
+    title: '📋 Tabel Responden',
+    description: 'Daftar semua responden yang telah mengisi survey. Klik pada baris untuk melihat detail jawaban lengkap dari setiap anggota.',
+    position: 'top',
+  },
+];
+
+/**
  * Get tutorial for a specific page
  */
-export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'keuangan' | 'members' | 'analitik' | 'team-optimizer' | 'artikel' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings' | 'member-training'): TutorialStep[] {
+export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'keuangan' | 'members' | 'analitik' | 'team-optimizer' | 'artikel' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings' | 'member-training' | 'survey'): TutorialStep[] {
   switch (page) {
     case 'dashboard':
       return ADMIN_DASHBOARD_TUTORIAL;
@@ -509,6 +551,8 @@ export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'keuangan' |
       return MEMBER_SETTINGS_TUTORIAL;
     case 'member-training':
       return MEMBER_TRAINING_TUTORIAL;
+    case 'survey':
+      return ADMIN_SURVEY_TUTORIAL;
     default:
       return [];
   }
