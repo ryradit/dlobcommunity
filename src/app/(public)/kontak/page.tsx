@@ -62,7 +62,7 @@ export default function KontakPage() {
     {
       icon: Phone,
       title: 'Telepon',
-      value: '+62 812-7073-7272',
+      value: '+62 812-7073-7272 / +62 822-3045-0433',
       detail: 'Admin DLOB - Hubungi kami kapan saja'
     },
     {

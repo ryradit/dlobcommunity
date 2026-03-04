@@ -2,8 +2,27 @@ import React from 'react';
 import { Trophy, Users, Star } from 'lucide-react';
 import Footer from '@/components/Footer';
 import HallOfFameSection from '@/components/HallOfFameSection';
+import { createClient } from '@supabase/supabase-js';
 
-export default function HallOfFamePage() {
+async function getActiveMemberCount(): Promise<number> {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    const { count } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export default async function HallOfFamePage() {
+  const activeMemberCount = await getActiveMemberCount();
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -29,7 +48,7 @@ export default function HallOfFamePage() {
           {/* Stats Banner */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-100 hover:shadow-xl transition-shadow">
-              <div className="text-3xl font-bold text-blue-600 mb-2">46</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">{activeMemberCount}</div>
               <div className="text-sm text-gray-600 font-medium">Member Aktif</div>
             </div>
             <div className="bg-white rounded-xl p-6 shadow-lg border border-green-100 hover:shadow-xl transition-shadow">

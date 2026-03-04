@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, Users, Shield, Sparkles, Dumbbell, FileText, TrendingUp, Sun, Moon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, Users, Shield, Sparkles, Dumbbell, FileText, TrendingUp, Sun, Moon, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 import ViewSwitcher from './ViewSwitcher';
 
@@ -83,11 +83,11 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
       href: '/admin/analitik',
       icon: BarChart3,
     },
-    // {
-    //   label: 'Survey Member',
-    //   href: '/admin/survey',
-    //   icon: MessageSquare,
-    // },
+    {
+      label: 'Survey Member',
+      href: '/admin/survey',
+      icon: MessageSquare,
+    },
     {
       label: 'AI Artikel Generator',
       href: '/admin/artikel',

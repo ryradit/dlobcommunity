@@ -118,6 +118,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       try {
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+
+        // Stale refresh token — wipe it so the user gets a clean login prompt
+        if (error?.message?.includes('Refresh Token Not Found') || error?.message?.includes('Invalid Refresh Token')) {
+          await supabase.auth.signOut();
+          if (mounted) setLoading(false);
+          return;
+        }
         
         if (mounted) {
           setSession(currentSession);
@@ -219,6 +226,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
           }
         }
+      } else if (event === 'TOKEN_REFRESH_FAILED') {
+        // Refresh token expired or invalid — clear stale session silently
+        await supabase.auth.signOut();
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setRole('member');
+          setIsAdmin(false);
+          setIsMember(true);
+          setViewAs('member');
+        }
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {
           setSession(null);
@@ -238,7 +256,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for window focus to check session (cross-tab sync)
     const handleWindowFocus = async () => {
-      const { data: { session: focusSession } } = await supabase.auth.getSession();
+      const { data: { session: focusSession }, error: focusError } = await supabase.auth.getSession();
+      if (focusError?.message?.includes('Refresh Token Not Found') || focusError?.message?.includes('Invalid Refresh Token')) {
+        await supabase.auth.signOut();
+        return;
+      }
       
       if (mounted) {
         const hadUser = !!user;

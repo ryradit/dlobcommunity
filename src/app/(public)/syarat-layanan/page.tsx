@@ -203,7 +203,7 @@ export default function SyaratLayananPage() {
             </p>
             <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2 text-zinc-300">
               <p><strong className="text-white">Email:</strong> info@dlob.community</p>
-              <p><strong className="text-white">Telepon:</strong> +62 812-7073-7272</p>
+              <p><strong className="text-white">Telepon:</strong> +62 812-7073-7272 / +62 822-3045-0433</p>
               <p><strong className="text-white">Alamat:</strong> GOR Badminton Wisma Harapan, Jl. Wisma Lantana IV No.D07-No 49, Gembor, Kec. Periuk, Kota Tangerang, Banten 15133</p>
             </div>
           </section>

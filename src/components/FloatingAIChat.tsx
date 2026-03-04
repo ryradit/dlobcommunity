@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2, Sparkles, Copy, Check, Dumbbell, HelpCircle, ExternalLink, Play } from 'lucide-react';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -20,18 +21,62 @@ interface YouTubeVideo {
 }
 
 export default function FloatingAIChat() {
+  const { user, isAdmin, viewAs, loading: authLoading, session } = useAuth();
+  // Respect the current view — an admin switched to member view acts as member
+  const userRole = !user ? 'guest' : (isAdmin && viewAs === 'member') ? 'member' : isAdmin ? 'admin' : 'member';
+  const rawEmail = user?.email || '';
+  const emailName = rawEmail ? rawEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Pengguna';
+  const userName = (user?.user_metadata?.full_name as string | undefined) || emailName;
+  const userPhone = (user?.user_metadata?.phone as string | undefined) || null;
+
+  const buildGreeting = (role: string, name: string) => {
+    if (role === 'admin')
+      return `Halo Admin ${name}! 👋\n\nSaya Dlob Agent — asisten cerdas DLOB. Saya bisa:\n\n📋 Rekap tagihan yang belum dibayar\n📲 Kirim reminder WA ke member\n📊 Statistik komunitas\n🏸 Coaching & tips badminton\n\nAda yang bisa saya bantu?`;
+    if (role === 'member')
+      return `Halo ${name}! 👋\n\nSaya Dlob Agent — asisten pribadi kamu di DLOB. Saya bisa:\n\n💳 Cek tagihan & status pembayaran kamu\n🏆 Statistik & win rate pertandinganmu\n🎫 Cek status membership\n🏸 Coaching & tips badminton\n\nAda yang bisa saya bantu?`;
+    return 'Halo! Saya Dlob Agent — asisten pintar DLOB.\n\n🏸 Info komunitas & membership\n💪 Coaching & teknik bermain\n\nAda yang bisa saya bantu?';
+  };
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: 'Halo! Saya Dlob Agent - asisten pintar untuk semua kebutuhan badminton Anda. Saya bisa membantu dengan:\n\n🏸 Info komunitas & membership\n💪 Coaching & teknik bermain\n📊 Analisis performa Anda\n\nAda yang bisa saya bantu?'
-    }
+    { role: 'assistant', content: buildGreeting('guest', '') }
   ]);
+  const [greetingSet, setGreetingSet] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesRef = useRef(messages);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Update greeting once auth finishes loading
+  useEffect(() => {
+    if (authLoading) return;
+    if (greetingSet) return;
+    setMessages([{ role: 'assistant', content: buildGreeting(userRole, userName) }]);
+    setGreetingSet(true);
+  }, [authLoading, userRole, userName, greetingSet]);
+
+  // Re-update greeting when full_name arrives via user metadata (may load after auth)
+  // Only if user hasn't started chatting yet
+  const fullName = user?.user_metadata?.full_name as string | undefined;
+  useEffect(() => {
+    if (!fullName) return;
+    if (messagesRef.current.length > 1) return; // conversation started, don't reset
+    setMessages([{ role: 'assistant', content: buildGreeting(userRole, fullName) }]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullName, userRole]);
+
+  // Reset chat when admin switches between admin/member view
+  const prevViewAs = useRef(viewAs);
+  useEffect(() => {
+    if (authLoading) return;
+    if (prevViewAs.current === viewAs) return;
+    prevViewAs.current = viewAs;
+    setMessages([{ role: 'assistant', content: buildGreeting(userRole, userName) }]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewAs]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -59,13 +104,19 @@ export default function FloatingAIChat() {
     setIsLoading(true);
 
     try {
+      const authToken = session?.access_token;
+
       // Unified Dlob Agent - handles all types of queries
       const response = await fetch('/api/ai/dlob-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: userMessage,
-          conversationHistory: messages
+          conversationHistory: messages,
+          userRole,
+          userName,
+          userPhone,
+          authToken,
         })
       });
 
@@ -87,12 +138,26 @@ export default function FloatingAIChat() {
     }
   };
 
-  const quickQuestions = [
-    'Bagaimana cara bergabung DLOB?',
-    'Analisis performa saya',
-    'Tips meningkatkan smash',
-    'Cara upload bukti bayar'
-  ];
+  const quickQuestions = isAdmin
+    ? [
+        'Siapa yang belum bayar?',
+        'Kirim reminder ke semua',
+        'Statistik komunitas bulan ini',
+        'Pertandingan terbaru',
+      ]
+    : user
+    ? [
+        'Tagihan saya berapa?',
+        'Win rate saya?',
+        'Status membership saya',
+        'Tips smash kuat',
+      ]
+    : [
+        'Cara bergabung DLOB?',
+        'Tips smash kuat',
+        'Cara bayar membership',
+        'Jadwal latihan',
+      ];
 
   const handleQuickQuestion = (question: string) => {
     setInput(question);
@@ -164,25 +229,23 @@ export default function FloatingAIChat() {
           {/* Content */}
           <div className="relative flex flex-col h-full">
             {/* Header */}
-            <div className="relative bg-gradient-to-br from-[#3e6461]/80 to-[#2d4a47]/80 backdrop-blur-xl border-b border-white/10 p-5 rounded-t-3xl transition-all duration-300">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="relative">
-                  <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-xl border border-white/30 overflow-hidden">
+            <div className="relative bg-gradient-to-br from-[#3e6461]/80 to-[#2d4a47]/80 backdrop-blur-xl border-b border-white/10 px-4 py-3 rounded-t-3xl transition-all duration-300">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-shrink-0">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-xl border border-white/30 overflow-hidden">
                     <Image
                       src="/dlobai.png"
                       alt="DLOB AI"
-                      width={40}
-                      height={40}
+                      width={28}
+                      height={28}
                       className="object-contain"
                     />
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-[#3e6461]/80 animate-pulse" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-[#3e6461]/80 animate-pulse" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-white font-bold text-lg tracking-tight">
-                    Dlob Agent
-                  </h3>
-                  <p className="text-xs text-white/90 font-medium">AI Assistant untuk semua kebutuhan badminton Anda</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-bold text-sm tracking-tight leading-tight">Dlob Agent</h3>
+                  <p className="text-[11px] text-white/70 truncate">AI Assistant DLOB</p>
                 </div>
               </div>
             </div>

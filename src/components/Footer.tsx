@@ -31,7 +31,8 @@ export default function Footer() {
                   <span>☎️</span>
                   <span className="font-semibold text-white">Admin DLOB</span>
                 </div>
-                <a href="tel:+6281270737272" className="hover:text-blue-400 ml-6">+62 812-7073-7272</a>
+                <a href="tel:+6281270737272" className="hover:text-blue-400 ml-6 block">+62 812-7073-7272</a>
+                <a href="tel:+6282230450433" className="hover:text-blue-400 ml-6 block">+62 822-3045-0433</a>
               </li>
               <li>
                 <div className="flex items-center gap-2 mb-1">
@@ -99,6 +100,7 @@ export default function Footer() {
                 <li><Link href="/hall-of-fame" className="hover:text-blue-400 transition-colors">Hall of Fame</Link></li>
                 <li><Link href="/galeri" className="hover:text-blue-400 transition-colors">Galeri</Link></li>
                 <li><Link href="/store" className="hover:text-blue-400 transition-colors">Toko</Link></li>
+                <li><Link href="/survey" className="hover:text-blue-400 transition-colors">Survey Member 📣</Link></li>
               </ul>
             </div>
             

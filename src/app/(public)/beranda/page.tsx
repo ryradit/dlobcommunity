@@ -27,6 +27,27 @@ export default function BerandaPage() {
       {/* Artikel Section */}
       <ArtikelSection />
 
+      {/* Survey CTA Banner */}
+      <section className="bg-linear-to-r from-[#3e6461] to-[#2d4a47] py-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div>
+            <p className="text-white/70 text-sm font-medium mb-1">Suara kamu penting 🏈</p>
+            <h2 className="text-white text-xl font-bold leading-snug">
+              Bantu DLOB berkembang — ikut survey komunitas
+            </h2>
+            <p className="text-white/60 text-sm mt-1">
+              5–10 menit · anonim boleh · pertanyaan adaptif
+            </p>
+          </div>
+          <Link
+            href="/survey"
+            className="shrink-0 bg-white text-[#3e6461] font-bold px-7 py-3 rounded-2xl hover:bg-white/90 transition-colors text-sm"
+          >
+            Isi Survey Sekarang →
+          </Link>
+        </div>
+      </section>
+
       {/* Stats Section */}
       <section className="relative bg-gradient-to-r from-[#3e6461] to-[#2d4a47] py-16 text-white overflow-hidden">
         {/* Badminton Court Background Pattern */}
