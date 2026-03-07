@@ -181,7 +181,7 @@ export default function SettingsPage() {
         // Check profile flags
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('using_temp_email, must_change_password')
+          .select('using_temp_email, must_change_password, pending_email_verification')
           .eq('id', user.id)
           .single();
 
@@ -194,6 +194,7 @@ export default function SettingsPage() {
         console.log('[Settings] Profile data:', profile);
         console.log('[Settings] using_temp_email:', profile?.using_temp_email);
         console.log('[Settings] must_change_password:', profile?.must_change_password);
+        console.log('[Settings] pending_email_verification:', profile?.pending_email_verification);
 
         // Check if using temp credentials
         if (profile?.using_temp_email || profile?.must_change_password) {
@@ -204,13 +205,8 @@ export default function SettingsPage() {
           return;
         }
 
-        // Check if email is verified
-        const { data: { session } } = await supabase.auth.getSession();
-        const emailConfirmed = session?.user?.email_confirmed_at;
-
-        console.log('[Settings] Email confirmed:', emailConfirmed);
-
-        if (!emailConfirmed) {
+        // Check if email verification is pending (use DB flag — more reliable than session JWT)
+        if (profile?.pending_email_verification === true) {
           console.log('[Settings] 🔒 BLOCKING SETTINGS - unverified email');
           setIsSettingsBlocked(true);
           setBlockReason('unverified_email');
