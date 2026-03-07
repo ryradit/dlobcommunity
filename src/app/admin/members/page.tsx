@@ -65,6 +65,31 @@ export default function AdminMembersPage() {
   const tutorialSteps = getTutorialSteps('members');
   const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-members', tutorialSteps);
 
+  // Fix temp accounts
+  const [fixingTemp, setFixingTemp] = useState(false);
+  const [fixTempResult, setFixTempResult] = useState<string | null>(null);
+
+  const handleFixTempAccounts = async () => {
+    if (!confirm('Reset semua akun temp (@temp.dlob.local) agar menampilkan warning ganti email & password?')) return;
+    setFixingTemp(true);
+    setFixTempResult(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/fix-temp-accounts', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${session?.access_token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setFixTempResult(`✅ ${data.updated} akun temp diperbarui`);
+    } catch (e) {
+      setFixTempResult(`❌ ${String(e)}`);
+    } finally {
+      setFixingTemp(false);
+      setTimeout(() => setFixTempResult(null), 5000);
+    }
+  };
+
   useEffect(() => {
     fetchMembers();
   }, [pathname]);
@@ -409,13 +434,26 @@ export default function AdminMembersPage() {
           <p className="text-sm sm:text-base text-gray-600 dark:text-zinc-400 transition-colors duration-300">Kelola semua anggota komunitas badminton.</p>
         </div>
         
-        <button
-          onClick={toggleTutorial}
-          className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
-          title="Tampilkan panduan fitur"
-        >
-          <HelpCircle className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {fixTempResult && (
+            <span className="text-xs text-gray-600 dark:text-zinc-400 bg-gray-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg">{fixTempResult}</span>
+          )}
+          <button
+            onClick={handleFixTempAccounts}
+            disabled={fixingTemp}
+            className="p-2 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 transition-colors disabled:opacity-50"
+            title="Fix warning akun temp"
+          >
+            {fixingTemp ? <span className="text-xs px-1">...</span> : <AlertCircle className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={toggleTutorial}
+            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+            title="Tampilkan panduan fitur"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}

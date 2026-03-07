@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
       full_name: name,
       email,
       role: 'member',
+      using_temp_email: true,
+      must_change_password: true,
     });
 
     return NextResponse.json({ id: data.user.id, full_name: name, existed: false });

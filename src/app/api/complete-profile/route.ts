@@ -14,7 +14,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, newEmail, newPassword, fullName } = await request.json();
+    const { userId, newEmail, newPassword, fullName, phone } = await request.json();
 
     if (!userId || !newEmail || !newPassword) {
       return NextResponse.json(
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
       .update({
         email: newEmail,
         ...(fullName && { full_name: fullName }),
+        ...(phone && { phone }),
         using_temp_email: false,
         must_change_password: false,
         pending_email_verification: true, // NEW: Block login until verified

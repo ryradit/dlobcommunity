@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, CheckCircle2, Phone } from 'lucide-react';
 import Image from 'next/image';
 
 export default function CompleteProfilePage() {
@@ -17,7 +17,8 @@ export default function CompleteProfilePage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    phone: '',
   });
 
   const [profile, setProfile] = useState<any>(null);
@@ -80,7 +81,8 @@ export default function CompleteProfilePage() {
         body: JSON.stringify({
           userId: user?.id,
           newEmail: formData.email,
-          newPassword: formData.password
+          newPassword: formData.password,
+          phone: formData.phone.trim() || null,
         })
       });
 
@@ -226,6 +228,25 @@ export default function CompleteProfilePage() {
                 minLength={6}
                 className="w-full px-4 py-3 bg-zinc-800/60 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-[#3e6461]/50 focus:ring-2 focus:ring-[#3e6461]/20"
               />
+            </div>
+
+            {/* Phone — optional */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
+                <Phone className="w-4 h-4 inline mr-1" />
+                Nomor WhatsApp
+                <span className="ml-1.5 text-xs text-zinc-500 font-normal">(opsional)</span>
+              </label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="08xxxxxxxxxx"
+                className="w-full px-4 py-3 bg-zinc-800/60 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-[#3e6461]/50 focus:ring-2 focus:ring-[#3e6461]/20"
+              />
+              <p className="text-xs text-zinc-500 mt-1.5">
+                📲 Digunakan untuk notifikasi match & tagihan via WhatsApp
+              </p>
             </div>
 
             {/* Error Message */}
