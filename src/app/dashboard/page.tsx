@@ -279,9 +279,9 @@ export default function DashboardPage() {
               className={`px-4 py-2 rounded-full text-sm font-bold border-2 transition-colors duration-300 ${
                 myMembership.payment_status === 'paid'
                   ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-300 dark:border-transparent'
-                  : myMembership.payment_status === 'cancelled'
+                  : (myMembership.payment_status as string) === 'cancelled'
                   ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
-                  : myMembership.payment_status === 'rejected'
+                  : (myMembership.payment_status as string) === 'rejected'
                   ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
                   : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-transparent'
               }`}
