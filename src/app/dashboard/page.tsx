@@ -287,8 +287,8 @@ export default function DashboardPage() {
               }`}
             >
               {myMembership.payment_status === 'paid' ? 'Lunas' :
-                myMembership.payment_status === 'cancelled' ? 'Dibatalkan' :
-                myMembership.payment_status === 'rejected' ? 'Ditolak' :
+                (myMembership.payment_status as string) === 'cancelled' ? 'Dibatalkan' :
+                (myMembership.payment_status as string) === 'rejected' ? 'Ditolak' :
                 (myMembership as any).payment_proof ? 'Menunggu Verifikasi' : 'Belum Bayar'}
             </span>
           </div>
