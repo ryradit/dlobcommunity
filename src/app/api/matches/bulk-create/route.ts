@@ -137,18 +137,22 @@ export async function POST(request: NextRequest) {
 
         // Check which members already paid attendance fee TODAY (not per match!)
         // by looking at existing match_members for this date
-        const matchDateString = matchDateObj.toISOString().split('T')[0];
+        const matchDayStart = new Date(matchDateObj);
+        matchDayStart.setHours(0, 0, 0, 0);
+        const matchDayEnd = new Date(matchDateObj);
+        matchDayEnd.setHours(23, 59, 59, 999);
         const { data: existingMatchMembers } = await supabase
           .from('match_members')
-          .select('member_name, attendance_paid_this_entry, matches!inner(match_date)')
-          .eq('matches.match_date', matchDateString)
-          .eq('attendance_paid_this_entry', true);
+          .select('member_name, matches!inner(match_date)')
+          .gt('attendance_fee', 0)
+          .gte('matches.match_date', matchDayStart.toISOString())
+          .lte('matches.match_date', matchDayEnd.toISOString());
 
         const attendancePaidTodaySet = new Set(
           (existingMatchMembers || []).map(mm => mm.member_name.toLowerCase().trim())
         );
 
-        console.log(`📅 Date: ${matchDateString}, Already paid attendance today:`, Array.from(attendancePaidTodaySet));
+        console.log(`📅 Date: ${matchDayStart.toISOString().split('T')[0]}, Already paid attendance today:`, Array.from(attendancePaidTodaySet));
 
         // Get next match number for this date
         const { data: matchNumberData } = await supabase

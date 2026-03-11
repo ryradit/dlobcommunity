@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Image as ImageIcon, Loader2, CheckCircle, XCircle, AlertCircle, ChevronDown, Save } from 'lucide-react';
+import { Upload, Image as ImageIcon, Loader2, CheckCircle, XCircle, AlertCircle, ChevronDown, Save, Award } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
 
 interface MatchData {
   team1_player1: string;
@@ -54,6 +55,13 @@ export default function MatchImageExtractionPage() {
   const [creatingPlayer, setCreatingPlayer] = useState<{[key: string]: boolean}>({});
   const [notifStatus, setNotifStatus] = useState<'idle' | 'sending' | 'done'>('idle');
   const [notifSummary, setNotifSummary] = useState<string>('');
+
+  // Membership payment states
+  const [membershipPayers, setMembershipPayers] = useState<Set<string>>(new Set());
+  const [existingMemberships, setExistingMemberships] = useState<Set<string>>(new Set());
+  const [membershipFee, setMembershipFee] = useState<number>(0);
+  const [weeksInMonth, setWeeksInMonth] = useState<number>(4);
+  const [loadingMemberships, setLoadingMemberships] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper function to parse date string as local date (not UTC)
@@ -61,6 +69,53 @@ export default function MatchImageExtractionPage() {
     const [year, month, day] = dateString.split('-').map(Number);
     return new Date(year, month - 1, day); // month is 0-indexed
   };
+
+  // Get unique validated (exact-match) player names from current extracted data
+  const getUniquePlayers = (): string[] => {
+    if (!extractedData) return [];
+    const names = new Set<string>();
+    const fields: PlayerField[] = ['team1_player1', 'team1_player2', 'team2_player1', 'team2_player2'];
+    extractedData.matches.forEach((match, i) => {
+      fields.forEach(f => {
+        const name = match[f]?.trim();
+        const isExact = playerValidation[i]?.[f]?.isExactMatch;
+        if (name && isExact) names.add(name);
+      });
+    });
+    return Array.from(names).sort();
+  };
+
+  // Fetch existing memberships for the match month when date changes
+  useEffect(() => {
+    if (!matchDate) {
+      setExistingMemberships(new Set());
+      setMembershipPayers(new Set());
+      setMembershipFee(0);
+      return;
+    }
+    const date = getLocalDateFromString(matchDate);
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const weeks = getSaturdaysInMonth(date);
+    const fee = weeks >= 5 ? 45000 : 40000;
+    setWeeksInMonth(weeks);
+    setMembershipFee(fee);
+
+    setLoadingMemberships(true);
+    supabase
+      .from('memberships')
+      .select('member_name')
+      .eq('month', month)
+      .eq('year', year)
+      .eq('payment_status', 'paid')
+      .then(({ data }) => {
+        const paid = new Set((data || []).map((m: { member_name: string }) => m.member_name));
+        setExistingMemberships(paid);
+        // Reset payers selection when date changes
+        setMembershipPayers(new Set());
+        setLoadingMemberships(false);
+      });
+  }, [matchDate]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -296,6 +351,32 @@ export default function MatchImageExtractionPage() {
     setError('');
 
     try {
+      // --- Create membership payments first (if any selected) ---
+      if (membershipPayers.size > 0) {
+        const date = getLocalDateFromString(matchDate);
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+        const membershipInserts = Array.from(membershipPayers).map(name => ({
+          member_name: name,
+          month,
+          year,
+          weeks_in_month: weeksInMonth,
+          amount: membershipFee,
+          payment_status: 'paid',
+          paid_at: new Date().toISOString(),
+        }));
+        const { error: membershipError } = await supabase
+          .from('memberships')
+          .upsert(membershipInserts, { onConflict: 'member_name,month,year', ignoreDuplicates: false });
+        if (membershipError) {
+          console.error('[Membership] Insert error:', membershipError);
+          // Non-fatal — proceed anyway but warn
+          alert(`⚠️ Gagal menyimpan ${membershipPayers.size} pembayaran membership: ${membershipError.message}\n\nPertandingan tetap akan disimpan.`);
+        } else {
+          console.log(`[Membership] ✅ Saved ${membershipPayers.size} membership payments`);
+        }
+      }
+
       const response = await fetch('/api/matches/bulk-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -350,6 +431,8 @@ export default function MatchImageExtractionPage() {
             isPaymentExempt: s.isPaymentExempt,
             matchCount: s.matchCount,
             totalAmountDue: s.totalAmountDue,
+            membershipJustPaid: membershipPayers.has(s.name),
+            membershipAmount: membershipPayers.has(s.name) ? membershipFee : undefined,
           });
 
           const waMembers = summary.filter(s => s.phone && s.phone.trim()).map(buildMember);
@@ -393,6 +476,8 @@ export default function MatchImageExtractionPage() {
         setSelectedImage(null);
         setMatchDate('');
         setPlayerValidation({});
+        setMembershipPayers(new Set());
+        setExistingMemberships(new Set());
       } else {
         let errorMessage = 'Gagal menyimpan semua pertandingan.';
         if (data.errors && data.errors.length > 0) {
@@ -759,6 +844,89 @@ export default function MatchImageExtractionPage() {
                   )}
                 </div>
 
+                {/* Membership Payment Section */}
+                {matchDate && (() => {
+                  const players = getUniquePlayers();
+                  if (players.length === 0) return null;
+                  const withoutMembership = players.filter(p => !existingMemberships.has(p));
+                  const withMembership = players.filter(p => existingMemberships.has(p));
+                  return (
+                    <div className="bg-amber-500/10 border border-amber-400/30 rounded-lg p-4 mb-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Award className="text-amber-400 shrink-0" size={18} />
+                        <h4 className="text-amber-300 font-semibold text-sm">
+                          Pembayaran Membership {new Date(matchDate + 'T00:00:00').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                        </h4>
+                        <span className="text-xs text-amber-400/70 ml-auto">
+                          {weeksInMonth} Sabtu · Rp {membershipFee.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+
+                      {loadingMemberships ? (
+                        <div className="flex items-center gap-2 text-amber-300/70 text-sm">
+                          <Loader2 className="animate-spin" size={14} />
+                          Mengecek data membership...
+                        </div>
+                      ) : (
+                        <>
+                          {withoutMembership.length > 0 && (
+                            <div className="space-y-1.5 mb-3">
+                              <p className="text-xs text-amber-300/70 mb-2">Pilih member yang membayar membership hari ini:</p>
+                              {withoutMembership.map(name => (
+                                <label key={name} className="flex items-center gap-3 cursor-pointer group">
+                                  <input
+                                    type="checkbox"
+                                    checked={membershipPayers.has(name)}
+                                    onChange={e => {
+                                      setMembershipPayers(prev => {
+                                        const next = new Set(prev);
+                                        e.target.checked ? next.add(name) : next.delete(name);
+                                        return next;
+                                      });
+                                    }}
+                                    className="w-4 h-4 rounded accent-amber-400"
+                                  />
+                                  <span className="text-white text-sm group-hover:text-amber-200 transition-colors">{name}</span>
+                                  {membershipPayers.has(name) && (
+                                    <span className="text-xs text-amber-400 ml-auto">+ Rp {membershipFee.toLocaleString('id-ID')}</span>
+                                  )}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+
+                          {withMembership.length > 0 && (
+                            <div className="border-t border-amber-400/20 pt-2 mt-2">
+                              <p className="text-xs text-green-400/70 mb-1.5">Sudah membership bulan ini:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {withMembership.map(name => (
+                                  <span key={name} className="flex items-center gap-1 text-xs bg-green-500/20 text-green-300 rounded-full px-2.5 py-1">
+                                    <CheckCircle size={11} />
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {withoutMembership.length === 0 && (
+                            <p className="text-xs text-green-400">✅ Semua pemain sudah membership bulan ini.</p>
+                          )}
+
+                          {membershipPayers.size > 0 && (
+                            <div className="mt-3 pt-3 border-t border-amber-400/20 flex items-center justify-between">
+                              <span className="text-xs text-amber-300">{membershipPayers.size} member akan dibayarkan membership-nya</span>
+                              <span className="text-xs font-semibold text-amber-400">
+                                Total: Rp {(membershipPayers.size * membershipFee).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Matches List */}
                 <div className="space-y-3 max-h-150 overflow-y-auto pr-2">
                   {extractedData.matches.map((match, index) => (
@@ -842,6 +1010,8 @@ export default function MatchImageExtractionPage() {
                       setPlayerValidation({});
                       setNotifStatus('idle');
                       setNotifSummary('');
+                      setMembershipPayers(new Set());
+                      setExistingMemberships(new Set());
                     }}
                     disabled={isSaving || notifStatus === 'sending'}
                     className="flex-1 bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white py-3 rounded-lg font-semibold border border-white/20 transition-all">

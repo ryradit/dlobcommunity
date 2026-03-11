@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
-import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle, Ban, X } from 'lucide-react';
+import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle, Ban, X, FlaskConical, Info } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -28,6 +28,7 @@ interface Member {
   instagram_url?: string;
   has_membership?: boolean;
   is_payment_exempt?: boolean;
+  is_test_account?: boolean;
 }
 
 export default function AdminMembersPage() {
@@ -64,6 +65,15 @@ export default function AdminMembersPage() {
   // Tutorial for members page
   const tutorialSteps = getTutorialSteps('members');
   const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-members', tutorialSteps);
+
+  // Photo zoom modal
+  const [zoomPhoto, setZoomPhoto] = useState<{ url: string; name: string } | null>(null);
+
+  // Label info modal
+  const [showLabelInfo, setShowLabelInfo] = useState(false);
+
+  // Test account filter
+  const [hideTestAccounts, setHideTestAccounts] = useState(false);
 
   // Fix temp accounts
   const [fixingTemp, setFixingTemp] = useState(false);
@@ -106,11 +116,12 @@ export default function AdminMembersPage() {
       // Update state to track current month
       setCurrentMonthYear({ month: currentMonth, year: currentYear });
       
-      // Clear cache for previous months to ensure fresh data
-      // This ensures when a new month starts, old membership data is not shown
+      // Clear cache for previous AND current month to always get fresh membership data.
+      // This ensures newly added memberships from the pembayaran page appear immediately.
       const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
       const previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
       queryCache.invalidate(`admin-active-memberships-${previousMonth}-${previousYear}`);
+      queryCache.invalidate(`admin-active-memberships-${currentMonth}-${currentYear}`);
       
       // Fetch profiles and memberships in parallel (skip slow auth.admin call)
       const [profilesResult, membershipsResult] = await Promise.allSettled([
@@ -126,20 +137,13 @@ export default function AdminMembersPage() {
           },
           30000 // 30 seconds cache
         ),
-        // Fetch active memberships
-        cachedQuery(
-          `admin-active-memberships-${currentMonth}-${currentYear}`,
-          async () => {
-            const result = await supabase
-              .from('memberships')
-              .select('member_name, payment_status')
-              .eq('month', currentMonth)
-              .eq('year', currentYear)
-              .eq('payment_status', 'paid');
-            return result;
-          },
-          30000
-        ),
+        // Fetch active memberships for current month (no cache — always fresh)
+        supabase
+          .from('memberships')
+          .select('member_name, payment_status')
+          .eq('month', currentMonth)
+          .eq('year', currentYear)
+          .eq('payment_status', 'paid'),
       ]);
       
       // Process results
@@ -157,7 +161,7 @@ export default function AdminMembersPage() {
         const res = membershipsResult.value as { data: any[] | null; error: any };
         if (!res.error && res.data) {
           membershipNames = new Set(
-            res.data.map((m: any) => m.member_name.toLowerCase())
+            res.data.map((m: any) => (m.member_name || '').toLowerCase().trim())
           );
         }
       }
@@ -168,7 +172,7 @@ export default function AdminMembersPage() {
       // will NOT have the membership badge, even if they had it last month
       if (profilesData.length > 0) {
         const mergedData = profilesData.map(profile => {
-          const hasMembership = membershipNames.has((profile.full_name || '').toLowerCase());
+          const hasMembership = membershipNames.has((profile.full_name || '').toLowerCase().trim());
           return {
             ...profile,
             has_membership: hasMembership, // Only true if member has PAID membership for current month
@@ -395,6 +399,27 @@ export default function AdminMembersPage() {
     }
   }
 
+  // Toggle test label for a member
+  async function handleToggleTestLabel(member: Member) {
+    const newValue = !member.is_test_account;
+    const confirmMsg = newValue
+      ? `Tandai "${member.full_name}" sebagai akun tes?`
+      : `Hapus label tes dari "${member.full_name}"?`;
+    if (!confirm(confirmMsg)) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_test_account: newValue })
+        .eq('id', member.id);
+      if (error) throw error;
+      queryCache.invalidate('admin-profiles-list');
+      await fetchMembers();
+    } catch (error) {
+      console.error('Error toggling test label:', error);
+      alert('Gagal mengubah label tes: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  }
+
   // Fetch exemption history for a member (admin only)
   async function fetchExemptionHistory(memberId: string) {
     try {
@@ -415,15 +440,19 @@ export default function AdminMembersPage() {
     }
   }
 
-  const filteredMembers = members.filter(member =>
-    member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMembers = members.filter(member => {
+    const matchesSearch = member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const passesTestFilter = !hideTestAccounts || !member.is_test_account;
+    return matchesSearch && passesTestFilter;
+  });
+
+  const realMembers = members.filter(m => !m.is_test_account);
 
   const stats = {
-    total: members.length,
-    active: members.filter(m => m.is_active).length,
-    admins: members.filter(m => m.role === 'admin').length,
+    total: realMembers.length,
+    active: realMembers.filter(m => m.is_active).length,
+    admins: realMembers.filter(m => m.role === 'admin').length,
   };
 
   return (
@@ -498,10 +527,13 @@ export default function AdminMembersPage() {
       {/* Membership Month Indicator */}
       <div className="mb-4 sm:mb-6 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/30 rounded-xl p-3 sm:p-4 transition-colors duration-300">
         <div className="flex items-center gap-2 sm:gap-3">
-          <Crown className="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0 transition-colors duration-300" />
+          <Crown className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0 transition-colors duration-300" />
           <div className="flex-1">
             <p className="text-sm font-medium text-purple-700 dark:text-purple-300 transition-colors duration-300">
               Status Membership: {new Date(currentMonthYear.year, currentMonthYear.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+              {members.filter(m => m.has_membership && !m.is_test_account).length === 0 && (
+                <span className="ml-2 text-xs font-normal text-purple-500 dark:text-purple-400/60">(Belum ada yang membayar bulan ini)</span>
+              )}
             </p>
             <p className="text-xs text-purple-600 dark:text-purple-400/70 mt-0.5 transition-colors duration-300">
               Badge membership hanya ditampilkan untuk member yang sudah membayar membership bulan ini
@@ -512,7 +544,7 @@ export default function AdminMembersPage() {
 
       {/* Search */}
       <div className="members-search mb-6">
-        <div className="relative">
+        <div className="relative mb-3">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-zinc-400 transition-colors duration-300" />
           <input
             type="text"
@@ -522,17 +554,47 @@ export default function AdminMembersPage() {
             className="w-full pl-12 pr-4 py-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 transition-colors duration-300"
           />
         </div>
+        {members.some(m => m.is_test_account) && (
+          <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
+            <div
+              onClick={() => setHideTestAccounts(v => !v)}
+              className={`w-9 h-5 rounded-full transition-colors relative ${
+                hideTestAccounts ? 'bg-orange-500' : 'bg-gray-300 dark:bg-zinc-600'
+              }`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                hideTestAccounts ? 'translate-x-4' : 'translate-x-0'
+              }`} />
+            </div>
+            <span className="text-xs text-gray-600 dark:text-zinc-400 flex items-center gap-1">
+              <FlaskConical className="w-3.5 h-3.5 text-orange-400" />
+              Sembunyikan akun tes
+              {hideTestAccounts && (
+                <span className="text-orange-400 font-medium">({members.filter(m => m.is_test_account).length} tersembunyi)</span>
+              )}
+            </span>
+          </label>
+        )}
       </div>
 
       {/* Members List */}
       <div className="members-table bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden transition-colors duration-300">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px]">
+          <table className="w-full min-w-200">
             <thead className="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
               <tr>
                 <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">Anggota</th>
                 <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">Email</th>
-                <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">Peran</th>
+                <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">
+                  <button
+                    onClick={() => setShowLabelInfo(true)}
+                    className="flex items-center gap-1.5 group"
+                    title="Lihat penjelasan label & status"
+                  >
+                    Peran
+                    <Info className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 group-hover:text-blue-400 transition-colors" />
+                  </button>
+                </th>
                 <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">Status</th>
                 <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">Bergabung</th>
                 <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">Aksi</th>
@@ -560,7 +622,11 @@ export default function AdminMembersPage() {
                   <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors duration-300">
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg flex-shrink-0">
+                        <div
+                          className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full overflow-hidden bg-linear-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg shrink-0 ${member.avatar_url ? 'cursor-pointer ring-2 ring-transparent hover:ring-blue-400 transition-all' : ''}`}
+                          onClick={member.avatar_url ? (e) => { e.stopPropagation(); setZoomPhoto({ url: member.avatar_url!, name: member.full_name || 'Member' }); } : undefined}
+                          title={member.avatar_url ? 'Klik untuk perbesar foto' : undefined}
+                        >
                           {member.avatar_url ? (
                             <Image
                               src={member.avatar_url}
@@ -585,7 +651,7 @@ export default function AdminMembersPage() {
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-1.5 sm:gap-2 text-gray-700 dark:text-zinc-300 text-xs sm:text-sm transition-colors duration-300">
-                        <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-zinc-500 flex-shrink-0 transition-colors duration-300" />
+                        <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-zinc-500 shrink-0 transition-colors duration-300" />
                         <span className="truncate">{member.email}</span>
                       </div>
                     </td>
@@ -593,9 +659,9 @@ export default function AdminMembersPage() {
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           {member.role === 'admin' ? (
-                            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 flex-shrink-0" />
+                            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 shrink-0" />
                           ) : (
-                            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0" />
+                            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 shrink-0" />
                           )}
                           <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold ${
                             member.role === 'admin' 
@@ -610,7 +676,7 @@ export default function AdminMembersPage() {
                             className="flex items-center gap-1 sm:gap-1.5"
                             title={`Membership aktif untuk ${new Date(currentMonthYear.year, currentMonthYear.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
                           >
-                            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
+                            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 shrink-0" />
                             <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30">
                               Membership
                             </span>
@@ -618,9 +684,17 @@ export default function AdminMembersPage() {
                         )}
                         {member.is_payment_exempt && (
                           <div className="flex items-center gap-1 sm:gap-1.5">
-                            <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-400 flex-shrink-0" />
+                            <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-400 shrink-0" />
                             <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold bg-pink-500/20 text-pink-400 border border-pink-500/30">
                               VIP - Gratis
+                            </span>
+                          </div>
+                        )}
+                        {member.is_test_account && (
+                          <div className="flex items-center gap-1 sm:gap-1.5">
+                            <FlaskConical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-400 shrink-0" />
+                            <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                              Tes
                             </span>
                           </div>
                         )}
@@ -647,7 +721,7 @@ export default function AdminMembersPage() {
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-1.5 sm:gap-2 text-gray-600 dark:text-zinc-400 text-xs sm:text-sm transition-colors duration-300">
-                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-zinc-500 flex-shrink-0 transition-colors duration-300" />
+                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-zinc-500 shrink-0 transition-colors duration-300" />
                         <span className="whitespace-nowrap">
                           {new Date(member.created_at).toLocaleDateString('id-ID', {
                             day: 'numeric',
@@ -659,6 +733,19 @@ export default function AdminMembersPage() {
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-1.5 sm:gap-2">
+                        {/* Test Label Button */}
+                        <button
+                          onClick={() => handleToggleTestLabel(member)}
+                          className={`p-1 sm:p-1.5 rounded-lg transition-colors border ${
+                            member.is_test_account
+                              ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border-orange-500/30'
+                              : 'bg-orange-500/10 text-orange-400/50 hover:bg-orange-500/20 border-orange-500/20'
+                          }`}
+                          title={member.is_test_account ? 'Hapus Label Tes' : 'Tandai Akun Tes'}
+                        >
+                          <FlaskConical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+
                         {/* VIP/Payment Exemption Button */}
                         <button
                           onClick={() => openExemptionModal(member)}
@@ -713,12 +800,110 @@ export default function AdminMembersPage() {
         </div>
       </div>
 
+      {/* Label Info Modal */}
+      {showLabelInfo && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowLabelInfo(false)}>
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl max-w-lg w-full p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center">
+                  <Info className="w-5 h-5 text-teal-400" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Penjelasan Label &amp; Status</h3>
+              </div>
+              <button onClick={() => setShowLabelInfo(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 dark:text-zinc-400 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Role */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-zinc-500 uppercase tracking-wide mb-2">Peran Akun</p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-red-500/5 border border-red-500/20">
+                    <Shield className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30">Admin</span>
+                      <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1">Memiliki akses penuh ke seluruh halaman admin: kelola anggota, pertandingan, keuangan, dan pengaturan.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                    <User className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">Member</span>
+                      <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1">Anggota reguler yang hanya dapat mengakses dashboard pribadi mereka.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Labels */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-zinc-500 uppercase tracking-wide mb-2">Label Khusus</p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20">
+                    <Crown className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30">Membership</span>
+                      <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1">Anggota telah membayar iuran membership untuk bulan berjalan. Badge ini otomatis muncul setelah pembayaran dikonfirmasi dan hilang di bulan berikutnya jika belum membayar lagi.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-pink-500/5 border border-pink-500/20">
+                    <Award className="w-4 h-4 text-pink-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-pink-500/20 text-pink-400 border border-pink-500/30">VIP - Gratis</span>
+                      <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1">Anggota dikecualikan dari semua biaya pertandingan. Semua tagihan otomatis diset ke Rp 0. Diberikan oleh admin untuk sponsor, tamu khusus, atau pengurus inti.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
+                    <FlaskConical className="w-4 h-4 text-orange-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500/20 text-orange-400 border border-orange-500/30">Tes</span>
+                      <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1">Akun dummy yang digunakan untuk keperluan pengujian fitur. Tidak dihitung dalam total statistik anggota. Tetap muncul di daftar agar mudah dikelola admin.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-zinc-500 uppercase tracking-wide mb-2">Status Akun</p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-green-500/5 border border-green-500/20">
+                    <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/30">Aktif</span>
+                      <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1">Akun aktif dan dapat login ke platform.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-500/5 border border-gray-500/20">
+                    <XCircle className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-zinc-500/20 text-gray-600 dark:text-zinc-400 border border-gray-300 dark:border-zinc-500/30">Nonaktif</span>
+                      <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1">Akun dinonaktifkan oleh admin. Member tidak dapat login hingga diaktifkan kembali.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowLabelInfo(false)}
+              className="mt-5 w-full py-2.5 rounded-xl bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Manage Modal */}
       {showManageModal && selectedMember && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto transition-colors duration-300">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+              <div className="w-12 h-12 rounded-full bg-linear-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
                 {selectedMember.full_name?.[0]?.toUpperCase() || 'U'}
               </div>
               <div>
@@ -850,14 +1035,23 @@ export default function AdminMembersPage() {
             <div className="flex flex-col items-center text-center mb-6 pb-6 border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
               <div className="relative w-28 h-28 mb-4">
                 {selectedMember.avatar_url ? (
-                  <Image
-                    src={selectedMember.avatar_url}
-                    alt={selectedMember.full_name || 'Member'}
-                    fill
-                    className="rounded-full object-cover border-4 border-gray-200 dark:border-white/10 transition-colors duration-300"
-                  />
+                  <div
+                    className="relative w-full h-full cursor-pointer group"
+                    onClick={() => setZoomPhoto({ url: selectedMember.avatar_url!, name: selectedMember.full_name || 'Member' })}
+                    title="Klik untuk perbesar foto"
+                  >
+                    <Image
+                      src={selectedMember.avatar_url}
+                      alt={selectedMember.full_name || 'Member'}
+                      fill
+                      className="rounded-full object-cover border-4 border-gray-200 dark:border-white/10 transition-colors duration-300 group-hover:brightness-90"
+                    />
+                    <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-all duration-200">
+                      <Eye className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow" />
+                    </div>
+                  </div>
                 ) : (
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-4xl shadow-lg border-4 border-gray-200 dark:border-white/10 transition-colors duration-300">
+                  <div className="w-full h-full rounded-full bg-linear-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-4xl shadow-lg border-4 border-gray-200 dark:border-white/10 transition-colors duration-300">
                     {selectedMember.full_name?.[0]?.toUpperCase() || 'U'}
                   </div>
                 )}
@@ -873,7 +1067,7 @@ export default function AdminMembersPage() {
               {/* Email */}
               <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
                     <Mail className="w-5 h-5 text-blue-400" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -887,7 +1081,7 @@ export default function AdminMembersPage() {
               {selectedMember.phone && (
                 <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center shrink-0">
                       <Phone className="w-5 h-5 text-green-400" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -901,7 +1095,7 @@ export default function AdminMembersPage() {
               {/* Role */}
               <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
                     <Shield className="w-5 h-5 text-purple-400" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -930,7 +1124,7 @@ export default function AdminMembersPage() {
               {/* Status */}
               <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
                     selectedMember.is_active ? 'bg-green-500/20' : 'bg-gray-200 dark:bg-zinc-500/20'
                   }`}>
                     {selectedMember.is_active ? (
@@ -965,7 +1159,7 @@ export default function AdminMembersPage() {
               {/* Join Date */}
               <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
                     <Calendar className="w-5 h-5 text-orange-400" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -993,7 +1187,7 @@ export default function AdminMembersPage() {
                   {selectedMember.playing_level && (
                     <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center shrink-0">
                           <Target className="w-5 h-5 text-cyan-400" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1014,7 +1208,7 @@ export default function AdminMembersPage() {
                     {selectedMember.dominant_hand && (
                       <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center shrink-0">
                             <Hand className="w-5 h-5 text-pink-400" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1030,7 +1224,7 @@ export default function AdminMembersPage() {
                     {selectedMember.years_playing && (
                       <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center shrink-0">
                             <Clock className="w-5 h-5 text-yellow-400" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1046,7 +1240,7 @@ export default function AdminMembersPage() {
                   {selectedMember.achievements && (
                     <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
                           <Award className="w-5 h-5 text-amber-400" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1066,28 +1260,28 @@ export default function AdminMembersPage() {
                                       let textColor = 'text-white';
                                       
                                       if (achievement.place === 'Juara 1') {
-                                        bgColor = 'bg-gradient-to-r from-amber-500/10 to-yellow-500/10';
+                                        bgColor = 'bg-linear-to-r from-amber-500/10 to-yellow-500/10';
                                         borderColor = 'border-amber-500/30';
-                                        iconBg = 'bg-gradient-to-br from-amber-400 to-yellow-500';
+                                        iconBg = 'bg-linear-to-br from-amber-400 to-yellow-500';
                                         iconColor = 'text-white';
                                         textColor = 'text-amber-400';
                                       } else if (achievement.place === 'Juara 2') {
-                                        bgColor = 'bg-gradient-to-r from-gray-400/10 to-zinc-300/10';
+                                        bgColor = 'bg-linear-to-r from-gray-400/10 to-zinc-300/10';
                                         borderColor = 'border-gray-400/30';
-                                        iconBg = 'bg-gradient-to-br from-gray-300 to-gray-400';
+                                        iconBg = 'bg-linear-to-br from-gray-300 to-gray-400';
                                         iconColor = 'text-white';
                                         textColor = 'text-gray-300';
                                       } else if (achievement.place === 'Juara 3') {
-                                        bgColor = 'bg-gradient-to-r from-orange-600/10 to-amber-700/10';
+                                        bgColor = 'bg-linear-to-r from-orange-600/10 to-amber-700/10';
                                         borderColor = 'border-orange-600/30';
-                                        iconBg = 'bg-gradient-to-br from-orange-500 to-amber-600';
+                                        iconBg = 'bg-linear-to-br from-orange-500 to-amber-600';
                                         iconColor = 'text-white';
                                         textColor = 'text-orange-400';
                                       }
                                       
                                       return (
                                         <div key={index} className={`flex items-start gap-3 p-3 rounded-lg border ${bgColor} ${borderColor}`}>
-                                          <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                                          <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center shrink-0 shadow-lg`}>
                                             <span className={`text-lg ${iconColor}`}>🏆</span>
                                           </div>
                                           <div className="flex-1">
@@ -1115,7 +1309,7 @@ export default function AdminMembersPage() {
                   {selectedMember.partner_preferences && (
                     <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0">
                           <Users className="w-5 h-5 text-indigo-400" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1130,7 +1324,7 @@ export default function AdminMembersPage() {
                   {selectedMember.instagram_url && (
                     <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-linear-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center shrink-0">
                           <Instagram className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1190,7 +1384,7 @@ export default function AdminMembersPage() {
                         return (
                           <div key={index} className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                             <div className="flex items-start gap-3">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors duration-300 ${
                                 isGranted ? 'bg-green-100 dark:bg-green-500/20' : 'bg-red-100 dark:bg-red-500/20'
                               }`}>
                                 {isGranted ? (
@@ -1459,6 +1653,43 @@ export default function AdminMembersPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Zoom Modal */}
+      {zoomPhoto && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+          onClick={() => setZoomPhoto(null)}
+        >
+          <div
+            className="relative max-w-sm w-full flex flex-col items-center gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setZoomPhoto(null)}
+              className="absolute -top-3 -right-3 z-10 bg-white dark:bg-zinc-800 text-gray-700 dark:text-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Photo */}
+            <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl overflow-hidden ring-4 ring-white/20 shadow-2xl relative">
+              <Image
+                src={zoomPhoto.url}
+                alt={zoomPhoto.name}
+                fill
+                className="object-cover"
+                sizes="320px"
+              />
+            </div>
+
+            {/* Name label */}
+            <p className="text-white font-semibold text-lg text-center drop-shadow">
+              {zoomPhoto.name}
+            </p>
           </div>
         </div>
       )}

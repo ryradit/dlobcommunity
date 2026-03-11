@@ -24,6 +24,7 @@ interface MatchMember {
   paid_at: string | null;
   matches: {
     match_number: number;
+    match_date: string | null;
     created_at: string;
     shuttlecock_count: number;
   };
@@ -72,9 +73,14 @@ export default function DashboardPage() {
           .eq('id', user.id)
           .single();
 
-        // Prioritize user_metadata full_name (most up-to-date), then profiles table, then email
-        const name = user.user_metadata?.full_name || profile?.full_name || profile?.email?.split('@')[0] || '';
-        setMemberName(name);
+        // profiles.full_name is the authoritative name used by admin when creating matches.
+        // user_metadata.full_name is only used for the greeting display.
+        const profileName = (profile?.full_name || '').trim();
+        const displayName = (user.user_metadata?.full_name || profileName || profile?.email?.split('@')[0] || '').trim();
+        const queryName = profileName || displayName; // what admin stored in match_members
+        setMemberName(displayName);
+
+        console.log('[Dashboard] profileName:', profileName, '| displayName:', displayName, '| queryName:', queryName);
 
         // Check if this is first time visiting dashboard
         const isFirst = !profile?.last_dashboard_visit;
@@ -89,7 +95,7 @@ export default function DashboardPage() {
             .then(() => console.log('Dashboard visit timestamp updated'));
         }
 
-        if (!name) {
+        if (!queryName) {
           setLoading(false);
           return;
         }
@@ -100,8 +106,10 @@ export default function DashboardPage() {
         const currentYear = now.getFullYear();
 
         const [matchesResult, membershipResult] = await Promise.allSettled([
+          // Invalidate stale match cache so newly-added matches always appear
+          (() => { queryCache.invalidate(`member-matches-${queryName}`); return Promise.resolve(); })().then(() =>
           cachedQuery(
-            `member-matches-${name}`,
+            `member-matches-${queryName}`,
             async () => {
               const result = await supabase
                 .from('match_members')
@@ -109,30 +117,26 @@ export default function DashboardPage() {
                   *,
                   matches (
                     match_number,
+                    match_date,
                     created_at,
                     shuttlecock_count
                   )
                 `)
-                .eq('member_name', name)
+                .ilike('member_name', queryName)
                 .order('created_at', { ascending: false });
+              console.log('[Dashboard] matches result:', result.data?.length, result.error);
               return result;
             },
-            30000 // 30 seconds cache
-          ),
-          cachedQuery(
-            `member-membership-${name}-${currentMonth}-${currentYear}`,
-            async () => {
-              const result = await supabase
-                .from('memberships')
-                .select('*')
-                .eq('member_name', name)
-                .eq('month', currentMonth)
-                .eq('year', currentYear)
-                .maybeSingle();
-              return result;
-            },
-            60000 // 1 minute cache for membership
-          ),
+            30000
+          )),
+          // Membership always fetched fresh — no cache
+          supabase
+            .from('memberships')
+            .select('*')
+            .ilike('member_name', queryName)
+            .eq('month', currentMonth)
+            .eq('year', currentYear)
+            .maybeSingle(),
         ]);
 
         // Process matches
@@ -182,28 +186,28 @@ export default function DashboardPage() {
       value: loading ? '...' : `Rp ${stats.totalPending.toLocaleString('id-ID')}`,
       icon: Clock,
       color: 'from-yellow-500 to-yellow-600',
-      subtext: `${stats.pendingCount} matches`,
+      subtext: `${stats.pendingCount} pertandingan`,
     },
     {
-      label: 'Total Paid',
+      label: 'Total Lunas',
       value: loading ? '...' : `Rp ${stats.totalPaid.toLocaleString('id-ID')}`,
       icon: CheckCircle,
       color: 'from-green-500 to-green-600',
-      subtext: `${stats.paidCount} matches`,
+      subtext: `${stats.paidCount} pertandingan`,
     },
     {
       label: 'Membership',
-      value: loading ? '...' : (myMembership?.payment_status === 'paid' ? 'Active' : 'Inactive'),
+      value: loading ? '...' : (myMembership?.payment_status === 'paid' ? 'Aktif' : 'Tidak Aktif'),
       icon: Award,
       color: myMembership?.payment_status === 'paid' ? 'from-purple-500 to-purple-600' : 'from-zinc-500 to-zinc-600',
-      subtext: myMembership ? `Rp ${myMembership.amount.toLocaleString('id-ID')}` : 'No membership',
+      subtext: myMembership ? `Rp ${myMembership.amount.toLocaleString('id-ID')}` : 'Belum ada membership',
     },
     {
-      label: 'Total Matches',
+      label: 'Total Pertandingan',
       value: loading ? '...' : myMatches.length.toLocaleString(),
       icon: Calendar,
       color: 'from-blue-500 to-blue-600',
-      subtext: 'All time',
+      subtext: 'Sepanjang waktu',
     },
   ];
 
@@ -244,7 +248,7 @@ export default function DashboardPage() {
                 key={stat.label}
                 className={`${cssClass} bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 hover:border-gray-400 dark:hover:border-white/20 transition-colors shadow-sm duration-300`}
               >
-                <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${stat.color} mb-4`}>
+                <div className={`inline-flex p-3 rounded-xl bg-linear-to-br ${stat.color} mb-4`}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
                 <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 transition-colors duration-300">{stat.value}</div>
@@ -260,7 +264,7 @@ export default function DashboardPage() {
 
       {/* Membership Status */}
       {myMembership && (
-        <div className="mb-8 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 border-2 border-purple-300 dark:border-purple-500/30 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="mb-8 bg-linear-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 border-2 border-purple-300 dark:border-purple-500/30 rounded-xl p-6 shadow-sm transition-colors duration-300">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Award className="w-8 h-8 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
@@ -277,10 +281,15 @@ export default function DashboardPage() {
                   ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-300 dark:border-transparent'
                   : myMembership.payment_status === 'cancelled'
                   ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
+                  : myMembership.payment_status === 'rejected'
+                  ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
                   : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-transparent'
               }`}
             >
-              {myMembership.payment_status === 'paid' ? 'Lunas' : myMembership.payment_status === 'cancelled' ? 'Dibatalkan' : 'Pending'}
+              {myMembership.payment_status === 'paid' ? 'Lunas' :
+                myMembership.payment_status === 'cancelled' ? 'Dibatalkan' :
+                myMembership.payment_status === 'rejected' ? 'Ditolak' :
+                (myMembership as any).payment_proof ? 'Menunggu Verifikasi' : 'Belum Bayar'}
             </span>
           </div>
           {myMembership.payment_status === 'paid' && (
@@ -321,7 +330,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                   <p className="text-sm text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">
-                    {new Date(match.matches.created_at).toLocaleDateString('id-ID', {
+                    {new Date(match.matches.match_date ?? match.matches.created_at).toLocaleDateString('id-ID', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric',

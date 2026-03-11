@@ -189,7 +189,7 @@ export default function AnalitikPage() {
               .from('matches')
               .select('*')
               .not('winner', 'is', null)
-              .order('created_at', { ascending: false });
+              .order('match_date', { ascending: false, nullsFirst: false });
             return result;
           },
           30000 // 30 seconds cache
@@ -381,7 +381,7 @@ export default function AnalitikPage() {
       // Calculate monthly data (last 6 months)
       const monthlyMap = new Map<string, { wins: number; losses: number }>();
       results.forEach(match => {
-        const date = new Date(match.created_at);
+        const date = new Date(match.match_date ?? match.created_at);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         const current = monthlyMap.get(monthKey) || { wins: 0, losses: 0 };
         monthlyMap.set(monthKey, {
@@ -409,7 +409,7 @@ export default function AnalitikPage() {
           matchNumber: results.length - 19 + index,
           myScore: match.myScore,
           opponentScore: match.opponentScore,
-          date: new Date(match.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+          date: new Date(match.match_date ?? match.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
         }));
 
       setScoreProgression(scoreProgressionData);
@@ -518,10 +518,10 @@ export default function AnalitikPage() {
 
     // Date range filter
     if (dateRange.start) {
-      filtered = filtered.filter(m => new Date(m.created_at) >= new Date(dateRange.start));
+      filtered = filtered.filter(m => new Date(m.match_date ?? m.created_at) >= new Date(dateRange.start));
     }
     if (dateRange.end) {
-      filtered = filtered.filter(m => new Date(m.created_at) <= new Date(dateRange.end));
+      filtered = filtered.filter(m => new Date(m.match_date ?? m.created_at) <= new Date(dateRange.end));
     }
 
     // Partner filter
@@ -547,21 +547,42 @@ export default function AnalitikPage() {
     const reportData = {
       memberName,
       memberEmail: user?.email || 'member@dlob.com',
+      hasMembership: false,
       stats: {
-        totalMatches: stats.totalMatches,
-        winRate: stats.winRate,
-        singlesWinRate: 0, // DLOB is doubles-only
-        doublesWinRate: stats.winRate,
-        attendanceRate: 0, // Can be integrated later
-        currentRank: 0, // Can be integrated later
-        totalMembers: 0, // Can be integrated later
+        totalMatches: stats.totalMatches ?? 0,
+        totalWins: stats.totalWins ?? 0,
+        totalLosses: stats.totalLosses ?? 0,
+        winRate: stats.winRate ?? 0,
+        doublesWinRate: stats.winRate ?? 0,
+        averageScore: stats.averageScore ?? 0,
+        highestScore: stats.highestScore ?? 0,
+        biggestWinMargin: stats.biggestWinMargin ?? 0,
+        longestWinStreak: stats.longestWinStreak ?? 0,
+        longestLossStreak: stats.longestLossStreak ?? 0,
+        currentStreak: stats.currentStreak ?? { type: null, count: 0 },
+        recentForm: stats.recentForm ?? [],
       },
+      partnerStats: partnerStats.slice(0, 8).map(p => ({
+        ...p,
+        winRate: p.winRate ?? 0,
+      })),
+      opponentStats: opponentStats.slice(0, 8).map(o => ({
+        ...o,
+        winRate: o.winRate ?? 0,
+      })),
+      monthlyData,
       insights: aiInsights.map(insight => ({
         title: insight.title,
         description: insight.description,
-        type: insight.type === 'positive' ? 'strength' as const : 
-              insight.type === 'negative' ? 'improvement' as const : 
+        type: insight.type === 'positive' ? 'strength' as const :
+              insight.type === 'negative' ? 'improvement' as const :
               'recommendation' as const,
+      })),
+      partnerRecommendations: partnerRecommendations.map(r => ({
+        partner: r.partner ?? '',
+        reason: r.reason ?? '',
+        confidence: r.confidence ?? 'medium' as const,
+        winRate: typeof r.winRate === 'number' ? r.winRate : 0,
       })),
     };
 
@@ -635,10 +656,10 @@ export default function AnalitikPage() {
         <div className="mb-8 space-y-6">
           {/* AI Performance Insights */}
           {aiInsights.length > 0 && (
-            <div className="bg-purple-50 dark:bg-linear-to-br dark:from-purple-900/30 dark:to-blue-900/30 border-2 border-purple-200 dark:border-purple-500/30 rounded-xl p-6">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Brain className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  <Brain className="w-6 h-6 text-purple-500 dark:text-purple-400" />
                   AI Performance Insights
                 </h2>
                 <button
@@ -659,16 +680,18 @@ export default function AnalitikPage() {
                                        insight.icon === 'alert' ? AlertCircle :
                                        Target;
                   
-                  const colorClass = insight.type === 'positive' ? 'from-green-500/20 to-emerald-500/20 border-green-500/30' :
-                                    insight.type === 'negative' ? 'from-red-500/20 to-rose-500/20 border-red-500/30' :
-                                    'from-blue-500/20 to-cyan-500/20 border-blue-500/30';
-                  
-                  const iconColor = insight.type === 'positive' ? 'text-green-400' :
-                                   insight.type === 'negative' ? 'text-red-400' :
-                                   'text-blue-400';
+                  const colorClass = insight.type === 'positive'
+                    ? 'bg-green-500/10 border-green-500/20 dark:bg-green-500/10 dark:border-green-500/20'
+                    : insight.type === 'negative'
+                    ? 'bg-red-500/10 border-red-500/20 dark:bg-red-500/10 dark:border-red-500/20'
+                    : 'bg-blue-500/10 border-blue-500/20 dark:bg-blue-500/10 dark:border-blue-500/20';
+
+                  const iconColor = insight.type === 'positive' ? 'text-green-500 dark:text-green-400' :
+                                   insight.type === 'negative' ? 'text-red-500 dark:text-red-400' :
+                                   'text-blue-500 dark:text-blue-400';
 
                   return (
-                    <div key={idx} className={`bg-linear-to-br ${colorClass} border rounded-lg p-4`}>
+                    <div key={idx} className={`${colorClass} border rounded-lg p-4`}>
                       <div className="flex items-start gap-3">
                         <IconComponent className={`w-5 h-5 ${iconColor} mt-1 shrink-0`} />
                         <div>
@@ -685,9 +708,9 @@ export default function AnalitikPage() {
 
           {/* Smart Partner Recommendations */}
           {partnerRecommendations.length > 0 && (
-            <div className="bg-blue-50 dark:bg-linear-to-br dark:from-blue-900/30 dark:to-cyan-900/30 border-2 border-blue-200 dark:border-blue-500/30 rounded-xl p-6">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <UserCheck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <UserCheck className="w-6 h-6 text-blue-500 dark:text-blue-400" />
                 Smart Partner Recommendations
               </h2>
               <div className="space-y-3">
@@ -1241,7 +1264,7 @@ export default function AnalitikPage() {
                     </span>
                     <span className="text-xs text-gray-500 dark:text-zinc-400 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {new Date(match.created_at).toLocaleDateString('id-ID', {
+                      {new Date(match.match_date ?? match.created_at).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric'

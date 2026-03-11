@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle, CheckSquare, Square, Zap, Copy, Check } from 'lucide-react';
+import Image from 'next/image';
+import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle, CheckSquare, Square, Zap, Copy, Check, QrCode } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
@@ -66,14 +67,56 @@ export default function PembayaranPage() {
     type: 'match' | 'membership';
     amount: number;
     matchNumber?: number;
+    matchDate?: string;
   } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [proofFile, setProofFile] = useState<File | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'cash'>('bank_transfer');
+  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'cash' | 'qris'>('bank_transfer');
   const [showPaymentHelpModal, setShowPaymentHelpModal] = useState(false);
   const [showStatusHelpModal, setShowStatusHelpModal] = useState(false);
   const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
+
+  // Bank account info (fetched from admin-configurable settings)
+  type BankAccount = { name: string; number: string };
+  type BankInfo = { holderName: string; banks: BankAccount[]; ewallets: BankAccount[] };
+  const DEFAULT_BANK_INFO: BankInfo = {
+    holderName: 'Septian Dwiyo Rifalda',
+    banks: [
+      { name: 'Permata Bank', number: '9937 296 220' },
+      { name: 'Jenius', number: '90012823396' },
+      { name: 'Mandiri', number: '1700 1093 5998 56' },
+      { name: 'BNI', number: '0389 125635' },
+      { name: 'Blu (BCA Digital)', number: '0022 2208 9889' },
+      { name: 'BCA', number: '5871 788 087' },
+    ],
+    ewallets: [
+      { name: 'DANA', number: '0821 1113 4140' },
+      { name: 'Gopay', number: '0812 7073 272' },
+      { name: 'ShopeePay', number: '0821 1113 4140' },
+    ],
+  };
+  const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
+  const [qrisImageUrl, setQrisImageUrl] = useState<string | null>(null);
+
+  // Fetch bank account info from admin-configurable settings
+  useEffect(() => {
+    fetch('/api/payment-info')
+      .then(r => r.json())
+      .then(d => {
+        if (d.bankInfo) setBankInfo(d.bankInfo);
+        if (d.qrisImageUrl) setQrisImageUrl(d.qrisImageUrl);
+      })
+      .catch(() => {}); // silently fall through to DEFAULT_BANK_INFO
+  }, []);
+
+  // Membership offer states (shown in payment modal when early month + no membership)
+  const [addMembershipOffer, setAddMembershipOffer] = useState(false);
+  const [showMembershipOffer, setShowMembershipOffer] = useState(false);
+  const [membershipOfferFee, setMembershipOfferFee] = useState(0);
+  const [membershipOfferMonth, setMembershipOfferMonth] = useState('');
+  const [membershipOfferYear, setMembershipOfferYear] = useState(0);
+  const [membershipOfferWeeks, setMembershipOfferWeeks] = useState(4);
   
   // Bulk payment states
   const [selectedPayments, setSelectedPayments] = useState<Array<{ id: string; type: 'match' | 'membership'; amount: number; matchNumber?: number; label: string }>>([]);
@@ -292,9 +335,34 @@ export default function PembayaranPage() {
     }
   }
 
-  function openPaymentModal(id: string, type: 'match' | 'membership', amount: number, matchNumber?: number) {
-    setSelectedPayment({ id, type, amount, matchNumber });
+  function openPaymentModal(id: string, type: 'match' | 'membership', amount: number, matchNumber?: number, matchDate?: string) {
+    setSelectedPayment({ id, type, amount, matchNumber, matchDate });
     setPaymentMethod('bank_transfer');
+    setAddMembershipOffer(false);
+
+    // Show membership offer only when: match payment + early month (day 1–7) + no active membership
+    if (type === 'match' && matchDate && !myMembership) {
+      const d = new Date(matchDate);
+      if (d.getDate() <= 7) {
+        const year = d.getFullYear();
+        const month = d.getMonth();
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        let sats = 0;
+        for (let day = 1; day <= lastDay; day++) {
+          if (new Date(year, month, day).getDay() === 6) sats++;
+        }
+        setMembershipOfferFee(sats >= 5 ? 45000 : 40000);
+        setMembershipOfferMonth(d.toLocaleDateString('id-ID', { month: 'long' }));
+        setMembershipOfferYear(year);
+        setMembershipOfferWeeks(sats);
+        setShowMembershipOffer(true);
+      } else {
+        setShowMembershipOffer(false);
+      }
+    } else {
+      setShowMembershipOffer(false);
+    }
+
     setShowPaymentModal(true);
   }
 
@@ -302,6 +370,8 @@ export default function PembayaranPage() {
     setShowPaymentModal(false);
     setSelectedPayment(null);
     setPaymentMethod('bank_transfer');
+    setAddMembershipOffer(false);
+    setShowMembershipOffer(false);
   }
 
   function copyToClipboard(accountNumber: string) {
@@ -322,12 +392,16 @@ export default function PembayaranPage() {
     setShowUploadModal(false);
     setProofFile(null);
     setSelectedPayment(null);
+    setAddMembershipOffer(false);
+    setShowMembershipOffer(false);
   }
 
   async function handleCashPayment() {
     if (!selectedPayment) return;
 
-    const confirmMsg = `Konfirmasi pembayaran cash sebesar Rp ${selectedPayment.amount.toLocaleString('id-ID')}?\n\nPembayaran cash akan langsung tercatat dan menunggu konfirmasi admin.`;
+    const totalCash = selectedPayment.amount + (addMembershipOffer ? membershipOfferFee : 0);
+    const membershipNote = addMembershipOffer ? `\n\nMembership ${membershipOfferMonth} juga akan didaftarkan (+Rp ${membershipOfferFee.toLocaleString('id-ID')}).` : '';
+    const confirmMsg = `Konfirmasi pembayaran cash sebesar Rp ${totalCash.toLocaleString('id-ID')}?${membershipNote}\n\nPembayaran cash akan langsung tercatat dan menunggu konfirmasi admin.`;
     
     if (!confirm(confirmMsg)) return;
 
@@ -360,6 +434,20 @@ export default function PembayaranPage() {
           .eq('id', selectedPayment.id);
 
         if (error) throw error;
+      }
+
+      // Insert membership if member opted in
+      if (addMembershipOffer && selectedPayment.type === 'match' && selectedPayment.matchDate) {
+        const d = new Date(selectedPayment.matchDate);
+        await supabase.from('memberships').upsert({
+          member_name: memberName,
+          month: d.getMonth() + 1,
+          year: membershipOfferYear,
+          weeks_in_month: membershipOfferWeeks,
+          amount: membershipOfferFee,
+          payment_status: 'pending',
+          payment_proof: 'CASH_PAYMENT',
+        }, { onConflict: 'member_name,month,year' });
       }
 
       alert('Pembayaran cash berhasil dicatat! Menunggu verifikasi admin.');
@@ -557,6 +645,19 @@ export default function PembayaranPage() {
           console.error('Database update error:', error);
           throw error;
         }
+      }
+
+      // Insert membership if member opted in
+      if (addMembershipOffer && selectedPayment.type === 'match' && selectedPayment.matchDate) {
+        await supabase.from('memberships').upsert({
+          member_name: memberName,
+          month: new Date(selectedPayment.matchDate).getMonth() + 1,
+          year: membershipOfferYear,
+          weeks_in_month: membershipOfferWeeks,
+          amount: membershipOfferFee,
+          payment_status: 'pending',
+          payment_proof: publicUrl,
+        }, { onConflict: 'member_name,month,year' });
       }
 
       alert('Bukti pembayaran berhasil diupload! Menunggu verifikasi admin.');
@@ -1114,6 +1215,32 @@ export default function PembayaranPage() {
             </div>
           </div>
 
+          {/* Early-month membership offer banner */}
+          {(() => {
+            const now = new Date();
+            const showBanner = !isPaymentExempt && !myMembership && now.getDate() <= 7 && myMatches.length > 0;
+            if (!showBanner) return null;
+            const monthName = now.toLocaleDateString('id-ID', { month: 'long' });
+            const year = now.getFullYear();
+            const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+            let sats = 0;
+            for (let d = 1; d <= lastDay; d++) if (new Date(year, now.getMonth(), d).getDay() === 6) sats++;
+            const fee = sats >= 5 ? 45000 : 40000;
+            return (
+              <div className="mx-6 mt-4 mb-2 flex items-start gap-3 bg-amber-500/10 border border-amber-500/40 rounded-xl px-4 py-3">
+                <span className="text-xl mt-0.5">💡</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                    Awal bulan — ambil Membership {monthName} & hemat attendance fee sisa bulan!
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                    Rp {fee.toLocaleString('id-ID')} untuk {sats} sesi. Klik <strong>Bayar</strong> di salah satu pertandingan → aktifkan toggle Membership di modal pembayaran.
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+
           {allMatches.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="w-16 h-16 text-gray-400 dark:text-zinc-600 mx-auto mb-4 transition-colors duration-300" />
@@ -1267,7 +1394,7 @@ export default function PembayaranPage() {
                           <td className="member-payment-actions px-6 py-4 whitespace-nowrap text-sm font-bold">
                             {match.payment_status === 'rejected' && (
                               <button
-                                onClick={() => openPaymentModal(match.id, 'match', match.total_amount, matchMonthlyNums[match.match_id] ?? match.matches.match_number)}
+                                onClick={() => openPaymentModal(match.id, 'match', match.total_amount, matchMonthlyNums[match.match_id] ?? match.matches.match_number, match.matches.match_date)}
                                 className="text-red-600 hover:text-red-700 font-bold transition-colors duration-300"
                               >
                                 Upload Ulang
@@ -1276,7 +1403,7 @@ export default function PembayaranPage() {
                             {match.payment_status === 'revision' && (
                               <div className="space-y-1">
                                 <button
-                                  onClick={() => openPaymentModal(match.id, 'match', match.additional_amount || match.total_amount, matchMonthlyNums[match.match_id] ?? match.matches.match_number)}
+                                  onClick={() => openPaymentModal(match.id, 'match', match.additional_amount || match.total_amount, matchMonthlyNums[match.match_id] ?? match.matches.match_number, match.matches.match_date)}
                                   className="text-blue-600 hover:text-blue-700 font-bold block"
                                 >
                                   Bayar Revisi
@@ -1286,7 +1413,7 @@ export default function PembayaranPage() {
                             )}
                             {match.payment_status === 'pending' && !match.payment_proof && (
                               <button
-                                onClick={() => openPaymentModal(match.id, 'match', match.total_amount, matchMonthlyNums[match.match_id] ?? match.matches.match_number)}
+                                onClick={() => openPaymentModal(match.id, 'match', match.total_amount, matchMonthlyNums[match.match_id] ?? match.matches.match_number, match.matches.match_date)}
                                 className="text-blue-600 hover:text-blue-700 font-bold"
                               >
                                 Bayar
@@ -1371,14 +1498,52 @@ export default function PembayaranPage() {
             <div className="bg-linear-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white mb-6">
               <p className="text-sm text-blue-100 mb-1">Total yang harus dibayar</p>
               <p className="text-4xl font-bold">
-                Rp {selectedPayment.amount.toLocaleString('id-ID')}
+                Rp {(selectedPayment.amount + (addMembershipOffer ? membershipOfferFee : 0)).toLocaleString('id-ID')}
               </p>
+              {addMembershipOffer && (
+                <p className="text-xs text-blue-200 mt-2">
+                  Shuttlecock: Rp {selectedPayment.amount.toLocaleString('id-ID')} + Membership: Rp {membershipOfferFee.toLocaleString('id-ID')}
+                </p>
+              )}
             </div>
+
+            {/* Membership Offer Toggle */}
+            {showMembershipOffer && (
+              <div
+                className={`rounded-xl border-2 p-4 mb-6 cursor-pointer transition-all ${
+                  addMembershipOffer
+                    ? 'border-amber-500 bg-amber-500/10'
+                    : 'border-white/10 bg-zinc-800 hover:border-amber-500/40'
+                }`}
+                onClick={() => setAddMembershipOffer(!addMembershipOffer)}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-5 h-5 rounded border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all ${
+                    addMembershipOffer ? 'border-amber-500 bg-amber-500' : 'border-zinc-500'
+                  }`}>
+                    {addMembershipOffer && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-white text-sm">
+                      💡 Ambil Membership {membershipOfferMonth} ({membershipOfferWeeks} sesi)
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      +Rp {membershipOfferFee.toLocaleString('id-ID')} — attendance fee GRATIS sisa bulan ini!
+                    </p>
+                    {addMembershipOffer && (
+                      <p className="text-xs text-amber-300 font-medium mt-1">
+                        ✅ Membership akan didaftarkan dan menunggu konfirmasi admin
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Payment Method Selection */}
             <div className="mb-6">
               <h4 className="font-semibold text-white mb-3">Pilih Metode Pembayaran:</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className={`grid gap-4 ${qrisImageUrl ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <button
                   onClick={() => setPaymentMethod('bank_transfer')}
                   className={`p-4 border-2 rounded-xl transition-all ${
@@ -1397,6 +1562,27 @@ export default function PembayaranPage() {
                   </p>
                   <p className="text-xs text-zinc-400 mt-1">Upload bukti transfer</p>
                 </button>
+
+                {qrisImageUrl && (
+                  <button
+                    onClick={() => setPaymentMethod('qris')}
+                    className={`p-4 border-2 rounded-xl transition-all ${
+                      paymentMethod === 'qris'
+                        ? 'border-purple-500 bg-purple-500/10'
+                        : 'border-white/10 hover:border-white/20 bg-zinc-800'
+                    }`}
+                  >
+                    <QrCode className={`w-8 h-8 mx-auto mb-2 ${
+                      paymentMethod === 'qris' ? 'text-purple-400' : 'text-zinc-400'
+                    }`} />
+                    <p className={`font-semibold text-sm ${
+                      paymentMethod === 'qris' ? 'text-purple-300' : 'text-zinc-300'
+                    }`}>
+                      QRIS
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-1">Scan & bayar</p>
+                  </button>
+                )}
 
                 <button
                   onClick={() => setPaymentMethod('cash')}
@@ -1430,170 +1616,55 @@ export default function PembayaranPage() {
                     </div>
                     <div className="flex-1">
                       <h4 className="text-lg font-semibold text-white mb-2">Pilih Rekening Tujuan Transfer</h4>
-                      <p className="text-xs text-blue-300 mb-1">Semua rekening a.n. <strong>Septian Dwiyo Rifalda</strong></p>
+                      <p className="text-xs text-blue-300 mb-1">Semua rekening a.n. <strong>{(bankInfo ?? DEFAULT_BANK_INFO).holderName}</strong></p>
                       <p className="text-xs text-amber-300 mb-4">💡 Pilih salah satu rekening di bawah untuk melakukan transfer</p>
                       
                       {/* Bank Accounts Grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
-                          <p className="text-xs text-blue-300 mb-1">Permata Bank</p>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-mono font-semibold text-white text-sm">9937 296 220</p>
-                            <button
-                              onClick={() => copyToClipboard('9937 296 220')}
-                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
-                              title="Salin nomor rekening"
-                            >
-                              {copiedAccount === '9937 296 220' ? (
-                                <Check className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4 text-blue-400" />
-                              )}
-                            </button>
+                        {(bankInfo ?? DEFAULT_BANK_INFO).banks.map((acct) => (
+                          <div key={acct.name} className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                            <p className="text-xs text-blue-300 mb-1">{acct.name}</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-mono font-semibold text-white text-sm">{acct.number}</p>
+                              <button
+                                onClick={() => copyToClipboard(acct.number)}
+                                className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                                title="Salin nomor rekening"
+                              >
+                                {copiedAccount === acct.number ? (
+                                  <Check className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <Copy className="w-4 h-4 text-blue-400" />
+                                )}
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
-                          <p className="text-xs text-blue-300 mb-1">Jenius</p>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-mono font-semibold text-white text-sm">90012823396</p>
-                            <button
-                              onClick={() => copyToClipboard('90012823396')}
-                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
-                              title="Salin nomor rekening"
-                            >
-                              {copiedAccount === '90012823396' ? (
-                                <Check className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4 text-blue-400" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
-                          <p className="text-xs text-blue-300 mb-1">Mandiri</p>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-mono font-semibold text-white text-sm">1700 1093 5998 56</p>
-                            <button
-                              onClick={() => copyToClipboard('1700 1093 5998 56')}
-                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
-                              title="Salin nomor rekening"
-                            >
-                              {copiedAccount === '1700 1093 5998 56' ? (
-                                <Check className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4 text-blue-400" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
-                          <p className="text-xs text-blue-300 mb-1">BNI</p>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-mono font-semibold text-white text-sm">0389 125635</p>
-                            <button
-                              onClick={() => copyToClipboard('0389 125635')}
-                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
-                              title="Salin nomor rekening"
-                            >
-                              {copiedAccount === '0389 125635' ? (
-                                <Check className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4 text-blue-400" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
-                          <p className="text-xs text-blue-300 mb-1">Blu (BCA Digital)</p>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-mono font-semibold text-white text-sm">0022 2208 9889</p>
-                            <button
-                              onClick={() => copyToClipboard('0022 2208 9889')}
-                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
-                              title="Salin nomor rekening"
-                            >
-                              {copiedAccount === '0022 2208 9889' ? (
-                                <Check className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4 text-blue-400" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
-                          <p className="text-xs text-blue-300 mb-1">BCA</p>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-mono font-semibold text-white text-sm">5871 788 087</p>
-                            <button
-                              onClick={() => copyToClipboard('5871 788 087')}
-                              className="p-1 hover:bg-blue-500/20 rounded transition-colors"
-                              title="Salin nomor rekening"
-                            >
-                              {copiedAccount === '5871 788 087' ? (
-                                <Check className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4 text-blue-400" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
+                        ))}
                       </div>
 
                       {/* E-Wallets */}
                       <div className="border-t border-blue-500/20 pt-4">
                         <p className="text-sm font-semibold text-white mb-3">E-Wallet (Transfer/QRIS)</p>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
-                            <p className="text-xs text-blue-300 mb-1">DANA</p>
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-mono font-semibold text-white text-sm">0821 1113 4140</p>
-                              <button
-                                onClick={() => copyToClipboard('0821 1113 4140')}
-                                className="p-1 hover:bg-blue-500/20 rounded transition-colors"
-                                title="Salin nomor"
-                              >
-                                {copiedAccount === '0821 1113 4140' ? (
-                                  <Check className="w-4 h-4 text-green-400" />
-                                ) : (
-                                  <Copy className="w-4 h-4 text-blue-400" />
-                                )}
-                              </button>
+                          {(bankInfo ?? DEFAULT_BANK_INFO).ewallets.map((acct) => (
+                            <div key={acct.name} className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
+                              <p className="text-xs text-blue-300 mb-1">{acct.name}</p>
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="font-mono font-semibold text-white text-sm">{acct.number}</p>
+                                <button
+                                  onClick={() => copyToClipboard(acct.number)}
+                                  className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                                  title="Salin nomor"
+                                >
+                                  {copiedAccount === acct.number ? (
+                                    <Check className="w-4 h-4 text-green-400" />
+                                  ) : (
+                                    <Copy className="w-4 h-4 text-blue-400" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                          <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
-                            <p className="text-xs text-blue-300 mb-1">Gopay</p>
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-mono font-semibold text-white text-sm">0812 7073 272</p>
-                              <button
-                                onClick={() => copyToClipboard('0812 7073 272')}
-                                className="p-1 hover:bg-blue-500/20 rounded transition-colors"
-                                title="Salin nomor"
-                              >
-                                {copiedAccount === '0812 7073 272' ? (
-                                  <Check className="w-4 h-4 text-green-400" />
-                                ) : (
-                                  <Copy className="w-4 h-4 text-blue-400" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                          <div className="bg-white/5 border border-blue-500/20 rounded-lg p-3">
-                            <p className="text-xs text-blue-300 mb-1">ShopeePay</p>
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-mono font-semibold text-white text-sm">0821 1113 4140</p>
-                              <button
-                                onClick={() => copyToClipboard('08211113414')}
-                                className="p-1 hover:bg-blue-500/20 rounded transition-colors"
-                                title="Salin nomor"
-                              >
-                                {copiedAccount === '08211113414' ? (
-                                  <Check className="w-4 h-4 text-green-400" />
-                                ) : (
-                                  <Copy className="w-4 h-4 text-blue-400" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -1608,7 +1679,7 @@ export default function PembayaranPage() {
                       <span className="shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
                         1
                       </span>
-                      <span className="text-zinc-300">Transfer sejumlah <strong className="text-white">Rp {selectedPayment.amount.toLocaleString('id-ID')}</strong> ke rekening di atas</span>
+                      <span className="text-zinc-300">Transfer sejumlah <strong className="text-white">Rp {(selectedPayment.amount + (addMembershipOffer ? membershipOfferFee : 0)).toLocaleString('id-ID')}</strong> ke rekening di atas</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
@@ -1627,6 +1698,60 @@ export default function PembayaranPage() {
                         4
                       </span>
                       <span className="text-zinc-300">Tunggu verifikasi dari admin (maksimal 1x24 jam)</span>
+                    </li>
+                  </ol>
+                </div>
+              </>
+            )}
+
+            {/* QRIS Payment Instructions */}
+            {paymentMethod === 'qris' && qrisImageUrl && (
+              <>
+                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6 mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-purple-600 p-3 rounded-full">
+                      <QrCode className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-lg font-semibold text-white mb-1">Pembayaran QRIS</h4>
+                      <p className="text-sm text-zinc-300">
+                        Scan QR code di bawah menggunakan aplikasi e-wallet atau m-banking apapun, lalu upload screenshot bukti pembayaran.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-center mb-6">
+                  <div className="bg-white p-4 rounded-2xl shadow-lg">
+                    <Image
+                      src={qrisImageUrl}
+                      alt="QRIS Code"
+                      width={240}
+                      height={240}
+                      className="rounded-lg object-contain"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <h4 className="font-semibold text-white mb-3">Langkah Pembayaran QRIS:</h4>
+                  <ol className="space-y-3">
+                    <li className="flex gap-3">
+                      <span className="shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">1</span>
+                      <span className="text-zinc-300">Buka aplikasi e-wallet atau m-banking kamu</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">2</span>
+                      <span className="text-zinc-300">Pilih fitur &quot;Scan QR&quot; atau &quot;QRIS&quot; lalu scan kode di atas</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">3</span>
+                      <span className="text-zinc-300">Masukkan nominal <strong className="text-white">Rp {(selectedPayment.amount + (addMembershipOffer ? membershipOfferFee : 0)).toLocaleString('id-ID')}</strong> dan selesaikan pembayaran</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">4</span>
+                      <span className="text-zinc-300">Screenshot bukti pembayaran, lalu upload di bawah ini</span>
                     </li>
                   </ol>
                 </div>
@@ -1669,7 +1794,7 @@ export default function PembayaranPage() {
                       <span className="shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
                         3
                       </span>
-                      <span className="text-zinc-300">Bayar sejumlah <strong className="text-white">Rp {selectedPayment.amount.toLocaleString('id-ID')}</strong> secara tunai kepada admin</span>
+                      <span className="text-zinc-300">Bayar sejumlah <strong className="text-white">Rp {(selectedPayment.amount + (addMembershipOffer ? membershipOfferFee : 0)).toLocaleString('id-ID')}</strong> secara tunai kepada admin</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">

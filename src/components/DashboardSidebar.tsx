@@ -140,7 +140,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
   return (
     <>
       {/* Mobile Top Bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-white/10 flex items-center px-4 z-[60] shrink-0">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-white/10 flex items-center px-4 z-60 shrink-0">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-2 bg-gray-100 dark:bg-zinc-900 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded-lg text-gray-900 dark:text-white transition-colors border border-gray-200 dark:border-white/20"

@@ -76,6 +76,8 @@ export default function AdminPembayaranPage() {
     shuttlecock_count: number;
     members: Record<string, { name: string; memberId: string }>;
   } | null>(null);
+  const [waiveAttendanceFee, setWaiveAttendanceFee] = useState<Set<string>>(new Set());
+  const [overrideMembership, setOverrideMembership] = useState<Set<string>>(new Set());
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMembershipModal, setShowMembershipModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'matches' | 'memberships'>('matches');
@@ -89,6 +91,7 @@ export default function AdminPembayaranPage() {
   });
   const [matchDateMembershipMap, setMatchDateMembershipMap] = useState<Record<string, Membership>>({});
   const [paymentExemptMembers, setPaymentExemptMembers] = useState<Set<string>>(new Set());
+  const [createMatchMembershipPayers, setCreateMatchMembershipPayers] = useState<Set<string>>(new Set());
   const [waNotificationResult, setWaNotificationResult] = useState<{
     wa: { results: { name: string; phone: string; status: string; error?: string }[]; summary: { sent: number; failed: number; skipped: number } } | null;
     email: { results: { name: string; email: string; status: string; error?: string }[]; summary: { sent: number; failed: number; skipped: number } } | null;
@@ -205,11 +208,13 @@ export default function AdminPembayaranPage() {
   }, [showMembershipModal]);
 
   // Fetch memberships for match date's month when creating a match
+  // Re-runs when date changes OR when the modal is opened/closed
   useEffect(() => {
     async function fetchMatchDateMemberships() {
       if (!newMatch.match_date) {
         setMatchDateMembershipMap({});
         setPaymentExemptMembers(new Set());
+        setCreateMatchMembershipPayers(new Set());
         return;
       }
 
@@ -233,7 +238,7 @@ export default function AdminPembayaranPage() {
           const map: Record<string, Membership> = {};
           if (memberships) {
             memberships.forEach((m) => {
-              map[m.member_name.toLowerCase()] = m;
+              map[m.member_name.toLowerCase().trim()] = m;
             });
           }
           setMatchDateMembershipMap(map);
@@ -263,7 +268,7 @@ export default function AdminPembayaranPage() {
     }
 
     fetchMatchDateMemberships();
-  }, [newMatch.match_date]);
+  }, [newMatch.match_date, showCreateModal]);
 
   // Load data function - defined outside useEffect so it can be called from other functions
   const loadData = useCallback(async () => {
@@ -300,6 +305,7 @@ export default function AdminPembayaranPage() {
             .select('*')
             .eq('month', targetMonth)
             .eq('year', targetYear)
+            .neq('payment_status', 'cancelled')
             .order('created_at', { ascending: false });
           return result;
         },
@@ -428,6 +434,7 @@ export default function AdminPembayaranPage() {
         .select('*')
         .eq('month', currentMonth)
         .eq('year', currentYear)
+        .neq('payment_status', 'cancelled')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -809,6 +816,32 @@ export default function AdminPembayaranPage() {
       const matchMonth = matchDate.getMonth() + 1;
       const matchYear = matchDate.getFullYear();
 
+      // Insert membership records for any players who opted in via checkbox
+      if (createMatchMembershipPayers.size > 0) {
+        const lastDay = new Date(matchYear, matchMonth, 0).getDate();
+        let sats = 0;
+        for (let d = 1; d <= lastDay; d++) { if (new Date(matchYear, matchMonth - 1, d).getDay() === 6) sats++; }
+        const mFee = sats >= 5 ? 45000 : 40000;
+        const membershipInserts = Array.from(createMatchMembershipPayers).map(name => ({
+          member_name: name,
+          month: matchMonth,
+          year: matchYear,
+          weeks_in_month: sats,
+          amount: mFee,
+          payment_status: 'paid',
+          paid_at: new Date().toISOString(),
+        }));
+        const { error: membershipInsertError } = await supabase
+          .from('memberships')
+          .upsert(membershipInserts, { onConflict: 'member_name,month,year', ignoreDuplicates: false });
+        if (membershipInsertError) {
+          console.error('[Membership] Insert error:', membershipInsertError);
+          alert(`⚠️ Gagal menyimpan membership: ${membershipInsertError.message}\n\nPertandingan tetap akan dibuat.`);
+        } else {
+          console.log(`[Membership] ✅ Saved ${createMatchMembershipPayers.size} membership payments`);
+        }
+      }
+
       // Fetch PAID memberships for the match's month (only paid memberships count!)
       const { data: matchMonthMemberships, error: membershipQueryError } = await supabase
         .from('memberships')
@@ -825,7 +858,7 @@ export default function AdminPembayaranPage() {
       const matchMonthMembershipMap: Record<string, Membership> = {};
       if (matchMonthMemberships) {
         matchMonthMemberships.forEach((m) => {
-          matchMonthMembershipMap[m.member_name.toLowerCase()] = m;
+          matchMonthMembershipMap[m.member_name.toLowerCase().trim()] = m;
         });
       }
 
@@ -865,6 +898,21 @@ export default function AdminPembayaranPage() {
 
       if (matchError) throw matchError;
 
+      // Check which members already paid attendance fee on this day (other matches)
+      const matchDayStart = new Date(newMatch.match_date);
+      matchDayStart.setHours(0, 0, 0, 0);
+      const matchDayEnd = new Date(newMatch.match_date);
+      matchDayEnd.setHours(23, 59, 59, 999);
+      const { data: sameDayFees } = await supabase
+        .from('match_members')
+        .select('member_name, matches!inner(match_date)')
+        .gt('attendance_fee', 0)
+        .gte('matches.match_date', matchDayStart.toISOString())
+        .lte('matches.match_date', matchDayEnd.toISOString());
+      const attendancePaidTodaySet = new Set(
+        (sameDayFees || []).map(mm => mm.member_name.toLowerCase().trim())
+      );
+
       // Create match members with membership check for match's month
       const membersData = members.map(memberName => {
         // Check if member is payment exempt (VIP/sponsor/special access)
@@ -883,9 +931,12 @@ export default function AdminPembayaranPage() {
 
         // Normal payment calculation for non-exempt members
         // Check membership for the match's month, not the selected month
-        const memberMembership = matchMonthMembershipMap[memberName.toLowerCase()];
-        const hasMembershipStatus = !!memberMembership; // Already filtered by paid status in query
-        const attendanceFee = hasMembershipStatus ? 0 : 18000;
+        const memberMembership = matchMonthMembershipMap[memberName.toLowerCase().trim()];
+        const hasMembershipStatus = !!memberMembership || createMatchMembershipPayers.has(memberName);
+        const alreadyPaidToday = attendancePaidTodaySet.has(memberName.toLowerCase().trim());
+        const shouldCharge = !hasMembershipStatus && !alreadyPaidToday;
+        const attendanceFee = shouldCharge ? 18000 : 0;
+        if (shouldCharge) attendancePaidTodaySet.add(memberName.toLowerCase().trim());
         
         return {
           match_id: match.id,
@@ -893,6 +944,7 @@ export default function AdminPembayaranPage() {
           amount_due: costPerMember,
           attendance_fee: attendanceFee,
           has_membership: hasMembershipStatus,
+          attendance_paid_this_entry: shouldCharge,
           payment_status: 'pending',
         };
       });
@@ -912,10 +964,19 @@ export default function AdminPembayaranPage() {
         member4: '',
         match_date: '',
       });
+      setCreateMatchMembershipPayers(new Set());
       loadData();
 
       // Send WA + Email notifications in parallel
       try {
+        const matchDateForFee = new Date(match.match_date);
+        const feeMonth = matchDateForFee.getMonth();
+        const feeYear = matchDateForFee.getFullYear();
+        const feeLast = new Date(feeYear, feeMonth + 1, 0).getDate();
+        let feeSats = 0;
+        for (let d = 1; d <= feeLast; d++) { if (new Date(feeYear, feeMonth, d).getDay() === 6) feeSats++; }
+        const notifMembershipFee = feeSats >= 5 ? 45000 : 40000;
+
         const notifMembers = membersData.map(m => ({
           name: m.member_name,
           phone: phoneMap[m.member_name.toLowerCase()] || '',
@@ -924,6 +985,8 @@ export default function AdminPembayaranPage() {
           attendanceFee: m.attendance_fee,
           hasMembership: m.has_membership,
           isPaymentExempt: paymentExemptMap[m.member_name.toLowerCase()] || false,
+          membershipJustPaid: createMatchMembershipPayers.has(m.member_name),
+          membershipAmount: createMatchMembershipPayers.has(m.member_name) ? notifMembershipFee : undefined,
         }));
 
         const [waRes, emailRes] = await Promise.all([
@@ -1062,7 +1125,7 @@ export default function AdminPembayaranPage() {
       const matchMonthMembershipMap: Record<string, Membership> = {};
       if (matchMonthMemberships) {
         matchMonthMemberships.forEach((m) => {
-          matchMonthMembershipMap[m.member_name.toLowerCase()] = m;
+          matchMonthMembershipMap[m.member_name.toLowerCase().trim()] = m;
         });
       }
 
@@ -1085,6 +1148,23 @@ export default function AdminPembayaranPage() {
         });
       }
 
+      // Check which members already paid attendance fee on this same day
+      // in OTHER matches (excluding this one being edited)
+      const editDayStart = new Date(matchDate);
+      editDayStart.setHours(0, 0, 0, 0);
+      const editDayEnd = new Date(matchDate);
+      editDayEnd.setHours(23, 59, 59, 999);
+      const { data: sameDayFees } = await supabase
+        .from('match_members')
+        .select('member_name, match_id, matches!inner(match_date)')
+        .gt('attendance_fee', 0)
+        .neq('match_id', editingMatch.matchId)
+        .gte('matches.match_date', editDayStart.toISOString())
+        .lte('matches.match_date', editDayEnd.toISOString());
+      const editAttendancePaidSet = new Set(
+        (sameDayFees || []).map(mm => mm.member_name.toLowerCase().trim())
+      );
+
       // Update members
       for (const [memberId, memberData] of Object.entries(editingMatch.members)) {
         // Check if member is payment exempt (VIP/sponsor/special access)
@@ -1100,9 +1180,19 @@ export default function AdminPembayaranPage() {
         } else {
           // Normal payment calculation for non-exempt members
           // Check membership for the match's month, not the selected month
-          const memberMembership = matchMonthMembershipMap[memberData.name.toLowerCase()];
-          hasMembershipStatus = !!memberMembership; // Already filtered by paid status in query
-          attendanceFee = hasMembershipStatus ? 0 : 18000;
+          const memberMembership = matchMonthMembershipMap[memberData.name.toLowerCase().trim()];
+          hasMembershipStatus = !!memberMembership;
+          const alreadyPaidElsewhere = editAttendancePaidSet.has(memberData.name.toLowerCase().trim());
+          attendanceFee = hasMembershipStatus || alreadyPaidElsewhere ? 0 : 18000;
+        }
+
+        // Manual override: admin explicitly set this member as having membership
+        if (overrideMembership.has(memberId)) {
+          hasMembershipStatus = true;
+          attendanceFee = 0;
+        } else if (waiveAttendanceFee.has(memberId)) {
+          // Manual override: admin explicitly waived this member's attendance fee
+          attendanceFee = 0;
         }
         
         // Get current member data
@@ -1172,6 +1262,8 @@ export default function AdminPembayaranPage() {
         alert('Perubahan berhasil disimpan!');
       }
       setEditingMatch(null);
+      setWaiveAttendanceFee(new Set());
+      setOverrideMembership(new Set());
       loadData();
     } catch (error) {
       console.error('Error saving match changes:', error);
@@ -1638,19 +1730,18 @@ export default function AdminPembayaranPage() {
     setShowRollbackModal(true);
 
     try {
-      // Preview what will be affected
-      const { data, error } = await supabase.rpc('preview_membership_rollback', {
-        p_membership_id: membership.id
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/admin/membership-rollback?id=${membership.id}`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        setRollbackPreview(data[0]);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Gagal memuat preview rollback');
+      if (json.data && json.data.length > 0) {
+        setRollbackPreview(json.data[0]);
       }
-    } catch (error) {
-      console.error('Error previewing rollback:', error);
-      alert('Gagal memuat preview rollback');
+    } catch (error: any) {
+      console.error('Error previewing rollback:', error?.message ?? error);
+      alert('Gagal memuat preview rollback: ' + (error?.message ?? ''));
       setShowRollbackModal(false);
     } finally {
       setIsLoadingRollback(false);
@@ -1662,29 +1753,39 @@ export default function AdminPembayaranPage() {
 
     setIsLoadingRollback(true);
     try {
-      const { data, error } = await supabase.rpc('rollback_membership', {
-        p_membership_id: rollbackMembership.id
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/membership-rollback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ membershipId: rollbackMembership.id }),
       });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Gagal rollback membership');
 
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const result = data[0];
+      if (json.data && json.data.length > 0) {
+        const result = json.data[0];
         alert(`✅ Rollback berhasil!\n\n` +
           `Member: ${result.member_name}\n` +
           `Bulan: ${result.month}/${result.year}\n` +
           `Match records diupdate: ${result.updated_match_records}\n\n` +
           `Member sekarang kembali ke non-membership dan akan dikenakan biaya kehadiran.`);
+      } else {
+        alert('✅ Rollback berhasil!');
       }
 
-      // Refresh data
+      // Refresh data — invalidate membership cache so rollback is visible immediately
+      queryCache.invalidatePattern(`admin-memberships-${rollbackMembership.month}-${rollbackMembership.year}`);
       await loadData();
       setShowRollbackModal(false);
       setRollbackMembership(null);
       setRollbackPreview(null);
-    } catch (error) {
-      console.error('Error executing rollback:', error);
-      alert('Gagal rollback membership');
+    } catch (error: any) {
+      const msg = error?.message ?? String(error);
+      console.error('Error executing rollback:', msg);
+      alert(`Gagal rollback membership:\n${msg}`);
     } finally {
       setIsLoadingRollback(false);
     }
@@ -1783,7 +1884,7 @@ export default function AdminPembayaranPage() {
         </div>
 
         {/* Monthly Recap */}
-        <div className="mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-300 dark:border-blue-500/30 rounded-xl p-6 transition-colors duration-300">
+        <div className="mb-8 bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-300 dark:border-blue-500/30 rounded-xl p-6 transition-colors duration-300">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <div>
@@ -1840,7 +1941,7 @@ export default function AdminPembayaranPage() {
               <div className="flex items-center gap-2">
                 <div className="flex-1 bg-gray-200 dark:bg-zinc-800 rounded-full h-2 w-32 transition-colors duration-300">
                   <div 
-                    className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
+                    className="bg-linear-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${collectionRate}%` }}
                   />
                 </div>
@@ -1923,7 +2024,7 @@ export default function AdminPembayaranPage() {
 
         {/* Smart Actions Section (MVP) */}
         {smartActions.length > 0 && (
-          <div className="smart-actions-section mb-6 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-cyan-900/20 border border-emerald-200 dark:border-emerald-500/30 rounded-xl p-6 transition-colors duration-300">
+          <div className="smart-actions-section mb-6 bg-linear-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-cyan-900/20 border border-emerald-200 dark:border-emerald-500/30 rounded-xl p-6 transition-colors duration-300">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Zap className="w-5 h-5 text-emerald-600 dark:text-emerald-400 transition-colors duration-300" />
@@ -2060,7 +2161,7 @@ export default function AdminPembayaranPage() {
 
         {/* Bulk Confirmation Banner */}
         {selectedPayments.length > 0 && (
-          <div className="bulk-actions mb-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-4">
+          <div className="bulk-actions mb-6 bg-linear-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <CheckSquare className="w-6 h-6 text-green-400" />
@@ -2096,7 +2197,7 @@ export default function AdminPembayaranPage() {
         {/* Stats Cards */}
         {activeTab === 'matches' ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
+            <div className="bg-linear-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-blue-500/20 rounded-lg">
                   <CreditCard className="w-6 h-6 text-blue-400" />
@@ -2108,7 +2209,7 @@ export default function AdminPembayaranPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
+            <div className="bg-linear-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-green-500/20 rounded-lg">
                   <TrendingUp className="w-6 h-6 text-green-400" />
@@ -2120,7 +2221,7 @@ export default function AdminPembayaranPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
+            <div className="bg-linear-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-yellow-500/20 rounded-lg">
                   <AlertCircle className="w-6 h-6 text-yellow-400" />
@@ -2134,7 +2235,7 @@ export default function AdminPembayaranPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
+            <div className="bg-linear-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-purple-500/20 rounded-lg">
                   <Award className="w-6 h-6 text-purple-400" />
@@ -2146,7 +2247,7 @@ export default function AdminPembayaranPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
+            <div className="bg-linear-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-green-500/20 rounded-lg">
                   <TrendingUp className="w-6 h-6 text-green-400" />
@@ -2158,7 +2259,7 @@ export default function AdminPembayaranPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
+            <div className="bg-linear-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-yellow-500/20 rounded-lg">
                   <AlertCircle className="w-6 h-6 text-yellow-400" />
@@ -2300,7 +2401,7 @@ export default function AdminPembayaranPage() {
                     {isEditing ? (
                       <>
                         <button
-                          onClick={() => setEditingMatch(null)}
+                          onClick={() => { setEditingMatch(null); setWaiveAttendanceFee(new Set()); setOverrideMembership(new Set()); }}
                           className="px-3 py-1 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-900 dark:text-white rounded text-sm transition-colors duration-300 flex items-center gap-1"
                         >
                           <X className="w-4 h-4" />
@@ -2345,7 +2446,7 @@ export default function AdminPembayaranPage() {
                     ← Geser tabel untuk melihat semua kolom →
                   </div>
                   <div className="overflow-x-auto -mx-6 px-6 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent" style={{ WebkitOverflowScrolling: 'touch' }}>
-                    <table className="w-full min-w-[600px]">
+                    <table className="w-full min-w-150">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
                         <th className="text-center py-3 px-2 w-12">
@@ -2432,12 +2533,77 @@ export default function AdminPembayaranPage() {
                           </td>
                           <td className="py-3 px-4 text-right text-gray-900 dark:text-white transition-colors duration-300">Rp {member.amount_due.toLocaleString('id-ID')}</td>
                           <td className="py-3 px-4 text-right">
-                            {member.attendance_fee > 0 ? (
-                              <span className="text-yellow-400">Rp {member.attendance_fee.toLocaleString('id-ID')}</span>
-                            ) : member.has_membership ? (
-                              <span className="text-purple-400">Gratis</span>
+                            {isEditing ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                {overrideMembership.has(member.id) ? (
+                                  // Admin manually marked as membership → free
+                                  <>
+                                    <Award className="w-3.5 h-3.5 text-purple-400" />
+                                    <span className="text-purple-400 text-xs">Gratis</span>
+                                    <button
+                                      onClick={() => setOverrideMembership(prev => { const n = new Set(prev); n.delete(member.id); return n; })}
+                                      className="p-0.5 bg-zinc-600 hover:bg-zinc-500 rounded text-zinc-200 text-xs transition-colors"
+                                      title="Batalkan override membership"
+                                    >
+                                      ↩
+                                    </button>
+                                  </>
+                                ) : waiveAttendanceFee.has(member.id) ? (
+                                  // Admin manually waived attendance fee
+                                  <>
+                                    <span className="text-green-400 text-xs">Dibebaskan</span>
+                                    <button
+                                      onClick={() => setWaiveAttendanceFee(prev => { const n = new Set(prev); n.delete(member.id); return n; })}
+                                      className="p-0.5 bg-zinc-600 hover:bg-zinc-500 rounded text-zinc-200 text-xs transition-colors"
+                                      title="Kembalikan biaya kehadiran"
+                                    >
+                                      ↩
+                                    </button>
+                                  </>
+                                ) : member.attendance_fee > 0 ? (
+                                  // Has fee — offer waive or mark as member
+                                  <>
+                                    <span className="text-yellow-400 text-xs">Rp {member.attendance_fee.toLocaleString('id-ID')}</span>
+                                    <button
+                                      onClick={() => setOverrideMembership(prev => new Set([...prev, member.id]))}
+                                      className="p-0.5 bg-purple-600 hover:bg-purple-700 rounded text-white transition-colors"
+                                      title="Tandai sebagai member (fee = 0)"
+                                    >
+                                      <Award className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => setWaiveAttendanceFee(prev => new Set([...prev, member.id]))}
+                                      className="p-0.5 bg-red-600 hover:bg-red-700 rounded text-white transition-colors"
+                                      title="Bebaskan biaya kehadiran"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                ) : member.has_membership ? (
+                                  // Already member in DB
+                                  <span className="text-purple-400">Gratis</span>
+                                ) : (
+                                  // No fee, no membership — offer to mark as member
+                                  <>
+                                    <span className="text-gray-400 dark:text-zinc-500">-</span>
+                                    <button
+                                      onClick={() => setOverrideMembership(prev => new Set([...prev, member.id]))}
+                                      className="p-0.5 bg-purple-600 hover:bg-purple-700 rounded text-white transition-colors"
+                                      title="Tandai sebagai member"
+                                    >
+                                      <Award className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             ) : (
-                              <span className="text-gray-400 dark:text-zinc-500">-</span>
+                              member.attendance_fee > 0 ? (
+                                <span className="text-yellow-400">Rp {member.attendance_fee.toLocaleString('id-ID')}</span>
+                              ) : member.has_membership ? (
+                                <span className="text-purple-400">Gratis</span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-zinc-500">-</span>
+                              )
                             )}
                           </td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900 dark:text-white transition-colors duration-300">Rp {member.total_amount.toLocaleString('id-ID')}</td>
@@ -2591,7 +2757,7 @@ export default function AdminPembayaranPage() {
               ← Geser tabel untuk melihat semua kolom →
             </div>
             <div className="overflow-x-auto -mx-6 px-6 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent" style={{ WebkitOverflowScrolling: 'touch' }}>
-              <table className="w-full min-w-[700px]">
+              <table className="w-full min-w-175">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-zinc-800/50 transition-colors duration-300">
                     <th className="text-center py-3 sm:py-4 px-2 w-12">
@@ -2875,14 +3041,24 @@ export default function AdminPembayaranPage() {
                     const isPaymentExempt = memberName ? paymentExemptMembers.has(memberName.toLowerCase()) : false;
                     
                     // Check membership for the match date's month, not the selected month
-                    const memberMembership = memberName ? matchDateMembershipMap[memberName.toLowerCase()] : null;
+                    const memberMembership = memberName ? matchDateMembershipMap[memberName.toLowerCase().trim()] : null;
                     const hasMembershipStatus = isPaymentExempt || !!memberMembership; // Exempt or has PAID membership
                     
+                    const willPayMembership = memberName ? createMatchMembershipPayers.has(memberName) : false;
+                    const membershipFeeForMatch = (() => {
+                      if (!newMatch.match_date) return 40000;
+                      const d = new Date(newMatch.match_date);
+                      const year = d.getFullYear(), month = d.getMonth();
+                      const lastDay = new Date(year, month + 1, 0).getDate();
+                      let sats = 0;
+                      for (let day = 1; day <= lastDay; day++) { if (new Date(year, month, day).getDay() === 6) sats++; }
+                      return sats >= 5 ? 45000 : 40000;
+                    })();
                     const costBreakdown = {
                       shuttlecock: isPaymentExempt ? 0 : (newMatch.shuttlecock_count * 12000) / 4,
-                      attendance: (isPaymentExempt || memberMembership) ? 0 : 18000,
+                      attendance: (isPaymentExempt || memberMembership || willPayMembership) ? 0 : 18000,
                     };
-                    const total = costBreakdown.shuttlecock + costBreakdown.attendance;
+                    const total = costBreakdown.shuttlecock + costBreakdown.attendance + (willPayMembership ? membershipFeeForMatch : 0);
 
                     return (
                       <div key={num}>
@@ -2952,13 +3128,55 @@ export default function AdminPembayaranPage() {
                                 <p className="text-gray-600 dark:text-zinc-400 transition-colors duration-300">
                                   Shuttlecock: Rp {costBreakdown.shuttlecock.toLocaleString('id-ID')}
                                 </p>
-                                {costBreakdown.attendance > 0 ? (
+                                {!memberMembership && !isPaymentExempt && !willPayMembership ? (
                                   <>
                                     <p className="text-yellow-400">
-                                      + Kehadiran: Rp {costBreakdown.attendance.toLocaleString('id-ID')} (Belum Member {new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' })})
+                                      + Kehadiran: Rp {(18000).toLocaleString('id-ID')} (Belum Member {new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' })})
                                     </p>
+                                    <label className="flex items-center gap-2 mt-1 cursor-pointer group">
+                                      <input
+                                        type="checkbox"
+                                        checked={false}
+                                        onChange={() => {
+                                          setCreateMatchMembershipPayers(prev => {
+                                            const next = new Set(prev);
+                                            next.add(memberName);
+                                            return next;
+                                          });
+                                        }}
+                                        className="w-3.5 h-3.5 rounded accent-amber-400"
+                                      />
+                                      <span className="text-xs text-amber-300 group-hover:text-amber-200">
+                                        Bayar membership sekarang (+Rp {membershipFeeForMatch.toLocaleString('id-ID')})
+                                      </span>
+                                    </label>
                                     <p className="text-white dark:text-white font-semibold transition-colors duration-300">
                                       Total: Rp {total.toLocaleString('id-ID')}
+                                    </p>
+                                  </>
+                                ) : willPayMembership ? (
+                                  <>
+                                    <p className="text-amber-300 flex items-center gap-1">
+                                      <Award className="w-3 h-3" />
+                                      Membership dibayar (+Rp {membershipFeeForMatch.toLocaleString('id-ID')})
+                                    </p>
+                                    <label className="flex items-center gap-2 mt-1 cursor-pointer group">
+                                      <input
+                                        type="checkbox"
+                                        checked={true}
+                                        onChange={() => {
+                                          setCreateMatchMembershipPayers(prev => {
+                                            const next = new Set(prev);
+                                            next.delete(memberName);
+                                            return next;
+                                          });
+                                        }}
+                                        className="w-3.5 h-3.5 rounded accent-amber-400"
+                                      />
+                                      <span className="text-xs text-amber-300 group-hover:text-amber-200">Batal membership</span>
+                                    </label>
+                                    <p className="text-white dark:text-white font-semibold transition-colors duration-300">
+                                      Total: Rp {total.toLocaleString('id-ID')} (termasuk membership)
                                     </p>
                                   </>
                                 ) : (
@@ -3041,7 +3259,7 @@ export default function AdminPembayaranPage() {
                     Jumlah Minggu dalam Bulan Ini
                   </label>
                   {weeksAutoDetected && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-500/20 dark:to-cyan-500/20 border border-blue-300 dark:border-blue-500/30 rounded-full text-xs font-medium text-blue-700 dark:text-blue-300 transition-colors duration-300">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-linear-to-r from-blue-100 to-cyan-100 dark:from-blue-500/20 dark:to-cyan-500/20 border border-blue-300 dark:border-blue-500/30 rounded-full text-xs font-medium text-blue-700 dark:text-blue-300 transition-colors duration-300">
                       <Sparkles className="w-3 h-3" />
                       Smart Detection
                     </span>
@@ -3104,7 +3322,7 @@ export default function AdminPembayaranPage() {
 
               <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-500/5 border border-blue-300 dark:border-blue-500/20 rounded-lg transition-colors duration-300">
                 <p className="text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2 transition-colors duration-300">
-                  <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>
                     <strong>Smart Detection:</strong> Sistem otomatis menghitung jumlah Sabtu dalam bulan untuk menentukan jumlah minggu (4 atau 5 minggu). Setiap sesi badminton adalah Sabtu pukul 20:00.
                   </span>

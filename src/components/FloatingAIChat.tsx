@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageCircle, X, Send, Loader2, Sparkles, Copy, Check, Dumbbell, HelpCircle, ExternalLink, Play } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +49,88 @@ export default function FloatingAIChat() {
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Draggable position
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const posInitialized = useRef(false);
+  const dragState = useRef<{ dragging: boolean; startX: number; startY: number; origX: number; origY: number; moved: boolean }>({
+    dragging: false, startX: 0, startY: 0, origX: 0, origY: 0, moved: false,
+  });
+
+  // Initialize to bottom-right on first render (mobile-safe)
+  useEffect(() => {
+    if (posInitialized.current) return;
+    posInitialized.current = true;
+    const isMobile = window.innerWidth < 640;
+    const vh = window.visualViewport?.height ?? window.innerHeight;
+    // Extra bottom clearance on mobile to stay above browser chrome
+    const safeBottom = isMobile ? 120 : 80;
+    setPos({ x: window.innerWidth - 80, y: vh - safeBottom });
+  }, []);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    dragState.current = { dragging: true, startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y, moved: false };
+    e.preventDefault();
+  }, [pos]);
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0];
+    dragState.current = { dragging: true, startX: t.clientX, startY: t.clientY, origX: pos.x, origY: pos.y, moved: false };
+  }, [pos]);
+
+  useEffect(() => {
+    const BUTTON_SIZE = 56;
+
+    const clampPos = (x: number, y: number) => {
+      const isMobile = window.innerWidth < 640;
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      const maxY = vh - (isMobile ? 120 : BUTTON_SIZE);
+      return {
+        x: Math.min(Math.max(0, x), window.innerWidth - BUTTON_SIZE),
+        y: Math.min(Math.max(0, y), maxY),
+      };
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragState.current.dragging) return;
+      const dx = e.clientX - dragState.current.startX;
+      const dy = e.clientY - dragState.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragState.current.moved = true;
+      if (!dragState.current.moved) return;
+      setPos(clampPos(dragState.current.origX + dx, dragState.current.origY + dy));
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!dragState.current.dragging) return;
+      const t = e.touches[0];
+      const dx = t.clientX - dragState.current.startX;
+      const dy = t.clientY - dragState.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragState.current.moved = true;
+      if (!dragState.current.moved) return;
+      e.preventDefault();
+      setPos(clampPos(dragState.current.origX + dx, dragState.current.origY + dy));
+    };
+
+    // Re-clamp button when mobile viewport resizes (keyboard open, address bar hide/show)
+    const onViewportResize = () => {
+      setPos(prev => clampPos(prev.x, prev.y));
+    };
+    window.visualViewport?.addEventListener('resize', onViewportResize);
+
+    const onUp = () => { dragState.current.dragging = false; };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onUp);
+      window.visualViewport?.removeEventListener('resize', onViewportResize);
+    };
+  }, []);
 
   // Update greeting once auth finishes loading
   useEffect(() => {
@@ -205,11 +287,14 @@ export default function FloatingAIChat() {
     <>
       {/* Floating Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 backdrop-blur-xl ${
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        onClick={() => { if (!dragState.current.moved) setIsOpen(!isOpen); }}
+        style={{ left: pos.x, top: pos.y, touchAction: 'none' }}
+        className={`fixed z-50 p-4 rounded-full shadow-2xl transition-colors duration-300 backdrop-blur-xl cursor-grab active:cursor-grabbing ${
           isOpen
-            ? 'bg-gradient-to-br from-red-500/80 to-red-600/80 hover:from-red-600/80 hover:to-red-700/80 scale-110'
-            : 'bg-gradient-to-br from-[#3e6461]/90 to-[#2d4a47]/90 hover:from-[#3e6461] hover:to-[#2d4a47] hover:scale-110'
+            ? 'bg-linear-to-br from-red-500/80 to-red-600/80 hover:from-red-600/80 hover:to-red-700/80'
+            : 'bg-linear-to-br from-[#3e6461]/90 to-[#2d4a47]/90 hover:from-[#3e6461] hover:to-[#2d4a47]'
         } border border-white/20`}
         aria-label="DLOB AI Assistant"
       >
@@ -220,18 +305,30 @@ export default function FloatingAIChat() {
         )}
       </button>
 
-      {/* Chat Window */}
-      {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-[400px] max-w-[calc(100vw-48px)] h-[620px] max-h-[calc(100vh-160px)] flex flex-col overflow-hidden">
+      {/* Chat Window — position anchors to button, clamped to viewport */}
+      {isOpen && (() => {
+        const BUTTON_SIZE = 56;
+        const isMobile = window.innerWidth < 640;
+        const vh = window.visualViewport?.height ?? window.innerHeight;
+        const PANEL_W = isMobile ? window.innerWidth - 16 : 400;
+        const PANEL_H = isMobile ? vh - 80 : 620;
+        const GAP = 12;
+        // prefer opening above+left of button, clamp to viewport
+        const rawLeft = pos.x + BUTTON_SIZE - PANEL_W;
+        const rawTop = pos.y - PANEL_H - GAP;
+        const left = Math.min(Math.max(8, rawLeft), window.innerWidth - PANEL_W - 8);
+        const top = rawTop < 8 ? pos.y + BUTTON_SIZE + GAP : rawTop;
+        return (
+          <div style={{ left, top, width: PANEL_W, maxWidth: 'calc(100vw - 16px)', height: PANEL_H, maxHeight: `calc(${vh}px - 80px)` }} className="fixed z-50 flex flex-col overflow-hidden">
           {/* Glassmorphic Container */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-gray-50/95 to-gray-100/95 dark:from-zinc-900/95 dark:via-zinc-950/95 dark:to-black/95 backdrop-blur-2xl rounded-3xl border border-gray-200 dark:border-white/10 shadow-2xl transition-all duration-300" />
+          <div className="absolute inset-0 bg-linear-to-br from-white/95 via-gray-50/95 to-gray-100/95 dark:from-zinc-900/95 dark:via-zinc-950/95 dark:to-black/95 backdrop-blur-2xl rounded-3xl border border-gray-200 dark:border-white/10 shadow-2xl transition-all duration-300" />
           
           {/* Content */}
           <div className="relative flex flex-col h-full">
             {/* Header */}
-            <div className="relative bg-gradient-to-br from-[#3e6461]/80 to-[#2d4a47]/80 backdrop-blur-xl border-b border-white/10 px-4 py-3 rounded-t-3xl transition-all duration-300">
+            <div className="relative bg-linear-to-br from-[#3e6461]/80 to-[#2d4a47]/80 backdrop-blur-xl border-b border-white/10 px-4 py-3 rounded-t-3xl transition-all duration-300">
               <div className="flex items-center gap-3">
-                <div className="relative flex-shrink-0">
+                <div className="relative shrink-0">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-xl border border-white/30 overflow-hidden">
                     <Image
                       src="/dlobai.png"
@@ -258,14 +355,14 @@ export default function FloatingAIChat() {
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {message.role === 'assistant' && (
-                      <div className="w-7 h-7 bg-gradient-to-br from-[#3e6461]/30 to-[#2d4a47]/30 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-[#3e6461]/20 dark:border-white/10 flex-shrink-0">
+                      <div className="w-7 h-7 bg-linear-to-br from-[#3e6461]/30 to-[#2d4a47]/30 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-[#3e6461]/20 dark:border-white/10 shrink-0">
                         <Sparkles className="w-4 h-4 text-[#3e6461]" />
                       </div>
                     )}
                     <div
                       className={`max-w-[75%] p-3.5 rounded-2xl backdrop-blur-xl border transition-all duration-300 ${
                         message.role === 'user'
-                          ? 'bg-gradient-to-br from-[#3e6461]/90 to-[#2d4a47]/90 text-white rounded-br-md border-[#3e6461]/30 shadow-lg'
+                          ? 'bg-linear-to-br from-[#3e6461]/90 to-[#2d4a47]/90 text-white rounded-br-md border-[#3e6461]/30 shadow-lg'
                           : 'bg-gray-100 dark:bg-zinc-800/60 text-gray-900 dark:text-zinc-100 rounded-bl-md border-gray-200 dark:border-white/5'
                       }`}
                     >
@@ -288,7 +385,7 @@ export default function FloatingAIChat() {
                           className="block group"
                         >
                           <div className="flex gap-2 bg-zinc-800/40 hover:bg-zinc-800/60 p-2 rounded-lg border border-white/5 hover:border-white/10 transition-all">
-                            <div className="relative w-28 h-16 flex-shrink-0 rounded overflow-hidden">
+                            <div className="relative w-28 h-16 shrink-0 rounded overflow-hidden">
                               <Image
                                 src={video.thumbnail}
                                 alt={video.title}
@@ -321,7 +418,7 @@ export default function FloatingAIChat() {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="w-7 h-7 bg-gradient-to-br from-[#3e6461]/30 to-[#2d4a47]/30 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-white/10 flex-shrink-0">
+                  <div className="w-7 h-7 bg-linear-to-br from-[#3e6461]/30 to-[#2d4a47]/30 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-white/10 shrink-0">
                     <Sparkles className="w-4 h-4 text-[#3e6461]" />
                   </div>
                   <div className="bg-zinc-800/60 backdrop-blur-xl text-zinc-100 p-3.5 rounded-2xl rounded-bl-md border border-white/5 transition-all duration-300">
@@ -365,7 +462,7 @@ export default function FloatingAIChat() {
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="p-3 bg-gradient-to-br from-[#3e6461]/90 to-[#2d4a47]/90 hover:from-[#3e6461] hover:to-[#2d4a47] disabled:from-gray-400/60 dark:disabled:from-zinc-700/60 disabled:to-gray-400/60 dark:disabled:to-zinc-700/60 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 backdrop-blur-xl border border-white/10 disabled:border-gray-300 dark:disabled:border-white/5"
+                  className="p-3 bg-linear-to-br from-[#3e6461]/90 to-[#2d4a47]/90 hover:from-[#3e6461] hover:to-[#2d4a47] disabled:from-gray-400/60 dark:disabled:from-zinc-700/60 disabled:to-gray-400/60 dark:disabled:to-zinc-700/60 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 backdrop-blur-xl border border-white/10 disabled:border-gray-300 dark:disabled:border-white/5"
                 >
                   <Send className="w-5 h-5" />
                 </button>
@@ -373,7 +470,8 @@ export default function FloatingAIChat() {
             </form>
           </div>
         </div>
-      )}
+        );
+      })()}
     </>
   );
 }
