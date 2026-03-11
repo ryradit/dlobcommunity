@@ -98,6 +98,7 @@ export default function Footer() {
               <ul className="space-y-2 text-xs text-gray-400">
                 <li><Link href="/tentang" className="hover:text-blue-400 transition-colors">Tentang</Link></li>
                 <li><Link href="/hall-of-fame" className="hover:text-blue-400 transition-colors">Hall of Fame</Link></li>
+                <li><Link href="/leaderboard" className="hover:text-blue-400 transition-colors">Leaderboard 🏆</Link></li>
                 <li><Link href="/galeri" className="hover:text-blue-400 transition-colors">Galeri</Link></li>
                 <li><Link href="/store" className="hover:text-blue-400 transition-colors">Toko</Link></li>
                 <li><Link href="/survey" className="hover:text-blue-400 transition-colors">Survey Member 📣</Link></li>

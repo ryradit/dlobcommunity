@@ -112,6 +112,98 @@ Q: Apa itu match code?
 A: Kode unik per pertandingan yang digunakan admin untuk identifikasi sesi.
 
 ────────────────────────────────────────
+🏆 LEADERBOARD DLOB (PAPAN PERINGKAT PUBLIK)
+────────────────────────────────────────
+URL: https://www.dlobcommunity.com/leaderboard
+
+Leaderboard adalah halaman PUBLIK yang bisa diakses SIAPA SAJA tanpa perlu login.
+Halaman ini menampilkan rekap statistik seluruh member DLOB secara real-time.
+
+APA YANG DITAMPILKAN:
+1. SPOTLIGHT CARDS (kartu ringkasan di bagian atas):
+   - Total Member: jumlah seluruh member aktif di sistem
+   - Pemain Terbaik: member dengan total kemenangan terbanyak
+   - Paling Rajin: member dengan pertemuan/kehadiran terbanyak
+   - Streak Terpanjang: member dengan rangkaian kemenangan beruntun terpanjang
+
+2. TABEL REKAP SEMUA MEMBER (sortable/bisa diurutkan):
+   - Pertemuan: jumlah sesi/hari kehadiran (BUKAN jumlah game)
+     → 1 pertemuan = 1 hari main, tidak peduli berapa game dimainkan hari itu
+   - Main: total pertandingan (game) yang pernah dimainkan
+   - M (Menang): total kemenangan
+   - K (Kalah): total kekalahan
+   - Win%: persentase kemenangan (0% jika belum pernah main)
+   - Avg Skor: rata-rata poin per game
+   - Streak Max: rekor rangkaian kemenangan beruntun terpanjang
+
+CARA MENGURUTKAN TABEL:
+- Klik judul kolom mana saja untuk mengurutkan berdasarkan kolom itu
+- Klik lagi untuk membalik urutan (dari besar ke kecil atau sebaliknya)
+- Default: diurutkan berdasarkan total pertandingan terbanyak
+
+BADGE STREAK DI NAMA MEMBER:
+- 🔥 angka merah: member sedang dalam rangkaian kemenangan ≥ 3 beruntun
+- ❄️ angka biru: member sedang dalam rangkaian kekalahan ≥ 3 beruntun
+
+APAKAH DATA REAL-TIME?
+- Ya! Leaderboard otomatis update saat admin menginput pertandingan baru
+- Ada indikator LIVE di bagian header → titik hijau = aktif memantau
+- Tidak perlu refresh manual — data berubah sendiri dalam ~1-2 detik setelah
+  pertandingan baru disimpan
+
+DISCLAIMER / CATATAN PENTING:
+- Data dihitung mulai dari pertandingan PERTAMA yang tercatat di sistem
+- Jika nama seseorang tidak muncul atau total main = 0, kemungkinan:
+  (a) Mereka belum pernah bermain setelah sistem mulai merekam, ATAU
+  (b) Mereka bermain sebelum sistem pencatatan diaktifkan
+- Data hanya mencakup pertandingan yang sudah diinput admin ke sistem DLOB
+- Akun test/dummy tidak ditampilkan di leaderboard
+
+SIAPA YANG BISA AKSES:
+- Semua orang, termasuk yang belum/tidak punya akun DLOB
+- Cukup buka link: https://www.dlobcommunity.com/leaderboard
+- Tidak perlu login
+
+────────────────────────────────────────
+❓ FAQ LEADERBOARD
+────────────────────────────────────────
+Q: Kenapa nama saya tidak muncul di leaderboard?
+A: Kemungkinan karena kamu belum pernah bertanding sejak sistem pencatatan
+   pertama kali diaktifkan, atau kamu bermain sebelum sistem mulai merekam
+   data. Semua pertandingan yang diinput admin akan otomatis terekam.
+
+Q: Kenapa total pertandingan saya 0 padahal sudah sering main?
+A: Pertandingan kamu mungkin belum diinput admin ke sistem, atau nama yang
+   dicatat di pertandingan berbeda dengan nama di profil akun. Hubungi admin
+   untuk pengecekan.
+
+Q: Apa bedanya "Pertemuan" dan "Main" di leaderboard?
+A: Pertemuan = jumlah hari/sesi kehadiran kamu (1 hari main = 1 pertemuan,
+   berapa pun banyaknya game hari itu). Main = total game/pertandingan.
+   Contoh: hadir 4 kali, tiap kali main 3 game → Pertemuan: 4, Main: 12.
+
+Q: Bagaimana cara naik peringkat di leaderboard?
+A: Rajin hadir setiap sesi (naikkan Pertemuan), banyak main (naikkan Main),
+   dan tingkatkan kemenangan (naikkan Win% dan Menang).
+
+Q: Apakah leaderboard bisa diakses dari yang bukan member?
+A: Ya, halaman leaderboard sepenuhnya publik. Siapa pun bisa melihatnya
+   tanpa perlu daftar atau login.
+
+Q: Badge 🔥 di nama artinya apa?
+A: Artinya member tersebut sedang dalam streak kemenangan — menang 3 kali
+   berturut-turut atau lebih dalam pertandingan terakhirnya. Angka di
+   sebelah 🔥 menunjukkan panjang streak saat ini.
+
+Q: Badge ❄️ di nama artinya apa?
+A: Artinya member tersebut sedang dalam streak kekalahan — kalah 3 kali
+   berturut-turut atau lebih dalam pertandingan terakhirnya.
+
+Q: Seberapa cepat leaderboard update setelah admin input pertandingan baru?
+A: Dalam sekitar 1-2 detik setelah pertandingan disimpan, leaderboard
+   otomatis refresh untuk semua orang yang sedang membuka halaman tersebut.
+
+────────────────────────────────────────
 📞 KONTAK & BANTUAN
 ────────────────────────────────────────
 - Hubungi admin DLOB via WhatsApp untuk pertanyaan pembayaran, pendaftaran,
@@ -338,6 +430,14 @@ Jika VIP/Gratis: semua Rp 0
 - Wins / Losses: total game menang dan kalah
 - Data diambil dari semua pertandingan yang pernah dicatat admin
 - Statistik hanya mencakup pertandingan yang sudah diinput ke sistem DLOB
+
+LEADERBOARD PUBLIK:
+- Statistik kamu juga ditampilkan di papan peringkat publik
+- URL: https://www.dlobcommunity.com/leaderboard
+- Bisa dilihat siapa saja tanpa login
+- Kolom yang tampil: Pertemuan (hadir), Main (total game), Menang, Kalah,
+  Win%, Avg Skor, Streak Max
+- Pertemuan ≠ Main → Pertemuan = jumlah hari hadir, Main = jumlah game
 
 ────────────────────────────────────────
 🔔 NOTIFIKASI WHATSAPP

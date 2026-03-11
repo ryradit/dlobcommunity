@@ -65,29 +65,40 @@ export default function TeamOptimizerPage() {
     fetchPlayerStats();
   }, [pathname]);
 
+  // Re-auto-select when mode changes (only after stats are loaded)
+  useEffect(() => {
+    if (playerStats.length > 0) {
+      setSelectedPlayers(autoSelectByMode(mode, playerStats));
+    }
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function fetchPlayerStats() {
     setLoading(true);
     try {
-      // Get all profiles with membership
+      // Get all profiles excluding test accounts
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, is_test_account')
         .order('full_name');
 
       if (!profiles) return;
 
-      // Get all matches
+      // Filter out test accounts client-side (safe even if column doesn't exist yet)
+      const realProfiles = profiles.filter((p: any) => !p.is_test_account);
+
+      // Get all matches (override Supabase default 1000-row limit)
       const { data: matches } = await supabase
         .from('matches')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('match_date', { ascending: false })
+        .limit(10000);
 
       if (!matches) return;
 
       // Calculate stats for each player
       const stats: PlayerStat[] = [];
 
-      for (const profile of profiles) {
+      for (const profile of realProfiles) {
         const playerMatches = matches.filter(m => 
           m.team1_player1 === profile.full_name ||
           m.team1_player2 === profile.full_name ||
@@ -103,7 +114,7 @@ export default function TeamOptimizerPage() {
         if (playerMatches.length > 0) {
           playerMatches.forEach(match => {
             const isTeam1 = match.team1_player1 === profile.full_name || match.team1_player2 === profile.full_name;
-            const isWinner = (isTeam1 && match.winner === 1) || (!isTeam1 && match.winner === 2);
+            const isWinner = (isTeam1 && match.winner === 'team1') || (!isTeam1 && match.winner === 'team2');
             const partner = isTeam1 
               ? (match.team1_player1 === profile.full_name ? match.team1_player2 : match.team1_player1)
               : (match.team2_player1 === profile.full_name ? match.team2_player2 : match.team2_player1);
@@ -145,7 +156,7 @@ export default function TeamOptimizerPage() {
           avgScore: Math.round(avgScore),
           skillLevel: playerMatches.length > 0 
             ? Math.min(Math.round(winRate + (avgScore / 21) * 10), 100)
-            : 50, // Default skill level for new players
+            : 0, // No data — don't pretend 50%
           bestPartners
         });
       }
@@ -153,9 +164,9 @@ export default function TeamOptimizerPage() {
       // Sort by skill level
       stats.sort((a, b) => b.skillLevel - a.skillLevel);
       setPlayerStats(stats);
-      
-      // Auto-select top players
-      setSelectedPlayers(stats.slice(0, Math.min(8, stats.length)).map(s => s.name));
+
+      // Auto-select based on current mode
+      setSelectedPlayers(autoSelectByMode(mode, stats));
     } catch (error) {
       console.error('Error fetching player stats:', error);
     } finally {
@@ -224,6 +235,73 @@ export default function TeamOptimizerPage() {
     }
   }
 
+  /**
+   * Auto-select up to 8 players whose history fits the chosen mode:
+   * - competitive  → top 8 by skillLevel (highest win-rate winners)
+   * - balanced     → mix high / mid / low skill tiers
+   * - training     → blend experienced (most matches) + newest players
+   * - exciting     → players whose winRate is closest to 50% for tight games
+   */
+  function autoSelectByMode(currentMode: string, stats: PlayerStat[]): string[] {
+    const withMatches = stats.filter(p => p.totalMatches > 0);
+    const noMatches   = stats.filter(p => p.totalMatches === 0);
+    let selected: PlayerStat[] = [];
+
+    if (currentMode === 'competitive') {
+      // Best of the best — highest skillLevel (win-rate + avg-score combo)
+      selected = [...withMatches]
+        .sort((a, b) => b.skillLevel - a.skillLevel)
+        .slice(0, 8);
+
+    } else if (currentMode === 'balanced') {
+      // Three tiers: top ≥65, mid 35-64, low <35 — take 3 / 3 / 2
+      const high = withMatches.filter(p => p.skillLevel >= 65).sort((a, b) => b.skillLevel - a.skillLevel);
+      const mid  = withMatches.filter(p => p.skillLevel >= 35 && p.skillLevel < 65).sort((a, b) => b.skillLevel - a.skillLevel);
+      const low  = withMatches.filter(p => p.skillLevel < 35).sort((a, b) => b.skillLevel - a.skillLevel);
+      selected = [...high.slice(0, 3), ...mid.slice(0, 3), ...low.slice(0, 2)];
+      // Pad to 8 if tiers were thin
+      if (selected.length < 8) {
+        const taken = new Set(selected.map(p => p.id));
+        const rest  = stats.filter(p => !taken.has(p.id));
+        selected = [...selected, ...rest.slice(0, 8 - selected.length)];
+      }
+
+    } else if (currentMode === 'training') {
+      // Top 4 most-experienced + 4 newest (0-match or fewest matches)
+      const experienced = [...withMatches].sort((a, b) => b.totalMatches - a.totalMatches).slice(0, 4);
+      const expIds      = new Set(experienced.map(p => p.id));
+      const newcomers   = [
+        ...noMatches,
+        ...withMatches.filter(p => !expIds.has(p.id)).sort((a, b) => a.totalMatches - b.totalMatches)
+      ].slice(0, 4);
+      selected = [...experienced, ...newcomers];
+      if (selected.length < 8) {
+        const taken = new Set(selected.map(p => p.id));
+        const rest  = stats.filter(p => !taken.has(p.id));
+        selected = [...selected, ...rest.slice(0, 8 - selected.length)];
+      }
+
+    } else if (currentMode === 'exciting') {
+      // Closest win-rate to 50% → most unpredictable / tight matches
+      const sorted = [...withMatches].sort((a, b) =>
+        Math.abs(a.winRate - 50) - Math.abs(b.winRate - 50)
+      );
+      selected = sorted.slice(0, 8);
+      if (selected.length < 8) {
+        const taken = new Set(selected.map(p => p.id));
+        const rest  = stats.filter(p => !taken.has(p.id));
+        selected = [...selected, ...rest.slice(0, 8 - selected.length)];
+      }
+    }
+
+    // Fallback: if we still don't have 4 just take the first ones
+    if (selected.length < 4 && stats.length >= 4) {
+      selected = stats.slice(0, 8);
+    }
+
+    return selected.slice(0, 8).map(p => p.name);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 flex items-center justify-center transition-colors duration-300">
@@ -241,7 +319,7 @@ export default function TeamOptimizerPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl shadow-sm">
+            <div className="p-3 bg-linear-to-br from-purple-500 to-blue-600 rounded-xl shadow-sm">
               <Users className="w-8 h-8 text-white" />
             </div>
             <div>
@@ -270,15 +348,15 @@ export default function TeamOptimizerPage() {
           <div>
             <div className="team-optimizer-mode-select grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { value: 'balanced', label: 'Seimbang', desc: 'Tim dengan skill merata', icon: '⚖️' },
-                { value: 'competitive', label: 'Kompetitif', desc: 'Maksimalkan kekuatan tim', icon: '🏆' },
-                { value: 'training', label: 'Latihan', desc: 'Campur pemain baru & lama', icon: '📚' },
-                { value: 'exciting', label: 'Seru', desc: 'Pertandingan lebih ketat', icon: '🔥' }
+                { value: 'balanced',    label: 'Seimbang',    desc: 'Tim dengan skill merata',     hint: 'Pilih mix skill tinggi & rendah',       icon: '⚖️' },
+                { value: 'competitive', label: 'Kompetitif',  desc: 'Maksimalkan kekuatan tim',    hint: 'Pilih pemain dengan kemenangan terbaik', icon: '🏆' },
+                { value: 'training',    label: 'Latihan',     desc: 'Campur pemain baru & lama',   hint: 'Pilih pemain berpengalaman & pemula',   icon: '📚' },
+                { value: 'exciting',    label: 'Seru',        desc: 'Pertandingan lebih ketat',    hint: 'Pilih pemain dengan kekuatan serupa',   icon: '🔥' }
               ].map(m => (
                 <button
                   key={m.value}
                   onClick={() => setMode(m.value as any)}
-                  className={`p-4 rounded-lg border-2 transition-all shadow-sm ${
+                  className={`p-4 rounded-lg border-2 transition-all shadow-sm text-left ${
                     mode === m.value
                       ? 'border-purple-500 bg-purple-100 dark:bg-purple-500/10'
                       : 'border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 hover:border-gray-400 dark:hover:border-zinc-600'
@@ -287,6 +365,7 @@ export default function TeamOptimizerPage() {
                   <div className="text-2xl mb-2">{m.icon}</div>
                   <div className="text-gray-900 dark:text-white font-bold transition-colors duration-300">{m.label}</div>
                   <div className="text-sm text-gray-600 dark:text-zinc-400 mt-1 font-medium transition-colors duration-300">{m.desc}</div>
+                  <div className="text-xs text-purple-500 dark:text-purple-400 mt-2 font-medium transition-colors duration-300">✦ {m.hint}</div>
                 </button>
               ))}
             </div>
@@ -294,10 +373,20 @@ export default function TeamOptimizerPage() {
 
           {/* Player Selection */}
           <div className="team-optimizer-player-select">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4 transition-colors duration-300">
-              <Users className="w-5 h-5 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
-              Langkah 2: Pilih Pemain (Minimal 4 orang)
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 transition-colors duration-300">
+                <Users className="w-5 h-5 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
+                Langkah 2: Pilih Pemain (Minimal 4 orang)
+              </h2>
+              <button
+                onClick={() => setSelectedPlayers(autoSelectByMode(mode, playerStats))}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg border-2 border-purple-400 dark:border-purple-500 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-all"
+                title="Pilih ulang otomatis sesuai mode"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Pilih Otomatis
+              </button>
+            </div>
             <div className="bg-blue-50 dark:bg-zinc-800/50 rounded-lg p-3 mb-4 border-2 border-blue-200 dark:border-transparent transition-colors duration-300">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">
                 <strong className="text-gray-900 dark:text-white transition-colors duration-300">{selectedPlayers.length} pemain dipilih</strong>
@@ -334,11 +423,12 @@ export default function TeamOptimizerPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 dark:text-zinc-400 font-semibold transition-colors duration-300">Tingkat Kemenangan:</span>
                       <span className={`font-bold ${
+                        player.totalMatches === 0 ? 'text-gray-400 dark:text-zinc-500' :
                         player.winRate >= 70 ? 'text-green-600 dark:text-green-400' :
                         player.winRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
                         player.winRate > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-zinc-400'
                       } transition-colors duration-300`}>
-                        {player.winRate}%
+                        {player.totalMatches === 0 ? '-' : `${player.winRate}%`}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
@@ -347,19 +437,23 @@ export default function TeamOptimizerPage() {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 dark:text-zinc-400 font-semibold transition-colors duration-300">Level Kemampuan:</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 bg-gray-300 dark:bg-zinc-700 rounded-full h-2 border border-gray-400 dark:border-transparent transition-colors duration-300">
-                          <div 
-                            className={`h-2 rounded-full ${
-                              player.skillLevel >= 70 ? 'bg-green-500' :
-                              player.skillLevel >= 50 ? 'bg-yellow-500' :
-                              'bg-orange-500'
-                            }`}
-                            style={{ width: `${player.skillLevel}%` }}
-                          />
+                      {player.totalMatches === 0 ? (
+                        <span className="text-xs text-gray-400 dark:text-zinc-500 italic">Belum ada data</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-gray-300 dark:bg-zinc-700 rounded-full h-2 border border-gray-400 dark:border-transparent transition-colors duration-300">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                player.skillLevel >= 70 ? 'bg-green-500' :
+                                player.skillLevel >= 50 ? 'bg-yellow-500' :
+                                'bg-orange-500'
+                              }`}
+                              style={{ width: `${player.skillLevel}%` }}
+                            />
+                          </div>
+                          <span className="text-gray-900 dark:text-white font-bold w-8 transition-colors duration-300">{player.skillLevel}</span>
                         </div>
-                        <span className="text-gray-900 dark:text-white font-bold w-8 transition-colors duration-300">{player.skillLevel}</span>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -376,7 +470,7 @@ export default function TeamOptimizerPage() {
             <button
               onClick={generateTeams}
               disabled={analyzing || selectedPlayers.length < 4}
-              className="team-optimizer-analyze-button w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-zinc-700 dark:disabled:to-zinc-700 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed text-lg border-2 border-transparent hover:border-purple-400 shadow-sm"
+              className="team-optimizer-analyze-button w-full py-4 bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-zinc-700 dark:disabled:to-zinc-700 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-all disabled:cursor-not-allowed text-lg border-2 border-transparent hover:border-purple-400 shadow-sm"
             >
               {analyzing ? (
                 <>
@@ -402,7 +496,7 @@ export default function TeamOptimizerPage() {
         {result && (
           <div className="team-optimizer-results space-y-6">
             {/* Summary */}
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/30 dark:to-blue-900/30 border-2 border-purple-300 dark:border-purple-500/30 rounded-xl p-6 shadow-sm transition-colors duration-300">
+            <div className="bg-linear-to-br from-purple-50 to-blue-50 dark:from-purple-900/30 dark:to-blue-900/30 border-2 border-purple-300 dark:border-purple-500/30 rounded-xl p-6 shadow-sm transition-colors duration-300">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2 transition-colors duration-300">
                 <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
                 Ringkasan Analisis

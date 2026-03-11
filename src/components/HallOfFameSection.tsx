@@ -41,7 +41,7 @@ const hallOfFameMembers: Member[] = [
   { id: 23, name: 'Jonathan', photo: '/images/members/jonathan.jpg' },
   { id: 24, name: 'Adi', photo: '/images/members/adi.jpg' },
   { id: 25, name: 'Ardo', photo: '/images/members/ardo.jpg' },
-  { id: 26, name: 'Roy', photo: null },
+  { id: 26, name: 'Roy', photo: '/images/members/roy.jpeg' },
   { id: 27, name: 'Edi', photo: '/images/members/edi.jpg' },
   { id: 28, name: 'Bibit', photo: '/images/members/bibit.jpg' },
   { id: 29, name: 'Fanis', photo: '/images/members/fanis.jpg' },
@@ -52,7 +52,7 @@ const hallOfFameMembers: Member[] = [
   { id: 34, name: 'Anthony', photo: '/images/members/anthony.jpg' },
   { id: 35, name: 'Yaya', photo: '/images/members/yaya.jpg' },
   { id: 36, name: 'Rara', photo: '/images/members/rara.jpg' },
-  { id: 37, name: 'Dyas', photo: '/images/members/dyas.jpg' },
+  { id: 37, name: 'Dyas', photo: null },
   { id: 38, name: 'Atna', photo: null },
   { id: 39, name: 'Reyza', photo: '/images/members/reyza.jpg' },
   { id: 40, name: 'Gavin', photo: '/images/members/gavin.jpg' },
@@ -63,7 +63,7 @@ const hallOfFameMembers: Member[] = [
   { id: 45, name: 'Ilham', photo: null },
   { id: 46, name: 'Bayu', photo: null },
   { id: 47, name: 'Yudha', photo: null },
-  { id: 48, name: 'Yudi', photo: null },
+  { id: 48, name: 'Yudi', photo: '/images/members/yudi.jpeg' },
   { id: 49, name: 'Daniel', photo: null },
   { id: 50, name: 'Lorenzo', photo: '/images/members/lorenzo.jpg' },
   { id: 51, name: 'Anan', photo: '/images/members/anan.jpg' },
@@ -87,24 +87,6 @@ const hallOfFameMembers: Member[] = [
 
 export default function HallOfFameSection({ showAll = false, className = '' }: HallOfFameSectionProps) {
   const displayMembers = showAll ? hallOfFameMembers : hallOfFameMembers.slice(0, 5);
-
-  // Calculate years since foundation
-  const calculateYears = () => {
-    const foundingDate = new Date(2020, 5, 16); // Month is 0-based, so 5 = June
-    const today = new Date();
-    const thisYearAnniversary = new Date(today.getFullYear(), 5, 16);
-    
-    let years = today.getFullYear() - foundingDate.getFullYear();
-    
-    // If we haven't reached June 16th this year, subtract one year
-    if (today < thisYearAnniversary) {
-      years--;
-    }
-    
-    return years;
-  };
-
-  const yearsActive = calculateYears();
 
   return (
     <div className={className}>
@@ -150,7 +132,7 @@ export default function HallOfFameSection({ showAll = false, className = '' }: H
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </>
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 group-hover:scale-[1.15] transition-transform duration-300 ease-out">
+                <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-blue-400 to-blue-600 group-hover:scale-[1.15] transition-transform duration-300 ease-out">
                   <img
                     src={`https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&size=400&background=3b82f6&color=fff&bold=true&font-size=0.35`}
                     alt={member.name}
@@ -193,27 +175,6 @@ export default function HallOfFameSection({ showAll = false, className = '' }: H
         </div>
       )}
 
-      {/* Statistics (only show on full page) */}
-      {showAll && (
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="text-center p-6 bg-blue-50 rounded-xl">
-            <div className="text-2xl font-bold text-blue-600">{hallOfFameMembers.length}</div>
-            <div className="text-sm text-gray-600 mt-1">Total Member</div>
-          </div>
-          <div className="text-center p-6 bg-green-50 rounded-xl">
-            <div className="text-2xl font-bold text-green-600">{yearsActive}+</div>
-            <div className="text-sm text-gray-600 mt-1">Tahun Berdiri</div>
-          </div>
-          <div className="text-center p-6 bg-purple-50 rounded-xl">
-            <div className="text-2xl font-bold text-purple-600">500+</div>
-            <div className="text-sm text-gray-600 mt-1">Match Dimainkan</div>
-          </div>
-          <div className="text-center p-6 bg-orange-50 rounded-xl">
-            <div className="text-2xl font-bold text-orange-600">100%</div>
-            <div className="text-sm text-gray-600 mt-1">Semangat</div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

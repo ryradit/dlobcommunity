@@ -1,21 +1,22 @@
-// Face Detection Utility - Fallback Implementation
-// This uses a simple heuristic approach that centers on the face area for portrait photos
-// without requiring external ML libraries
+// Face Detection Utility — Gemini Vision API
+// Sends each member photo to gemini-2.0-flash via /api/face-detect.
+// Returns face center as (faceX%, faceY%) of the original image dimensions.
+// Results are cached in localStorage (key: dlob_face_v3_{filename}) so each
+// photo is only analysed once — subsequent page loads are instant.
 
-interface FaceDetectionResult {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  confidence: number;
+const CACHE_PREFIX = 'dlob_face_v5_';
+
+export interface FacePercent {
+  /** Horizontal center of the face, 0-100% of image width */
+  faceX: number;
+  /** Vertical center of the face, 0-100% of image height */
+  faceY: number;
+  /** Scale factor to apply on the thumbnail so the face is comfortably visible (1.0–2.5) */
+  zoom: number;
 }
 
-interface CropArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+/** In-flight request dedup: imagePath → pending Promise */
+const inFlight = new Map<string, Promise<FacePercent>>();
 
 class FaceDetectionService {
   private static instance: FaceDetectionService;
@@ -27,127 +28,74 @@ class FaceDetectionService {
     return FaceDetectionService.instance;
   }
 
-  async loadModel(): Promise<void> {
-    // Stub implementation - no model to load
-    console.log('Face detection using fallback implementation (optimized for portrait photos)');
+  // ─── No-op kept for backwards compat with SmartCropImage ─────────────────
+  async loadModel(): Promise<void> {}
+
+  // ─── localStorage cache ───────────────────────────────────────────────────
+
+  private cacheKey(imagePath: string): string {
+    const slug = imagePath.split('/').pop() ?? imagePath;
+    return `${CACHE_PREFIX}${slug}`;
   }
 
-  async detectFace(imageElement: HTMLImageElement): Promise<FaceDetectionResult | null> {
-    // Optimized for portrait photos - shows waist to upper body/head
+  private getCached(imagePath: string): FacePercent | null {
+    if (typeof window === 'undefined') return null;
     try {
-      const { naturalWidth, naturalHeight } = imageElement;
-      
-      if (!naturalWidth || !naturalHeight) return null;
-      
-      // For portrait photos, show from waist area to head
-      // This typically means showing from ~40% down to top of image
-      const faceWidth = naturalWidth * 0.6;
-      const faceHeight = naturalHeight * 0.65;
-      
-      const result: FaceDetectionResult = {
-        x: (naturalWidth - faceWidth) / 2,     // Center horizontally
-        y: naturalHeight * 0.10,                // Start from 10% from top
-        width: faceWidth,
-        height: faceHeight,
-        confidence: 0.9 // High confidence
-      };
-
-      return result;
-    } catch (error) {
-      console.error('Face detection fallback failed:', error);
+      const raw = localStorage.getItem(this.cacheKey(imagePath));
+      return raw ? (JSON.parse(raw) as FacePercent) : null;
+    } catch {
       return null;
     }
   }
 
-  // Helper method for getting optimal crop dimensions
-  getOptimalCrop(
-    imageWidth: number, 
-    imageHeight: number, 
-    targetWidth: number, 
-    targetHeight: number
-  ): CropArea {
-    // Calculate square crop (1:1 aspect ratio for member cards)
-    const targetAspect = targetWidth / targetHeight;
-    const imageAspect = imageWidth / imageHeight;
-    
-    let cropWidth: number, cropHeight: number, cropX: number, cropY: number;
-    
-    if (imageAspect > targetAspect) {
-      // Image is wider than target aspect ratio
-      cropHeight = imageHeight;
-      cropWidth = imageHeight * targetAspect;
-      cropX = (imageWidth - cropWidth) / 2;
-      cropY = 0;
-    } else {
-      // Image is taller than target aspect ratio
-      cropWidth = imageWidth;
-      cropHeight = imageWidth / targetAspect;
-      cropX = 0;
-      // Position crop to capture face in upper-middle portion
-      cropY = Math.max(0, (imageHeight - cropHeight) * 0.15);
-    }
-    
-    return {
-      x: Math.max(0, cropX),
-      y: Math.max(0, cropY),
-      width: Math.min(cropWidth, imageWidth),
-      height: Math.min(cropHeight, imageHeight)
-    };
+  private setCached(imagePath: string, value: FacePercent): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(this.cacheKey(imagePath), JSON.stringify(value));
+    } catch { /* quota — ignore */ }
   }
 
-  // Smart crop that tries to center faces properly
-  async getSmartCrop(
-    imageElement: HTMLImageElement,
-    targetWidth: number,
-    targetHeight: number
-  ): Promise<CropArea> {
-    const face = await this.detectFace(imageElement);
-    
-    if (face && face.confidence > 0.7) {
-      // Calculate crop area that keeps face centered
-      const { width: imgWidth, height: imgHeight } = imageElement;
-      const targetAspect = targetWidth / targetHeight;
-      
-      // Calculate crop dimensions to match target aspect ratio
-      let cropWidth: number, cropHeight: number;
-      if (imgWidth / imgHeight > targetAspect) {
-        cropHeight = imgHeight;
-        cropWidth = imgHeight * targetAspect;
-      } else {
-        cropWidth = imgWidth;
-        cropHeight = imgWidth / targetAspect;
+  // ─── Gemini Vision API call ───────────────────────────────────────────────
+
+  /**
+   * Returns the face center as percentages of the original image dimensions.
+   * Results are cached in localStorage so each photo is only analysed once.
+   */
+  async detectFacePercent(imagePath: string): Promise<FacePercent> {
+    const cached = this.getCached(imagePath);
+    if (cached) return cached;
+
+    // Dedup: if a request for this path is already in-flight, share it
+    const existing = inFlight.get(imagePath);
+    if (existing) return existing;
+
+    const promise = (async (): Promise<FacePercent> => {
+      try {
+        const res = await fetch('/api/face-detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imagePath }),
+        });
+        if (!res.ok) throw new Error(`face-detect HTTP ${res.status}`);
+        const data = await res.json() as FacePercent;
+        // Ensure zoom is always present (handles old cached responses without it)
+        if (!data.zoom) data.zoom = 1.0;
+        this.setCached(imagePath, data);
+        return data;
+      } catch (err) {
+        console.warn('[FaceDetection] Gemini call failed, using heuristic:', err);
+        const fallback: FacePercent = { faceX: 50, faceY: 18, zoom: 1.0 };
+        this.setCached(imagePath, fallback);
+        return fallback;
+      } finally {
+        inFlight.delete(imagePath);
       }
-      
-      // Center crop on the detected face with slight bias towards top
-      const faceCenterX = face.x + face.width / 2;
-      const faceCenterY = face.y + face.height / 2;
-      
-      // For square crops on portrait photos, position face in upper-middle
-      let cropX = faceCenterX - cropWidth / 2;
-      let cropY = faceCenterY - cropHeight * 0.35; // Bias towards top
-      
-      // Ensure crop stays within image bounds
-      cropX = Math.max(0, Math.min(cropX, imgWidth - cropWidth));
-      cropY = Math.max(0, Math.min(cropY, imgHeight - cropHeight));
-      
-      return {
-        x: cropX,
-        y: cropY,
-        width: cropWidth,
-        height: cropHeight
-      };
-    }
-    
-    // Fallback to optimal crop
-    return this.getOptimalCrop(
-      imageElement.width, 
-      imageElement.height, 
-      targetWidth, 
-      targetHeight
-    );
+    })();
+
+    inFlight.set(imagePath, promise);
+    return promise;
   }
 }
 
-// Export the singleton instance
 export const faceDetection = FaceDetectionService.getInstance();
-export type { FaceDetectionResult, CropArea };
+export type { FacePercent as FaceDetectionResult };
