@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
 
         // Get match month and year to check memberships
         const matchDateObj = new Date(matchDate);
+        const matchDateString = matchDateObj.toISOString().split('T')[0];
         const matchMonth = matchDateObj.getMonth() + 1;
         const matchYear = matchDateObj.getFullYear();
 
