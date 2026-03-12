@@ -8,6 +8,7 @@ interface ZoomableImageProps {
   alt: string;
   name: string;
   zoomFactor?: number; // default 3.5×
+  objectPositionOverride?: string;
 }
 
 /**
@@ -22,6 +23,7 @@ export default function ZoomableImage({
   alt,
   name,
   zoomFactor = 3.5,
+  objectPositionOverride,
 }: ZoomableImageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null); // 0-1 fractions
@@ -66,6 +68,9 @@ export default function ZoomableImage({
   const bgX = effectiveX * 100;
   const bgY = effectiveY * 100;
 
+  // Encode spaces and special chars so CSS url() works with filenames like "kuning 5.png"
+  const cssSrc = src.split('/').map((seg) => encodeURIComponent(seg)).join('/');
+
   return (
     <>
       {/* Main container */}
@@ -78,7 +83,7 @@ export default function ZoomableImage({
           onMouseLeave={handleMouseLeave}
           onClick={() => { if (!pos) setLightboxOpen(true); }}
         >
-          <SmartCropImage src={src} alt={alt} name={name} />
+          <SmartCropImage src={src} alt={alt} name={name} objectPositionOverride={objectPositionOverride} />
 
           {/* Lens overlay */}
           {pos && (
@@ -113,7 +118,7 @@ export default function ZoomableImage({
               style={{
                 width: '100%',
                 height: '100%',
-                backgroundImage: `url(${src})`,
+                backgroundImage: `url(${cssSrc})`,
                 backgroundRepeat: 'no-repeat',
                 backgroundSize: `${zoomFactor * 100}%`,
                 backgroundPosition: `${bgX}% ${bgY}%`,

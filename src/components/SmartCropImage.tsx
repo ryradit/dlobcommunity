@@ -8,6 +8,7 @@ interface SmartCropImageProps {
   alt: string;
   name: string;
   className?: string;
+  objectPositionOverride?: string; // skip face detection and force a specific object-position
 }
 
 /**
@@ -37,8 +38,8 @@ function computeObjectPositionY(
   return Math.max(0, Math.min(100, (offsetY / overflow) * 100));
 }
 
-export default function SmartCropImage({ src, alt, name: _name, className = '' }: SmartCropImageProps) {
-  const [objectPosition, setObjectPosition] = useState<string>('50% 5%');
+export default function SmartCropImage({ src, alt, name: _name, className = '', objectPositionOverride }: SmartCropImageProps) {
+  const [objectPosition, setObjectPosition] = useState<string>(objectPositionOverride ?? '50% 5%');
   const [zoom, setZoom] = useState<number>(1);
   const [transformOrigin, setTransformOrigin] = useState<string>('50% 22%');
   const [isLoading, setIsLoading] = useState(true);
@@ -93,13 +94,19 @@ export default function SmartCropImage({ src, alt, name: _name, className = '' }
   }, [src]);
 
   useEffect(() => {
+    if (objectPositionOverride) {
+      setObjectPosition(objectPositionOverride);
+      setZoom(1);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setObjectPosition('50% 5%');
     setZoom(1);
     if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
       calculateObjectPosition();
     }
-  }, [src, calculateObjectPosition]);
+  }, [src, calculateObjectPosition, objectPositionOverride]);
 
   return (
     <div ref={containerRef} className={`relative w-full h-full overflow-hidden bg-gray-100 ${className}`}>

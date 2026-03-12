@@ -9,6 +9,7 @@ import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock, HelpCircle
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
+import WeatherWidget from '@/components/WeatherWidget';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
 
@@ -226,13 +227,16 @@ export default function DashboardPage() {
           <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">Berikut ringkasan pembayaran dan riwayat pertandingan Anda.</p>
         </div>
         
-        <button
+        <div className="flex items-center gap-2">
+          <WeatherWidget />
+          <button
           onClick={toggleTutorial}
           className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10 hover:bg-blue-200 dark:hover:bg-blue-500/20 border-2 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 transition-colors duration-300"
           title="Tampilkan panduan fitur"
         >
           <HelpCircle className="w-5 h-5" />
         </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

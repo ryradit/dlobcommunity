@@ -1,9 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { Heart, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Footer from '@/components/Footer';
 import SmartCropImage from '@/components/SmartCropImage';
 import ZoomableImage from '@/components/ZoomableImage';
 
@@ -23,12 +22,12 @@ interface SizePrice {
 
 // --- Jersey DLOB Official ---
 const officialColorVariants: ColorVariant[] = [
-  { id: 'biru',   name: 'Biru Navy', color: 'Biru Navy', images: ['/images/members/model/biru1.jpg','/images/members/model/biru2.jpg'], bgColor: '#0b244c' },
-  { id: 'pink',   name: 'Pink',      color: 'Pink',      images: ['/images/members/model/pink1.jpg','/images/members/model/pink2.jpg','/images/members/model/pink3.jpg','/images/members/model/pink4.jpg'], bgColor: '#c8a19c' },
-  { id: 'kuning', name: 'Kuning',    color: 'Kuning',    images: ['/images/members/model/kuning1.jpg','/images/members/model/kuning2.jpg'], bgColor: '#fecb00' },
+  { id: 'biru',   name: 'Biru Navy', color: 'Biru Navy', images: ['/images/members/model/biru3.png','/images/members/model/biru4.png','/images/members/model/biru5.png'], bgColor: '#0b244c' },
+  { id: 'pink',   name: 'Pink',      color: 'Pink',      images: ['/images/members/model/pink8.png','/images/members/model/pink6.png','/images/members/model/pink7.png','/images/members/model/pink9.png'], bgColor: '#c8a19c' },
+  { id: 'kuning', name: 'Kuning', color: 'Kuning', images: ['/images/members/model/kuning3.png','/images/members/model/kuning4.png','/images/members/model/kuning 5.png','/images/members/model/kuning6.png'], bgColor: '#fecb00' },
 ];
 
-// --- DLOB Jersey - Circuit Noir ---
+// --- DLOB Jersey - Noir ---
 const circuitNoirColorVariants: ColorVariant[] = [
   { id: 'midnight',  name: 'Midnight Black',   color: 'Midnight Black',   images: ['/images/members/model/hitam1.jpeg','/images/members/model/hitam2.jpeg','/images/members/model/hitam3.jpeg'], bgColor: '#0d0d0d' },
   { id: 'charcoal',  name: 'Charcoal Grey',    color: 'Charcoal Grey',    images: ['/images/members/model/grey1.png','/images/members/model/grey2.jpeg','/images/members/model/grey3.png'], bgColor: '#3a3a3a' },
@@ -81,7 +80,7 @@ const products: Product[] = [
     description: 'Jersey resmi DLOB dengan teknologi Milano Standard premium. Bahan berkualitas tinggi, nyaman dipakai, dan tahan lama. Tersedia dalam 3 pilihan warna eksklusif.',
     badge: 'NEW',
     badgeStyle: 'bg-white text-black',
-    coverImage: '/images/members/model/biru1.jpg',
+    coverImage: '/images/members/model/biru3.png',
     coverBg: '#0b244c',
     colorVariants: officialColorVariants,
     material: 'Milano Standard',
@@ -92,10 +91,10 @@ const products: Product[] = [
     comingSoon: false,
   },
   {
-    id: 'circuit-noir',
-    name: 'DLOB Jersey – Circuit Noir',
+    id: 'noir',
+    name: 'DLOB Jersey – Noir',
     tagline: 'The Dark Edition',
-    description: 'Jersey edisi spesial DLOB Circuit Noir dengan desain eksklusif bertema gelap dan modern. Terinspirasi dari sirkuit elektronik, cocok untuk tampilan sporty dan elegan.',
+    description: 'Jersey edisi spesial DLOB Noir dengan desain eksklusif bertema gelap dan modern. Terinspirasi dari sirkuit elektronik, cocok untuk tampilan sporty dan elegan.',
     badge: 'COMING SOON',
     badgeStyle: 'bg-white/20 text-white border border-white/30',
     coverImage: '/images/members/model/hitam1.jpeg',
@@ -110,7 +109,7 @@ const products: Product[] = [
   },
 ];
 
-// ── Auto-rotating catalog card ──────────────────────────────────────────────
+// -- Auto-rotating catalog card ----------------------------------------------
 function CatalogCard({
   product,
   onOpen,
@@ -166,7 +165,7 @@ function CatalogCard({
             className="absolute inset-0 transition-opacity duration-500"
             style={{ opacity: visible ? 1 : 0 }}
           >
-            <SmartCropImage src={currentSrc} alt={product.name} name={product.name} />
+            <SmartCropImage src={currentSrc} alt={product.name} name={product.name} objectPositionOverride={currentSrc.includes('pink8') ? '20% 50%' : undefined} />
           </div>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -262,12 +261,12 @@ export default function StorePage() {
   const Disclaimer = () => (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
       <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl px-5 py-4">
-        <span className="text-amber-500 text-xl mt-0.5">⚠️</span>
+        <span className="text-amber-500 text-xl mt-0.5">??</span>
         <div>
           <p className="font-semibold text-amber-800 text-sm">Informasi Pre-Order</p>
           <p className="text-amber-700 text-sm mt-0.5">
             Jersey ini dijual secara <span className="font-bold">pre-order</span>. Pesanan akan mulai diproses setelah kuota minimum{' '}
-            <span className="font-bold">15 order</span> terpenuhi. Terima kasih atas kesabaran dan dukungan Anda! 🏸
+            <span className="font-bold">15 order</span> terpenuhi. Terima kasih atas kesabaran dan dukungan Anda! ??
           </p>
         </div>
       </div>
@@ -283,8 +282,8 @@ export default function StorePage() {
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">📏 Panduan Ukuran Jersey</h2>
-                <button onClick={() => setShowSizeGuideModal(false)} className="text-gray-500 hover:text-gray-900 text-2xl font-light">×</button>
+                <h2 className="text-2xl font-bold text-gray-900">?? Panduan Ukuran Jersey</h2>
+                <button onClick={() => setShowSizeGuideModal(false)} className="text-gray-500 hover:text-gray-900 text-2xl font-light">�</button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse">
@@ -308,10 +307,10 @@ export default function StorePage() {
               </div>
               <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-sm text-gray-900 leading-relaxed">
-                  <span className="font-semibold">💡 Catatan Penting:</span><br />
-                  • Ukuran dalam centimeter (cm)<br />
-                  • Toleransi pengukuran ±2cm<br />
-                  • Untuk fit yang lebih longgar, pilih 1 size lebih besar
+                  <span className="font-semibold">?? Catatan Penting:</span><br />
+                  � Ukuran dalam centimeter (cm)<br />
+                  � Toleransi pengukuran �2cm<br />
+                  � Untuk fit yang lebih longgar, pilih 1 size lebih besar
                 </p>
               </div>
               <div className="mt-6 flex justify-end">
@@ -322,15 +321,80 @@ export default function StorePage() {
         </div>
       )}
 
-      {/* ── CATALOG VIEW ─────────────────────────────────────────────── */}
+      {/* -- CATALOG VIEW ----------------------------------------------- */}
       {!selectedProductId && (
         <>
-          <div className="bg-gray-100 py-16">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-              <h1 className="text-5xl font-light text-gray-900 mb-6 tracking-tight">DLOB STORE</h1>
-              <p className="text-lg text-gray-700 max-w-2xl mx-auto leading-relaxed">
-                Koleksi jersey resmi DLOB Community dengan kualitas premium. Desain modern, bahan berkualitas tinggi, dan kenyamanan maksimal untuk setiap aktivitas.
+          {/* Hero */}
+          <div className="relative w-full overflow-hidden" style={{ minHeight: '85vh' }}>
+            {/* Background image */}
+            <img
+              src="/images/members/model/storeheroimage4.jpeg"
+              alt="DLOB Store Hero"
+              className="absolute inset-0 w-full h-full object-cover object-center"
+              style={{ imageRendering: 'auto', WebkitFontSmoothing: 'antialiased' }}
+              loading="eager"
+              draggable={false}
+            />
+            {/* Dark overlay — lighter to preserve image clarity */}
+            <div className="absolute inset-0 bg-linear-to-b from-black/10 via-transparent to-black/65" />
+
+            {/* Content */}
+            <div className="relative z-10 flex flex-col justify-end h-full min-h-[85vh] max-w-7xl mx-auto px-6 sm:px-10 pb-16 pt-32">
+              {/* Eyebrow */}
+              <p className="text-xs uppercase tracking-[0.3em] text-white/70 mb-3 font-medium">
+                DLOB Community · Official Collection
               </p>
+
+              {/* Headline */}
+              <h1 className="text-5xl sm:text-7xl font-light tracking-tight text-white leading-none mb-4">
+                DLOB<br />
+                <span className="font-bold italic">STORE</span>
+              </h1>
+
+              {/* Sub-copy */}
+              <p className="text-base sm:text-lg text-white/80 max-w-md leading-relaxed mb-8">
+                Jersey resmi DLOB Community. Kualitas premium, desain eksklusif, dan kenyamanan maksimal untuk setiap pertandingan.
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-wrap gap-4 items-center">
+                <button
+                  onClick={() => {
+                    document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-8 py-3.5 bg-white text-black text-sm font-semibold uppercase tracking-widest hover:bg-gray-100 transition-colors"
+                >
+                  Lihat Koleksi
+                </button>
+                <button
+                  onClick={() => {
+                    document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-8 py-3.5 border border-white/60 text-white text-sm font-semibold uppercase tracking-widest hover:border-white hover:bg-white/10 transition-colors"
+                >
+                  Pre-Order Sekarang
+                </button>
+              </div>
+
+              {/* Stats strip */}
+              <div className="flex gap-8 mt-12 border-t border-white/20 pt-6">
+                <div>
+                  <p className="text-2xl font-bold text-white">2</p>
+                  <p className="text-xs text-white/60 uppercase tracking-wider mt-0.5">Koleksi</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">3</p>
+                  <p className="text-xs text-white/60 uppercase tracking-wider mt-0.5">Pilihan Warna</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">Milano</p>
+                  <p className="text-xs text-white/60 uppercase tracking-wider mt-0.5">Standard</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">7</p>
+                  <p className="text-xs text-white/60 uppercase tracking-wider mt-0.5">Ukuran</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -344,7 +408,7 @@ export default function StorePage() {
             </nav>
           </div>
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" id="catalog-grid">
             <h2 className="text-2xl font-light text-gray-900 mb-8 tracking-tight">Koleksi Jersey</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               {products.map((product) => (
@@ -355,7 +419,7 @@ export default function StorePage() {
         </>
       )}
 
-      {/* ── DETAIL VIEW ──────────────────────────────────────────────── */}
+      {/* -- DETAIL VIEW ------------------------------------------------ */}
       {selectedProductId && selectedProduct && selectedVariant && (
         <>
           <div className="bg-gray-100 py-12">
@@ -405,7 +469,7 @@ export default function StorePage() {
                   </div>
                 ) : (
                   <>
-                    <ZoomableImage src={currentImage} alt={`${selectedProduct.name} - ${selectedVariant.color}`} name={selectedVariant.name} />
+                    <ZoomableImage src={currentImage} alt={`${selectedProduct.name} - ${selectedVariant.color}`} name={selectedVariant.name} objectPositionOverride={currentImage.includes('pink8') ? '20% 50%' : undefined} />
                     <div className="grid grid-cols-4 gap-4">
                       {selectedVariant.images.map((image, index) => (
                         <button
@@ -413,7 +477,7 @@ export default function StorePage() {
                           onClick={() => setSelectedImageIndex(index)}
                           className={`aspect-3/4 overflow-hidden bg-gray-100 border-2 transition-all ${selectedImageIndex === index ? 'border-black' : 'border-transparent hover:border-gray-300'}`}
                         >
-                          <SmartCropImage src={image} alt={`${selectedProduct.name} ${index + 1}`} name={selectedVariant.name} />
+                          <SmartCropImage src={image} alt={`${selectedProduct.name} ${index + 1}`} name={selectedVariant.name} objectPositionOverride={image.includes('pink8') ? '20% 50%' : undefined} />
                         </button>
                       ))}
                     </div>
@@ -430,7 +494,7 @@ export default function StorePage() {
                           className={`aspect-3/4 overflow-hidden bg-gray-100 border-2 transition-all ${selectedColor === variant.id ? 'border-black' : 'border-transparent hover:border-gray-300'}`}
                         >
                           {variant.images[0] ? (
-                            <SmartCropImage src={variant.images[0]} alt={`${selectedProduct.name} - ${variant.color}`} name={variant.name} />
+                            <SmartCropImage src={variant.images[0]} alt={`${selectedProduct.name} - ${variant.color}`} name={variant.name} objectPositionOverride={variant.images[0].includes('pink8') ? '20% 50%' : undefined} />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: variant.bgColor }}>
                               <span className="text-white/60 text-xs text-center px-1">{variant.color}</span>
@@ -456,14 +520,14 @@ export default function StorePage() {
                   <div className="mb-8">
                     <span className="text-2xl font-bold text-blue-600">{formatPrice(currentPrice)}</span>
                     {selectedProduct.preOrder && (
-                      <p className="text-sm text-green-600 font-medium mt-2">📦 Pre-Order • Estimasi pengiriman {selectedProduct.estimatedDelivery}</p>
+                      <p className="text-sm text-green-600 font-medium mt-2">?? Pre-Order � Estimasi pengiriman {selectedProduct.estimatedDelivery}</p>
                     )}
                   </div>
                 )}
 
                 {selectedProduct.comingSoon && (
                   <div className="mb-8 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-                    <p className="text-indigo-700 font-semibold text-sm">🔮 Segera Hadir</p>
+                    <p className="text-indigo-700 font-semibold text-sm">?? Segera Hadir</p>
                     <p className="text-indigo-600 text-sm mt-1">Jersey ini sedang dalam tahap finalisasi desain. Stay tuned untuk info lebih lanjut!</p>
                   </div>
                 )}
@@ -516,7 +580,7 @@ export default function StorePage() {
                         ))}
                       </div>
                       <button onClick={() => setShowSizeGuideModal(true)} className="text-sm text-blue-600 hover:text-blue-800 mt-3 font-medium flex items-center gap-2">
-                        📏 Lihat Panduan Ukuran
+                        ?? Lihat Panduan Ukuran
                       </button>
                     </div>
                   </>
@@ -561,7 +625,6 @@ export default function StorePage() {
         </>
       )}
 
-      <Footer />
     </div>
   );
 }
