@@ -498,7 +498,7 @@ export default function LeaderboardPage() {
               ];
               return medals.map(({ card, medal, color }) => (
                 <div
-                  key={card.label}
+                  key={typeof card.label === 'string' ? card.label : 'medal-' + i}
                   className={`rounded-xl p-4 border-2 shadow-sm transition-all duration-300 hover:shadow-md hover:scale-105 ${color}`}
                 >
                   {/* Medal Badge */}
