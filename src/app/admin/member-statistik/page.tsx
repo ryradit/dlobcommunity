@@ -349,9 +349,9 @@ export default function MemberStatistikPage() {
     let sorted: MemberStat[];
     switch (activeCategory) {
       case 'attendance': sorted = [...stats].sort((a, b) => b.attendances - a.attendances || b.totalMatches - a.totalMatches); break;
-      case 'wins':       sorted = [...stats].sort((a, b) => b.wins - a.wins || b.totalMatches - a.totalMatches); break;
-      case 'losses':     sorted = [...stats].sort((a, b) => b.losses - a.losses); break;
-      case 'winrate':    sorted = [...stats].filter(s => s.totalMatches >= 5).sort((a, b) => b.winRate - a.winRate); break;
+      case 'wins':       sorted = [...stats].sort((a, b) => b.wins - a.wins || b.avgScore - a.avgScore || b.longestWinStreak - a.longestWinStreak); break;
+      case 'losses':     sorted = [...stats].sort((a, b) => b.losses - a.losses || a.avgScore - b.avgScore); break;
+      case 'winrate':    sorted = [...stats].filter(s => s.totalMatches >= 5).sort((a, b) => b.winRate - a.winRate || b.totalMatches - a.totalMatches || b.attendances - a.attendances); break;
       case 'matches':    sorted = [...stats].sort((a, b) => b.totalMatches - a.totalMatches); break;
       case 'avgscore':   sorted = [...stats].filter(s => s.totalMatches >= 5).sort((a, b) => b.avgScore - a.avgScore); break;
       case 'streak':     sorted = [...stats].sort((a, b) => b.longestWinStreak - a.longestWinStreak); break;
@@ -393,9 +393,18 @@ export default function MemberStatistikPage() {
 
   const totalPlayers  = stats.length;
   const totalWithData = stats.filter(s => s.totalMatches > 0).length;
-  const topWinner     = [...stats].sort((a, b) => b.wins - a.wins)[0];
+  const topWinner     = [...stats].filter(s => s.totalMatches > 0).sort((a, b) => {
+    if (a.totalMatches !== b.totalMatches) return b.totalMatches - a.totalMatches;
+    if (a.wins !== b.wins) return b.wins - a.wins;
+    if (a.losses !== b.losses) return a.losses - b.losses; // lower losses is better
+    if (a.winRate !== b.winRate) return b.winRate - a.winRate;
+    if (a.avgScore !== b.avgScore) return b.avgScore - a.avgScore;
+    return b.longestWinStreak - a.longestWinStreak;
+  })[0];
   const mostActive    = [...stats].sort((a, b) => b.totalMatches - a.totalMatches)[0];
-  const bestAttendee  = [...stats].sort((a, b) => b.attendances - a.attendances)[0];
+  const bestUnbeatenList = [...stats].filter(s => s.losses === 0 && s.wins > 0).sort((a, b) => b.wins - a.wins);
+  const maxUnbeatenWins = bestUnbeatenList[0]?.wins ?? 0;
+  const bestUnbeaten = bestUnbeatenList.filter(s => s.wins === maxUnbeatenWins);
   const kingStreak    = [...stats].sort((a, b) => b.longestWinStreak - a.longestWinStreak)[0];
 
   const categoryData = activeCategory === 'duo' ? duos : getSortedStats();
@@ -505,8 +514,8 @@ export default function MemberStatistikPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-tutorial="spotlight-cards">
           {[
             { label: 'Total Member',       value: totalPlayers,                      sub: `${totalWithData} punya data main`, icon: Users,      color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-500/10'    },
-            { label: 'Pemain Terbaik',      value: topWinner?.name ?? '-',            sub: `${topWinner?.wins ?? 0} kemenangan`,             icon: Trophy,     color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-500/10' },
-            { label: 'Paling Rajin',        value: bestAttendee?.name ?? '-',         sub: `${bestAttendee?.attendances ?? 0} pertemuan`,   icon: Calendar,   color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+            { label: 'Pemain Terbaik',      value: topWinner?.name ?? '-',            sub: `${topWinner?.winRate ?? 0}% · ${topWinner?.avgScore ?? 0} poin`,             icon: Trophy,     color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-500/10' },
+            { label: 'Paling Tak Terkalahkan', value: bestUnbeaten.map(m => m.name).join(', ') ?? '-',      sub: `${maxUnbeatenWins} M - 0 K`, icon: Flame,      color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
             { label: 'Streak Terpanjang',   value: kingStreak?.name ?? '-',           sub: `${kingStreak?.longestWinStreak ?? 0}x beruntun`, icon: Flame,      color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10'  },
           ].map(card => (
             <div key={card.label} className={`rounded-xl p-4 border-2 border-gray-200 dark:border-transparent shadow-sm ${card.bg} transition-colors duration-300`}>

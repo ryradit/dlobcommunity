@@ -137,8 +137,14 @@ export default function AdminAnalitikPage() {
     if (!selectedMatch) return;
 
     try {
-      const winner = formData.team1_score >= 42 ? 'team1' :
-                     formData.team2_score >= 42 ? 'team2' : null;
+      // Determine winner based on highest score
+      let winner: 'team1' | 'team2' | null = null;
+      if (formData.team1_score > formData.team2_score) {
+        winner = 'team1';
+      } else if (formData.team2_score > formData.team1_score) {
+        winner = 'team2';
+      }
+      // If equal or both 0, winner stays null
 
       const { error } = await supabase
         .from('matches')
@@ -489,7 +495,7 @@ export default function AdminAnalitikPage() {
                       </>
                     )}
                     
-                    {formData.team1_score >= 42 && (
+                    {formData.team1_score > formData.team2_score && (
                       <div className="mt-4 px-3 py-2 bg-green-100 dark:bg-zinc-700 border-2 border-green-300 dark:border-zinc-600 text-green-700 dark:text-zinc-300 rounded-lg text-center font-bold text-sm transition-colors duration-300">
                         Pemenang
                       </div>
@@ -558,7 +564,7 @@ export default function AdminAnalitikPage() {
                       </>
                     )}
                     
-                    {formData.team2_score >= 42 && (
+                    {formData.team2_score > formData.team1_score && (
                       <div className="mt-4 px-3 py-2 bg-green-100 dark:bg-zinc-700 border-2 border-green-300 dark:border-zinc-600 text-green-700 dark:text-zinc-300 rounded-lg text-center font-bold text-sm transition-colors duration-300">
                         Pemenang
                       </div>
@@ -576,7 +582,7 @@ export default function AdminAnalitikPage() {
                     <div>
                       <p className="text-gray-600 dark:text-zinc-500 font-semibold transition-colors duration-300">Status</p>
                       <p className="text-gray-900 dark:text-white font-bold transition-colors duration-300">
-                        {formData.team1_score >= 42 || formData.team2_score >= 42 ? 'Selesai' : 'Berlangsung'}
+                        {formData.team1_score !== formData.team2_score && (formData.team1_score > 0 || formData.team2_score > 0) ? 'Selesai' : 'Berlangsung'}
                       </p>
                     </div>
                   </div>
