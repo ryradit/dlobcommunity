@@ -496,9 +496,9 @@ export default function LeaderboardPage() {
                 { card: spotlights[3], medal: '🥈', color: 'border-red-300 dark:border-red-500/50 bg-red-50 dark:bg-red-500/10' }, // Paling Tak Terkalahkan
                 { card: spotlights[4], medal: '🥉', color: 'border-orange-300 dark:border-orange-500/50 bg-orange-50 dark:bg-orange-500/10' }, // Streak Terpanjang
               ];
-              return medals.map(({ card, medal, color }) => (
+              return medals.map(({ card, medal, color }, index) => (
                 <div
-                  key={typeof card.label === 'string' ? card.label : 'medal-' + i}
+                  key={typeof card.label === 'string' ? card.label : 'medal-' + index}
                   className={`rounded-xl p-4 border-2 shadow-sm transition-all duration-300 hover:shadow-md hover:scale-105 ${color}`}
                 >
                   {/* Medal Badge */}
