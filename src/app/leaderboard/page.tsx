@@ -456,7 +456,7 @@ export default function LeaderboardPage() {
                           {/* Main Stats */}
                           <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
-                              <div className="text-xs uppercase font-semibold text-gray-300">Menang</div>
+                              key={typeof card.label === 'string' ? card.label : `info-${infoCards.indexOf(card)}`}
                               <div className="text-lg font-bold text-white">{bestPlayer?.wins ?? 0}</div>
                             </div>
                             <div>
@@ -530,9 +530,9 @@ export default function LeaderboardPage() {
           <div className="grid grid-cols-2 gap-4">
             {(() => {
               const infoCards = [spotlights[0], spotlights[2]]; // Total Member, Paling Konsisten
-              return infoCards.map(card => (
+              return infoCards.map((card, index) => (
                 <div
-                  key={card.label}
+                  key={typeof card.label === 'string' ? card.label : 'info-' + infoCards.indexOf(card)}
                   className={`rounded-lg p-4 border shadow-sm ${card.bg} ${card.border} transition-colors duration-300 hover:shadow-md`}
                 >
                   <div className="flex items-center gap-2 mb-2">
