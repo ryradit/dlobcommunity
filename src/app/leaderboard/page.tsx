@@ -437,7 +437,7 @@ export default function LeaderboardPage() {
                       <div className="flex-shrink-0 pt-2">
                         <div className="relative w-16 h-16 rounded-full border-2 border-purple-500 bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center overflow-hidden ring-2 ring-purple-400/50">
                           <span className="text-2xl font-bold text-white">
-                            {bestCard.value?.charAt(0).toUpperCase()}
+                            {typeof bestCard.value === 'string' ? bestCard.value.charAt(0).toUpperCase() : String(bestCard.value).charAt(0).toUpperCase()}
                           </span>
                           {/* Glow effect */}
                           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500/30 to-transparent animate-pulse" />
