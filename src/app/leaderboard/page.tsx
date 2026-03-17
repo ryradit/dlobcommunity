@@ -456,7 +456,7 @@ export default function LeaderboardPage() {
                           {/* Main Stats */}
                           <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
-                              key={typeof card.label === 'string' ? card.label : `info-${infoCards.indexOf(card)}`}
+                              <div className="text-xs uppercase font-semibold text-gray-300">Menang</div>
                               <div className="text-lg font-bold text-white">{bestPlayer?.wins ?? 0}</div>
                             </div>
                             <div>
