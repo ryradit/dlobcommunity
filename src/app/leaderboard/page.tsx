@@ -30,6 +30,43 @@ function winRateColor(wr: number) {
   return 'text-orange-600 dark:text-orange-400';
 }
 
+// Calculate weighted Pemain Terbaik score based on normalized metrics
+function calculateBestPlayerScore(player: MemberStat, maxStats: {
+  matches: number;
+  wins: number;
+  losses: number;
+  avgScore: number;
+  streak: number;
+}): number {
+  // Normalize each metric to 0-100 scale
+  const normMatches = maxStats.matches > 0 ? (player.totalMatches / maxStats.matches) * 100 : 0;
+  const normWins = maxStats.wins > 0 ? (player.wins / maxStats.wins) * 100 : 0;
+  const normLosses = maxStats.losses > 0 ? (player.losses / maxStats.losses) * 100 : 0;
+  const normAvgScore = maxStats.avgScore > 0 ? (player.avgScore / maxStats.avgScore) * 100 : 0;
+  const normStreak = maxStats.streak > 0 ? (player.longestWinStreak / maxStats.streak) * 100 : 0;
+  const winRate = player.winRate; // Already 0-100
+
+  // Apply weights
+  const weights = {
+    matches: 0.25,     // Increased: participation & consistency more important
+    wins: 0.20,        // Reduced slightly
+    losses: -0.10,     // Penalty for losses
+    winRate: 0.20,     // Consistency ratio
+    avgScore: 0.15,    // Individual contribution per match
+    streak: 0.10,      // Peak performance
+  };
+
+  const score =
+    (normMatches * weights.matches) +
+    (normWins * weights.wins) +
+    (normLosses * weights.losses) +
+    (winRate * weights.winRate) +
+    (normAvgScore * weights.avgScore) +
+    (normStreak * weights.streak);
+
+  return Math.round(score * 10) / 10; // Round to 1 decimal
+}
+
 // ─── Main component ─────────────────────────────────────────────────────────
 
 export default function LeaderboardPage() {
@@ -37,12 +74,14 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<MemberStat[]>([]);
   const [recapSort, setRecapSort] = useState<
-    'totalMatches' | 'wins' | 'losses' | 'winRate' | 'avgScore' | 'attendances' | 'longestWinStreak'
-  >('totalMatches');
+    'totalMatches' | 'wins' | 'losses' | 'winRate' | 'avgScore' | 'attendances' | 'longestWinStreak' | 'bestPlayerScore'
+  >('bestPlayerScore');
   const [recapDir, setRecapDir] = useState<'desc' | 'asc'>('desc');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [liveRefreshing, setLiveRefreshing] = useState(false);
   const [firstMatchDate, setFirstMatchDate] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'pemain-terbaik' | 'pemain-tak-terkalahkan' | 'streak-terpanjang' | 'paling-konsisten'>('pemain-terbaik');
+  const [showPointsInfo, setShowPointsInfo] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -185,7 +224,22 @@ export default function LeaderboardPage() {
         s.avgScore = s.totalMatches > 0 ? Math.round((s.totalScore / s.totalMatches) * 10) / 10 : 0;
       }
 
-      setStats(Array.from(statMap.values()));
+      // Calculate best player scores for all members
+      const allStats = Array.from(statMap.values());
+      const maxStats = {
+        matches: Math.max(...allStats.map(s => s.totalMatches), 1),
+        wins: Math.max(...allStats.map(s => s.wins), 1),
+        losses: Math.max(...allStats.map(s => s.losses), 1),
+        avgScore: Math.max(...allStats.map(s => s.avgScore), 1),
+        streak: Math.max(...allStats.map(s => s.longestWinStreak), 1),
+      };
+
+      const statsWithScores = allStats.map(s => ({
+        ...s,
+        bestPlayerScore: calculateBestPlayerScore(s, maxStats),
+      }));
+
+      setStats(statsWithScores);
     } catch (e) {
       console.error(e);
     } finally {
@@ -203,6 +257,12 @@ export default function LeaderboardPage() {
 
   const sortedRecap = [...stats].sort((a, b) => {
     const mul = recapDir === 'desc' ? -1 : 1;
+    // Special handling for bestPlayerScore column
+    if (recapSort === 'bestPlayerScore') {
+      const scoreA = (a as any).bestPlayerScore || 0;
+      const scoreB = (b as any).bestPlayerScore || 0;
+      return mul * (scoreA - scoreB);
+    }
     // Special handling for wins column
     if (recapSort === 'wins') {
       if (a.wins !== b.wins) return mul * (a.wins - b.wins);
@@ -384,173 +444,222 @@ export default function LeaderboardPage() {
 
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
 
-        {/* ── Competitive Leaderboard Spotlight ─────────────────────── */}
+        {/* ── Championship Podium with Tabs ─────────────────────────── */}
         <div className="space-y-4">
-          {/* 🏆 Center Hero: Pemain Terbaik */}
-          <div className="flex justify-center">
-            {(() => {
-              const bestCard = spotlights[1]; // Pemain Terbaik is always index 1
-              const bestPlayer = stats.find(s => s.name === bestCard.value);
-              return (
-                <div className="relative w-full max-w-md">
-                  {/* Main Card with Gold Border */}
-                  <div
-                    className="rounded-2xl p-6 border-3 shadow-2xl bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-black border-yellow-500/60 hover:border-yellow-400 transition-all duration-300 relative"
-                  >
-                    {/* Medal - Top Right */}
-                    <div className="absolute -top-8 right-6 z-10">
-                      {/* Ribbon */}
-                      <svg width="60" height="30" viewBox="0 0 60 30" className="drop-shadow-lg">
-                        {/* Left ribbon */}
-                        <rect x="2" y="6" width="14" height="24" fill="#EF4444" opacity="0.95" />
-                        <line x1="2" y1="6" x2="16" y2="6" stroke="#DC2626" strokeWidth="1.5" />
-                        <line x1="5" y1="6" x2="5" y2="30" stroke="white" strokeWidth="0.8" opacity="0.7" />
-                        <line x1="11" y1="6" x2="11" y2="30" stroke="white" strokeWidth="0.8" opacity="0.7" />
-                        
-                        {/* Right ribbon */}
-                        <rect x="44" y="6" width="14" height="24" fill="#EF4444" opacity="0.95" />
-                        <line x1="44" y1="6" x2="58" y2="6" stroke="#DC2626" strokeWidth="1.5" />
-                        <line x1="47" y1="6" x2="47" y2="30" stroke="white" strokeWidth="0.8" opacity="0.7" />
-                        <line x1="53" y1="6" x2="53" y2="30" stroke="white" strokeWidth="0.8" opacity="0.7" />
-                      </svg>
-                      
-                      {/* Medal Circle */}
-                      <div className="flex justify-center -mt-3">
-                        <div className="relative w-16 h-16">
-                          {/* Gold outer */}
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-600 drop-shadow-lg border-3 border-yellow-700" />
-                          {/* Gold inner */}
-                          <div className="absolute inset-1.5 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-500" />
-                          {/* Shine */}
-                          <div className="absolute inset-2 rounded-full bg-gradient-to-br from-yellow-100 to-transparent opacity-70" />
-                          {/* Trophy icon */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Trophy className="w-7 h-7 text-yellow-900 drop-shadow" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Content Layout */}
-                    <div className="flex gap-4 items-start">
-                      {/* Avatar Left */}
-                      <div className="flex-shrink-0 pt-2">
-                        <div className="relative w-16 h-16 rounded-full border-2 border-purple-500 bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center overflow-hidden ring-2 ring-purple-400/50">
-                          <span className="text-2xl font-bold text-white">
-                            {typeof bestCard.value === 'string' ? bestCard.value.charAt(0).toUpperCase() : String(bestCard.value).charAt(0).toUpperCase()}
-                          </span>
-                          {/* Glow effect */}
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500/30 to-transparent animate-pulse" />
-                        </div>
-                      </div>
-
-                      {/* Info Right */}
-                      <div className="flex-1">
-                        {/* Name */}
-                        <h3 className="text-xl font-black text-yellow-300 drop-shadow">
-                          {bestCard.value}
-                        </h3>
-                        
-                        {/* Stats Row Below Name */}
-                        <div className="mt-3 space-y-2">
-                          {/* Main Stats */}
-                          <div className="grid grid-cols-3 gap-3 text-center">
-                            <div>
-                              <div className="text-xs uppercase font-semibold text-gray-300">Menang</div>
-                              <div className="text-lg font-bold text-white">{bestPlayer?.wins ?? 0}</div>
-                            </div>
-                            <div>
-                              <div className="text-xs uppercase font-semibold text-gray-300">Pertemuan</div>
-                              <div className="text-lg font-bold text-white">{bestPlayer?.totalMatches ?? 0}</div>
-                            </div>
-                            <div>
-                                <div className="text-xs uppercase font-semibold text-gray-300">Rata-rata Skor</div>
-                                <div className="text-lg font-bold text-white">{bestPlayer?.avgScore?.toFixed(1) ?? 0}</div>
-                            </div>
-                          </div>
-
-                          {/* Secondary Stats */}
-                          <div className="flex gap-4 justify-center text-sm">
-                            <div className="flex items-center gap-1">
-                              <span className="text-yellow-300">⭐</span>
-                              <span className="text-gray-300">{bestPlayer?.winRate?.toFixed(0) ?? 0}% WR</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-orange-300">🔥</span>
-                              <span className="text-gray-300">{bestPlayer?.longestWinStreak ?? 0} streak</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+          {/* Tab Navigation */}
+          <div className="flex gap-2 pb-2 justify-center flex-wrap">
+            {[
+              { id: 'pemain-terbaik', label: 'Pemain Terbaik', icon: '🏆' },
+              { id: 'pemain-tak-terkalahkan', label: 'Tak Terkalahkan', icon: '🔥' },
+              { id: 'streak-terpanjang', label: 'Streak Terpanjang', icon: '⚡' },
+              { id: 'paling-konsisten', label: 'Paling Konsisten', icon: '📅' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all duration-300 flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? 'bg-purple-600 text-white shadow-lg'
+                    : 'bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-zinc-600'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* 🎖️ Secondary: Left & Right Champions */}
-          <div className="grid grid-cols-2 gap-4">
-            {(() => {
-              const medals = [
-                { card: spotlights[3], medal: '🥈', color: 'border-red-300 dark:border-red-500/50 bg-red-50 dark:bg-red-500/10' }, // Paling Tak Terkalahkan
-                { card: spotlights[4], medal: '🥉', color: 'border-orange-300 dark:border-orange-500/50 bg-orange-50 dark:bg-orange-500/10' }, // Streak Terpanjang
+          {/* Podium Display */}
+          {(() => {
+            // Different ranking logic for each tab
+            let top3: { rank: number; player: MemberStat | null; metric: string }[] = [];
+            let tabTitle = '';
+
+            if (activeTab === 'pemain-terbaik') {
+              // Calculate max values for normalization
+              const maxStats = {
+                matches: Math.max(...stats.map(s => s.totalMatches), 1),
+                wins: Math.max(...stats.map(s => s.wins), 1),
+                losses: Math.max(...stats.map(s => s.losses), 1),
+                avgScore: Math.max(...stats.map(s => s.avgScore), 1),
+                streak: Math.max(...stats.map(s => s.longestWinStreak), 1),
+              };
+
+              const sorted = [...stats]
+                .filter(s => s.totalMatches > 0)
+                .map(s => ({
+                  ...s,
+                  bestPlayerScore: calculateBestPlayerScore(s, maxStats),
+                }))
+                .sort((a, b) => b.bestPlayerScore - a.bestPlayerScore);
+
+              top3 = [
+                { rank: 1, player: sorted[0] || null, metric: `Score: ${sorted[0]?.bestPlayerScore ?? 0} · ${sorted[0]?.winRate ?? 0}% WR` },
+                { rank: 2, player: sorted[1] || null, metric: `Score: ${sorted[1]?.bestPlayerScore ?? 0} · ${sorted[1]?.winRate ?? 0}% WR` },
+                { rank: 3, player: sorted[2] || null, metric: `Score: ${sorted[2]?.bestPlayerScore ?? 0} · ${sorted[2]?.winRate ?? 0}% WR` },
               ];
-              return medals.map(({ card, medal, color }, index) => (
-                <div
-                  key={typeof card.label === 'string' ? card.label : 'medal-' + index}
-                  className={`rounded-xl p-4 border-2 shadow-sm transition-all duration-300 hover:shadow-md hover:scale-105 ${color}`}
-                >
-                  {/* Medal Badge */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-2xl">{medal}</span>
-                    <card.icon className={`w-5 h-5 ${card.color}`} />
-                  </div>
-                  
-                  {/* Label */}
-                  <span className="text-xs text-gray-600 dark:text-zinc-300 font-bold uppercase tracking-wide block mb-2">
-                    {card.label}
-                  </span>
-                  
-                  {/* Value */}
-                  <div className={`text-2xl font-bold truncate ${card.color} mb-1`}>
-                    {card.value}
-                  </div>
-                  
-                  {/* Sub */}
-                  <div className="text-xs text-gray-500 dark:text-zinc-500">
-                    {card.sub}
-                  </div>
-                </div>
-              ));
-            })()}
-          </div>
+              tabTitle = 'Pemain Terbaik';
+            } else if (activeTab === 'pemain-tak-terkalahkan') {
+              const unbeaten = [...stats]
+                .filter(s => s.losses === 0 && s.wins > 0)
+                .sort((a, b) => b.wins - a.wins);
+              top3 = [
+                { rank: 1, player: unbeaten[0] || null, metric: `${unbeaten[0]?.wins ?? 0} menang - 0 kalah` },
+                { rank: 2, player: unbeaten[1] || null, metric: `${unbeaten[1]?.wins ?? 0} menang - 0 kalah` },
+                { rank: 3, player: unbeaten[2] || null, metric: `${unbeaten[2]?.wins ?? 0} menang - 0 kalah` },
+              ];
+              tabTitle = 'Pemain Tak Terkalahkan';
+            } else if (activeTab === 'streak-terpanjang') {
+              const streaks = [...stats]
+                .sort((a, b) => b.longestWinStreak - a.longestWinStreak);
+              top3 = [
+                { rank: 1, player: streaks[0] || null, metric: `${streaks[0]?.longestWinStreak ?? 0}x beruntun` },
+                { rank: 2, player: streaks[1] || null, metric: `${streaks[1]?.longestWinStreak ?? 0}x beruntun` },
+                { rank: 3, player: streaks[2] || null, metric: `${streaks[2]?.longestWinStreak ?? 0}x beruntun` },
+              ];
+              tabTitle = 'Streak Terpanjang';
+            } else if (activeTab === 'paling-konsisten') {
+              const consistent = [...stats]
+                .sort((a, b) => b.attendances - a.attendances || b.totalMatches - a.totalMatches);
+              top3 = [
+                { rank: 1, player: consistent[0] || null, metric: `${consistent[0]?.attendances ?? 0} pertemuan · ${consistent[0]?.totalMatches ?? 0} main` },
+                { rank: 2, player: consistent[1] || null, metric: `${consistent[1]?.attendances ?? 0} pertemuan · ${consistent[1]?.totalMatches ?? 0} main` },
+                { rank: 3, player: consistent[2] || null, metric: `${consistent[2]?.attendances ?? 0} pertemuan · ${consistent[2]?.totalMatches ?? 0} main` },
+              ];
+              tabTitle = 'Paling Konsisten';
+            }
 
-          {/* 📊 Info Cards: Statistics */}
-          <div className="grid grid-cols-2 gap-4">
-            {(() => {
-              const infoCards = [spotlights[0], spotlights[2]]; // Total Member, Paling Konsisten
-              return infoCards.map((card, index) => (
-                <div
-                  key={typeof card.label === 'string' ? card.label : 'info-' + infoCards.indexOf(card)}
-                  className={`rounded-lg p-4 border shadow-sm ${card.bg} ${card.border} transition-colors duration-300 hover:shadow-md`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <card.icon className={`w-5 h-5 ${card.color}`} />
-                    <span className="text-xs text-gray-500 dark:text-zinc-400 font-semibold uppercase tracking-wide">
-                      {card.label}
-                    </span>
+            const medals = ['🥇', '🥈', '🥉'];
+            const medalColors = [
+              'border-yellow-500/60 bg-gradient-to-br from-slate-900 to-slate-800',
+              'border-gray-400/60 bg-gradient-to-br from-slate-800 to-slate-700',
+              'border-orange-400/60 bg-gradient-to-br from-slate-700 to-slate-600',
+            ];
+            const textColors = ['text-yellow-300', 'text-gray-300', 'text-orange-300'];
+
+            return (
+              <div className="space-y-6">
+                {/* Title */}
+                <div className="text-center">
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-white">{tabTitle}</h2>
+                </div>
+
+                {/* Podium Layout */}
+                <div className="flex items-flex-end justify-center gap-4 h-96">
+                  {/* 2nd Place - Left */}
+                  <div className="flex flex-col items-center">
+                    {top3[1].player ? (
+                      <>
+                        {/* Card */}
+                        <div className={`rounded-lg p-4 border-2 shadow-sm ${medalColors[1]} transition-all duration-300 w-32`}>
+                          {/* Medal Badge */}
+                          <div className="flex justify-center mb-2">
+                            <span className="text-3xl">{medals[1]}</span>
+                          </div>
+
+                          {/* Avatar Mini */}
+                          <div className="flex justify-center mb-2">
+                            <div className="relative w-12 h-12 rounded-full border-2 border-gray-400 bg-gradient-to-br from-gray-600 to-gray-900 flex items-center justify-center overflow-hidden">
+                              <span className="text-sm font-bold text-white">
+                                {typeof top3[1].player?.name === 'string' ? top3[1].player.name.charAt(0).toUpperCase() : '?'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Name & Metric */}
+                          <div className={`text-base font-bold truncate text-center ${textColors[1]} mb-1 text-xs`}>
+                            {top3[1].player?.name}
+                          </div>
+                          <div className="text-xs text-gray-400 text-center line-clamp-2">{top3[1].metric}</div>
+                        </div>
+
+                        {/* Podium Beam */}
+                        <div className="w-32 h-24 bg-gradient-to-b from-slate-600 to-slate-700 border-2 border-slate-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
+                          <span className="text-4xl font-black text-gray-300">2</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center text-gray-400 py-4">-</div>
+                    )}
                   </div>
-                  <div className={`text-lg font-bold truncate ${card.color}`}>
-                    {card.value}
+
+                  {/* 1st Place - Center High */}
+                  <div className="flex flex-col items-center mb-12">
+                    {top3[0].player ? (
+                      <>
+                        {/* Card */}
+                        <div className={`rounded-lg p-5 border-3 shadow-2xl ${medalColors[0]} transition-all duration-300 w-40`}>
+                          {/* Medal */}
+                          <div className="flex justify-center mb-2">
+                            <span className="text-5xl drop-shadow-lg">{medals[0]}</span>
+                          </div>
+
+                          {/* Avatar */}
+                          <div className="flex justify-center mb-3">
+                            <div className="relative w-16 h-16 rounded-full border-2 border-yellow-500 bg-gradient-to-br from-yellow-600 to-yellow-900 flex items-center justify-center overflow-hidden ring-2 ring-yellow-400/50">
+                              <span className="text-2xl font-bold text-white">
+                                {typeof top3[0].player?.name === 'string' ? top3[0].player.name.charAt(0).toUpperCase() : '?'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Name & Metric */}
+                          <div className="text-center">
+                            <div className="text-xl font-black text-yellow-300 line-clamp-1">{top3[0].player?.name}</div>
+                            <div className="text-xs text-gray-300 line-clamp-2">{top3[0].metric}</div>
+                          </div>
+                        </div>
+
+                        {/* Podium Beam - Tallest */}
+                        <div className="w-40 h-40 bg-gradient-to-b from-yellow-600 to-yellow-700 border-2 border-yellow-800 rounded-t-none shadow-2xl flex items-center justify-center mt-0">
+                          <span className="text-6xl font-black text-yellow-200">1</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center text-gray-400 py-4">-</div>
+                    )}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-zinc-500 mt-0.5">
-                    {card.sub}
+
+                  {/* 3rd Place - Right */}
+                  <div className="flex flex-col items-center">
+                    {top3[2].player ? (
+                      <>
+                        {/* Card */}
+                        <div className={`rounded-lg p-4 border-2 shadow-sm ${medalColors[2]} transition-all duration-300 w-32`}>
+                          {/* Medal Badge */}
+                          <div className="flex justify-center mb-2">
+                            <span className="text-3xl">{medals[2]}</span>
+                          </div>
+
+                          {/* Avatar Mini */}
+                          <div className="flex justify-center mb-2">
+                            <div className="relative w-12 h-12 rounded-full border-2 border-orange-400 bg-gradient-to-br from-orange-600 to-orange-900 flex items-center justify-center overflow-hidden">
+                              <span className="text-sm font-bold text-white">
+                                {typeof top3[2].player?.name === 'string' ? top3[2].player.name.charAt(0).toUpperCase() : '?'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Name & Metric */}
+                          <div className={`text-base font-bold truncate text-center ${textColors[2]} mb-1 text-xs`}>
+                            {top3[2].player?.name}
+                          </div>
+                          <div className="text-xs text-gray-400 text-center line-clamp-2">{top3[2].metric}</div>
+                        </div>
+
+                        {/* Podium Beam - Shortest */}
+                        <div className="w-32 h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
+                          <span className="text-4xl font-black text-orange-200">3</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center text-gray-400 py-4">-</div>
+                    )}
                   </div>
                 </div>
-              ));
-            })()}
-          </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── Disclaimer ─────────────────────────────────────────────── */}
@@ -581,7 +690,24 @@ export default function LeaderboardPage() {
                 <tr className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-10">#</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Member</th>
-                  <SortTh col="attendances"      label="Pertemuan" />
+                  <th className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400 flex items-center justify-end gap-1" onClick={() => toggleRecapSort('bestPlayerScore')}>
+                    <span className="inline-flex items-center justify-end gap-1">
+                      Points
+                      <span className={`text-xs ${recapSort === 'bestPlayerScore' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                        {recapSort === 'bestPlayerScore' ? (recapDir === 'desc' ? '▼' : '▲') : '▼'}
+                      </span>
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPointsInfo(true);
+                      }}
+                      className="ml-1 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
+                      title="Informasi tentang sistem Points"
+                    >
+                      <Info className="w-4 h-4" />
+                    </button>
+                  </th>
                   <SortTh col="totalMatches"     label="Main" />
                   <SortTh col="wins"             label="M" />
                   <SortTh col="losses"           label="K" />
@@ -619,7 +745,19 @@ export default function LeaderboardPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-600 dark:text-zinc-300">{s.attendances}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            {(s as any).bestPlayerScore?.toFixed(1) || '-'}
+                          </span>
+                          {streakUp && s.currentStreak >= 3 && (
+                            <span className="text-orange-500 dark:text-orange-400 text-sm">↑</span>
+                          )}
+                          {streakDown && Math.abs(s.currentStreak) >= 3 && (
+                            <span className="text-blue-400 text-sm">↓</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-right text-gray-600 dark:text-zinc-300">{s.totalMatches}</td>
                       <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-semibold">{s.wins}</td>
                       <td className="px-4 py-3 text-right text-red-500 dark:text-red-400 font-semibold">{s.losses}</td>
@@ -643,6 +781,77 @@ export default function LeaderboardPage() {
             </table>
           </div>
         </div>
+
+        {/* ── Points Info Modal ───────────────────────────────────────── */}
+        {showPointsInfo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-xl max-w-md w-full animate-in fade-in-0 zoom-in-95 duration-200">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between">
+                <h3 className="font-bold text-gray-900 dark:text-white text-lg flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-purple-500" />
+                  Sistem Points
+                </h3>
+                <button
+                  onClick={() => setShowPointsInfo(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-zinc-300 mb-3">
+                    <strong>Points</strong> adalah skor komprehensif yang menggabungkan berbagai metrik performa pemain. Semakin tinggi points, semakin baik performa keseluruhan.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Komponen Perhitungan:</h4>
+                  <ul className="space-y-2 text-sm text-gray-600 dark:text-zinc-400">
+                    <li className="flex items-start gap-2">
+                      <span className="font-semibold text-purple-600 dark:text-purple-400 min-w-fit">25%</span>
+                      <span><strong>Total Pertandingan</strong> - Konsistensi & partisipasi aktif</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-semibold text-green-600 dark:text-green-400 min-w-fit">20%</span>
+                      <span><strong>Total Menang</strong> - Kemampuan memenangkan pertandingan</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-semibold text-yellow-600 dark:text-yellow-400 min-w-fit">20%</span>
+                      <span><strong>Win Rate</strong> - Rasio kemenangan vs kekalahan</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-semibold text-blue-600 dark:text-blue-400 min-w-fit">15%</span>
+                      <span><strong>Rata-rata Skor</strong> - Kontribusi poin per pertandingan</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-semibold text-orange-600 dark:text-orange-400 min-w-fit">10%</span>
+                      <span><strong>Streak Terpanjang</strong> - Performa puncak</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-semibold text-red-600 dark:text-red-400 min-w-fit">-10%</span>
+                      <span><strong>Total Kekalahan</strong> - Pengurangan untuk konsistensi</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-purple-50 dark:bg-zinc-800/50 rounded-lg p-3">
+                  <p className="text-xs text-gray-700 dark:text-zinc-300">
+                    💡 <strong>Tips:</strong> Klik kolom <strong>Points</strong> untuk mengurutkan pemain berdasarkan skor keseluruhan. Status 🔥 menunjukkan pemain sedang panas (streak positif).
+                  </p>
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-zinc-700">
+                <button
+                  onClick={() => setShowPointsInfo(false)}
+                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+                >
+                  Mengerti
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Footer ──────────────────────────────────────────────────── */}
         <div className="text-center text-xs text-gray-400 dark:text-zinc-600 pb-4">
