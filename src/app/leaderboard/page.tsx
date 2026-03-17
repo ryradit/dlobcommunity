@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -77,6 +77,26 @@ function calculateBestPlayerScore(player: MemberStat, maxStats: {
   return Math.round(score * 10) / 10; // Round to 1 decimal
 }
 
+// Get chibi image path from member name
+function getChibiImagePath(memberName: string): string {
+  // Handle name aliases/mappings
+  const nameMap: { [key: string]: string } = {
+    'bonardo': 'ardo',
+  };
+  
+  let cleanName = memberName
+    .toLowerCase()
+    .replace(/\s+/g, '') // Remove spaces
+    .replace(/[^a-z0-9]/g, ''); // Remove special characters
+  
+  // Check if there's a mapping for this name
+  if (nameMap[cleanName]) {
+    cleanName = nameMap[cleanName];
+  }
+  
+  return `/images/members/members-chibi/${cleanName}chibi.png`;
+}
+
 // ─── Main component ─────────────────────────────────────────────────────────
 
 export default function LeaderboardPage() {
@@ -90,7 +110,7 @@ export default function LeaderboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [liveRefreshing, setLiveRefreshing] = useState(false);
   const [firstMatchDate, setFirstMatchDate] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pemain-terbaik' | 'pemain-tak-terkalahkan' | 'streak-terpanjang' | 'paling-konsisten' | 'pasangan-terbaik'>('pemain-terbaik');
+  const [activeTab, setActiveTab] = useState<'pemain-terbaik' | 'pemain-tak-terkalahkan' | 'streak-terpanjang' | 'paling-rajin' | 'pasangan-terbaik'>('pemain-terbaik');
   const [showPointsInfo, setShowPointsInfo] = useState(false);
   const [canGoBack, setCanGoBack] = useState(true);
   const [partnerships, setPartnerships] = useState<PartnershipStat[]>([]);
@@ -103,7 +123,7 @@ export default function LeaderboardPage() {
   // Auto-rotate carousel
   useEffect(() => {
     carouselRef.current = setInterval(() => {
-      setCurrentImageIndex(prev => (prev + 1) % 2);
+      setCurrentImageIndex(prev => (prev + 1) % 4);
     }, 4000);
 
     return () => {
@@ -392,6 +412,12 @@ export default function LeaderboardPage() {
       if (a.totalMatches !== b.totalMatches) return mul * (a.totalMatches - b.totalMatches);
       return mul * (a.attendances - b.attendances);
     }
+    // Special handling for longestWinStreak column
+    if (recapSort === 'longestWinStreak') {
+      if (a.longestWinStreak !== b.longestWinStreak) return mul * (a.longestWinStreak - b.longestWinStreak);
+      // Tiebreaker: fewer losses ALWAYS rank higher (independent of sort direction)
+      return a.losses - b.losses;
+    }
     return mul * (a[recapSort] - b[recapSort]);
   });
 
@@ -517,6 +543,8 @@ export default function LeaderboardPage() {
           {[
             '/images/dlobanimated1.png',
             '/images/dlobanimated2.png',
+            '/images/dlobanimated3.png',
+            '/images/dlobanimated4.png',
           ].map((src, idx) => (
             <div
               key={idx}
@@ -588,7 +616,7 @@ export default function LeaderboardPage() {
               { id: 'pemain-terbaik', label: 'Pemain Terbaik', icon: '🏆' },
               { id: 'pemain-tak-terkalahkan', label: 'Tak Terkalahkan', icon: '🔥' },
               { id: 'streak-terpanjang', label: 'Streak Terpanjang', icon: '⚡' },
-              { id: 'paling-konsisten', label: 'Paling Konsisten', icon: '📅' },
+              { id: 'paling-rajin', label: 'Paling Rajin', icon: '📅' },
               { id: 'pasangan-terbaik', label: 'Pasangan Terbaik', icon: '👥' },
             ].map(tab => (
               <button
@@ -631,9 +659,9 @@ export default function LeaderboardPage() {
                 .sort((a, b) => b.bestPlayerScore - a.bestPlayerScore);
 
               top3 = [
-                { rank: 1, player: sorted[0] || null, metric: `Score: ${sorted[0]?.bestPlayerScore ?? 0} · ${sorted[0]?.winRate ?? 0}% WR` },
-                { rank: 2, player: sorted[1] || null, metric: `Score: ${sorted[1]?.bestPlayerScore ?? 0} · ${sorted[1]?.winRate ?? 0}% WR` },
-                { rank: 3, player: sorted[2] || null, metric: `Score: ${sorted[2]?.bestPlayerScore ?? 0} · ${sorted[2]?.winRate ?? 0}% WR` },
+                { rank: 1, player: sorted[0] || null, metric: `Points: ${sorted[0]?.bestPlayerScore ?? 0} · ${sorted[0]?.winRate ?? 0}% WR` },
+                { rank: 2, player: sorted[1] || null, metric: `Points: ${sorted[1]?.bestPlayerScore ?? 0} · ${sorted[1]?.winRate ?? 0}% WR` },
+                { rank: 3, player: sorted[2] || null, metric: `Points: ${sorted[2]?.bestPlayerScore ?? 0} · ${sorted[2]?.winRate ?? 0}% WR` },
               ];
               tabTitle = 'Pemain Terbaik';
             } else if (activeTab === 'pemain-tak-terkalahkan') {
@@ -648,22 +676,28 @@ export default function LeaderboardPage() {
               tabTitle = 'Pemain Tak Terkalahkan';
             } else if (activeTab === 'streak-terpanjang') {
               const streaks = [...stats]
-                .sort((a, b) => b.longestWinStreak - a.longestWinStreak);
+                .sort((a, b) => {
+                  // First sort by longestWinStreak descending
+                  const streakDiff = b.longestWinStreak - a.longestWinStreak;
+                  if (streakDiff !== 0) return streakDiff;
+                  // If streaks are equal, sort by losses ascending (fewer losses = higher rank)
+                  return a.losses - b.losses;
+                });
               top3 = [
-                { rank: 1, player: streaks[0] || null, metric: `${streaks[0]?.longestWinStreak ?? 0}x beruntun` },
-                { rank: 2, player: streaks[1] || null, metric: `${streaks[1]?.longestWinStreak ?? 0}x beruntun` },
-                { rank: 3, player: streaks[2] || null, metric: `${streaks[2]?.longestWinStreak ?? 0}x beruntun` },
+                { rank: 1, player: streaks[0] || null, metric: `${streaks[0]?.longestWinStreak ?? 0}x Streak - ${streaks[0]?.losses ?? 0} Losses` },
+                { rank: 2, player: streaks[1] || null, metric: `${streaks[1]?.longestWinStreak ?? 0}x Streak - ${streaks[1]?.losses ?? 0} Losses` },
+                { rank: 3, player: streaks[2] || null, metric: `${streaks[2]?.longestWinStreak ?? 0}x Streak - ${streaks[2]?.losses ?? 0} Losses` },
               ];
               tabTitle = 'Streak Terpanjang';
-            } else if (activeTab === 'paling-konsisten') {
-              const consistent = [...stats]
-                .sort((a, b) => b.attendances - a.attendances || b.totalMatches - a.totalMatches);
+            } else if (activeTab === 'paling-rajin') {
+              const diligent = [...stats]
+                .sort((a, b) => b.totalMatches - a.totalMatches || b.attendances - a.attendances);
               top3 = [
-                { rank: 1, player: consistent[0] || null, metric: `${consistent[0]?.attendances ?? 0} pertemuan · ${consistent[0]?.totalMatches ?? 0} main` },
-                { rank: 2, player: consistent[1] || null, metric: `${consistent[1]?.attendances ?? 0} pertemuan · ${consistent[1]?.totalMatches ?? 0} main` },
-                { rank: 3, player: consistent[2] || null, metric: `${consistent[2]?.attendances ?? 0} pertemuan · ${consistent[2]?.totalMatches ?? 0} main` },
+                { rank: 1, player: diligent[0] || null, metric: `${diligent[0]?.totalMatches ?? 0} main · ${diligent[0]?.attendances ?? 0} pertemuan` },
+                { rank: 2, player: diligent[1] || null, metric: `${diligent[1]?.totalMatches ?? 0} main · ${diligent[1]?.attendances ?? 0} pertemuan` },
+                { rank: 3, player: diligent[2] || null, metric: `${diligent[2]?.totalMatches ?? 0} main · ${diligent[2]?.attendances ?? 0} pertemuan` },
               ];
-              tabTitle = 'Paling Konsisten';
+              tabTitle = 'Paling Rajin';
             }
 
             // For Pasangan Terbaik, render different podium type
@@ -685,16 +719,32 @@ export default function LeaderboardPage() {
                     <div className="flex flex-col items-center">
                       {topPartnerships[1] ? (
                         <>
-                          <div className={`rounded-lg p-4 border-2 shadow-sm ${medalColors[1]} transition-all duration-300 w-32`}>
-                            <div className="flex justify-center mb-2">
-                              <span className="text-3xl">{medals[1]}</span>
+                          <div className={`rounded-lg p-7 border-2 shadow-lg ${medalColors[1]} transition-all duration-300 w-56`}>
+                            <div className="flex justify-center mb-4">
+                              <span className="text-4xl">{medals[1]}</span>
                             </div>
-                            <div className="flex justify-center gap-1 mb-2">
-                              <div className="w-6 h-6 rounded-full border border-gray-400 text-xs flex items-center justify-center bg-gray-600 text-white font-bold">
-                                {topPartnerships[1].player1.charAt(0)}
+                            <div className="flex justify-center gap-4 mb-5">
+                              <div className="relative w-16 h-36 bg-gray-500/10 rounded-lg overflow-hidden border border-gray-400">
+                                <img
+                                  key={`partnership-2nd-p1-${topPartnerships[1].player1}`}
+                                  src={getChibiImagePath(topPartnerships[1].player1)}
+                                  alt={topPartnerships[1].player1}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
                               </div>
-                              <div className="w-6 h-6 rounded-full border border-gray-400 text-xs flex items-center justify-center bg-gray-600 text-white font-bold">
-                                {topPartnerships[1].player2.charAt(0)}
+                              <div className="relative w-16 h-36 bg-gray-500/10 rounded-lg overflow-hidden border border-gray-400">
+                                <img
+                                  key={`partnership-2nd-p2-${topPartnerships[1].player2}`}
+                                  src={getChibiImagePath(topPartnerships[1].player2)}
+                                  alt={topPartnerships[1].player2}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
                               </div>
                             </div>
                             <div className={`text-xs font-bold text-center ${textColors[1]} mb-1 line-clamp-2`}>
@@ -717,16 +767,32 @@ export default function LeaderboardPage() {
                     <div className="flex flex-col items-center mb-12">
                       {topPartnerships[0] ? (
                         <>
-                          <div className={`rounded-lg p-5 border-3 shadow-2xl ${medalColors[0]} transition-all duration-300 w-40`}>
-                            <div className="flex justify-center mb-2">
-                              <span className="text-5xl drop-shadow-lg">{medals[0]}</span>
+                          <div className={`rounded-lg p-8 border-3 shadow-2xl ${medalColors[0]} transition-all duration-300 w-64`}>
+                            <div className="flex justify-center mb-5">
+                              <span className="text-6xl drop-shadow-lg">{medals[0]}</span>
                             </div>
-                            <div className="flex justify-center gap-2 mb-3">
-                              <div className="w-8 h-8 rounded-full border-2 border-yellow-500 text-sm flex items-center justify-center bg-yellow-600 text-white font-bold">
-                                {topPartnerships[0].player1.charAt(0)}
+                            <div className="flex justify-center gap-5 mb-6">
+                              <div className="relative w-20 h-44 bg-yellow-500/10 rounded-lg overflow-hidden border-2 border-yellow-500">
+                                <img
+                                  key={`partnership-1st-p1-${topPartnerships[0].player1}`}
+                                  src={getChibiImagePath(topPartnerships[0].player1)}
+                                  alt={topPartnerships[0].player1}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
                               </div>
-                              <div className="w-8 h-8 rounded-full border-2 border-yellow-500 text-sm flex items-center justify-center bg-yellow-600 text-white font-bold">
-                                {topPartnerships[0].player2.charAt(0)}
+                              <div className="relative w-20 h-44 bg-yellow-500/10 rounded-lg overflow-hidden border-2 border-yellow-500">
+                                <img
+                                  key={`partnership-1st-p2-${topPartnerships[0].player2}`}
+                                  src={getChibiImagePath(topPartnerships[0].player2)}
+                                  alt={topPartnerships[0].player2}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
                               </div>
                             </div>
                             <div className="text-center">
@@ -747,16 +813,32 @@ export default function LeaderboardPage() {
                     <div className="flex flex-col items-center">
                       {topPartnerships[2] ? (
                         <>
-                          <div className={`rounded-lg p-4 border-2 shadow-sm ${medalColors[2]} transition-all duration-300 w-32`}>
-                            <div className="flex justify-center mb-2">
-                              <span className="text-3xl">{medals[2]}</span>
+                          <div className={`rounded-lg p-7 border-2 shadow-lg ${medalColors[2]} transition-all duration-300 w-56`}>
+                            <div className="flex justify-center mb-4">
+                              <span className="text-4xl">{medals[2]}</span>
                             </div>
-                            <div className="flex justify-center gap-1 mb-2">
-                              <div className="w-6 h-6 rounded-full border border-orange-400 text-xs flex items-center justify-center bg-orange-600 text-white font-bold">
-                                {topPartnerships[2].player1.charAt(0)}
+                            <div className="flex justify-center gap-4 mb-5">
+                              <div className="relative w-16 h-36 bg-orange-500/10 rounded-lg overflow-hidden border border-orange-400">
+                                <img
+                                  key={`partnership-3rd-p1-${topPartnerships[2].player1}`}
+                                  src={getChibiImagePath(topPartnerships[2].player1)}
+                                  alt={topPartnerships[2].player1}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
                               </div>
-                              <div className="w-6 h-6 rounded-full border border-orange-400 text-xs flex items-center justify-center bg-orange-600 text-white font-bold">
-                                {topPartnerships[2].player2.charAt(0)}
+                              <div className="relative w-16 h-36 bg-orange-500/10 rounded-lg overflow-hidden border border-orange-400">
+                                <img
+                                  key={`partnership-3rd-p2-${topPartnerships[2].player2}`}
+                                  src={getChibiImagePath(topPartnerships[2].player2)}
+                                  alt={topPartnerships[2].player2}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
                               </div>
                             </div>
                             <div className={`text-xs font-bold text-center ${textColors[2]} mb-1 line-clamp-2`}>
@@ -820,12 +902,18 @@ export default function LeaderboardPage() {
                             <span className="text-4xl">{medals[1]}</span>
                           </div>
 
-                          {/* Avatar */}
+                          {/* Avatar - Chibi Character */}
                           <div className="flex justify-center mb-3">
-                            <div className="relative w-14 h-14 rounded-full border-2 border-gray-300 bg-gradient-to-br from-gray-500 to-gray-700 flex items-center justify-center overflow-hidden shadow-md">
-                              <span className="text-lg font-bold text-white">
-                                {typeof top3[1].player?.name === 'string' ? top3[1].player.name.charAt(0).toUpperCase() : '?'}
-                              </span>
+                            <div className="relative w-20 h-40 bg-gradient-to-b from-gray-500/10 to-gray-700/10 rounded-lg overflow-hidden border-2 border-gray-300">
+                              <img
+                                key={`${activeTab}-2nd-${top3[1].player?.name}`}
+                                src={getChibiImagePath(top3[1].player?.name || '')}
+                                alt={top3[1].player?.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </div>
                           </div>
 
@@ -835,9 +923,11 @@ export default function LeaderboardPage() {
                           </div>
 
                           {/* Achievement Badge */}
-                          <div className="text-xs text-gray-300 text-center mb-2 font-semibold">
-                            {top3[1].player?.winRate || 0}% WR
-                          </div>
+                          {activeTab !== 'paling-rajin' && (
+                            <div className="text-xs text-gray-300 text-center mb-2 font-semibold">
+                              {top3[1].player?.winRate || 0}% WR
+                            </div>
+                          )}
 
                           {/* Metric */}
                           <div className="text-xs text-gray-400 text-center line-clamp-2">{top3[1].metric}</div>
@@ -868,12 +958,18 @@ export default function LeaderboardPage() {
                               <span className="text-6xl drop-shadow-lg animate-bounce">{medals[0]}</span>
                             </div>
 
-                            {/* Avatar - Larger & Gold Ring */}
+                            {/* Chibi Character - Champion */}
                             <div className="flex justify-center mb-4">
-                              <div className="relative w-20 h-20 rounded-full border-4 border-yellow-400 bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center overflow-hidden ring-4 ring-yellow-300/60 shadow-lg">
-                                <span className="text-3xl font-bold text-white drop-shadow-lg">
-                                  {typeof top3[0].player?.name === 'string' ? top3[0].player.name.charAt(0).toUpperCase() : '?'}
-                                </span>
+                              <div className="relative w-24 h-48 bg-gradient-to-b from-yellow-400/10 to-yellow-600/10 rounded-lg overflow-hidden border-2 border-yellow-400/50">
+                                <img
+                                  key={`${activeTab}-1st-${top3[0].player?.name}`}
+                                  src={getChibiImagePath(top3[0].player?.name || '')}
+                                  alt={top3[0].player?.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
                               </div>
                             </div>
 
@@ -883,13 +979,20 @@ export default function LeaderboardPage() {
                             </div>
 
                             {/* Achievement Signal */}
-                            <div className="text-sm text-yellow-200 text-center mb-3 font-semibold">
-                              {top3[0].player && top3[0].player.longestWinStreak >= 3 ? (
-                                <span>🔥 {top3[0].player.longestWinStreak}x Streak - ON FIRE</span>
-                              ) : (
-                                <span>💯 {top3[0].player?.winRate || 0}% Win Rate</span>
-                              )}
-                            </div>
+                            {activeTab !== 'paling-rajin' && (
+                              <div className="text-sm text-yellow-200 text-center mb-3 font-semibold">
+                                {top3[0].player && top3[0].player.longestWinStreak >= 3 ? (
+                                  <span>🔥 {top3[0].player.longestWinStreak}x Streak - ON FIRE</span>
+                                ) : (
+                                  <span>💯 {top3[0].player?.winRate || 0}% Win Rate</span>
+                                )}
+                              </div>
+                            )}
+                            {activeTab === 'paling-rajin' && (
+                              <div className="text-sm text-yellow-200 text-center mb-3 font-semibold">
+                                {/* Empty space for consistency */}
+                              </div>
+                            )}
 
                             {/* Metric */}
                             <div className="text-xs text-yellow-100 text-center line-clamp-2">{top3[0].metric}</div>
@@ -918,12 +1021,18 @@ export default function LeaderboardPage() {
                             <span className="text-4xl">{medals[2]}</span>
                           </div>
 
-                          {/* Avatar */}
+                          {/* Avatar - Chibi Character */}
                           <div className="flex justify-center mb-3">
-                            <div className="relative w-14 h-14 rounded-full border-2 border-orange-300 bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center overflow-hidden shadow-md">
-                              <span className="text-lg font-bold text-white">
-                                {typeof top3[2].player?.name === 'string' ? top3[2].player.name.charAt(0).toUpperCase() : '?'}
-                              </span>
+                            <div className="relative w-20 h-40 bg-gradient-to-b from-orange-500/10 to-orange-700/10 rounded-lg overflow-hidden border-2 border-orange-300">
+                              <img
+                                key={`${activeTab}-3rd-${top3[2].player?.name}`}
+                                src={getChibiImagePath(top3[2].player?.name || '')}
+                                alt={top3[2].player?.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </div>
                           </div>
 
@@ -933,9 +1042,11 @@ export default function LeaderboardPage() {
                           </div>
 
                           {/* Achievement Badge */}
-                          <div className="text-xs text-orange-100 text-center mb-2 font-semibold">
-                            {top3[2].player?.winRate || 0}% WR
-                          </div>
+                          {activeTab !== 'paling-rajin' && (
+                            <div className="text-xs text-orange-100 text-center mb-2 font-semibold">
+                              {top3[2].player?.winRate || 0}% WR
+                            </div>
+                          )}
 
                           {/* Metric */}
                           <div className="text-xs text-gray-400 text-center line-clamp-2">{top3[2].metric}</div>
@@ -958,7 +1069,7 @@ export default function LeaderboardPage() {
 
         {/* ── Disclaimer ─────────────────────────────────────────────── */}
         {firstMatchDate && (
-          <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-sm text-blue-800 dark:text-blue-200">
+          <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-sm text-blue-800 dark:text-blue-200 mt-20">
             <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-500" />
             <span>
               <strong>Catatan:</strong> Data dihitung sejak pertandingan pertama yang tercatat di sistem
@@ -1244,5 +1355,7 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
+
 
 
