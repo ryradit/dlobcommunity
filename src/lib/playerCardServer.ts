@@ -197,102 +197,11 @@ export async function compositeMemberFaceAndJerseyOnCard(
   cardBuffer: any,
 ): Promise<Buffer> {
   try {
-    const sharp = require('sharp');
-    // @ts-ignore - face-api setup for Node.js with canvas
-    const faceapi = await import('@vladmandic/face-api');
-    const canvas = require('canvas');
-
-    // Load face-api models
-    const modelPath = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model/';
-    await faceapi.nets.tinyFaceDetector.load(modelPath);
-    await faceapi.nets.faceLandmark68Net.load(modelPath);
-
-    // Create canvas from member photo for face detection
-    const memberMeta = await sharp(memberPhotoBuffer).metadata();
-    const memberCanvas = canvas.createCanvas(memberMeta.width || 300, memberMeta.height || 400);
-    const memberCtx = memberCanvas.getContext('2d');
-    const memberImg = await canvas.loadImage(memberPhotoBuffer);
-    memberCtx.drawImage(memberImg, 0, 0);
-
-    // Detect face in member photo
-    const memberDetections = await faceapi.detectAllFaces(memberCanvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
-
-    if (!memberDetections || memberDetections.length === 0) {
-      console.warn('No face detected in member photo, using original card');
-      return cardBuffer instanceof Buffer ? cardBuffer : Buffer.from(cardBuffer);
-    }
-
-    const memberFace = memberDetections[0];
-    const memberBox = memberFace.detection.box;
-
-    // Extract member face region with padding
-    const padding = Math.min(memberBox.width, memberBox.height) * 0.2;
-    const faceX = Math.max(0, memberBox.x - padding);
-    const faceY = Math.max(0, memberBox.y - padding);
-    const faceWidth = memberBox.width + padding * 2;
-    const faceHeight = memberBox.height + padding * 2;
-
-    const memberFaceImage = await sharp(memberPhotoBuffer)
-      .extract({ left: Math.round(faceX), top: Math.round(faceY), width: Math.round(faceWidth), height: Math.round(faceHeight) })
-      .toBuffer();
-
-    // Create canvas from generated card for face detection
-    const cardMeta = await sharp(cardBuffer).metadata();
-    const cardCanvas = canvas.createCanvas(cardMeta.width || 300, cardMeta.height || 400);
-    const cardCtx = cardCanvas.getContext('2d');
-    const cardImg = await canvas.loadImage(cardBuffer);
-    cardCtx.drawImage(cardImg, 0, 0);
-
-    // Detect face in generated card
-    const cardDetections = await faceapi.detectAllFaces(cardCanvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
-
-    if (!cardDetections || cardDetections.length === 0) {
-      console.warn('No face detected in generated card, using original card');
-      return cardBuffer instanceof Buffer ? cardBuffer : Buffer.from(cardBuffer);
-    }
-
-    const cardFace = cardDetections[0];
-    const cardBox = cardFace.detection.box;
-
-    // Scale member face to match card face size
-    const scaleFactor = cardBox.height / faceHeight;
-    const scaledFaceSize = Math.round(faceWidth * scaleFactor);
-
-    const scaledMemberFace = await sharp(memberFaceImage)
-      .resize(scaledFaceSize, Math.round(faceHeight * scaleFactor), { fit: 'cover' })
-      .toBuffer();
-
-    // Position member face on card
-    const faceCompositeX = Math.max(0, Math.round(cardBox.x + (cardBox.width - scaledFaceSize) / 2));
-    const faceCompositeY = Math.max(0, Math.round(cardBox.y - (faceHeight * scaleFactor - cardBox.height) * 0.3));
-
-    // First composite member face onto card
-    let compositeCard = await sharp(cardBuffer)
-      .composite([{ input: scaledMemberFace, left: faceCompositeX, top: faceCompositeY, blend: 'over' }])
-      .toBuffer();
-
-    // Then composite jersey image on top (jersey goes over the face/body area)
-    const jerseyMeta = await sharp(jerseyImageBuffer).metadata();
-    const compositeCardMeta = await sharp(compositeCard).metadata();
-
-    // Scale jersey to fit card width with maintained aspect ratio
-    const jerseyScale = (compositeCardMeta.width || 300) / (jerseyMeta.width || 200);
-    const scaledJerseyWidth = Math.round((jerseyMeta.width || 200) * jerseyScale);
-    const scaledJerseyHeight = Math.round((jerseyMeta.height || 300) * jerseyScale);
-
-    const scaledJersey = await sharp(jerseyImageBuffer)
-      .resize(scaledJerseyWidth, scaledJerseyHeight, { fit: 'cover' })
-      .toBuffer();
-
-    // Position jersey roughly centered on the athlete area
-    const jerseyX = Math.round(((compositeCardMeta.width || 300) - scaledJerseyWidth) / 2);
-    const jerseyY = Math.round(faceCompositeY + scaledFaceSize * 0.3); // offset below face
-
-    const finalCard = await sharp(compositeCard)
-      .composite([{ input: scaledJersey, left: jerseyX, top: jerseyY, blend: 'over' }])
-      .toBuffer();
-
-    return finalCard;
+    // Note: Canvas package (>250MB) was removed due to Vercel serverless function size limits.
+    // Face detection and compositing feature is temporarily disabled.
+    // The generated card is returned as-is without face/jersey compositing.
+    console.log('[Player Card] Face detection and compositing disabled (canvas package removed for deployment)');
+    return cardBuffer instanceof Buffer ? cardBuffer : Buffer.from(cardBuffer);
   } catch (error: any) {
     console.warn('Face and jersey compositing failed, returning original card:', error?.message);
     return cardBuffer instanceof Buffer ? cardBuffer : Buffer.from(cardBuffer);
