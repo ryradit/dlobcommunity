@@ -22,6 +22,16 @@ interface MemberStat {
   totalScore: number;
 }
 
+interface PartnershipStat {
+  player1: string;
+  player2: string;
+  totalMatches: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  combinedScore: number;
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function winRateColor(wr: number) {
@@ -80,10 +90,26 @@ export default function LeaderboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [liveRefreshing, setLiveRefreshing] = useState(false);
   const [firstMatchDate, setFirstMatchDate] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pemain-terbaik' | 'pemain-tak-terkalahkan' | 'streak-terpanjang' | 'paling-konsisten'>('pemain-terbaik');
+  const [activeTab, setActiveTab] = useState<'pemain-terbaik' | 'pemain-tak-terkalahkan' | 'streak-terpanjang' | 'paling-konsisten' | 'pasangan-terbaik'>('pemain-terbaik');
   const [showPointsInfo, setShowPointsInfo] = useState(false);
   const [canGoBack, setCanGoBack] = useState(true);
+  const [partnerships, setPartnerships] = useState<PartnershipStat[]>([]);
+  const [partnershipSort, setPartnershipSort] = useState<'totalMatches' | 'wins' | 'winRate'>('winRate');
+  const [partnershipDir, setPartnershipDir] = useState<'desc' | 'asc'>('desc');
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const carouselRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-rotate carousel
+  useEffect(() => {
+    carouselRef.current = setInterval(() => {
+      setCurrentImageIndex(prev => (prev + 1) % 2);
+    }, 4000);
+
+    return () => {
+      if (carouselRef.current) clearInterval(carouselRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     fetchStats();
@@ -245,6 +271,68 @@ export default function LeaderboardPage() {
         bestPlayerScore: calculateBestPlayerScore(s, maxStats),
       }));
 
+      // Calculate partnership statistics
+      const partnershipMap = new Map<string, PartnershipStat>();
+      for (const match of matches) {
+        // Team 1 partnership
+        const team1_p1 = match.team1_player1?.trim();
+        const team1_p2 = match.team1_player2?.trim();
+        if (team1_p1 && team1_p2 && realNames.has(team1_p1) && realNames.has(team1_p2)) {
+          const key = [team1_p1, team1_p2].sort().join('|');
+          if (!partnershipMap.has(key)) {
+            partnershipMap.set(key, {
+              player1: [team1_p1, team1_p2].sort()[0],
+              player2: [team1_p1, team1_p2].sort()[1],
+              totalMatches: 0,
+              wins: 0,
+              losses: 0,
+              winRate: 0,
+              combinedScore: 0,
+            });
+          }
+          const p = partnershipMap.get(key)!;
+          p.totalMatches++;
+          const score1 = match.team1_score ?? 0;
+          const score2 = match.team2_score ?? 0;
+          p.combinedScore += score1;
+          if (match.winner === 'team1') p.wins++;
+          else if (match.winner === 'team2') p.losses++;
+        }
+
+        // Team 2 partnership
+        const team2_p1 = match.team2_player1?.trim();
+        const team2_p2 = match.team2_player2?.trim();
+        if (team2_p1 && team2_p2 && realNames.has(team2_p1) && realNames.has(team2_p2)) {
+          const key = [team2_p1, team2_p2].sort().join('|');
+          if (!partnershipMap.has(key)) {
+            partnershipMap.set(key, {
+              player1: [team2_p1, team2_p2].sort()[0],
+              player2: [team2_p1, team2_p2].sort()[1],
+              totalMatches: 0,
+              wins: 0,
+              losses: 0,
+              winRate: 0,
+              combinedScore: 0,
+            });
+          }
+          const p = partnershipMap.get(key)!;
+          p.totalMatches++;
+          const score2 = match.team2_score ?? 0;
+          p.combinedScore += score2;
+          if (match.winner === 'team2') p.wins++;
+          else if (match.winner === 'team1') p.losses++;
+        }
+      }
+
+      // Filter partnerships with minimum 2 matches and calculate win rate
+      const qualifiedPartnerships = Array.from(partnershipMap.values())
+        .filter(p => p.totalMatches >= 2)
+        .map(p => ({
+          ...p,
+          winRate: p.totalMatches > 0 ? Math.round((p.wins / p.totalMatches) * 100) : 0,
+        }));
+
+      setPartnerships(qualifiedPartnerships);
       setStats(statsWithScores);
     } catch (e) {
       console.error(e);
@@ -260,6 +348,24 @@ export default function LeaderboardPage() {
     if (recapSort === col) setRecapDir(d => (d === 'desc' ? 'asc' : 'desc'));
     else { setRecapSort(col); setRecapDir('desc'); }
   }
+
+  function togglePartnershipSort(col: typeof partnershipSort) {
+    if (partnershipSort === col) setPartnershipDir(d => (d === 'desc' ? 'asc' : 'desc'));
+    else { setPartnershipSort(col); setPartnershipDir('desc'); }
+  }
+
+  const sortedPartnerships = [...partnerships].sort((a, b) => {
+    const mul = partnershipDir === 'desc' ? -1 : 1;
+    if (partnershipSort === 'winRate') {
+      if (a.winRate !== b.winRate) return mul * (a.winRate - b.winRate);
+      return mul * (a.wins - b.wins);
+    }
+    if (partnershipSort === 'wins') {
+      if (a.wins !== b.wins) return mul * (a.wins - b.wins);
+      return mul * (a.winRate - b.winRate);
+    }
+    return mul * (a[partnershipSort] - b[partnershipSort]);
+  });
 
   const sortedRecap = [...stats].sort((a, b) => {
     const mul = recapDir === 'desc' ? -1 : 1;
@@ -404,25 +510,49 @@ export default function LeaderboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 transition-colors duration-300">
 
-      {/* ── Top banner ─────────────────────────────────────────────────── */}
-      <div className="bg-linear-to-r from-[#3e6461] to-[#2d4a47] py-10 px-6 text-white text-center shadow-lg relative">
+      {/* ── Hero Banner with Rotating Background Images ─────────────── */}
+      <div className="relative py-32 px-6 text-white text-center shadow-lg overflow-hidden min-h-[32rem]">
+        {/* Rotating Background Images */}
+        <div className="absolute inset-0 z-0">
+          {[
+            '/images/dlobanimated1.png',
+            '/images/dlobanimated2.png',
+          ].map((src, idx) => (
+            <div
+              key={idx}
+              className={`absolute inset-0 transition-opacity duration-1000 ${
+                currentImageIndex === idx ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <img
+                src={src}
+                alt={`DLOB Hero ${idx + 1}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Dark Overlay (65% opacity for readability) */}
+        <div className="absolute inset-0 bg-black/65 z-10" />
+
         {/* Back button */}
         <button
           onClick={() => canGoBack ? router.back() : router.push('/dashboard')}
-          className="absolute left-4 top-4 inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all backdrop-blur-sm"
+          className="absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 text-white/90 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all backdrop-blur-sm"
         >
           <ArrowLeft className="w-4 h-4" />
           Kembali
         </button>
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <Trophy className="w-10 h-10 drop-shadow" />
-            <h1 className="text-4xl font-extrabold tracking-tight drop-shadow">DLOB Leaderboard</h1>
-            <Trophy className="w-10 h-10 drop-shadow" />
-          </div>
-          <p className="text-white/80 text-base font-medium">Rekap performa & statistik seluruh member komunitas</p>
 
-          {/* Live indicator */}
+        {/* Content */}
+        <div className="max-w-4xl mx-auto relative z-20">
+          <div className="flex items-center justify-center gap-4 mb-3">
+            <Trophy className="w-14 h-14 drop-shadow-lg" />
+            <h1 className="text-6xl font-extrabold tracking-tight drop-shadow-lg">DLOB Leaderboard</h1>
+            <Trophy className="w-14 h-14 drop-shadow-lg" />
+          </div>
+          <p className="text-white/90 text-xl font-medium drop-shadow-lg">Rekap performa & statistik seluruh member komunitas</p>
           <div className="mt-3 inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
             <span
               className={`w-2 h-2 rounded-full ${
@@ -459,6 +589,7 @@ export default function LeaderboardPage() {
               { id: 'pemain-tak-terkalahkan', label: 'Tak Terkalahkan', icon: '🔥' },
               { id: 'streak-terpanjang', label: 'Streak Terpanjang', icon: '⚡' },
               { id: 'paling-konsisten', label: 'Paling Konsisten', icon: '📅' },
+              { id: 'pasangan-terbaik', label: 'Pasangan Terbaik', icon: '👥' },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -535,126 +666,288 @@ export default function LeaderboardPage() {
               tabTitle = 'Paling Konsisten';
             }
 
+            // For Pasangan Terbaik, render different podium type
+            if (activeTab === 'pasangan-terbaik') {
+              const topPartnerships = [...sortedPartnerships].slice(0, 3);
+              const medals = ['🥇', '🥈', '🥉'];
+              const medalColors = [
+                'border-yellow-500/60 bg-gradient-to-br from-slate-900 to-slate-800',
+                'border-gray-400/60 bg-gradient-to-br from-slate-800 to-slate-700',
+                'border-orange-400/60 bg-gradient-to-br from-slate-700 to-slate-600',
+              ];
+              const textColors = ['text-yellow-300', 'text-gray-300', 'text-orange-300'];
+
+              return (
+                <div className="space-y-6">
+                  {/* Partnership Podium */}
+                  <div className="flex items-flex-end justify-center gap-4 h-96">
+                    {/* 2nd Place */}
+                    <div className="flex flex-col items-center">
+                      {topPartnerships[1] ? (
+                        <>
+                          <div className={`rounded-lg p-4 border-2 shadow-sm ${medalColors[1]} transition-all duration-300 w-32`}>
+                            <div className="flex justify-center mb-2">
+                              <span className="text-3xl">{medals[1]}</span>
+                            </div>
+                            <div className="flex justify-center gap-1 mb-2">
+                              <div className="w-6 h-6 rounded-full border border-gray-400 text-xs flex items-center justify-center bg-gray-600 text-white font-bold">
+                                {topPartnerships[1].player1.charAt(0)}
+                              </div>
+                              <div className="w-6 h-6 rounded-full border border-gray-400 text-xs flex items-center justify-center bg-gray-600 text-white font-bold">
+                                {topPartnerships[1].player2.charAt(0)}
+                              </div>
+                            </div>
+                            <div className={`text-xs font-bold text-center ${textColors[1]} mb-1 line-clamp-2`}>
+                              {topPartnerships[1].player1} & {topPartnerships[1].player2}
+                            </div>
+                            <div className="text-xs text-gray-400 text-center line-clamp-2">
+                              {topPartnerships[1].wins}W - {topPartnerships[1].winRate}%
+                            </div>
+                          </div>
+                          <div className="w-32 h-24 bg-gradient-to-b from-slate-600 to-slate-700 border-2 border-slate-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
+                            <span className="text-4xl font-black text-gray-300">2</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center text-gray-400 py-4">-</div>
+                      )}
+                    </div>
+
+                    {/* 1st Place */}
+                    <div className="flex flex-col items-center mb-12">
+                      {topPartnerships[0] ? (
+                        <>
+                          <div className={`rounded-lg p-5 border-3 shadow-2xl ${medalColors[0]} transition-all duration-300 w-40`}>
+                            <div className="flex justify-center mb-2">
+                              <span className="text-5xl drop-shadow-lg">{medals[0]}</span>
+                            </div>
+                            <div className="flex justify-center gap-2 mb-3">
+                              <div className="w-8 h-8 rounded-full border-2 border-yellow-500 text-sm flex items-center justify-center bg-yellow-600 text-white font-bold">
+                                {topPartnerships[0].player1.charAt(0)}
+                              </div>
+                              <div className="w-8 h-8 rounded-full border-2 border-yellow-500 text-sm flex items-center justify-center bg-yellow-600 text-white font-bold">
+                                {topPartnerships[0].player2.charAt(0)}
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm font-black text-yellow-300 line-clamp-2">{topPartnerships[0].player1} & {topPartnerships[0].player2}</div>
+                              <div className="text-xs text-gray-300">{topPartnerships[0].wins}W - {topPartnerships[0].winRate}%</div>
+                            </div>
+                          </div>
+                          <div className="w-40 h-40 bg-gradient-to-b from-yellow-600 to-yellow-700 border-2 border-yellow-800 rounded-t-none shadow-2xl flex items-center justify-center mt-0">
+                            <span className="text-6xl font-black text-yellow-200">1</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center text-gray-400 py-4">-</div>
+                      )}
+                    </div>
+
+                    {/* 3rd Place */}
+                    <div className="flex flex-col items-center">
+                      {topPartnerships[2] ? (
+                        <>
+                          <div className={`rounded-lg p-4 border-2 shadow-sm ${medalColors[2]} transition-all duration-300 w-32`}>
+                            <div className="flex justify-center mb-2">
+                              <span className="text-3xl">{medals[2]}</span>
+                            </div>
+                            <div className="flex justify-center gap-1 mb-2">
+                              <div className="w-6 h-6 rounded-full border border-orange-400 text-xs flex items-center justify-center bg-orange-600 text-white font-bold">
+                                {topPartnerships[2].player1.charAt(0)}
+                              </div>
+                              <div className="w-6 h-6 rounded-full border border-orange-400 text-xs flex items-center justify-center bg-orange-600 text-white font-bold">
+                                {topPartnerships[2].player2.charAt(0)}
+                              </div>
+                            </div>
+                            <div className={`text-xs font-bold text-center ${textColors[2]} mb-1 line-clamp-2`}>
+                              {topPartnerships[2].player1} & {topPartnerships[2].player2}
+                            </div>
+                            <div className="text-xs text-gray-400 text-center line-clamp-2">
+                              {topPartnerships[2].wins}W - {topPartnerships[2].winRate}%
+                            </div>
+                          </div>
+                          <div className="w-32 h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
+                            <span className="text-4xl font-black text-orange-200">3</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center text-gray-400 py-4">-</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             const medals = ['🥇', '🥈', '🥉'];
             const medalColors = [
-              'border-yellow-500/60 bg-gradient-to-br from-slate-900 to-slate-800',
-              'border-gray-400/60 bg-gradient-to-br from-slate-800 to-slate-700',
-              'border-orange-400/60 bg-gradient-to-br from-slate-700 to-slate-600',
+              'border-yellow-400 bg-gradient-to-br from-yellow-900/40 to-yellow-800/40',
+              'border-gray-300 bg-gradient-to-br from-gray-700/40 to-gray-600/40',
+              'border-orange-300 bg-gradient-to-br from-orange-700/40 to-orange-600/40',
             ];
-            const textColors = ['text-yellow-300', 'text-gray-300', 'text-orange-300'];
+            const textColors = ['text-yellow-300', 'text-gray-200', 'text-orange-300'];
 
             return (
-              <div className="space-y-6">
-                {/* Podium Layout */}
-                <div className="flex items-flex-end justify-center gap-4 h-96">
+              <div className="space-y-8">
+                {/* Add animations */}
+                <style>{`
+                  @keyframes pulse-glow {
+                    0%, 100% { filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6)); }
+                    50% { filter: drop-shadow(0 0 40px rgba(251, 191, 36, 0.9)); }
+                  }
+                  @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-8px); }
+                  }
+                  @keyframes count-up {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                  }
+                  .pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
+                  .float { animation: float 3s ease-in-out infinite; }
+                `}</style>
+                
+                {/* Podium Layout - Larger & More Prominent */}
+                <div className="flex items-flex-end justify-center gap-6 h-[500px] px-4">
                   {/* 2nd Place - Left */}
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center group">
                     {top3[1].player ? (
                       <>
                         {/* Card */}
-                        <div className={`rounded-lg p-4 border-2 shadow-sm ${medalColors[1]} transition-all duration-300 w-32`}>
+                        <div className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 w-36 hover:shadow-2xl hover:scale-105 ${medalColors[1]}`}>
                           {/* Medal Badge */}
-                          <div className="flex justify-center mb-2">
-                            <span className="text-3xl">{medals[1]}</span>
+                          <div className="flex justify-center mb-3">
+                            <span className="text-4xl">{medals[1]}</span>
                           </div>
 
-                          {/* Avatar Mini */}
-                          <div className="flex justify-center mb-2">
-                            <div className="relative w-12 h-12 rounded-full border-2 border-gray-400 bg-gradient-to-br from-gray-600 to-gray-900 flex items-center justify-center overflow-hidden">
-                              <span className="text-sm font-bold text-white">
+                          {/* Avatar */}
+                          <div className="flex justify-center mb-3">
+                            <div className="relative w-14 h-14 rounded-full border-2 border-gray-300 bg-gradient-to-br from-gray-500 to-gray-700 flex items-center justify-center overflow-hidden shadow-md">
+                              <span className="text-lg font-bold text-white">
                                 {typeof top3[1].player?.name === 'string' ? top3[1].player.name.charAt(0).toUpperCase() : '?'}
                               </span>
                             </div>
                           </div>
 
-                          {/* Name & Metric */}
-                          <div className={`text-base font-bold truncate text-center ${textColors[1]} mb-1 text-xs`}>
+                          {/* Name */}
+                          <div className={`text-sm font-bold truncate text-center ${textColors[1]} mb-2`}>
                             {top3[1].player?.name}
                           </div>
+
+                          {/* Achievement Badge */}
+                          <div className="text-xs text-gray-300 text-center mb-2 font-semibold">
+                            {top3[1].player?.winRate || 0}% WR
+                          </div>
+
+                          {/* Metric */}
                           <div className="text-xs text-gray-400 text-center line-clamp-2">{top3[1].metric}</div>
                         </div>
 
                         {/* Podium Beam */}
-                        <div className="w-32 h-24 bg-gradient-to-b from-slate-600 to-slate-700 border-2 border-slate-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
-                          <span className="text-4xl font-black text-gray-300">2</span>
+                        <div className="w-36 h-28 bg-gradient-to-b from-gray-500 to-gray-600 border-2 border-gray-700 rounded-b-lg shadow-lg flex items-center justify-center">
+                          <span className="text-5xl font-black text-gray-300">2</span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center text-gray-400 py-4">-</div>
+                      <div className="text-center text-gray-400 py-8">-</div>
                     )}
                   </div>
 
-                  {/* 1st Place - Center High */}
-                  <div className="flex flex-col items-center mb-12">
+                  {/* 1st Place - Center High - CHAMPION */}
+                  <div className="flex flex-col items-center">
                     {top3[0].player ? (
                       <>
-                        {/* Card */}
-                        <div className={`rounded-lg p-5 border-3 shadow-2xl ${medalColors[0]} transition-all duration-300 w-40`}>
-                          {/* Medal */}
-                          <div className="flex justify-center mb-2">
-                            <span className="text-5xl drop-shadow-lg">{medals[0]}</span>
-                          </div>
+                        {/* Champion Card with Glow & Float */}
+                        <div className="pulse-glow float">
+                          <div className={`rounded-2xl p-6 border-4 shadow-2xl transition-all duration-300 w-48 hover:shadow-3xl hover:scale-110 relative bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-yellow-400 backdrop-blur-sm`}>
+                            {/* Crown Icon - Top Right */}
+                            <div className="absolute -top-3 -right-3 text-4xl drop-shadow-lg">👑</div>
 
-                          {/* Avatar */}
-                          <div className="flex justify-center mb-3">
-                            <div className="relative w-16 h-16 rounded-full border-2 border-yellow-500 bg-gradient-to-br from-yellow-600 to-yellow-900 flex items-center justify-center overflow-hidden ring-2 ring-yellow-400/50">
-                              <span className="text-2xl font-bold text-white">
-                                {typeof top3[0].player?.name === 'string' ? top3[0].player.name.charAt(0).toUpperCase() : '?'}
-                              </span>
+                            {/* Medal Badge */}
+                            <div className="flex justify-center mb-3">
+                              <span className="text-6xl drop-shadow-lg animate-bounce">{medals[0]}</span>
                             </div>
-                          </div>
 
-                          {/* Name & Metric */}
-                          <div className="text-center">
-                            <div className="text-xl font-black text-yellow-300 line-clamp-1">{top3[0].player?.name}</div>
-                            <div className="text-xs text-gray-300 line-clamp-2">{top3[0].metric}</div>
+                            {/* Avatar - Larger & Gold Ring */}
+                            <div className="flex justify-center mb-4">
+                              <div className="relative w-20 h-20 rounded-full border-4 border-yellow-400 bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center overflow-hidden ring-4 ring-yellow-300/60 shadow-lg">
+                                <span className="text-3xl font-bold text-white drop-shadow-lg">
+                                  {typeof top3[0].player?.name === 'string' ? top3[0].player.name.charAt(0).toUpperCase() : '?'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Name - Bold & Gold */}
+                            <div className="text-center mb-2">
+                              <div className="text-xl font-black text-yellow-300 line-clamp-1 drop-shadow-lg">{top3[0].player?.name}</div>
+                            </div>
+
+                            {/* Achievement Signal */}
+                            <div className="text-sm text-yellow-200 text-center mb-3 font-semibold">
+                              {top3[0].player && top3[0].player.longestWinStreak >= 3 ? (
+                                <span>🔥 {top3[0].player.longestWinStreak}x Streak - ON FIRE</span>
+                              ) : (
+                                <span>💯 {top3[0].player?.winRate || 0}% Win Rate</span>
+                              )}
+                            </div>
+
+                            {/* Metric */}
+                            <div className="text-xs text-yellow-100 text-center line-clamp-2">{top3[0].metric}</div>
                           </div>
                         </div>
 
-                        {/* Podium Beam - Tallest */}
-                        <div className="w-40 h-40 bg-gradient-to-b from-yellow-600 to-yellow-700 border-2 border-yellow-800 rounded-t-none shadow-2xl flex items-center justify-center mt-0">
-                          <span className="text-6xl font-black text-yellow-200">1</span>
+                        {/* Podium Beam - Prominent & Gold */}
+                        <div className="w-48 h-48 bg-gradient-to-b from-yellow-500 to-yellow-600 border-4 border-yellow-700 rounded-b-2xl shadow-2xl flex items-center justify-center relative">
+                          <span className="text-8xl font-black text-yellow-200 drop-shadow-lg">1</span>
+                          <div className="absolute inset-0 rounded-b-2xl border-4 border-yellow-400/30 pointer-events-none"></div>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center text-gray-400 py-4">-</div>
+                      <div className="text-center text-gray-400 py-12">-</div>
                     )}
                   </div>
 
                   {/* 3rd Place - Right */}
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center group">
                     {top3[2].player ? (
                       <>
                         {/* Card */}
-                        <div className={`rounded-lg p-4 border-2 shadow-sm ${medalColors[2]} transition-all duration-300 w-32`}>
+                        <div className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 w-36 hover:shadow-2xl hover:scale-105 ${medalColors[2]}`}>
                           {/* Medal Badge */}
-                          <div className="flex justify-center mb-2">
-                            <span className="text-3xl">{medals[2]}</span>
+                          <div className="flex justify-center mb-3">
+                            <span className="text-4xl">{medals[2]}</span>
                           </div>
 
-                          {/* Avatar Mini */}
-                          <div className="flex justify-center mb-2">
-                            <div className="relative w-12 h-12 rounded-full border-2 border-orange-400 bg-gradient-to-br from-orange-600 to-orange-900 flex items-center justify-center overflow-hidden">
-                              <span className="text-sm font-bold text-white">
+                          {/* Avatar */}
+                          <div className="flex justify-center mb-3">
+                            <div className="relative w-14 h-14 rounded-full border-2 border-orange-300 bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center overflow-hidden shadow-md">
+                              <span className="text-lg font-bold text-white">
                                 {typeof top3[2].player?.name === 'string' ? top3[2].player.name.charAt(0).toUpperCase() : '?'}
                               </span>
                             </div>
                           </div>
 
-                          {/* Name & Metric */}
-                          <div className={`text-base font-bold truncate text-center ${textColors[2]} mb-1 text-xs`}>
+                          {/* Name */}
+                          <div className={`text-sm font-bold truncate text-center ${textColors[2]} mb-2`}>
                             {top3[2].player?.name}
                           </div>
+
+                          {/* Achievement Badge */}
+                          <div className="text-xs text-orange-100 text-center mb-2 font-semibold">
+                            {top3[2].player?.winRate || 0}% WR
+                          </div>
+
+                          {/* Metric */}
                           <div className="text-xs text-gray-400 text-center line-clamp-2">{top3[2].metric}</div>
                         </div>
 
-                        {/* Podium Beam - Shortest */}
-                        <div className="w-32 h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
-                          <span className="text-4xl font-black text-orange-200">3</span>
+                        {/* Podium Beam */}
+                        <div className="w-36 h-20 bg-gradient-to-b from-orange-500 to-orange-600 border-2 border-orange-700 rounded-b-lg shadow-lg flex items-center justify-center">
+                          <span className="text-5xl font-black text-orange-200">3</span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center text-gray-400 py-4">-</div>
+                      <div className="text-center text-gray-400 py-8">-</div>
                     )}
                   </div>
                 </div>
@@ -677,111 +970,200 @@ export default function LeaderboardPage() {
         )}
 
         {/* ── Full sortable member table ──────────────────────────────── */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-colors duration-300">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center gap-2 flex-wrap">
-            <Zap className="w-5 h-5 text-purple-500 shrink-0" />
-            <h2 className="font-bold text-gray-900 dark:text-white text-lg">Rekap Semua Member</h2>
-            <span className="ml-1 text-xs text-gray-400 dark:text-zinc-500">· Klik kolom untuk mengurutkan</span>
-            <span className="ml-auto text-xs text-gray-400 dark:text-zinc-500">{stats.length} member</span>
-          </div>
+        {activeTab !== 'pasangan-terbaik' && (
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-colors duration-300">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center gap-2 flex-wrap">
+              <Zap className="w-5 h-5 text-purple-500 shrink-0" />
+              <h2 className="font-bold text-gray-900 dark:text-white text-lg">Rekap Semua Member</h2>
+              <span className="ml-1 text-xs text-gray-400 dark:text-zinc-500">· Klik kolom untuk mengurutkan</span>
+              <span className="ml-auto text-xs text-gray-400 dark:text-zinc-500">{stats.length} member</span>
+            </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-10">#</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Member</th>
-                  <th className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400 flex items-center justify-end gap-1" onClick={() => toggleRecapSort('bestPlayerScore')}>
-                    <span className="inline-flex items-center justify-end gap-1">
-                      Points
-                      <span className={`text-xs ${recapSort === 'bestPlayerScore' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
-                        {recapSort === 'bestPlayerScore' ? (recapDir === 'desc' ? '▼' : '▲') : '▼'}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-10">#</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Member</th>
+                    <th className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400 flex items-center justify-end gap-1" onClick={() => toggleRecapSort('bestPlayerScore')}>
+                      <span className="inline-flex items-center justify-end gap-1">
+                        Points
+                        <span className={`text-xs ${recapSort === 'bestPlayerScore' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                          {recapSort === 'bestPlayerScore' ? (recapDir === 'desc' ? '▼' : '▲') : '▼'}
+                        </span>
                       </span>
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowPointsInfo(true);
-                      }}
-                      className="ml-1 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
-                      title="Informasi tentang sistem Points"
-                    >
-                      <Info className="w-4 h-4" />
-                    </button>
-                  </th>
-                  <SortTh col="totalMatches"     label="Main" />
-                  <SortTh col="wins"             label="M" />
-                  <SortTh col="losses"           label="K" />
-                  <SortTh col="winRate"          label="Win%" />
-                  <SortTh col="avgScore"         label="Avg Skor" className="hidden md:table-cell" />
-                  <SortTh col="longestWinStreak" label="Streak Max" className="hidden lg:table-cell" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-zinc-700/50">
-                {sortedRecap.map((s, i) => {
-                  const streakUp = s.currentStreak > 0;
-                  const streakDown = s.currentStreak < 0;
-                  return (
-                    <tr
-                      key={s.name}
-                      className={`hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors ${
-                        i < 3 ? 'font-semibold' : ''
-                      }`}
-                    >
-                      <td className="px-4 py-3 text-gray-400 dark:text-zinc-500">
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                      </td>
-                      <td className="px-4 py-3 text-gray-900 dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <span>{s.name}</span>
-                          {streakUp && s.currentStreak >= 3 && (
-                            <span className="text-orange-500 dark:text-orange-400 text-xs font-bold whitespace-nowrap">
-                              🔥{s.currentStreak}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPointsInfo(true);
+                        }}
+                        className="ml-1 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
+                        title="Informasi tentang sistem Points"
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+                    </th>
+                    <SortTh col="totalMatches"     label="Main" />
+                    <SortTh col="wins"             label="M" />
+                    <SortTh col="losses"           label="K" />
+                    <SortTh col="winRate"          label="Win%" />
+                    <SortTh col="avgScore"         label="Avg Skor" className="hidden md:table-cell" />
+                    <SortTh col="longestWinStreak" label="Streak Max" className="hidden lg:table-cell" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-zinc-700/50">
+                  {sortedRecap.map((s, i) => {
+                    const streakUp = s.currentStreak > 0;
+                    const streakDown = s.currentStreak < 0;
+                    return (
+                      <tr
+                        key={s.name}
+                        className={`hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors ${
+                          i < 3 ? 'font-semibold' : ''
+                        }`}
+                      >
+                        <td className="px-4 py-3 text-gray-400 dark:text-zinc-500">
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                        </td>
+                        <td className="px-4 py-3 text-gray-900 dark:text-white">
+                          <div className="flex items-center gap-2">
+                            <span>{s.name}</span>
+                            {streakUp && s.currentStreak >= 3 && (
+                              <span className="text-orange-500 dark:text-orange-400 text-xs font-bold whitespace-nowrap">
+                                🔥{s.currentStreak}
+                              </span>
+                            )}
+                            {streakDown && Math.abs(s.currentStreak) >= 3 && (
+                              <span className="text-blue-400 text-xs font-bold whitespace-nowrap">
+                                ❄️{Math.abs(s.currentStreak)}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {(s as any).bestPlayerScore?.toFixed(1) || '-'}
                             </span>
+                            {streakUp && s.currentStreak >= 3 && (
+                              <span className="text-orange-500 dark:text-orange-400 text-sm">↑</span>
+                            )}
+                            {streakDown && Math.abs(s.currentStreak) >= 3 && (
+                              <span className="text-blue-400 text-sm">↓</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600 dark:text-zinc-300">{s.totalMatches}</td>
+                        <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-semibold">{s.wins}</td>
+                        <td className="px-4 py-3 text-right text-red-500 dark:text-red-400 font-semibold">{s.losses}</td>
+                        <td className="px-4 py-3 text-right">
+                          {s.totalMatches === 0 ? (
+                            <span className="text-gray-300 dark:text-zinc-600">-</span>
+                          ) : (
+                            <span className={`font-bold ${winRateColor(s.winRate)}`}>{s.winRate}%</span>
                           )}
-                          {streakDown && Math.abs(s.currentStreak) >= 3 && (
-                            <span className="text-blue-400 text-xs font-bold whitespace-nowrap">
-                              ❄️{Math.abs(s.currentStreak)}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {(s as any).bestPlayerScore?.toFixed(1) || '-'}
-                          </span>
-                          {streakUp && s.currentStreak >= 3 && (
-                            <span className="text-orange-500 dark:text-orange-400 text-sm">↑</span>
-                          )}
-                          {streakDown && Math.abs(s.currentStreak) >= 3 && (
-                            <span className="text-blue-400 text-sm">↓</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-600 dark:text-zinc-300">{s.totalMatches}</td>
-                      <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-semibold">{s.wins}</td>
-                      <td className="px-4 py-3 text-right text-red-500 dark:text-red-400 font-semibold">{s.losses}</td>
-                      <td className="px-4 py-3 text-right">
-                        {s.totalMatches === 0 ? (
-                          <span className="text-gray-300 dark:text-zinc-600">-</span>
-                        ) : (
-                          <span className={`font-bold ${winRateColor(s.winRate)}`}>{s.winRate}%</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-500 dark:text-zinc-400 hidden md:table-cell text-base">
-                        {s.totalMatches === 0 ? '-' : s.avgScore}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-500 dark:text-zinc-400 hidden lg:table-cell">
-                        {s.longestWinStreak > 0 ? `🔥 ${s.longestWinStreak}x` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-500 dark:text-zinc-400 hidden md:table-cell text-base">
+                          {s.totalMatches === 0 ? '-' : s.avgScore}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-500 dark:text-zinc-400 hidden lg:table-cell">
+                          {s.longestWinStreak > 0 ? `🔥 ${s.longestWinStreak}x` : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── Partnership Table (Pasangan Terbaik) ───────────────────── */}
+        {activeTab === 'pasangan-terbaik' && (
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-colors duration-300">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center gap-2 flex-wrap">
+              <Users className="w-5 h-5 text-purple-500 shrink-0" />
+              <h2 className="font-bold text-gray-900 dark:text-white text-lg">Semua Pasangan (Min. 2 Pertandingan)</h2>
+              <span className="ml-1 text-xs text-gray-400 dark:text-zinc-500">· Klik kolom untuk mengurutkan</span>
+              <span className="ml-auto text-xs text-gray-400 dark:text-zinc-500">{sortedPartnerships.length} pasangan</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-10">#</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Pasangan</th>
+                    <th 
+                      className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
+                      onClick={() => togglePartnershipSort('wins')}
+                    >
+                      <span className={`text-xs ${partnershipSort === 'wins' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                        {partnershipSort === 'wins' ? (partnershipDir === 'desc' ? '▼' : '▲') : '▼'}
+                      </span>
+                      {' '}Menang
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
+                      onClick={() => togglePartnershipSort('totalMatches')}
+                    >
+                      <span className={`text-xs ${partnershipSort === 'totalMatches' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                        {partnershipSort === 'totalMatches' ? (partnershipDir === 'desc' ? '▼' : '▲') : '▼'}
+                      </span>
+                      {' '}Main
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
+                      onClick={() => togglePartnershipSort('winRate')}
+                    >
+                      <span className={`text-xs ${partnershipSort === 'winRate' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
+                        {partnershipSort === 'winRate' ? (partnershipDir === 'desc' ? '▼' : '▲') : '▼'}
+                      </span>
+                      {' '}Win%
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-zinc-700/50">
+                  {sortedPartnerships.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400 dark:text-zinc-500">
+                        Belum ada pasangan dengan minimal 5 pertandingan
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ) : (
+                    sortedPartnerships.map((p, i) => (
+                      <tr key={`${p.player1}|${p.player2}`} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
+                        <td className="px-4 py-3 text-gray-400 dark:text-zinc-500">
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                        </td>
+                        <td className="px-4 py-3 text-gray-900 dark:text-white">
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1">
+                              <div className="w-6 h-6 rounded-full text-xs flex items-center justify-center bg-purple-600 text-white font-bold">
+                                {p.player1.charAt(0)}
+                              </div>
+                              <div className="w-6 h-6 rounded-full text-xs flex items-center justify-center bg-purple-600 text-white font-bold">
+                                {p.player2.charAt(0)}
+                              </div>
+                            </div>
+                            <span className="font-medium">{p.player1} & {p.player2}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-semibold">{p.wins}</td>
+                        <td className="px-4 py-3 text-right text-gray-600 dark:text-zinc-300">{p.totalMatches}</td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={`font-bold ${p.winRate >= 70 ? 'text-green-600 dark:text-green-400' : p.winRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                            {p.winRate}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Points Info Modal ───────────────────────────────────────── */}
         {showPointsInfo && (
