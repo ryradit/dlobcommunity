@@ -426,26 +426,26 @@ export default function TrainingCenterPage() {
             </div>
 
             {/* Tips */}
-            <div className="training-tips bg-teal-50 dark:bg-linear-to-br dark:from-[#3e6461]/20 dark:to-[#2d4a47]/20 border-2 border-teal-200 dark:border-[#3e6461]/30 rounded-2xl p-6">
+            <div className="training-tips bg-teal-50 dark:bg-zinc-800 border-2 border-teal-200 dark:border-zinc-700 rounded-2xl p-6">
               <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <Star className="w-5 h-5 text-[#3e6461]" />
+                <Star className="w-5 h-5 text-teal-600 dark:text-gray-300" />
                 Tips Bertanya
               </h3>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-zinc-300">
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                 <li className="flex gap-2">
-                  <span className="text-[#3e6461] font-bold">•</span>
+                  <span className="text-teal-600 dark:text-gray-300 font-bold">•</span>
                   <span className="font-medium">Jelaskan masalah spesifik Anda</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-[#3e6461] font-bold">•</span>
+                  <span className="text-teal-600 dark:text-gray-300 font-bold">•</span>
                   <span className="font-medium">Sebutkan level skill Anda</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-[#3e6461] font-bold">•</span>
+                  <span className="text-teal-600 dark:text-gray-300 font-bold">•</span>
                   <span className="font-medium">Fokus pada satu topik per pertanyaan</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-[#3e6461] font-bold">•</span>
+                  <span className="text-teal-600 dark:text-gray-300 font-bold">•</span>
                   <span className="font-medium">Tonton video tutorial untuk hasil terbaik</span>
                 </li>
               </ul>

@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock, HelpCircle, Sparkles } from 'lucide-react';
+import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock, HelpCircle, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [memberName, setMemberName] = useState('');
   const [isFirstLogin, setIsFirstLogin] = useState(false);
+  const [expandRecentMatches, setExpandRecentMatches] = useState(true);
 
   // Tutorial for member dashboard
   const tutorialSteps = getTutorialSteps('member-dashboard');
@@ -314,68 +315,82 @@ export default function DashboardPage() {
       )}
 
       {/* Recent Matches */}
-      <div className="member-recent-matches bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 transition-colors duration-300">
-          <CreditCard className="w-6 h-6 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
-          Pertandingan Terkini
-        </h2>
-        
-        {loading ? (
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => <MatchCardSkeleton key={i} />)}
-          </div>
-        ) : myMatches.length === 0 ? (
-          <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">Belum ada pertandingan.</p>
-        ) : (
-          <div className="space-y-3">
-            {myMatches.slice(0, 10).map((match) => (
-              <div
-                key={match.id}
-                className="flex items-center justify-between p-4 bg-gray-100 dark:bg-zinc-800/50 rounded-lg border-2 border-gray-300 dark:border-white/5 hover:border-gray-400 dark:hover:border-white/10 transition-colors shadow-sm duration-300"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-gray-900 dark:text-white transition-colors duration-300">
-                      Pertandingan #{match.matches.match_number}
-                    </h3>
-                    {match.has_membership && (
-                      <Award className="w-4 h-4 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">
-                    {new Date(match.matches.match_date ?? match.matches.created_at).toLocaleDateString('id-ID', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </p>
-                  <div className="flex gap-4 mt-2 text-xs text-gray-600 dark:text-zinc-400 font-semibold transition-colors duration-300">
-                    <span>Shuttlecock: Rp {match.amount_due.toLocaleString('id-ID')}</span>
-                    <span>
-                      Kehadiran: {match.attendance_fee > 0 
-                        ? `Rp ${match.attendance_fee.toLocaleString('id-ID')}`
-                        : 'Gratis'}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xl font-bold text-gray-900 dark:text-white mb-1 transition-colors duration-300">
-                    Rp {match.total_amount.toLocaleString('id-ID')}
-                  </div>
-                  <span
-                    className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border-2 transition-colors duration-300 ${
-                      match.payment_status === 'paid'
-                        ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-300 dark:border-transparent'
-                        : match.payment_status === 'cancelled'
-                        ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
-                        : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-transparent'
-                    }`}
-                  >
-                    {match.payment_status === 'paid' ? 'Lunas' : match.payment_status === 'cancelled' ? 'Dibatalkan' : 'Pending'}
-                  </span>
-                </div>
+      <div className="member-recent-matches bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl shadow-sm transition-colors duration-300">
+        <button
+          onClick={() => setExpandRecentMatches(!expandRecentMatches)}
+          className="w-full px-6 py-4 flex items-center gap-2 hover:opacity-75 transition-opacity"
+        >
+          <CreditCard className="w-6 h-6 text-purple-600 dark:text-purple-400 transition-colors duration-300 shrink-0" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex-1 text-left transition-colors duration-300">
+            Pertandingan Terkini
+          </h2>
+          {expandRecentMatches ? (
+            <ChevronUp className="w-5 h-5 text-gray-400 shrink-0" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />
+          )}
+        </button>
+
+        {expandRecentMatches && (
+          <div className="px-6 pb-6 border-t border-gray-200 dark:border-zinc-700">
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => <MatchCardSkeleton key={i} />)}
               </div>
-            ))}
+            ) : myMatches.length === 0 ? (
+              <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">Belum ada pertandingan.</p>
+            ) : (
+              <div className="space-y-3 pt-4">
+                {myMatches.slice(0, 10).map((match) => (
+                  <div
+                    key={match.id}
+                    className="flex items-center justify-between p-4 bg-gray-100 dark:bg-zinc-800/50 rounded-lg border-2 border-gray-300 dark:border-white/5 hover:border-gray-400 dark:hover:border-white/10 transition-colors shadow-sm duration-300"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-gray-900 dark:text-white transition-colors duration-300">
+                          Pertandingan #{match.matches.match_number}
+                        </h3>
+                        {match.has_membership && (
+                          <Award className="w-4 h-4 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">
+                        {new Date(match.matches.match_date ?? match.matches.created_at).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </p>
+                      <div className="flex gap-4 mt-2 text-xs text-gray-600 dark:text-zinc-400 font-semibold transition-colors duration-300">
+                        <span>Shuttlecock: Rp {match.amount_due.toLocaleString('id-ID')}</span>
+                        <span>
+                          Kehadiran: {match.attendance_fee > 0 
+                            ? `Rp ${match.attendance_fee.toLocaleString('id-ID')}`
+                            : 'Gratis'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-gray-900 dark:text-white mb-1 transition-colors duration-300">
+                        Rp {match.total_amount.toLocaleString('id-ID')}
+                      </div>
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border-2 transition-colors duration-300 ${
+                          match.payment_status === 'paid'
+                            ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-300 dark:border-transparent'
+                            : match.payment_status === 'cancelled'
+                            ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
+                            : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-transparent'
+                        }`}
+                      >
+                        {match.payment_status === 'paid' ? 'Lunas' : match.payment_status === 'cancelled' ? 'Dibatalkan' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
