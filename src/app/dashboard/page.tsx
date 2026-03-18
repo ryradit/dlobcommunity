@@ -11,6 +11,7 @@ import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeleto
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import WeatherWidget from '@/components/WeatherWidget';
+import HeadToHead from '@/components/HeadToHead';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
 
@@ -302,6 +303,13 @@ export default function DashboardPage() {
               ✨ Anda tidak perlu membayar biaya kehadiran untuk pertandingan bulan ini!
             </p>
           )}
+        </div>
+      )}
+
+      {/* Head-to-Head Section */}
+      {!loading && memberName && (
+        <div className="mb-8">
+          <HeadToHead memberName={memberName} />
         </div>
       )}
 
