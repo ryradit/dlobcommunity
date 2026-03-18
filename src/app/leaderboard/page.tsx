@@ -79,9 +79,11 @@ function calculateBestPlayerScore(player: MemberStat, maxStats: {
 
 // Get chibi image path from member name
 function getChibiImagePath(memberName: string): string {
-  // Handle name aliases/mappings
+  // Handle name aliases/mappings - maps lowercase normalized name to actual filename
   const nameMap: { [key: string]: string } = {
     'bonardo': 'ardo',
+    'septiandwey': 'SeptianDwey',
+    'yogieprasetyo': 'YogiePrasetyo',
   };
   
   let cleanName = memberName
