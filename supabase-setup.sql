@@ -91,6 +91,42 @@ CREATE TRIGGER on_profile_updated
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON public.profiles TO anon, authenticated;
 
+-- Create function to safely update profile (used by admin API)
+CREATE OR REPLACE FUNCTION public.update_profile_safe(
+  p_id UUID,
+  p_full_name TEXT,
+  p_email TEXT,
+  p_role TEXT DEFAULT 'member',
+  p_is_active BOOLEAN DEFAULT true
+)
+RETURNS json AS $$
+DECLARE
+  v_result json;
+BEGIN
+  UPDATE public.profiles
+  SET 
+    full_name = p_full_name,
+    email = p_email,
+    role = p_role,
+    is_active = p_is_active,
+    updated_at = NOW()
+  WHERE id = p_id;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Profile not found for user %', p_id;
+  END IF;
+  
+  SELECT json_build_object('id', id, 'full_name', full_name, 'email', email)
+  INTO v_result
+  FROM public.profiles
+  WHERE id = p_id;
+  
+  RETURN v_result;
+EXCEPTION WHEN others THEN
+  RAISE EXCEPTION 'Profile update failed: %', SQLERRM;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
+
 -- Comments
 COMMENT ON TABLE profiles IS 'User profile information';
 COMMENT ON COLUMN profiles.role IS 'User role: member (default) or admin';

@@ -29,15 +29,19 @@ export async function POST(request: NextRequest) {
     const slug = name.toLowerCase().replace(/\s+/g, '.');
     const email = `${slug}@temp.dlob.local`;
 
-    // Check if already exists
-    const { data: existing } = await supabaseAdmin
+    // Check if already exists - check by exact name match first, then by email
+    const { data: existing, error: checkError } = await supabaseAdmin
       .from('profiles')
       .select('id, full_name')
-      .ilike('full_name', name)
+      .eq('full_name', name)
       .single();
 
     if (existing) {
       return NextResponse.json({ id: existing.id, full_name: existing.full_name, existed: true });
+    }
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+      return NextResponse.json({ error: `Failed to check existing profile: ${checkError.message}` }, { status: 500 });
     }
 
     // Create auth user
@@ -50,18 +54,40 @@ export async function POST(request: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Upsert profile
-    await supabaseAdmin.from('profiles').upsert({
-      id: data.user.id,
-      full_name: name,
-      email,
-      role: 'member',
-      using_temp_email: true,
-      must_change_password: true,
-    });
+    // Update profile created by trigger using RPC function with SECURITY DEFINER
+    // This bypasses RLS policies to ensure service_role can update
+    const { data: result, error: updateError } = await supabaseAdmin
+      .rpc('update_profile_safe', {
+        p_id: data.user.id,
+        p_full_name: name,
+        p_email: email,
+        p_role: 'member',
+        p_is_active: true,
+      });
+
+    if (updateError) {
+      console.error('[create-temp-member] RPC update failed:', {
+        error: updateError.message,
+        code: updateError.code,
+        userId: data.user.id,
+        email,
+      });
+      
+      // If update fails, try to delete the auth user we just created
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+        console.warn('[create-temp-member] Cleaned up auth user after profile update failure');
+      } catch (cleanupErr) {
+        console.error('[create-temp-member] Cleanup failed:', cleanupErr);
+      }
+      
+      return NextResponse.json({ error: `Failed to create profile: ${updateError.message}` }, { status: 500 });
+    }
 
     return NextResponse.json({ id: data.user.id, full_name: name, existed: false });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error('[create-temp-member] Error:', errorMessage, err);
+    return NextResponse.json({ error: `Server error: ${errorMessage}` }, { status: 500 });
   }
 }

@@ -20,6 +20,7 @@ interface MemberStat {
   currentStreak: number;
   attendances: number;
   totalScore: number;
+  lastMatchDate: string | null; // ISO date string
 }
 
 interface PartnershipStat {
@@ -41,6 +42,7 @@ function winRateColor(wr: number) {
 }
 
 // Calculate weighted Pemain Terbaik score based on normalized metrics
+// Score freezes for players who haven't played in 7+ days (no increase, no decrease)
 function calculateBestPlayerScore(player: MemberStat, maxStats: {
   matches: number;
   wins: number;
@@ -51,16 +53,14 @@ function calculateBestPlayerScore(player: MemberStat, maxStats: {
   // Normalize each metric to 0-100 scale
   const normMatches = maxStats.matches > 0 ? (player.totalMatches / maxStats.matches) * 100 : 0;
   const normWins = maxStats.wins > 0 ? (player.wins / maxStats.wins) * 100 : 0;
-  const normLosses = maxStats.losses > 0 ? (player.losses / maxStats.losses) * 100 : 0;
   const normAvgScore = maxStats.avgScore > 0 ? (player.avgScore / maxStats.avgScore) * 100 : 0;
   const normStreak = maxStats.streak > 0 ? (player.longestWinStreak / maxStats.streak) * 100 : 0;
   const winRate = player.winRate; // Already 0-100
 
-  // Apply weights
+  // Apply weights to all players
   const weights = {
-    matches: 0.25,     // Increased: participation & consistency more important
-    wins: 0.20,        // Reduced slightly
-    losses: -0.10,     // Penalty for losses
+    matches: 0.25,     // Participation & consistency
+    wins: 0.20,        // Win count
     winRate: 0.20,     // Consistency ratio
     avgScore: 0.15,    // Individual contribution per match
     streak: 0.10,      // Peak performance
@@ -69,12 +69,21 @@ function calculateBestPlayerScore(player: MemberStat, maxStats: {
   const score =
     (normMatches * weights.matches) +
     (normWins * weights.wins) +
-    (normLosses * weights.losses) +
     (winRate * weights.winRate) +
     (normAvgScore * weights.avgScore) +
     (normStreak * weights.streak);
 
-  return Math.round(score * 10) / 10; // Round to 1 decimal
+  return Math.round(score * 10) / 10;
+}
+
+// Check if player is inactive (no match in last 7 days)
+function isPlayerInactive(player: MemberStat): boolean {
+  const INACTIVITY_DAYS = 7;
+  if (!player.lastMatchDate) return true;
+  
+  const lastMatch = new Date(player.lastMatchDate);
+  const daysSinceLastMatch = (Date.now() - lastMatch.getTime()) / (1000 * 60 * 60 * 24);
+  return daysSinceLastMatch > INACTIVITY_DAYS;
 }
 
 // Get chibi image path from member name
@@ -230,6 +239,7 @@ export default function LeaderboardPage() {
           currentStreak: 0,
           attendances: attendanceMap.get(name)?.size ?? 0,
           totalScore: 0,
+          lastMatchDate: null,
         });
       }
 
@@ -253,6 +263,10 @@ export default function LeaderboardPage() {
           s.totalScore += score;
           if (won) s.wins++;
           if (lost) s.losses++;
+          // Track last match date - will be updated to the most recent match
+          if (match.match_date) {
+            s.lastMatchDate = new Date(match.match_date).toISOString().slice(0, 10);
+          }
           if (!playerMatchHistory.has(name)) playerMatchHistory.set(name, []);
           playerMatchHistory.get(name)!.push(won);
         }
@@ -1155,7 +1169,7 @@ export default function LeaderboardPage() {
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-white text-xs sm:text-sm">
                           <div className="flex items-center gap-1 sm:gap-2">
                             <span className="truncate">{s.name}</span>
-                            {streakUp && s.currentStreak >= 3 && (
+                            {!isPlayerInactive(s) && streakUp && s.currentStreak >= 3 && (
                               <span className="text-orange-500 dark:text-orange-400 text-xs font-bold whitespace-nowrap">
                                 🔥{s.currentStreak}
                               </span>
@@ -1172,7 +1186,7 @@ export default function LeaderboardPage() {
                             <span className="font-semibold text-gray-900 dark:text-white">
                               {(s as any).bestPlayerScore?.toFixed(1) || '-'}
                             </span>
-                            {streakUp && s.currentStreak >= 3 && (
+                            {!isPlayerInactive(s) && streakUp && s.currentStreak >= 3 && (
                               <span className="text-orange-500 dark:text-orange-400 text-sm">↑</span>
                             )}
                             {streakDown && Math.abs(s.currentStreak) >= 3 && (

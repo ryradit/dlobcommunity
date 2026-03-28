@@ -562,7 +562,7 @@ export default function MatchImageExtractionPage() {
         <div className="flex items-center gap-1">
           <input
             type="text"
-            value={value}
+            value={value ?? ''}
             onChange={(e) => handleFieldChange(matchIndex, field, e.target.value)}
             placeholder={placeholder}
             className={`w-full bg-white/5 border ${getInputBorderClass(matchIndex, field)} rounded px-2 py-1 text-sm text-white placeholder-purple-300 pr-8`}
