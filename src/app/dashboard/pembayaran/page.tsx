@@ -6,12 +6,13 @@ import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle, CheckSquare, Square, Zap, Copy, Check, QrCode } from 'lucide-react';
+import { Building2, Award, Upload, X, CheckCircle, Clock, AlertCircle, CreditCard, Calendar, Users, Info, HelpCircle, CheckSquare, Square, Zap, Copy, Check, QrCode, Download, ChevronDown } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
+import { generateBulkPaymentPDF, generatePaymentPDF } from '@/lib/pdfGenerator';
 
 interface MatchMember {
   id: string;
@@ -32,6 +33,13 @@ interface MatchMember {
     match_date: string;
     created_at: string;
     shuttlecock_count: number;
+    team1_score: number | null;
+    team2_score: number | null;
+    winner: string | null;
+    team1_player1: string | null;
+    team1_player2: string | null;
+    team2_player1: string | null;
+    team2_player2: string | null;
   };
 }
 
@@ -76,6 +84,9 @@ export default function PembayaranPage() {
   const [showStatusHelpModal, setShowStatusHelpModal] = useState(false);
   const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
+  const [showReceiptDropdown, setShowReceiptDropdown] = useState(false);
+  const [generatingReceiptPDF, setGeneratingReceiptPDF] = useState(false);
+  const [generatingMatchPDF, setGeneratingMatchPDF] = useState<string | null>(null);
 
   // Bank account info (fetched from admin-configurable settings)
   type BankAccount = { name: string; number: string };
@@ -219,7 +230,14 @@ export default function PembayaranPage() {
                   match_number,
                   match_date,
                   created_at,
-                  shuttlecock_count
+                  shuttlecock_count,
+                  team1_score,
+                  team2_score,
+                  winner,
+                  team1_player1,
+                  team1_player2,
+                  team2_player1,
+                  team2_player2
                 )
               `)
               .eq('member_name', name)
@@ -784,6 +802,119 @@ export default function PembayaranPage() {
     }
   }
 
+  const handleDownloadAllPayments = async () => {
+    if (!memberName || allMatches.length === 0) return;
+    
+    try {
+      setGeneratingReceiptPDF(true);
+      const paidMatches = allMatches.filter(m => m.payment_status === 'paid');
+      
+      if (paidMatches.length === 0) {
+        alert('Tidak ada pembayaran yang sudah lunas untuk diunduh.');
+        return;
+      }
+
+      const bulkData = paidMatches.map(m => ({
+        matchNumber: m.matches.match_number,
+        matchDate: m.matches.match_date,
+        shuttlecockFee: m.amount_due,
+        attendanceFee: m.attendance_fee,
+        totalAmount: m.total_amount,
+        paymentStatus: m.payment_status as 'paid' | 'pending' | 'cancelled' | 'rejected' | 'revision',
+        paidAt: m.paid_at ?? undefined,
+      }));
+
+      // Include membership if it's paid
+      const membershipData = myMembership && myMembership.payment_status === 'paid' ? {
+        month: myMembership.month,
+        year: myMembership.year,
+        amount: myMembership.amount,
+        paymentStatus: myMembership.payment_status as 'paid' | 'pending' | 'cancelled' | 'rejected',
+        paidAt: myMembership.paid_at ?? undefined,
+      } : null;
+
+      await generateBulkPaymentPDF(memberName, bulkData, 'all', undefined, undefined, undefined, membershipData);
+      setShowReceiptDropdown(false);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Gagal membuat PDF. Silakan coba lagi.');
+    } finally {
+      setGeneratingReceiptPDF(false);
+    }
+  };
+
+  const handleDownloadMonthPayments = async () => {
+    if (!memberName || allMatches.length === 0) return;
+    
+    try {
+      setGeneratingReceiptPDF(true);
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      const monthMatches = allMatches.filter(m => {
+        const mDate = new Date(m.matches.match_date);
+        return mDate.getMonth() + 1 === currentMonth && mDate.getFullYear() === currentYear && m.payment_status === 'paid';
+      });
+      
+      if (monthMatches.length === 0) {
+        alert(`Tidak ada pembayaran yang sudah lunas di bulan ini untuk diunduh.`);
+        return;
+      }
+
+      const bulkData = monthMatches.map(m => ({
+        matchNumber: m.matches.match_number,
+        matchDate: m.matches.match_date,
+        shuttlecockFee: m.amount_due,
+        attendanceFee: m.attendance_fee,
+        totalAmount: m.total_amount,
+        paymentStatus: m.payment_status as 'paid' | 'pending' | 'cancelled' | 'rejected' | 'revision',
+        paidAt: m.paid_at ?? undefined,
+      }));
+
+      // Include membership if it's paid and in the current month
+      const membershipData = myMembership && myMembership.payment_status === 'paid' && myMembership.month === currentMonth && myMembership.year === currentYear ? {
+        month: myMembership.month,
+        year: myMembership.year,
+        amount: myMembership.amount,
+        paymentStatus: myMembership.payment_status as 'paid' | 'pending' | 'cancelled' | 'rejected',
+        paidAt: myMembership.paid_at ?? undefined,
+      } : null;
+
+      await generateBulkPaymentPDF(memberName, bulkData, 'month', currentMonth, currentYear, undefined, membershipData);
+      setShowReceiptDropdown(false);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Gagal membuat PDF. Silakan coba lagi.');
+    } finally {
+      setGeneratingReceiptPDF(false);
+    }
+  };
+
+  const handleDownloadMatchPDF = async (match: MatchMember) => {
+    if (!memberName) return;
+    
+    try {
+      setGeneratingMatchPDF(match.id);
+      
+      await generatePaymentPDF({
+        matchNumber: match.matches.match_number,
+        matchDate: match.matches.match_date,
+        memberName: memberName,
+        shuttlecockFee: match.amount_due,
+        attendanceFee: match.attendance_fee,
+        totalAmount: match.total_amount,
+        paymentStatus: match.payment_status,
+        paidAt: match.paid_at ?? undefined,
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Gagal membuat PDF. Silakan coba lagi.');
+    } finally {
+      setGeneratingMatchPDF(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 p-4 lg:p-8 transition-colors duration-300">
@@ -816,11 +947,54 @@ export default function PembayaranPage() {
             >
               <HelpCircle className="w-5 h-5" />
             </button>
+
+            {/* Receipt Download Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowReceiptDropdown(!showReceiptDropdown)}
+                disabled={generatingReceiptPDF || allMatches.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 rounded-lg transition-colors font-bold border-2 border-transparent hover:border-green-400 shadow-sm text-white"
+                title="Download struk pembayaran"
+              >
+                <Download className={`w-5 h-5 ${generatingReceiptPDF ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Struk Pembayaran</span>
+                <span className="sm:hidden">Struk</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showReceiptDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showReceiptDropdown && !generatingReceiptPDF && (
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-lg shadow-lg z-50 overflow-hidden">
+                  <button
+                    onClick={handleDownloadAllPayments}
+                    className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-500/20 transition-colors border-b border-gray-200 dark:border-white/5 flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <div>
+                      <div className="font-semibold text-sm text-gray-900 dark:text-white">Semua Pembayaran</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">Download semua struk</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleDownloadMonthPayments}
+                    className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-500/20 transition-colors border-b border-gray-200 dark:border-white/5 flex items-center gap-2"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <div>
+                      <div className="font-semibold text-sm text-gray-900 dark:text-white">Bulan Ini</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">Download pembayaran bulan {new Date().getMonth() + 1}</div>
+                    </div>
+                  </button>
+                  <div className="px-4 py-2 bg-gray-50 dark:bg-zinc-800 text-xs text-gray-600 dark:text-gray-400 font-medium">
+                    💡 Pilih Pertandingan Spesifik di daftar bawah
+                  </div>
+                </div>
+              )}
+            </div>
             
             {!isPaymentExempt && (
               <button
                 onClick={() => setShowPaymentHelpModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-bold border-2 border-transparent hover:border-blue-400 shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-bold border-2 border-transparent hover:border-blue-400 shadow-sm text-white"
               >
                 <HelpCircle className="w-5 h-5" />
                 <span className="hidden sm:inline">Panduan Pembayaran</span>
@@ -1435,7 +1609,14 @@ export default function PembayaranPage() {
                               </a>
                             )}
                             {match.payment_status === 'paid' && (
-                              <span className="text-green-600 font-bold">✓ Lunas</span>
+                              <button
+                                onClick={() => handleDownloadMatchPDF(match)}
+                                disabled={generatingMatchPDF === match.id}
+                                className="flex items-center gap-1 text-green-600 hover:text-green-700 disabled:text-gray-400 font-bold transition-colors duration-300"
+                              >
+                                <Download className={`w-4 h-4 ${generatingMatchPDF === match.id ? 'animate-spin' : ''}`} />
+                                {generatingMatchPDF === match.id ? 'Membuat...' : 'Struk'}
+                              </button>
                             )}
                           </td>
                         )}
@@ -2090,188 +2271,59 @@ export default function PembayaranPage() {
                   <Building2 className="w-5 h-5 text-green-400" />
                   Rekening Pembayaran
                 </h4>
-                <p className="text-xs text-green-300 mb-2">Semua rekening a.n. <strong>Septian Dwiyo Rifalda</strong></p>
+                <p className="text-xs text-green-300 mb-2">Semua rekening a.n. <strong>{(bankInfo ?? DEFAULT_BANK_INFO).holderName}</strong></p>
                 <p className="text-xs text-amber-300 mb-3">💡 Pilih salah satu rekening untuk transfer</p>
                 
                 {/* Bank Accounts */}
                 <div className="space-y-2 text-sm mb-4">
-                  <div className="bg-white/5 rounded p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-300">Permata Bank</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-semibold font-mono">9937 296 220</span>
-                        <button
-                          onClick={() => copyToClipboard('9937 296 220')}
-                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
-                          title="Salin nomor rekening"
-                        >
-                          {copiedAccount === '9937 296 220' ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5 text-green-400" />
-                          )}
-                        </button>
+                  {(bankInfo ?? DEFAULT_BANK_INFO).banks.map((acct) => (
+                    <div key={acct.name} className="bg-white/5 rounded p-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-300">{acct.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-semibold font-mono">{acct.number}</span>
+                          <button
+                            onClick={() => copyToClipboard(acct.number)}
+                            className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                            title="Salin nomor rekening"
+                          >
+                            {copiedAccount === acct.number ? (
+                              <Check className="w-3.5 h-3.5 text-green-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5 text-green-400" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="bg-white/5 rounded p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-300">Jenius</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-semibold font-mono">90012823396</span>
-                        <button
-                          onClick={() => copyToClipboard('90012823396')}
-                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
-                          title="Salin nomor rekening"
-                        >
-                          {copiedAccount === '90012823396' ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5 text-green-400" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white/5 rounded p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-300">Mandiri</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-semibold font-mono">1700 1093 5998 56</span>
-                        <button
-                          onClick={() => copyToClipboard('1700 1093 5998 56')}
-                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
-                          title="Salin nomor rekening"
-                        >
-                          {copiedAccount === '1700 1093 5998 56' ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5 text-green-400" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white/5 rounded p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-300">BNI</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-semibold font-mono">0389 125635</span>
-                        <button
-                          onClick={() => copyToClipboard('0389 125635')}
-                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
-                          title="Salin nomor rekening"
-                        >
-                          {copiedAccount === '0389 125635' ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5 text-green-400" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white/5 rounded p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-300">Blu (BCA Digital)</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-semibold font-mono">0022 2208 9889</span>
-                        <button
-                          onClick={() => copyToClipboard('0022 2208 9889')}
-                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
-                          title="Salin nomor rekening"
-                        >
-                          {copiedAccount === '0022 2208 9889' ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5 text-green-400" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white/5 rounded p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-300">BCA</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-semibold font-mono">5871 788 087</span>
-                        <button
-                          onClick={() => copyToClipboard('5871 788 087')}
-                          className="p-1 hover:bg-green-500/20 rounded transition-colors"
-                          title="Salin nomor rekening"
-                        >
-                          {copiedAccount === '5871 788 087' ? (
-                            <Check className="w-3.5 h-3.5 text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5 text-green-400" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
                 {/* E-Wallets */}
                 <div className="border-t border-green-500/30 pt-3 mt-3">
                   <p className="text-xs text-green-300 font-semibold mb-2">E-Wallet:</p>
                   <div className="space-y-2 text-sm">
-                    <div className="bg-white/5 rounded p-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-zinc-300">DANA</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-semibold font-mono">0821 1113 4140</span>
-                          <button
-                            onClick={() => copyToClipboard('0821 1113 4140')}
-                            className="p-1 hover:bg-green-500/20 rounded transition-colors"
-                            title="Salin nomor"
-                          >
-                            {copiedAccount === '0821 1113 4140' ? (
-                              <Check className="w-3.5 h-3.5 text-green-400" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5 text-green-400" />
-                            )}
-                          </button>
+                    {(bankInfo ?? DEFAULT_BANK_INFO).ewallets.map((acct) => (
+                      <div key={acct.name} className="bg-white/5 rounded p-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-zinc-300">{acct.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-semibold font-mono">{acct.number}</span>
+                            <button
+                              onClick={() => copyToClipboard(acct.number)}
+                              className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                              title="Salin nomor"
+                            >
+                              {copiedAccount === acct.number ? (
+                                <Check className="w-3.5 h-3.5 text-green-400" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5 text-green-400" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="bg-white/5 rounded p-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-zinc-300">Gopay</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-semibold font-mono">0812 7073 272</span>
-                          <button
-                            onClick={() => copyToClipboard('0812 7073 272')}
-                            className="p-1 hover:bg-green-500/20 rounded transition-colors"
-                            title="Salin nomor"
-                          >
-                            {copiedAccount === '0812 7073 272' ? (
-                              <Check className="w-3.5 h-3.5 text-green-400" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5 text-green-400" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-white/5 rounded p-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-zinc-300">ShopeePay</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-semibold font-mono">0821 1113 4140</span>
-                          <button
-                            onClick={() => copyToClipboard('08211113414')}
-                            className="p-1 hover:bg-green-500/20 rounded transition-colors"
-                            title="Salin nomor"
-                          >
-                            {copiedAccount === '08211113414' ? (
-                              <Check className="w-3.5 h-3.5 text-green-400" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5 text-green-400" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>

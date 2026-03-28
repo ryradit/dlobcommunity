@@ -126,11 +126,21 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
       href: '/dashboard/analitik',
       icon: BarChart3,
     },
+    // {
+    //   label: 'Training Coach',
+    //   href: '/dashboard/training-coach',
+    //   icon: Trophy,
+    // },
     {
       label: 'Training Center',
       href: '/dashboard/training',
       icon: Dumbbell,
     },
+    // {
+    //   label: 'Coaching AI',
+    //   href: '/dashboard/coaching',
+    //   icon: MessageSquare,
+    // },
     {
       label: 'Pengaturan Profil',
       href: '/dashboard/settings',

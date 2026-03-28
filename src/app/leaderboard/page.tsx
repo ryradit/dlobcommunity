@@ -539,7 +539,7 @@ export default function LeaderboardPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 transition-colors duration-300">
 
       {/* ── Hero Banner with Rotating Background Images ─────────────── */}
-      <div className="relative py-32 px-6 text-white text-center shadow-lg overflow-hidden min-h-[32rem]">
+      <div className="relative px-3 sm:px-6 text-white text-center shadow-lg overflow-hidden py-12 sm:py-20 md:py-32 min-h-[24rem] sm:min-h-[28rem] md:min-h-[32rem]">
         {/* Rotating Background Images */}
         <div className="absolute inset-0 z-0">
           {[
@@ -569,31 +569,34 @@ export default function LeaderboardPage() {
         {/* Back button */}
         <button
           onClick={() => canGoBack ? router.back() : router.push('/dashboard')}
-          className="absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 text-white/90 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all backdrop-blur-sm"
+          className="absolute left-2 sm:left-4 top-2 sm:top-4 z-20 inline-flex items-center gap-1 sm:gap-1.5 text-white/90 hover:text-white text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all backdrop-blur-sm"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Kembali
+          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="hidden sm:inline">Kembali</span>
+          <span className="sm:hidden">Kembali</span>
         </button>
 
         {/* Content */}
         <div className="max-w-4xl mx-auto relative z-20">
-          <div className="flex items-center justify-center gap-4 mb-3">
-            <Trophy className="w-14 h-14 drop-shadow-lg" />
-            <h1 className="text-6xl font-extrabold tracking-tight drop-shadow-lg">DLOB Leaderboard</h1>
-            <Trophy className="w-14 h-14 drop-shadow-lg" />
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-3">
+            <Trophy className="w-8 h-8 sm:w-12 md:w-14 drop-shadow-lg" />
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight drop-shadow-lg text-center">DLOB Leaderboard</h1>
+            <Trophy className="w-8 h-8 sm:w-12 md:w-14 drop-shadow-lg" />
           </div>
-          <p className="text-white/90 text-xl font-medium drop-shadow-lg">Rekap performa & statistik seluruh member komunitas</p>
-          <div className="mt-3 inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                liveRefreshing ? 'bg-white animate-ping' : 'bg-green-300'
-              }`}
-            />
-            {liveRefreshing
-              ? 'Memperbarui...'
-              : 'Live'}
+          <p className="text-white/90 text-sm sm:text-base md:text-lg lg:text-xl font-medium drop-shadow-lg px-2 mb-3">Rekap performa & statistik seluruh member komunitas</p>
+          <div className="inline-flex flex-col sm:flex-row items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-2 rounded-full text-xs sm:text-sm font-medium">
+            <span className="flex items-center gap-2">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  liveRefreshing ? 'bg-white animate-ping' : 'bg-green-300'
+                }`}
+              />
+              {liveRefreshing
+                ? 'Memperbarui...'
+                : 'Live'}
+            </span>
             {lastUpdated && !liveRefreshing && (
-              <span className="text-white/60 text-xs">
+              <span className="text-white/60 text-xs hidden sm:inline">
                 · {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
@@ -608,12 +611,21 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
 
         {/* ── Championship Podium with Tabs ─────────────────────────── */}
         <div className="space-y-4">
-          {/* Tab Navigation */}
-          <div className="flex gap-2 pb-2 justify-center">
+          {/* Tab Navigation - Responsive */}
+          <div className="flex gap-1 sm:gap-2 pb-2 overflow-x-auto justify-start sm:justify-center scrollbar-hide">
+            <style>{`
+              .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+              }
+              .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+              }
+            `}</style>
             {[
               { id: 'pemain-terbaik', label: 'Pemain Terbaik', icon: '🏆' },
               { id: 'pemain-tak-terkalahkan', label: 'Tak Terkalahkan', icon: '🔥' },
@@ -624,14 +636,15 @@ export default function LeaderboardPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all duration-300 flex items-center gap-2 ${
+                className={`px-2 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm whitespace-nowrap transition-all duration-300 flex items-center gap-1 sm:gap-2 flex-shrink-0 ${
                   activeTab === tab.id
                     ? 'bg-purple-600 text-white shadow-lg'
                     : 'bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-zinc-600'
                 }`}
               >
-                <span>{tab.icon}</span>
-                {tab.label}
+                <span className="text-xs sm:text-sm">{tab.icon}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden text-xs">{tab.label.split(' ')[0]}</span>
               </button>
             ))}
           </div>
@@ -716,17 +729,17 @@ export default function LeaderboardPage() {
               return (
                 <div className="space-y-6">
                   {/* Partnership Podium */}
-                  <div className="flex items-flex-end justify-center gap-4 h-96">
+                  <div className="flex flex-col sm:flex-row items-flex-end justify-center gap-3 sm:gap-4 md:gap-6 min-h-[24rem] sm:min-h-[28rem] md:min-h-[400px] px-2 sm:px-4">
                     {/* 2nd Place */}
-                    <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-center w-full sm:w-auto">
                       {topPartnerships[1] ? (
                         <>
-                          <div className={`rounded-lg p-7 border-2 shadow-lg ${medalColors[1]} transition-all duration-300 w-56`}>
-                            <div className="flex justify-center mb-4">
-                              <span className="text-4xl">{medals[1]}</span>
+                          <div className={`rounded-lg p-4 sm:p-6 sm:p-7 border-2 shadow-lg ${medalColors[1]} transition-all duration-300 w-full sm:w-48 md:w-56`}>
+                            <div className="flex justify-center mb-3 sm:mb-4">
+                              <span className="text-3xl sm:text-4xl">{medals[1]}</span>
                             </div>
-                            <div className="flex justify-center gap-4 mb-5">
-                              <div className="relative w-16 h-36 bg-gray-500/10 rounded-lg overflow-hidden border border-gray-400">
+                            <div className="flex justify-center gap-3 sm:gap-4 mb-4 sm:mb-5">
+                              <div className="relative sm:w-16 sm:h-36 w-12 h-28 bg-gray-500/10 rounded-lg overflow-hidden border border-gray-400">
                                 <img
                                   key={`partnership-2nd-p1-${topPartnerships[1].player1}`}
                                   src={getChibiImagePath(topPartnerships[1].player1)}
@@ -737,7 +750,7 @@ export default function LeaderboardPage() {
                                   }}
                                 />
                               </div>
-                              <div className="relative w-16 h-36 bg-gray-500/10 rounded-lg overflow-hidden border border-gray-400">
+                              <div className="relative sm:w-16 sm:h-36 w-12 h-28 bg-gray-500/10 rounded-lg overflow-hidden border border-gray-400">
                                 <img
                                   key={`partnership-2nd-p2-${topPartnerships[1].player2}`}
                                   src={getChibiImagePath(topPartnerships[1].player2)}
@@ -749,15 +762,15 @@ export default function LeaderboardPage() {
                                 />
                               </div>
                             </div>
-                            <div className={`text-xs font-bold text-center ${textColors[1]} mb-1 line-clamp-2`}>
+                            <div className={`text-xs sm:text-sm font-bold text-center ${textColors[1]} mb-1 line-clamp-2`}>
                               {topPartnerships[1].player1} & {topPartnerships[1].player2}
                             </div>
                             <div className="text-xs text-gray-400 text-center line-clamp-2">
                               {topPartnerships[1].wins}W - {topPartnerships[1].winRate}%
                             </div>
                           </div>
-                          <div className="w-32 h-24 bg-gradient-to-b from-slate-600 to-slate-700 border-2 border-slate-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
-                            <span className="text-4xl font-black text-gray-300">2</span>
+                          <div className="w-full sm:w-48 md:w-56 h-16 sm:h-20 md:h-24 bg-gradient-to-b from-slate-600 to-slate-700 border-2 border-slate-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
+                            <span className="text-3xl sm:text-4xl font-black text-gray-300">2</span>
                           </div>
                         </>
                       ) : (
@@ -766,15 +779,15 @@ export default function LeaderboardPage() {
                     </div>
 
                     {/* 1st Place */}
-                    <div className="flex flex-col items-center mb-12">
+                    <div className="flex flex-col items-center mb-0 sm:mb-8 md:mb-12 w-full sm:w-auto order-first sm:order-none">
                       {topPartnerships[0] ? (
                         <>
-                          <div className={`rounded-lg p-8 border-3 shadow-2xl ${medalColors[0]} transition-all duration-300 w-64`}>
-                            <div className="flex justify-center mb-5">
-                              <span className="text-6xl drop-shadow-lg">{medals[0]}</span>
+                          <div className={`rounded-lg p-5 sm:p-7 sm:p-8 border-3 shadow-2xl ${medalColors[0]} transition-all duration-300 w-full sm:w-56 md:w-64`}>
+                            <div className="flex justify-center mb-3 sm:mb-5">
+                              <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-lg">{medals[0]}</span>
                             </div>
-                            <div className="flex justify-center gap-5 mb-6">
-                              <div className="relative w-20 h-44 bg-yellow-500/10 rounded-lg overflow-hidden border-2 border-yellow-500">
+                            <div className="flex justify-center gap-3 sm:gap-4 md:gap-5 mb-4 sm:mb-6">
+                              <div className="relative sm:w-20 sm:h-44 w-16 h-36 bg-yellow-500/10 rounded-lg overflow-hidden border-2 border-yellow-500">
                                 <img
                                   key={`partnership-1st-p1-${topPartnerships[0].player1}`}
                                   src={getChibiImagePath(topPartnerships[0].player1)}
@@ -785,7 +798,7 @@ export default function LeaderboardPage() {
                                   }}
                                 />
                               </div>
-                              <div className="relative w-20 h-44 bg-yellow-500/10 rounded-lg overflow-hidden border-2 border-yellow-500">
+                              <div className="relative sm:w-20 sm:h-44 w-16 h-36 bg-yellow-500/10 rounded-lg overflow-hidden border-2 border-yellow-500">
                                 <img
                                   key={`partnership-1st-p2-${topPartnerships[0].player2}`}
                                   src={getChibiImagePath(topPartnerships[0].player2)}
@@ -798,29 +811,29 @@ export default function LeaderboardPage() {
                               </div>
                             </div>
                             <div className="text-center">
-                              <div className="text-sm font-black text-yellow-300 line-clamp-2">{topPartnerships[0].player1} & {topPartnerships[0].player2}</div>
+                              <div className="text-sm sm:text-base font-black text-yellow-300 line-clamp-2">{topPartnerships[0].player1} & {topPartnerships[0].player2}</div>
                               <div className="text-xs text-gray-300">{topPartnerships[0].wins}W - {topPartnerships[0].winRate}%</div>
                             </div>
                           </div>
-                          <div className="w-40 h-40 bg-gradient-to-b from-yellow-600 to-yellow-700 border-2 border-yellow-800 rounded-t-none shadow-2xl flex items-center justify-center mt-0">
-                            <span className="text-6xl font-black text-yellow-200">1</span>
+                          <div className="w-full sm:w-56 md:w-64 h-20 sm:h-28 md:h-40 bg-gradient-to-b from-yellow-600 to-yellow-700 border-2 border-yellow-800 rounded-t-none shadow-2xl flex items-center justify-center mt-0">
+                            <span className="text-5xl sm:text-6xl md:text-7xl font-black text-yellow-200">1</span>
                           </div>
                         </>
                       ) : (
-                        <div className="text-center text-gray-400 py-4">-</div>
+                        <div className="text-center text-gray-400 py-4 sm:py-8">-</div>
                       )}
                     </div>
 
                     {/* 3rd Place */}
-                    <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-center w-full sm:w-auto">
                       {topPartnerships[2] ? (
                         <>
-                          <div className={`rounded-lg p-7 border-2 shadow-lg ${medalColors[2]} transition-all duration-300 w-56`}>
-                            <div className="flex justify-center mb-4">
-                              <span className="text-4xl">{medals[2]}</span>
+                          <div className={`rounded-lg p-4 sm:p-6 sm:p-7 border-2 shadow-lg ${medalColors[2]} transition-all duration-300 w-full sm:w-48 md:w-56`}>
+                            <div className="flex justify-center mb-3 sm:mb-4">
+                              <span className="text-3xl sm:text-4xl">{medals[2]}</span>
                             </div>
-                            <div className="flex justify-center gap-4 mb-5">
-                              <div className="relative w-16 h-36 bg-orange-500/10 rounded-lg overflow-hidden border border-orange-400">
+                            <div className="flex justify-center gap-3 sm:gap-4 mb-4 sm:mb-5">
+                              <div className="relative sm:w-16 sm:h-36 w-12 h-28 bg-orange-500/10 rounded-lg overflow-hidden border border-orange-400">
                                 <img
                                   key={`partnership-3rd-p1-${topPartnerships[2].player1}`}
                                   src={getChibiImagePath(topPartnerships[2].player1)}
@@ -831,7 +844,7 @@ export default function LeaderboardPage() {
                                   }}
                                 />
                               </div>
-                              <div className="relative w-16 h-36 bg-orange-500/10 rounded-lg overflow-hidden border border-orange-400">
+                              <div className="relative sm:w-16 sm:h-36 w-12 h-28 bg-orange-500/10 rounded-lg overflow-hidden border border-orange-400">
                                 <img
                                   key={`partnership-3rd-p2-${topPartnerships[2].player2}`}
                                   src={getChibiImagePath(topPartnerships[2].player2)}
@@ -843,15 +856,15 @@ export default function LeaderboardPage() {
                                 />
                               </div>
                             </div>
-                            <div className={`text-xs font-bold text-center ${textColors[2]} mb-1 line-clamp-2`}>
+                            <div className={`text-xs sm:text-sm font-bold text-center ${textColors[2]} mb-1 line-clamp-2`}>
                               {topPartnerships[2].player1} & {topPartnerships[2].player2}
                             </div>
                             <div className="text-xs text-gray-400 text-center line-clamp-2">
                               {topPartnerships[2].wins}W - {topPartnerships[2].winRate}%
                             </div>
                           </div>
-                          <div className="w-32 h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
-                            <span className="text-4xl font-black text-orange-200">3</span>
+                          <div className="w-full sm:w-48 md:w-56 h-12 sm:h-14 md:h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
+                            <span className="text-3xl sm:text-4xl font-black text-orange-200">3</span>
                           </div>
                         </>
                       ) : (
@@ -891,22 +904,22 @@ export default function LeaderboardPage() {
                   .float { animation: float 3s ease-in-out infinite; }
                 `}</style>
                 
-                {/* Podium Layout - Larger & More Prominent */}
-                <div className="flex items-flex-end justify-center gap-6 h-[500px] px-4">
+                {/* Podium Layout - Responsive */}
+                <div className="flex flex-col sm:flex-row items-flex-end justify-center gap-3 sm:gap-4 md:gap-6 min-h-[24rem] sm:min-h-[32rem] md:min-h-[500px] px-2 sm:px-4">
                   {/* 2nd Place - Left */}
-                  <div className="flex flex-col items-center group">
+                  <div className="flex flex-col items-center group w-full sm:w-auto">
                     {top3[1].player ? (
                       <>
                         {/* Card */}
-                        <div className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 w-36 hover:shadow-2xl hover:scale-105 ${medalColors[1]}`}>
+                        <div className={`rounded-xl p-3 sm:p-4 md:p-5 border-2 shadow-lg transition-all duration-300 w-full sm:w-32 md:w-36 hover:shadow-2xl hover:scale-105 ${medalColors[1]}`}>
                           {/* Medal Badge */}
-                          <div className="flex justify-center mb-3">
-                            <span className="text-4xl">{medals[1]}</span>
+                          <div className="flex justify-center mb-2 sm:mb-3">
+                            <span className="text-3xl sm:text-4xl">{medals[1]}</span>
                           </div>
 
                           {/* Avatar - Chibi Character */}
-                          <div className="flex justify-center mb-3">
-                            <div className="relative w-20 h-40 bg-gradient-to-b from-gray-500/10 to-gray-700/10 rounded-lg overflow-hidden border-2 border-gray-300">
+                          <div className="flex justify-center mb-2 sm:mb-3">
+                            <div className="relative sm:w-20 sm:h-40 w-16 h-32 bg-gradient-to-b from-gray-500/10 to-gray-700/10 rounded-lg overflow-hidden border-2 border-gray-300">
                               <img
                                 key={`${activeTab}-2nd-${top3[1].player?.name}`}
                                 src={getChibiImagePath(top3[1].player?.name || '')}
@@ -920,13 +933,13 @@ export default function LeaderboardPage() {
                           </div>
 
                           {/* Name */}
-                          <div className={`text-sm font-bold truncate text-center ${textColors[1]} mb-2`}>
+                          <div className={`text-xs sm:text-sm font-bold truncate text-center ${textColors[1]} mb-1 sm:mb-2`}>
                             {top3[1].player?.name}
                           </div>
 
                           {/* Achievement Badge */}
                           {activeTab !== 'paling-rajin' && (
-                            <div className="text-xs text-gray-300 text-center mb-2 font-semibold">
+                            <div className="text-xs text-gray-300 text-center mb-1 sm:mb-2 font-semibold">
                               {top3[1].player?.winRate || 0}% WR
                             </div>
                           )}
@@ -936,33 +949,33 @@ export default function LeaderboardPage() {
                         </div>
 
                         {/* Podium Beam */}
-                        <div className="w-36 h-28 bg-gradient-to-b from-gray-500 to-gray-600 border-2 border-gray-700 rounded-b-lg shadow-lg flex items-center justify-center">
-                          <span className="text-5xl font-black text-gray-300">2</span>
+                        <div className="w-full sm:w-32 md:w-36 h-16 sm:h-24 md:h-28 bg-gradient-to-b from-gray-500 to-gray-600 border-2 border-gray-700 rounded-b-lg shadow-lg flex items-center justify-center">
+                          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-300">2</span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center text-gray-400 py-8">-</div>
+                      <div className="text-center text-gray-400 py-4 sm:py-8">-</div>
                     )}
                   </div>
 
                   {/* 1st Place - Center High - CHAMPION */}
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center mb-0 sm:mb-8 md:mb-12 w-full sm:w-auto order-first sm:order-none">
                     {top3[0].player ? (
                       <>
                         {/* Champion Card with Glow & Float */}
                         <div className="pulse-glow float">
-                          <div className={`rounded-2xl p-6 border-4 shadow-2xl transition-all duration-300 w-48 hover:shadow-3xl hover:scale-110 relative bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-yellow-400 backdrop-blur-sm`}>
+                          <div className={`rounded-2xl p-4 sm:p-5 md:p-6 border-4 shadow-2xl transition-all duration-300 w-full sm:w-40 md:w-48 hover:shadow-3xl hover:scale-110 relative bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-yellow-400 backdrop-blur-sm`}>
                             {/* Crown Icon - Top Right */}
-                            <div className="absolute -top-3 -right-3 text-4xl drop-shadow-lg">👑</div>
+                            <div className="absolute -top-2 sm:-top-3 -right-2 sm:-right-3 text-3xl sm:text-4xl drop-shadow-lg">👑</div>
 
                             {/* Medal Badge */}
-                            <div className="flex justify-center mb-3">
-                              <span className="text-6xl drop-shadow-lg animate-bounce">{medals[0]}</span>
+                            <div className="flex justify-center mb-2 sm:mb-3">
+                              <span className="text-5xl sm:text-6xl drop-shadow-lg animate-bounce">{medals[0]}</span>
                             </div>
 
                             {/* Chibi Character - Champion */}
-                            <div className="flex justify-center mb-4">
-                              <div className="relative w-24 h-48 bg-gradient-to-b from-yellow-400/10 to-yellow-600/10 rounded-lg overflow-hidden border-2 border-yellow-400/50">
+                            <div className="flex justify-center mb-3 sm:mb-4">
+                              <div className="relative sm:w-24 sm:h-48 w-20 h-40 bg-gradient-to-b from-yellow-400/10 to-yellow-600/10 rounded-lg overflow-hidden border-2 border-yellow-400/50">
                                 <img
                                   key={`${activeTab}-1st-${top3[0].player?.name}`}
                                   src={getChibiImagePath(top3[0].player?.name || '')}
@@ -976,13 +989,13 @@ export default function LeaderboardPage() {
                             </div>
 
                             {/* Name - Bold & Gold */}
-                            <div className="text-center mb-2">
-                              <div className="text-xl font-black text-yellow-300 line-clamp-1 drop-shadow-lg">{top3[0].player?.name}</div>
+                            <div className="text-center mb-1 sm:mb-2">
+                              <div className="text-lg sm:text-xl font-black text-yellow-300 line-clamp-1 drop-shadow-lg">{top3[0].player?.name}</div>
                             </div>
 
                             {/* Achievement Signal */}
                             {activeTab !== 'paling-rajin' && (
-                              <div className="text-sm text-yellow-200 text-center mb-3 font-semibold">
+                              <div className="text-xs sm:text-sm text-yellow-200 text-center mb-2 sm:mb-3 font-semibold">
                                 {top3[0].player && top3[0].player.longestWinStreak >= 3 ? (
                                   <span>🔥 {top3[0].player.longestWinStreak}x Streak - ON FIRE</span>
                                 ) : (
@@ -991,7 +1004,7 @@ export default function LeaderboardPage() {
                               </div>
                             )}
                             {activeTab === 'paling-rajin' && (
-                              <div className="text-sm text-yellow-200 text-center mb-3 font-semibold">
+                              <div className="text-xs sm:text-sm text-yellow-200 text-center mb-2 sm:mb-3 font-semibold">
                                 {/* Empty space for consistency */}
                               </div>
                             )}
@@ -1002,30 +1015,30 @@ export default function LeaderboardPage() {
                         </div>
 
                         {/* Podium Beam - Prominent & Gold */}
-                        <div className="w-48 h-48 bg-gradient-to-b from-yellow-500 to-yellow-600 border-4 border-yellow-700 rounded-b-2xl shadow-2xl flex items-center justify-center relative">
-                          <span className="text-8xl font-black text-yellow-200 drop-shadow-lg">1</span>
+                        <div className="w-full sm:w-40 md:w-48 h-24 sm:h-32 md:h-48 bg-gradient-to-b from-yellow-500 to-yellow-600 border-4 border-yellow-700 rounded-b-2xl shadow-2xl flex items-center justify-center relative">
+                          <span className="text-6xl sm:text-7xl md:text-8xl font-black text-yellow-200 drop-shadow-lg">1</span>
                           <div className="absolute inset-0 rounded-b-2xl border-4 border-yellow-400/30 pointer-events-none"></div>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center text-gray-400 py-12">-</div>
+                      <div className="text-center text-gray-400 py-8 sm:py-12">-</div>
                     )}
                   </div>
 
                   {/* 3rd Place - Right */}
-                  <div className="flex flex-col items-center group">
+                  <div className="flex flex-col items-center group w-full sm:w-auto">
                     {top3[2].player ? (
                       <>
                         {/* Card */}
-                        <div className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 w-36 hover:shadow-2xl hover:scale-105 ${medalColors[2]}`}>
+                        <div className={`rounded-xl p-3 sm:p-4 md:p-5 border-2 shadow-lg transition-all duration-300 w-full sm:w-32 md:w-36 hover:shadow-2xl hover:scale-105 ${medalColors[2]}`}>
                           {/* Medal Badge */}
-                          <div className="flex justify-center mb-3">
-                            <span className="text-4xl">{medals[2]}</span>
+                          <div className="flex justify-center mb-2 sm:mb-3">
+                            <span className="text-3xl sm:text-4xl">{medals[2]}</span>
                           </div>
 
                           {/* Avatar - Chibi Character */}
-                          <div className="flex justify-center mb-3">
-                            <div className="relative w-20 h-40 bg-gradient-to-b from-orange-500/10 to-orange-700/10 rounded-lg overflow-hidden border-2 border-orange-300">
+                          <div className="flex justify-center mb-2 sm:mb-3">
+                            <div className="relative sm:w-20 sm:h-40 w-16 h-32 bg-gradient-to-b from-orange-500/10 to-orange-700/10 rounded-lg overflow-hidden border-2 border-orange-300">
                               <img
                                 key={`${activeTab}-3rd-${top3[2].player?.name}`}
                                 src={getChibiImagePath(top3[2].player?.name || '')}
@@ -1039,13 +1052,13 @@ export default function LeaderboardPage() {
                           </div>
 
                           {/* Name */}
-                          <div className={`text-sm font-bold truncate text-center ${textColors[2]} mb-2`}>
+                          <div className={`text-xs sm:text-sm font-bold truncate text-center ${textColors[2]} mb-1 sm:mb-2`}>
                             {top3[2].player?.name}
                           </div>
 
                           {/* Achievement Badge */}
                           {activeTab !== 'paling-rajin' && (
-                            <div className="text-xs text-orange-100 text-center mb-2 font-semibold">
+                            <div className="text-xs text-orange-100 text-center mb-1 sm:mb-2 font-semibold">
                               {top3[2].player?.winRate || 0}% WR
                             </div>
                           )}
@@ -1055,12 +1068,12 @@ export default function LeaderboardPage() {
                         </div>
 
                         {/* Podium Beam */}
-                        <div className="w-36 h-20 bg-gradient-to-b from-orange-500 to-orange-600 border-2 border-orange-700 rounded-b-lg shadow-lg flex items-center justify-center">
-                          <span className="text-5xl font-black text-orange-200">3</span>
+                        <div className="w-full sm:w-32 md:w-36 h-12 sm:h-16 md:h-20 bg-gradient-to-b from-orange-500 to-orange-600 border-2 border-orange-700 rounded-b-lg shadow-lg flex items-center justify-center">
+                          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-orange-200">3</span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center text-gray-400 py-8">-</div>
+                      <div className="text-center text-gray-400 py-4 sm:py-8">-</div>
                     )}
                   </div>
                 </div>
@@ -1071,8 +1084,8 @@ export default function LeaderboardPage() {
 
         {/* ── Disclaimer ─────────────────────────────────────────────── */}
         {firstMatchDate && (
-          <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-sm text-blue-800 dark:text-blue-200 mt-20">
-            <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-500" />
+          <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 px-3 sm:px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-xs sm:text-sm text-blue-800 dark:text-blue-200 mt-12 sm:mt-16 md:mt-20">
+            <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-500 flex-shrink-0" />
             <span>
               <strong>Catatan:</strong> Data dihitung sejak pertandingan pertama yang tercatat di sistem
               {' '}(<strong>{firstMatchDate}</strong>). Jika namamu tidak muncul atau total pertandingan
@@ -1085,22 +1098,23 @@ export default function LeaderboardPage() {
         {/* ── Full sortable member table ──────────────────────────────── */}
         {activeTab !== 'pasangan-terbaik' && (
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-colors duration-300">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center gap-2 flex-wrap">
+            <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-zinc-700 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2 flex-wrap">
               <Zap className="w-5 h-5 text-purple-500 shrink-0" />
-              <h2 className="font-bold text-gray-900 dark:text-white text-lg">Rekap Semua Member</h2>
-              <span className="ml-1 text-xs text-gray-400 dark:text-zinc-500">· Klik kolom untuk mengurutkan</span>
+              <h2 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg">Rekap Semua Member</h2>
+              <span className="text-xs text-gray-400 dark:text-zinc-500">· Klik kolom untuk mengurutkan</span>
               <span className="ml-auto text-xs text-gray-400 dark:text-zinc-500">{stats.length} member</span>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs sm:text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
-                    <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-10">#</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Member</th>
-                    <th className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400 flex items-center justify-end gap-1" onClick={() => toggleRecapSort('bestPlayerScore')}>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-8">#</th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Member</th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400 flex items-center justify-end gap-1" onClick={() => toggleRecapSort('bestPlayerScore')}>
                       <span className="inline-flex items-center justify-end gap-1">
-                        Points
+                        <span className="hidden sm:inline">Points</span>
+                        <span className="sm:hidden">Pts</span>
                         <span className={`text-xs ${recapSort === 'bestPlayerScore' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
                           {recapSort === 'bestPlayerScore' ? (recapDir === 'desc' ? '▼' : '▲') : '▼'}
                         </span>
@@ -1113,15 +1127,15 @@ export default function LeaderboardPage() {
                         className="ml-1 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
                         title="Informasi tentang sistem Points"
                       >
-                        <Info className="w-4 h-4" />
+                        <Info className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
                     </th>
                     <SortTh col="totalMatches"     label="Main" />
                     <SortTh col="wins"             label="M" />
                     <SortTh col="losses"           label="K" />
                     <SortTh col="winRate"          label="Win%" />
-                    <SortTh col="avgScore"         label="Avg Skor" className="hidden md:table-cell" />
-                    <SortTh col="longestWinStreak" label="Streak Max" className="hidden lg:table-cell" />
+                    <SortTh col="avgScore"         label="Avg" className="hidden md:table-cell" />
+                    <SortTh col="longestWinStreak" label="Max" className="hidden lg:table-cell" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-zinc-700/50">
@@ -1135,12 +1149,12 @@ export default function LeaderboardPage() {
                           i < 3 ? 'font-semibold' : ''
                         }`}
                       >
-                        <td className="px-4 py-3 text-gray-400 dark:text-zinc-500">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm">
                           {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                         </td>
-                        <td className="px-4 py-3 text-gray-900 dark:text-white">
-                          <div className="flex items-center gap-2">
-                            <span>{s.name}</span>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-white text-xs sm:text-sm">
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <span className="truncate">{s.name}</span>
                             {streakUp && s.currentStreak >= 3 && (
                               <span className="text-orange-500 dark:text-orange-400 text-xs font-bold whitespace-nowrap">
                                 🔥{s.currentStreak}
@@ -1153,8 +1167,8 @@ export default function LeaderboardPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm">
+                          <div className="flex items-center justify-end gap-1 sm:gap-2">
                             <span className="font-semibold text-gray-900 dark:text-white">
                               {(s as any).bestPlayerScore?.toFixed(1) || '-'}
                             </span>
@@ -1166,20 +1180,20 @@ export default function LeaderboardPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-600 dark:text-zinc-300">{s.totalMatches}</td>
-                        <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-semibold">{s.wins}</td>
-                        <td className="px-4 py-3 text-right text-red-500 dark:text-red-400 font-semibold">{s.losses}</td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-600 dark:text-zinc-300 text-xs sm:text-sm">{s.totalMatches}</td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-green-600 dark:text-green-400 font-semibold text-xs sm:text-sm">{s.wins}</td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-red-500 dark:text-red-400 font-semibold text-xs sm:text-sm">{s.losses}</td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm">
                           {s.totalMatches === 0 ? (
                             <span className="text-gray-300 dark:text-zinc-600">-</span>
                           ) : (
                             <span className={`font-bold ${winRateColor(s.winRate)}`}>{s.winRate}%</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-500 dark:text-zinc-400 hidden md:table-cell text-base">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-500 dark:text-zinc-400 hidden md:table-cell text-xs sm:text-base">
                           {s.totalMatches === 0 ? '-' : s.avgScore}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-500 dark:text-zinc-400 hidden lg:table-cell">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-500 dark:text-zinc-400 hidden lg:table-cell text-xs sm:text-sm">
                           {s.longestWinStreak > 0 ? `🔥 ${s.longestWinStreak}x` : '-'}
                         </td>
                       </tr>
@@ -1194,30 +1208,30 @@ export default function LeaderboardPage() {
         {/* ── Partnership Table (Pasangan Terbaik) ───────────────────── */}
         {activeTab === 'pasangan-terbaik' && (
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-colors duration-300">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center gap-2 flex-wrap">
+            <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-zinc-700 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2 flex-wrap">
               <Users className="w-5 h-5 text-purple-500 shrink-0" />
-              <h2 className="font-bold text-gray-900 dark:text-white text-lg">Semua Pasangan (Min. 2 Pertandingan)</h2>
-              <span className="ml-1 text-xs text-gray-400 dark:text-zinc-500">· Klik kolom untuk mengurutkan</span>
+              <h2 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg">Semua Pasangan (Min. 2 Pertandingan)</h2>
+              <span className="text-xs text-gray-400 dark:text-zinc-500">· Klik kolom untuk mengurutkan</span>
               <span className="ml-auto text-xs text-gray-400 dark:text-zinc-500">{sortedPartnerships.length} pasangan</span>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs sm:text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
-                    <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-10">#</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Pasangan</th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-8">#</th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Pasangan</th>
                     <th 
-                      className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
                       onClick={() => togglePartnershipSort('wins')}
                     >
                       <span className={`text-xs ${partnershipSort === 'wins' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
                         {partnershipSort === 'wins' ? (partnershipDir === 'desc' ? '▼' : '▲') : '▼'}
                       </span>
-                      {' '}Menang
+                      {' '}<span className="hidden sm:inline">Menang</span><span className="sm:hidden">M</span>
                     </th>
                     <th 
-                      className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
                       onClick={() => togglePartnershipSort('totalMatches')}
                     >
                       <span className={`text-xs ${partnershipSort === 'totalMatches' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
@@ -1226,7 +1240,7 @@ export default function LeaderboardPage() {
                       {' '}Main
                     </th>
                     <th 
-                      className="px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
                       onClick={() => togglePartnershipSort('winRate')}
                     >
                       <span className={`text-xs ${partnershipSort === 'winRate' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
@@ -1239,32 +1253,32 @@ export default function LeaderboardPage() {
                 <tbody className="divide-y divide-gray-100 dark:divide-zinc-700/50">
                   {sortedPartnerships.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400 dark:text-zinc-500">
+                      <td colSpan={5} className="px-3 sm:px-4 py-4 sm:py-8 text-center text-gray-400 dark:text-zinc-500 text-xs sm:text-sm">
                         Belum ada pasangan dengan minimal 5 pertandingan
                       </td>
                     </tr>
                   ) : (
                     sortedPartnerships.map((p, i) => (
                       <tr key={`${p.player1}|${p.player2}`} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
-                        <td className="px-4 py-3 text-gray-400 dark:text-zinc-500">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm">
                           {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                         </td>
-                        <td className="px-4 py-3 text-gray-900 dark:text-white">
-                          <div className="flex items-center gap-2">
-                            <div className="flex gap-1">
-                              <div className="w-6 h-6 rounded-full text-xs flex items-center justify-center bg-purple-600 text-white font-bold">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-white text-xs sm:text-sm">
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <div className="flex gap-0.5 sm:gap-1 flex-shrink-0">
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs flex items-center justify-center bg-purple-600 text-white font-bold">
                                 {p.player1.charAt(0)}
                               </div>
-                              <div className="w-6 h-6 rounded-full text-xs flex items-center justify-center bg-purple-600 text-white font-bold">
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs flex items-center justify-center bg-purple-600 text-white font-bold">
                                 {p.player2.charAt(0)}
                               </div>
                             </div>
-                            <span className="font-medium">{p.player1} & {p.player2}</span>
+                            <span className="font-medium truncate">{p.player1} & {p.player2}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-semibold">{p.wins}</td>
-                        <td className="px-4 py-3 text-right text-gray-600 dark:text-zinc-300">{p.totalMatches}</td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-green-600 dark:text-green-400 font-semibold text-xs sm:text-sm">{p.wins}</td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-600 dark:text-zinc-300 text-xs sm:text-sm">{p.totalMatches}</td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm">
                           <span className={`font-bold ${p.winRate >= 70 ? 'text-green-600 dark:text-green-400' : p.winRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-orange-600 dark:text-orange-400'}`}>
                             {p.winRate}%
                           </span>
@@ -1280,11 +1294,11 @@ export default function LeaderboardPage() {
 
         {/* ── Points Info Modal ───────────────────────────────────────── */}
         {showPointsInfo && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-xl max-w-md w-full animate-in fade-in-0 zoom-in-95 duration-200">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 dark:text-white text-lg flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-purple-500" />
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between">
+                <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg flex items-center gap-2">
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
                   Sistem Points
                 </h3>
                 <button
@@ -1294,16 +1308,16 @@ export default function LeaderboardPage() {
                   ✕
                 </button>
               </div>
-              <div className="px-6 py-4 space-y-4">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4 max-h-[60vh] overflow-y-auto">
                 <div>
-                  <p className="text-sm text-gray-700 dark:text-zinc-300 mb-3">
+                  <p className="text-xs sm:text-sm text-gray-700 dark:text-zinc-300 mb-2 sm:mb-3">
                     <strong>Points</strong> adalah skor komprehensif yang menggabungkan berbagai metrik performa pemain. Semakin tinggi points, semakin baik performa keseluruhan.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Komponen Perhitungan:</h4>
-                  <ul className="space-y-2 text-sm text-gray-600 dark:text-zinc-400">
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm">Komponen Perhitungan:</h4>
+                  <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-600 dark:text-zinc-400">
                     <li className="flex items-start gap-2">
                       <span className="font-semibold text-purple-600 dark:text-purple-400 min-w-fit">25%</span>
                       <span><strong>Total Pertandingan</strong> - Konsistensi & partisipasi aktif</span>
@@ -1331,16 +1345,16 @@ export default function LeaderboardPage() {
                   </ul>
                 </div>
 
-                <div className="bg-purple-50 dark:bg-zinc-800/50 rounded-lg p-3">
+                <div className="bg-purple-50 dark:bg-zinc-800/50 rounded-lg p-2 sm:p-3">
                   <p className="text-xs text-gray-700 dark:text-zinc-300">
                     💡 <strong>Tips:</strong> Klik kolom <strong>Points</strong> untuk mengurutkan pemain berdasarkan skor keseluruhan. Status 🔥 menunjukkan pemain sedang panas (streak positif).
                   </p>
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-gray-200 dark:border-zinc-700">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-zinc-700">
                 <button
                   onClick={() => setShowPointsInfo(false)}
-                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors text-sm sm:text-base"
                 >
                   Mengerti
                 </button>
@@ -1350,7 +1364,7 @@ export default function LeaderboardPage() {
         )}
 
         {/* ── Footer ──────────────────────────────────────────────────── */}
-        <div className="text-center text-xs text-gray-400 dark:text-zinc-600 pb-4">
+        <div className="text-center text-xs text-gray-400 dark:text-zinc-600 pb-3 sm:pb-4 px-3">
           DLOB Community · Data diperbarui otomatis · Statistik berdasarkan pertandingan yang diinput
         </div>
       </div>

@@ -30,6 +30,13 @@ interface MatchMember {
     match_date: string | null;
     created_at: string;
     shuttlecock_count: number;
+    team1_score: number | null;
+    team2_score: number | null;
+    winner: string | null;
+    team1_player1: string | null;
+    team1_player2: string | null;
+    team2_player1: string | null;
+    team2_player2: string | null;
   };
 }
 
@@ -123,7 +130,14 @@ export default function DashboardPage() {
                     match_number,
                     match_date,
                     created_at,
-                    shuttlecock_count
+                    shuttlecock_count,
+                    team1_score,
+                    team2_score,
+                    winner,
+                    team1_player1,
+                    team1_player2,
+                    team2_player1,
+                    team2_player2
                   )
                 `)
                 .ilike('member_name', queryName)
@@ -340,55 +354,110 @@ export default function DashboardPage() {
             ) : myMatches.length === 0 ? (
               <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">Belum ada pertandingan.</p>
             ) : (
-              <div className="space-y-3 pt-4">
-                {myMatches.slice(0, 10).map((match) => (
-                  <div
-                    key={match.id}
-                    className="flex items-center justify-between p-4 bg-gray-100 dark:bg-zinc-800/50 rounded-lg border-2 border-gray-300 dark:border-white/5 hover:border-gray-400 dark:hover:border-white/10 transition-colors shadow-sm duration-300"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-gray-900 dark:text-white transition-colors duration-300">
-                          Pertandingan #{match.matches.match_number}
-                        </h3>
-                        {match.has_membership && (
-                          <Award className="w-4 h-4 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
-                        )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                {myMatches.slice(0, 5).map((match) => {
+                  const team1Score = match.matches.team1_score;
+                  const team2Score = match.matches.team2_score;
+                  const winner = match.matches.winner;
+                  const hasScore = team1Score !== null && team2Score !== null;
+                  
+                  return (
+                    <div
+                      key={match.id}
+                      className="flex flex-col p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-900 rounded-xl border-2 border-gray-300 dark:border-white/10 hover:border-purple-400 dark:hover:border-purple-500/50 transition-all shadow-sm duration-300 hover:shadow-md"
+                    >
+                      {/* Header: Match Number & Badge */}
+                      <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-300 dark:border-white/10">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-base text-gray-900 dark:text-white transition-colors duration-300">
+                            Match #{match.matches.match_number}
+                          </h3>
+                          {match.has_membership && (
+                            <Award className="w-4 h-4 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">
+
+                      {/* Date */}
+                      <p className="text-xs text-gray-600 dark:text-zinc-400 font-semibold mb-3">
                         {new Date(match.matches.match_date ?? match.matches.created_at).toLocaleDateString('id-ID', {
                           day: 'numeric',
-                          month: 'long',
+                          month: 'short',
                           year: 'numeric',
                         })}
                       </p>
-                      <div className="flex gap-4 mt-2 text-xs text-gray-600 dark:text-zinc-400 font-semibold transition-colors duration-300">
-                        <span>Shuttlecock: Rp {match.amount_due.toLocaleString('id-ID')}</span>
-                        <span>
-                          Kehadiran: {match.attendance_fee > 0 
-                            ? `Rp ${match.attendance_fee.toLocaleString('id-ID')}`
-                            : 'Gratis'}
-                        </span>
+
+                      {/* Score Section - Prominent */}
+                      <div className="mb-4">
+                        {hasScore ? (
+                          <div className={`flex items-center justify-center py-3 px-3 rounded-lg ${
+                            winner === 'team1'
+                              ? 'bg-green-100 dark:bg-green-500/20'
+                              : 'bg-gray-200 dark:bg-zinc-700'
+                          } transition-colors`}>
+                            <div className="text-center">
+                              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                {team1Score}
+                                <span className="text-sm font-semibold mx-2 text-gray-700 dark:text-gray-300">-</span>
+                                {team2Score}
+                              </p>
+                              <p className={`text-xs font-semibold mt-1 ${
+                                winner === 'team1'
+                                  ? 'text-green-700 dark:text-green-300'
+                                  : 'text-gray-600 dark:text-gray-400'
+                              }`}>
+                                {winner === 'team1' ? '✓ Menang' : 'Kalah'}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center py-3 px-3 rounded-lg bg-gray-200 dark:bg-zinc-700">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Belum ada skor</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Cost Details */}
+                      <div className="space-y-2 mb-4 pb-4 border-b border-gray-300 dark:border-white/10">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-700 dark:text-zinc-400">Shuttlecock:</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">Rp {match.amount_due.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-700 dark:text-zinc-400">Kehadiran:</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            {match.attendance_fee > 0 
+                              ? `Rp ${match.attendance_fee.toLocaleString('id-ID')}`
+                              : 'Gratis'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Total & Status */}
+                      <div className="space-y-3">
+                        <div className="flex items-end justify-between">
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-600 dark:text-zinc-400 font-semibold mb-1">Total</p>
+                            <p className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">
+                              Rp {match.total_amount.toLocaleString('id-ID')}
+                            </p>
+                          </div>
+                          <span
+                            className={`inline-flex px-2 py-1 rounded-lg text-xs font-bold border transition-colors duration-300 whitespace-nowrap ml-2 ${
+                              match.payment_status === 'paid'
+                                ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-300 dark:border-transparent'
+                                : match.payment_status === 'cancelled'
+                                ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
+                                : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-transparent'
+                            }`}
+                          >
+                            {match.payment_status === 'paid' ? 'Lunas' : match.payment_status === 'cancelled' ? 'Dibatalkan' : 'Pending'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-gray-900 dark:text-white mb-1 transition-colors duration-300">
-                        Rp {match.total_amount.toLocaleString('id-ID')}
-                      </div>
-                      <span
-                        className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border-2 transition-colors duration-300 ${
-                          match.payment_status === 'paid'
-                            ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-300 dark:border-transparent'
-                            : match.payment_status === 'cancelled'
-                            ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
-                            : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-transparent'
-                        }`}
-                      >
-                        {match.payment_status === 'paid' ? 'Lunas' : match.payment_status === 'cancelled' ? 'Dibatalkan' : 'Pending'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

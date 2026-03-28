@@ -70,6 +70,7 @@ interface Product {
   preOrder: boolean;
   estimatedDelivery: string;
   comingSoon: boolean;
+  introductionVideos?: string[]; // New: video carousel for product introduction
 }
 
 const products: Product[] = [
@@ -89,6 +90,12 @@ const products: Product[] = [
     preOrder: true,
     estimatedDelivery: 'Januari 2026',
     comingSoon: false,
+    // Introductory videos - will shuffle automatically
+    introductionVideos: [
+      '/images/members/model/videomodel2.mp4',
+      '/images/members/model/videomodel3.mp4',
+      '/images/members/model/videomodel5.mp4',
+    ],
   },
   {
     id: 'noir',
@@ -97,7 +104,7 @@ const products: Product[] = [
     description: 'Jersey edisi spesial DLOB Noir dengan desain eksklusif bertema gelap dan modern. Terinspirasi dari sirkuit elektronik, cocok untuk tampilan sporty dan elegan.',
     badge: 'COMING SOON',
     badgeStyle: 'bg-white/20 text-white border border-white/30',
-    coverImage: '/images/members/model/hitam1.jpeg',
+    coverImage: null,
     coverBg: '#0d0d0d',
     colorVariants: circuitNoirColorVariants,
     material: 'Milano Standard',
@@ -106,10 +113,14 @@ const products: Product[] = [
     preOrder: true,
     estimatedDelivery: 'TBA',
     comingSoon: true,
+    // Introductory video - highlights the Noir edition
+    introductionVideos: [
+      '/images/members/model/videomodel4.mp4',
+    ],
   },
 ];
 
-// -- Auto-rotating catalog card ----------------------------------------------
+// -- Auto-rotating catalog card with video support ---------------------
 function CatalogCard({
   product,
   onOpen,
@@ -119,40 +130,49 @@ function CatalogCard({
   onOpen: (p: Product) => void;
   formatPrice: (n: number) => string;
 }) {
-  // Collect one representative image per variant (skip empty)
-  const allImages: string[] = Array.from(
-    new Set(
-      product.colorVariants
-        .map((v) => v.images[0])
-        .filter(Boolean) as string[],
-    ),
-  );
-  if (product.coverImage && !allImages.includes(product.coverImage)) {
-    allImages.unshift(product.coverImage);
+  // Prioritize introductory videos if available
+  const mediaItems = product.introductionVideos && product.introductionVideos.length > 0
+    ? product.introductionVideos
+    : Array.from(
+        new Set(
+          product.colorVariants
+            .map((v) => v.images[0])
+            .filter(Boolean) as string[],
+        ),
+      );
+  
+  if (product.coverImage && !mediaItems.includes(product.coverImage) && !product.introductionVideos) {
+    mediaItems.unshift(product.coverImage);
   }
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [visible, setVisible]     = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const isVideo = (src: string) => src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov');
+  const currentMedia = mediaItems[activeIdx] ?? null;
+  const currentIsVideo = currentMedia ? isVideo(currentMedia) : false;
 
   useEffect(() => {
-    if (allImages.length <= 1) return;
+    // Only auto-rotate if multiple items available
+    if (mediaItems.length <= 1) return;
+    
     const interval = setInterval(() => {
       // fade out
       setVisible(false);
       timerRef.current = setTimeout(() => {
-        setActiveIdx((i) => (i + 1) % allImages.length);
+        setActiveIdx((i) => (i + 1) % mediaItems.length);
         setVisible(true);
-      }, 500); // 500ms fade-out before swap
-    }, 10000);
+      }, 800); // Longer fade-out (800ms) for smoother transitions
+    }, currentIsVideo ? 9000 : 10000); // 9s for videos (includes fade), 10s for images
+    
     return () => {
       clearInterval(interval);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allImages.length]);
-
-  const currentSrc = allImages[activeIdx] ?? null;
+  }, [mediaItems.length, activeIdx]);
 
   return (
     <button
@@ -160,12 +180,25 @@ function CatalogCard({
       className="group text-left overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-gray-400"
     >
       <div className="relative w-full aspect-4/5 overflow-hidden" style={{ backgroundColor: product.coverBg }}>
-        {currentSrc ? (
+        {currentMedia ? (
           <div
-            className="absolute inset-0 transition-opacity duration-500"
+            className="absolute inset-0 transition-opacity duration-800"
             style={{ opacity: visible ? 1 : 0 }}
           >
-            <SmartCropImage src={currentSrc} alt={product.name} name={product.name} objectPositionOverride={currentSrc.includes('pink8') ? '20% 50%' : undefined} />
+            {currentIsVideo ? (
+              <video
+                key={currentMedia}
+                ref={videoRef}
+                src={currentMedia}
+                autoPlay
+                muted
+                playsInline
+                loop={mediaItems.length === 1} // Loop if only one video
+                className="w-full h-full object-cover bg-black"
+              />
+            ) : (
+              <SmartCropImage src={currentMedia} alt={product.name} name={product.name} objectPositionOverride={currentMedia.includes('pink8') ? '20% 50%' : undefined} />
+            )}
           </div>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -190,10 +223,10 @@ function CatalogCard({
             <div key={v.id} className="w-4 h-4 rounded-full border border-white/60 shadow" style={{ backgroundColor: v.bgColor }} />
           ))}
         </div>
-        {/* Dot indicators */}
-        {allImages.length > 1 && (
+        {/* Dot indicators - only show for multiple items */}
+        {mediaItems.length > 1 && (
           <div className="absolute bottom-16 left-0 right-0 flex justify-center gap-1.5 z-20">
-            {allImages.map((_, i) => (
+            {mediaItems.map((_, i) => (
               <div
                 key={i}
                 className={`rounded-full transition-all duration-300 ${
