@@ -64,6 +64,7 @@ interface MemberStat {
   currentStreak: number; // positive = win streak, negative = lose streak
   attendances: number;   // distinct play dates (sessions) attended
   totalScore: number;
+  lastMatchDate: string | null; // ISO date string - for inactivity detection
 }
 
 interface DuoStat {
@@ -78,6 +79,7 @@ interface DuoStat {
 // ─── Leaderboard categories ────────────────────────────────────────────────
 
 type Category =
+  | 'best-player'
   | 'attendance'
   | 'wins'
   | 'losses'
@@ -89,6 +91,7 @@ type Category =
   | 'duo';
 
 const CATEGORIES: { id: Category; label: string; icon: any; desc: string; color: string }[] = [
+  { id: 'best-player', label: 'Pemain Terbaik',        icon: Trophy,        desc: 'Skor tertinggi dari formula weighted (matches, wins, rate, avg, streak)',   color: 'from-yellow-500 to-amber-500'   },
   { id: 'attendance', label: 'Paling Rajin Hadir',    icon: Calendar,      desc: 'Pertemuan terbanyak · seri diputus oleh total pertandingan terbanyak',          color: 'from-blue-500 to-cyan-500'      },
   { id: 'wins',       label: 'Paling Banyak Menang',  icon: Trophy,        desc: 'Total kemenangan tertinggi · seri diputus oleh total pertandingan terbanyak', color: 'from-yellow-500 to-amber-500'   },
   { id: 'losses',     label: 'Paling Banyak Kalah',   icon: TrendingDown,  desc: 'Total kekalahan terbanyak',           color: 'from-red-500 to-rose-500'       },
@@ -123,6 +126,50 @@ function duoChemistry(winRate: number, total: number): { label: string; color: s
   return                                    { label: 'Masih Berkembang', color: 'bg-gray-100 dark:bg-zinc-700/50 text-gray-500 dark:text-zinc-400 border-gray-300 dark:border-zinc-600',           emoji: '🌱' };
 }
 
+// ─── Calculate weighted Pemain Terbaik score ───────────────────────────────
+
+function calculateBestPlayerScore(player: MemberStat, maxStats: {
+  matches: number;
+  wins: number;
+  avgScore: number;
+  streak: number;
+}): number {
+  // Normalize each metric to 0-100 scale
+  const normMatches = maxStats.matches > 0 ? (player.totalMatches / maxStats.matches) * 100 : 0;
+  const normWins = maxStats.wins > 0 ? (player.wins / maxStats.wins) * 100 : 0;
+  const normAvgScore = maxStats.avgScore > 0 ? (player.avgScore / maxStats.avgScore) * 100 : 0;
+  const normStreak = maxStats.streak > 0 ? (player.longestWinStreak / maxStats.streak) * 100 : 0;
+  const winRate = player.winRate; // Already 0-100
+
+  // Apply weights to all players
+  const weights = {
+    matches: 0.25,     // Participation & consistency
+    wins: 0.20,        // Win count
+    winRate: 0.20,     // Consistency ratio
+    avgScore: 0.15,    // Individual contribution per match
+    streak: 0.10,      // Peak performance
+  };
+
+  const score =
+    (normMatches * weights.matches) +
+    (normWins * weights.wins) +
+    (winRate * weights.winRate) +
+    (normAvgScore * weights.avgScore) +
+    (normStreak * weights.streak);
+
+  return Math.round(score * 10) / 10;
+}
+
+// Check if player is inactive (no match in last 7 days)
+function isPlayerInactive(player: MemberStat): boolean {
+  const INACTIVITY_DAYS = 7;
+  if (!player.lastMatchDate) return true;
+  
+  const lastMatch = new Date(player.lastMatchDate);
+  const daysSinceLastMatch = (Date.now() - lastMatch.getTime()) / (1000 * 60 * 60 * 24);
+  return daysSinceLastMatch > INACTIVITY_DAYS;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function MemberStatistikPage() {
@@ -132,8 +179,9 @@ export default function MemberStatistikPage() {
   const [duos, setDuos] = useState<DuoStat[]>([]);
   const [activeCategory, setActiveCategory] = useState<Category>('attendance');
   const [showAll, setShowAll] = useState(false);
-  const [recapSort, setRecapSort] = useState<'totalMatches' | 'wins' | 'losses' | 'winRate' | 'avgScore' | 'attendances' | 'longestWinStreak'>('totalMatches');
+  const [recapSort, setRecapSort] = useState<'name' | 'totalMatches' | 'wins' | 'losses' | 'winRate' | 'avgScore' | 'attendances' | 'longestWinStreak'>('totalMatches');
   const [recapDir, setRecapDir] = useState<'desc' | 'asc'>('desc');
+  const [recapSearch, setRecapSearch] = useState<string>('');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [liveRefreshing, setLiveRefreshing] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -237,6 +285,7 @@ export default function MemberStatistikPage() {
           currentStreak: 0,
           attendances: attendanceMap.get(name)?.size ?? 0,
           totalScore: 0,
+          lastMatchDate: null,
         });
       }
 
@@ -263,6 +312,10 @@ export default function MemberStatistikPage() {
           s.totalScore += score;
           if (won) s.wins++;
           if (lost) s.losses++;
+          // Track last match date - will be updated to the most recent match
+          if (match.match_date) {
+            s.lastMatchDate = new Date(match.match_date).toISOString().slice(0, 10);
+          }
 
           if (!playerMatchHistory.has(name)) playerMatchHistory.set(name, []);
           playerMatchHistory.get(name)!.push(won);
@@ -331,7 +384,7 @@ export default function MemberStatistikPage() {
             longestStreak,
           };
         })
-        .filter(d => d.total >= 3)
+        .filter(d => d.total >= 2)
         .sort((a, b) => b.winRate - a.winRate || b.total - a.total);
 
       setDuos(duoList);
@@ -348,6 +401,22 @@ export default function MemberStatistikPage() {
   function getSortedStats(): MemberStat[] {
     let sorted: MemberStat[];
     switch (activeCategory) {
+      case 'best-player': {
+        const maxStats = {
+          matches: Math.max(...stats.map(s => s.totalMatches), 1),
+          wins: Math.max(...stats.map(s => s.wins), 1),
+          avgScore: Math.max(...stats.map(s => s.avgScore), 1),
+          streak: Math.max(...stats.map(s => s.longestWinStreak), 1),
+        };
+        sorted = [...stats]
+          .filter(s => s.totalMatches > 0)
+          .map(s => ({
+            ...s,
+            bestPlayerScore: calculateBestPlayerScore(s, maxStats),
+          }))
+          .sort((a, b) => (b as any).bestPlayerScore - (a as any).bestPlayerScore);
+        break;
+      }
       case 'attendance': sorted = [...stats].sort((a, b) => b.attendances - a.attendances || b.totalMatches - a.totalMatches); break;
       case 'wins':       sorted = [...stats].sort((a, b) => b.wins - a.wins || b.avgScore - a.avgScore || b.longestWinStreak - a.longestWinStreak); break;
       case 'losses':     sorted = [...stats].sort((a, b) => b.losses - a.losses || a.avgScore - b.avgScore); break;
@@ -363,6 +432,7 @@ export default function MemberStatistikPage() {
 
   function getDisplayValue(s: MemberStat): string {
     switch (activeCategory) {
+      case 'best-player': return `${(s as any).bestPlayerScore?.toFixed(1) || '-'} pts`;
       case 'attendance': return `${s.attendances} pertemuan · ${s.totalMatches} main`;
       case 'wins':       return `${s.wins} menang`;
       case 'losses':     return `${s.losses} kalah`;
@@ -377,6 +447,7 @@ export default function MemberStatistikPage() {
 
   function getSubValue(s: MemberStat): string {
     switch (activeCategory) {
+      case 'best-player': return `${s.totalMatches} main · ${s.winRate}% WR`;
       case 'attendance': return `${s.wins}M ${s.losses}K · ${s.winRate > 0 ? s.winRate + '%' : '-'}`;
       case 'wins':       return `${s.totalMatches} main · ${s.winRate}% WR`;
       case 'losses':     return `${s.totalMatches} total main`;
@@ -393,14 +464,21 @@ export default function MemberStatistikPage() {
 
   const totalPlayers  = stats.length;
   const totalWithData = stats.filter(s => s.totalMatches > 0).length;
-  const topWinner     = [...stats].filter(s => s.totalMatches > 0).sort((a, b) => {
-    if (a.totalMatches !== b.totalMatches) return b.totalMatches - a.totalMatches;
-    if (a.wins !== b.wins) return b.wins - a.wins;
-    if (a.losses !== b.losses) return a.losses - b.losses; // lower losses is better
-    if (a.winRate !== b.winRate) return b.winRate - a.winRate;
-    if (a.avgScore !== b.avgScore) return b.avgScore - a.avgScore;
-    return b.longestWinStreak - a.longestWinStreak;
-  })[0];
+  
+  // Calculate topWinner using same formula as Pemain Terbaik leaderboard
+  const maxStats = {
+    matches: Math.max(...stats.map(s => s.totalMatches), 1),
+    wins: Math.max(...stats.map(s => s.wins), 1),
+    avgScore: Math.max(...stats.map(s => s.avgScore), 1),
+    streak: Math.max(...stats.map(s => s.longestWinStreak), 1),
+  };
+  const topWinner = [...stats]
+    .filter(s => s.totalMatches > 0)
+    .map(s => ({
+      ...s,
+      bestPlayerScore: calculateBestPlayerScore(s, maxStats),
+    }))
+    .sort((a, b) => (b as any).bestPlayerScore - (a as any).bestPlayerScore)[0];
   const mostActive    = [...stats].sort((a, b) => b.totalMatches - a.totalMatches)[0];
   const bestUnbeatenList = [...stats].filter(s => s.losses === 0 && s.wins > 0).sort((a, b) => b.wins - a.wins);
   const maxUnbeatenWins = bestUnbeatenList[0]?.wins ?? 0;
@@ -418,21 +496,32 @@ export default function MemberStatistikPage() {
     else { setRecapSort(col); setRecapDir('desc'); }
   }
 
-  const sortedRecap = [...stats].sort((a, b) => {
-    const mul = recapDir === 'desc' ? -1 : 1;
-    return mul * (a[recapSort] - b[recapSort]);
-  });
+  const sortedRecap = [...stats]
+    .sort((a, b) => {
+      const mul = recapDir === 'desc' ? -1 : 1;
+      if (recapSort === 'name') {
+        return mul * a.name.localeCompare(b.name);
+      }
+      return mul * ((a[recapSort] as number) - (b[recapSort] as number));
+    })
+    .filter(s => 
+      recapSearch === '' || 
+      s.name.toLowerCase().includes(recapSearch.toLowerCase())
+    );
 
   function SortTh({ col, label, className }: { col: typeof recapSort; label: string; className?: string }) {
     const active = recapSort === col;
+    const isLeftAligned = className?.includes('text-left');
     return (
       <th
-        className={`px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors hover:text-purple-600 dark:hover:text-purple-400 ${
+        className={`px-4 py-3 font-semibold cursor-pointer select-none group transition-colors hover:text-purple-600 dark:hover:text-purple-400 ${
+          isLeftAligned ? 'text-left' : 'text-right'
+        } ${
           active ? 'text-purple-600 dark:text-purple-400' : 'text-gray-600 dark:text-zinc-400'
         } ${className ?? ''}`}
         onClick={() => toggleRecapSort(col)}
       >
-        <span className="inline-flex items-center justify-end gap-1">
+        <span className={`inline-flex items-center gap-1 ${isLeftAligned ? 'justify-start' : 'justify-end'}`}>
           {label}
           <span className={`text-xs ${active ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
             {active ? (recapDir === 'desc' ? '▼' : '▲') : '▼'}
@@ -514,7 +603,7 @@ export default function MemberStatistikPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-tutorial="spotlight-cards">
           {[
             { label: 'Total Member',       value: totalPlayers,                      sub: `${totalWithData} punya data main`, icon: Users,      color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-500/10'    },
-            { label: 'Pemain Terbaik',      value: topWinner?.name ?? '-',            sub: `${topWinner?.winRate ?? 0}% · ${topWinner?.avgScore ?? 0} poin`,             icon: Trophy,     color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-500/10' },
+            { label: 'Pemain Terbaik',      value: topWinner?.name ?? '-',            sub: `${(topWinner as any)?.bestPlayerScore?.toFixed(1) ?? '-'} pts · ${topWinner?.winRate ?? 0}% WR`,             icon: Trophy,     color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-500/10' },
             { label: 'Paling Tak Terkalahkan', value: bestUnbeaten.map(m => m.name).join(', ') ?? '-',      sub: `${maxUnbeatenWins} M - 0 K`, icon: Flame,      color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
             { label: 'Streak Terpanjang',   value: kingStreak?.name ?? '-',           sub: `${kingStreak?.longestWinStreak ?? 0}x beruntun`, icon: Flame,      color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10'  },
           ].map(card => (
@@ -806,36 +895,66 @@ export default function MemberStatistikPage() {
 
         {/* ── Full member table ─────────────────────────────────────────────── */}
         <div className="bg-white dark:bg-zinc-900 rounded-xl border-2 border-gray-200 dark:border-transparent shadow-sm overflow-hidden transition-colors duration-300" data-tutorial="rekap-table">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-purple-500" />
-            <h2 className="font-bold text-gray-900 dark:text-white text-lg">Rekap Semua Member</h2>
-            <span className="ml-2 text-xs text-gray-400 dark:text-zinc-500">Klik kolom untuk mengurutkan</span>
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700 space-y-4">
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-purple-500" />
+              <h2 className="font-bold text-gray-900 dark:text-white text-lg">Rekap Semua Member</h2>
+              <span className="ml-2 text-xs text-gray-400 dark:text-zinc-500">Klik kolom untuk mengurutkan</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Cari nama member..."
+                value={recapSearch}
+                onChange={(e) => setRecapSearch(e.target.value)}
+                className="flex-1 px-4 py-2 text-sm bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              />
+              {recapSearch && (
+                <button
+                  onClick={() => setRecapSearch('')}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  Bersihkan
+                </button>
+              )}
+              <span className="text-xs text-gray-500 dark:text-zinc-500 whitespace-nowrap">{sortedRecap.length} hasil</span>
+            </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs sm:text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600 dark:text-zinc-400">#</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600 dark:text-zinc-400">Member</th>
-                  <SortTh col="attendances"      label="Pertemuan" />
+                  <th className="px-2 sm:px-4 py-3 text-left font-semibold text-gray-600 dark:text-zinc-400">#</th>
+                  <SortTh col="name"              label="Member" className="text-left" />
                   <SortTh col="totalMatches"     label="Main" />
                   <SortTh col="wins"             label="M" />
                   <SortTh col="losses"           label="K" />
                   <SortTh col="winRate"          label="Win%" />
-                  <SortTh col="avgScore"         label="Avg Skor" className="hidden md:table-cell" />
-                  <SortTh col="longestWinStreak" label="Streak Max" className="hidden lg:table-cell" />
+                  <SortTh col="avgScore"         label="Avg" className="hidden md:table-cell" />
+                  <SortTh col="longestWinStreak" label="Max" className="hidden lg:table-cell" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-zinc-700/50">
-                {sortedRecap.map((s, i) => (
+                {sortedRecap.map((s, i) => {
+                  const streakUp = s.currentStreak > 0;
+                  const streakDown = s.currentStreak < 0;
+                  return (
                     <tr key={s.name} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
-                      <td className="px-4 py-3 text-gray-400 dark:text-zinc-500">{i + 1}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{s.name}</td>
-                      <td className="px-4 py-3 text-right text-gray-600 dark:text-zinc-300">{s.attendances}</td>
-                      <td className="px-4 py-3 text-right text-gray-600 dark:text-zinc-300">{s.totalMatches}</td>
-                      <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-semibold">{s.wins}</td>
-                      <td className="px-4 py-3 text-right text-red-500 dark:text-red-400 font-semibold">{s.losses}</td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm">{i + 1}</td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-white text-xs sm:text-sm font-semibold">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <span className="truncate">{s.name}</span>
+                          {!isPlayerInactive(s) && streakUp && s.currentStreak >= 3 && (
+                            <span className="text-orange-500 dark:text-orange-400 text-xs font-bold whitespace-nowrap">
+                              🔥{s.currentStreak}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-600 dark:text-zinc-300 text-xs sm:text-sm">{s.totalMatches}</td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-green-600 dark:text-green-400 font-semibold text-xs sm:text-sm">{s.wins}</td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-red-500 dark:text-red-400 font-semibold text-xs sm:text-sm">{s.losses}</td>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm">
                         {s.totalMatches === 0 ? (
                           <span className="text-gray-300 dark:text-zinc-600">-</span>
                         ) : (
@@ -844,14 +963,15 @@ export default function MemberStatistikPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-500 dark:text-zinc-400 hidden md:table-cell">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-500 dark:text-zinc-400 hidden md:table-cell text-xs sm:text-sm">
                         {s.totalMatches === 0 ? '-' : s.avgScore}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-500 dark:text-zinc-400 hidden lg:table-cell">
-                        {s.longestWinStreak > 0 ? `🔥 ${s.longestWinStreak}x` : '-'}
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-500 dark:text-zinc-400 hidden lg:table-cell text-xs sm:text-sm">
+                        {s.longestWinStreak > 0 ? `${s.longestWinStreak}x` : '-'}
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

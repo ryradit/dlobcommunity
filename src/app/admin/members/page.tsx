@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
-import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle, Ban, X, FlaskConical, Info } from 'lucide-react';
+import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle, Ban, X, FlaskConical, Info, MoreVertical, ArrowRight } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -72,8 +72,28 @@ export default function AdminMembersPage() {
   // Label info modal
   const [showLabelInfo, setShowLabelInfo] = useState(false);
 
+  // Migration states
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [migrationSource, setMigrationSource] = useState<Member | null>(null);
+  const [migrationTarget, setMigrationTarget] = useState<string>('');
+  const [migratingMember, setMigratingMember] = useState(false);
+
+  // Dropdown menu state
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
   // Test account filter
   const [hideTestAccounts, setHideTestAccounts] = useState(false);
+
+  // Duplicate detection states
+  const [duplicates, setDuplicates] = useState<Array<{
+    member1: Member;
+    member2: Member;
+    similarityScore: number;
+    reason: string;
+    aiConfidence?: string;
+  }>>([]);
+  const [showDuplicateAlert, setShowDuplicateAlert] = useState(true);
+  const [detectingDuplicates, setDetectingDuplicates] = useState(false);
 
   // Fix temp accounts
   const [fixingTemp, setFixingTemp] = useState(false);
@@ -103,6 +123,22 @@ export default function AdminMembersPage() {
   useEffect(() => {
     fetchMembers();
   }, [pathname]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      // Check if click is outside any dropdown
+      if (!target.closest('.dropdown-menu')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    if (openDropdownId) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openDropdownId]);
 
   async function fetchMembers() {
     try {
@@ -184,6 +220,42 @@ export default function AdminMembersPage() {
       console.error('Error fetching members:', error);
     } finally {
       setLoading(false);
+      // Detect duplicates after loading members
+      detectDuplicates();
+    }
+  }
+
+  // Detect duplicate members using AI
+  async function detectDuplicates() {
+    try {
+      setDetectingDuplicates(true);
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        console.log('No session token for duplicate detection');
+        return;
+      }
+
+      const response = await fetch('/api/admin/detect-duplicate-members', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setDuplicates(data.duplicates || []);
+        setShowDuplicateAlert(data.duplicates && data.duplicates.length > 0);
+      } else {
+        console.error('Duplicate detection failed:', data.error);
+      }
+    } catch (error) {
+      console.error('Error detecting duplicates:', error);
+    } finally {
+      setDetectingDuplicates(false);
     }
   }
 
@@ -440,6 +512,74 @@ export default function AdminMembersPage() {
     }
   }
 
+  // Migrate member data handler
+  async function handleMigrateMember() {
+    if (!migrationSource || !migrationTarget) {
+      alert('Pilih member sumber dan target');
+      return;
+    }
+
+    if (migrationSource.id === migrationTarget) {
+      alert('Member sumber dan target tidak bisa sama');
+      return;
+    }
+
+    if (!confirm(
+      `Transfer SEMUA data pertandingan dari ${migrationSource.full_name} ke member target?\n\n` +
+      `⚠️ PERINGATAN: Operasi ini tidak bisa dibatalkan!\n` +
+      `Semua pertandingan ${migrationSource.full_name} akan pindah ke member target.`
+    )) {
+      return;
+    }
+
+    setMigratingMember(true);
+    try {
+      // Get current user's session token
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      if (authError || !session?.access_token) {
+        throw new Error('Session token tidak ditemukan. Silakan login kembali.');
+      }
+
+      const response = await fetch('/api/admin/migrate-member-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          sourceMemberId: migrationSource.id,
+          sourceMemberName: migrationSource.full_name,
+          targetMemberId: migrationTarget,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert(
+          `✅ Migrasi berhasil!\n\n` +
+          `- ${data.migratedCount} pertandingan dipindahkan\n` +
+          `- Dari: ${migrationSource.full_name}\n` +
+          `- Ke: Member target\n` +
+          `- Member sumber sekarang tidak punya pertandingan lagi`
+        );
+        setShowMigrationModal(false);
+        setMigrationSource(null);
+        setMigrationTarget('');
+        setOpenDropdownId(null);
+        queryCache.clear();
+        await fetchMembers();
+      } else {
+        alert('Gagal melakukan migrasi: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error migrating member:', error);
+      alert('Gagal melakukan migrasi: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setMigratingMember(false);
+    }
+  }
+
   const filteredMembers = members.filter(member => {
     const matchesSearch = member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -484,6 +624,71 @@ export default function AdminMembersPage() {
           </button>
         </div>
       </div>
+
+      {/* Duplicate Detection Alert */}
+      {showDuplicateAlert && duplicates.length > 0 && (
+        <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg transition-colors duration-300">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <h3 className="font-semibold text-amber-900 dark:text-amber-200">
+                  ⚠️ Kemungkinan Duplikat Ditemukan ({duplicates.length})
+                </h3>
+              </div>
+              <p className="text-sm text-amber-800 dark:text-amber-300 mb-3">
+                Sistem AI telah mendeteksi {duplicates.length} pasangan member dengan nama yang sangat mirip. Periksa apakah mereka adalah akun duplikat dari orang yang sama.
+              </p>
+              
+              {/* Duplicate List */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {duplicates.slice(0, 5).map((dup, idx) => (
+                  <div key={idx} className="flex items-start justify-between gap-3 bg-white dark:bg-zinc-900 p-3 rounded border border-amber-200 dark:border-amber-500/20">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        "{dup.member1.full_name}" ↔ "{dup.member2.full_name}"
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1">
+                        {dup.reason} • {dup.similarityScore}% kesamaan
+                      </p>
+                      {dup.aiConfidence && (
+                        <span className={`inline-block text-xs px-2 py-1 rounded mt-1 ${
+                          dup.aiConfidence === 'LIKELY_DUPLICATE'
+                            ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300'
+                            : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                        }`}>
+                          {dup.aiConfidence === 'LIKELY_DUPLICATE' ? 'Kemungkinan Tinggi' : 'Kemungkinan Sedang'}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMigrationSource(dup.member1);
+                        setMigrationTarget(dup.member2.id);
+                        setShowMigrationModal(true);
+                      }}
+                      className="px-3 py-1.5 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium whitespace-nowrap transition-colors"
+                    >
+                      Periksa
+                    </button>
+                  </div>
+                ))}
+                {duplicates.length > 5 && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400 text-center py-2">
+                    +{duplicates.length - 5} pasangan lainnya
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowDuplicateAlert(false)}
+              className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -733,37 +938,11 @@ export default function AdminMembersPage() {
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-1.5 sm:gap-2">
-                        {/* Test Label Button */}
-                        <button
-                          onClick={() => handleToggleTestLabel(member)}
-                          className={`p-1 sm:p-1.5 rounded-lg transition-colors border ${
-                            member.is_test_account
-                              ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border-orange-500/30'
-                              : 'bg-orange-500/10 text-orange-400/50 hover:bg-orange-500/20 border-orange-500/20'
-                          }`}
-                          title={member.is_test_account ? 'Hapus Label Tes' : 'Tandai Akun Tes'}
-                        >
-                          <FlaskConical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
-
-                        {/* VIP/Payment Exemption Button */}
-                        <button
-                          onClick={() => openExemptionModal(member)}
-                          className={`p-1 sm:p-1.5 rounded-lg transition-colors border ${
-                            member.is_payment_exempt
-                              ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border-purple-500/30'
-                              : 'bg-purple-500/10 text-purple-400/50 hover:bg-purple-500/20 border-purple-500/20'
-                          }`}
-                          title={member.is_payment_exempt ? 'VIP - Hapus Akses Gratis' : 'Berikan Akses Gratis (VIP)'}
-                        >
-                          <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
-
+                        {/* Detail View Button */}
                         <button
                           onClick={() => {
                             setSelectedMember(member);
                             setShowDetailModal(true);
-                            // Fetch exemption history if member has VIP or might have history
                             fetchExemptionHistory(member.id);
                           }}
                           className="p-1 sm:p-1.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors border border-purple-500/30"
@@ -771,25 +950,85 @@ export default function AdminMembersPage() {
                         >
                           <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
-                        <button
-                          onClick={() => {
-                            setSelectedMember(member);
-                            setShowManageModal(true);
-                          }}
-                          className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors text-xs sm:text-sm font-medium border border-blue-500/30 flex items-center gap-1 sm:gap-1.5"
-                        >
-                          <UserCog className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          <span className="hidden sm:inline">Kelola</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedMember(member);
-                            setShowDeleteModal(true);
-                          }}
-                          className="p-1 sm:p-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors border border-red-500/30"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
+
+                        {/* Dropdown Menu for Additional Actions */}
+                        <div className="relative dropdown-menu">
+                          <button
+                            onClick={() => setOpenDropdownId(openDropdownId === member.id ? null : member.id)}
+                            className="p-1 sm:p-1.5 rounded-lg bg-gray-500/20 text-gray-400 hover:bg-gray-500/30 transition-colors border border-gray-500/30"
+                            title="Kelola Anggota"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          </button>
+
+                          {/* Dropdown Menu Items */}
+                          {openDropdownId === member.id && (
+                            <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-lg shadow-lg z-40">
+                              {/* Toggle Account Status */}
+                              <button
+                                onClick={() => {
+                                  handleToggleStatus(member);
+                                  setOpenDropdownId(null);
+                                }}
+                                disabled={actionLoading}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-zinc-800 border-b border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                              >
+                                <Shield className="w-4 h-4 text-blue-500" />
+                                {member.is_active ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
+                              </button>
+
+                              {/* Test Account */}
+                              <button
+                                onClick={() => {
+                                  handleToggleTestLabel(member);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-zinc-800 border-b border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300"
+                              >
+                                <FlaskConical className="w-4 h-4 text-orange-400" />
+                                {member.is_test_account ? 'Hapus Label Tes' : 'Tandai Akun Tes'}
+                              </button>
+
+                              {/* VIP Access */}
+                              <button
+                                onClick={() => {
+                                  openExemptionModal(member);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-zinc-800 border-b border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300"
+                              >
+                                <Award className="w-4 h-4 text-pink-400" />
+                                {member.is_payment_exempt ? 'Hapus Akses VIP' : 'Berikan Akses VIP'}
+                              </button>
+
+                              {/* Migrate Data */}
+                              <button
+                                onClick={() => {
+                                  setMigrationSource(member);
+                                  setShowMigrationModal(true);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-zinc-800 border-b border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300"
+                              >
+                                <ArrowRight className="w-4 h-4 text-blue-400" />
+                                Migrasi Data ke Member Lain
+                              </button>
+
+                              {/* Delete Account */}
+                              <button
+                                onClick={() => {
+                                  setSelectedMember(member);
+                                  setShowDeleteModal(true);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Hapus Akun
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -1021,6 +1260,90 @@ export default function AdminMembersPage() {
                 className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Menghapus...' : 'Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Migration Modal */}
+      {showMigrationModal && migrationSource && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-500/30 rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl transition-colors duration-300">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <ArrowRight className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Migrasi Data Member</h3>
+                <p className="text-sm text-gray-600 dark:text-zinc-400 transition-colors duration-300">Pindahkan data pertandingan</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              {/* Source Member */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                  Dari Member (Sumber):
+                </label>
+                <div className="bg-gray-100 dark:bg-zinc-800 rounded-lg p-3 border border-gray-200 dark:border-white/10">
+                  <p className="text-gray-900 dark:text-white font-medium">{migrationSource.full_name}</p>
+                  <p className="text-xs text-gray-500 dark:text-zinc-400">{migrationSource.email}</p>
+                </div>
+              </div>
+
+              {/* Target Member */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                  Ke Member (Target):
+                </label>
+                <select
+                  value={migrationTarget}
+                  onChange={(e) => setMigrationTarget(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-colors"
+                >
+                  <option value="">Pilih member target...</option>
+                  {members
+                    .filter(m => m.id !== migrationSource.id)
+                    .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+                    .map(member => (
+                      <option key={member.id} value={member.id}>
+                        {member.full_name} ({member.email})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Warning */}
+              <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+                <p className="text-sm text-orange-600 dark:text-orange-400 font-medium mb-2">
+                  ⚠️ Perhatian:
+                </p>
+                <ul className="text-xs text-orange-600 dark:text-orange-400 space-y-1">
+                  <li>• Semua pertandingan {migrationSource.full_name} akan dipindahkan</li>
+                  <li>• Data tidak bisa dikembalikan setelah migrasi</li>
+                  <li>• Jumlah pertandingan akan bertambah untuk member target</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowMigrationModal(false);
+                  setMigrationSource(null);
+                  setMigrationTarget('');
+                }}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-white/15 transition-colors duration-300 font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleMigrateMember}
+                disabled={migratingMember || !migrationTarget}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium disabled:opacity-50"
+              >
+                {migratingMember ? 'Memproses...' : 'Migrasi'}
               </button>
             </div>
           </div>

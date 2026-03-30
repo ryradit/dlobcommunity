@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
-  Trophy, Calendar, Flame, Users, RefreshCw, Zap, Info, ArrowLeft,
+  Trophy, Calendar, Flame, Users, RefreshCw, Zap, Info, ArrowLeft, ArrowUp, ArrowDown,
 } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -21,6 +21,10 @@ interface MemberStat {
   attendances: number;
   totalScore: number;
   lastMatchDate: string | null; // ISO date string
+  scoreChange?: number; // Score delta from yesterday
+  previousScore?: number; // Yesterday's score
+  rankChange?: number; // Rank position change from yesterday (+1 = improved, -1 = declined)
+  previousRank?: number; // Yesterday's rank
 }
 
 interface PartnershipStat {
@@ -31,6 +35,7 @@ interface PartnershipStat {
   losses: number;
   winRate: number;
   combinedScore: number;
+  longestStreak: number; // longest consecutive wins as a partnership
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -127,6 +132,7 @@ export default function LeaderboardPage() {
   const [partnerships, setPartnerships] = useState<PartnershipStat[]>([]);
   const [partnershipSort, setPartnershipSort] = useState<'totalMatches' | 'wins' | 'winRate'>('winRate');
   const [partnershipDir, setPartnershipDir] = useState<'desc' | 'asc'>('desc');
+  const [scoreHistory, setScoreHistory] = useState<Map<string, { yesterdayScore: number }>>(new Map());
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const carouselRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -307,8 +313,103 @@ export default function LeaderboardPage() {
         bestPlayerScore: calculateBestPlayerScore(s, maxStats),
       }));
 
-      // Calculate partnership statistics
-      const partnershipMap = new Map<string, PartnershipStat>();
+      // Fetch previous match week's score history for rank/score comparison
+      // Get all unique snapshot dates, ordered descending
+      const { data: snapshotDates } = await supabase
+        .from('score_history')
+        .select('snapshot_date')
+        .order('snapshot_date', { ascending: false })
+        .limit(20); // Get last 20 snapshots to find previous week
+
+      let previousWeekDateStr: string | null = null;
+      if (snapshotDates && snapshotDates.length > 0) {
+        // Get the most recent snapshot (likely today or last match day)
+        const lastSnapshotDate = snapshotDates[0].snapshot_date;
+        // Find a snapshot from more than 2 days ago (previous week)
+        const lastDate = new Date(lastSnapshotDate);
+        for (const snapshot of snapshotDates) {
+          const snapshotDate = new Date(snapshot.snapshot_date);
+          const daysDiff = (lastDate.getTime() - snapshotDate.getTime()) / (1000 * 60 * 60 * 24);
+          if (daysDiff >= 3) { // At least 3 days ago = previous match week
+            previousWeekDateStr = snapshot.snapshot_date;
+            break;
+          }
+        }
+      }
+
+      // If no snapshot from previous week, try getting the oldest one
+      if (!previousWeekDateStr && snapshotDates && snapshotDates.length > 1) {
+        previousWeekDateStr = snapshotDates[snapshotDates.length - 1].snapshot_date;
+      }
+
+      const { data: previousWeekSnapshotData } = previousWeekDateStr
+        ? await supabase
+            .from('score_history')
+            .select('member_name, best_player_score')
+            .eq('snapshot_date', previousWeekDateStr)
+        : { data: null };
+
+      // Build previous week's ranking map
+      const previousWeekScoresMap = new Map<string, { bestPlayerScore: number }>();
+      if (previousWeekSnapshotData) {
+        for (const snapshot of previousWeekSnapshotData) {
+          previousWeekScoresMap.set(snapshot.member_name, {
+            bestPlayerScore: snapshot.best_player_score ?? 0,
+          });
+        }
+      }
+
+      // Calculate rank changes by comparing positions
+      const sortedByBestScore = [...statsWithScores].sort((a, b) => {
+        const scoreA = (a as any).bestPlayerScore || 0;
+        const scoreB = (b as any).bestPlayerScore || 0;
+        return scoreB - scoreA; // desc
+      });
+
+      const todayRankMap = new Map<string, number>();
+      sortedByBestScore.forEach((stat, idx) => {
+        todayRankMap.set(stat.name, idx + 1);
+      });
+
+      // Build previous week's ranking
+      const previousWeekRankMap = new Map<string, number>();
+      const previousWeekStats = [...statsWithScores].map(stat => ({
+        ...stat,
+        bestPlayerScore: previousWeekScoresMap.get(stat.name)?.bestPlayerScore ?? 0,
+      }));
+      const sortedPreviousWeekByBestScore = previousWeekStats.sort((a, b) => {
+        const scoreA = a.bestPlayerScore || 0;
+        const scoreB = b.bestPlayerScore || 0;
+        return scoreB - scoreA; // desc
+      });
+      sortedPreviousWeekByBestScore.forEach((stat, idx) => {
+        previousWeekRankMap.set(stat.name, idx + 1);
+      });
+
+      // Add rank and score change to stats
+      const statsWithChanges = statsWithScores.map(stat => {
+        const previousData = previousWeekScoresMap.get(stat.name);
+        const previousBestPlayerScore = previousData?.bestPlayerScore ?? 0;
+        const currentBestPlayerScore = (stat as any).bestPlayerScore ?? 0;
+        const scoreChange = currentBestPlayerScore - previousBestPlayerScore;
+        const todayRank = todayRankMap.get(stat.name) ?? 999;
+        const previousRank = previousWeekRankMap.get(stat.name) ?? 999;
+        const rankChange = previousRank - todayRank; // positive = improved (lower rank = better)
+
+        return {
+          ...stat,
+          scoreChange,
+          previousScore: previousBestPlayerScore,
+          rankChange,
+          previousRank: previousRank,
+        };
+      });
+
+      // Calculate partnership statistics with streak tracking
+      const partnershipMap = new Map<string, {
+        data: PartnershipStat;
+        history: boolean[]; // track win/loss history for streak calculation
+      }>();
       for (const match of matches) {
         // Team 1 partnership
         const team1_p1 = match.team1_player1?.trim();
@@ -317,21 +418,28 @@ export default function LeaderboardPage() {
           const key = [team1_p1, team1_p2].sort().join('|');
           if (!partnershipMap.has(key)) {
             partnershipMap.set(key, {
-              player1: [team1_p1, team1_p2].sort()[0],
-              player2: [team1_p1, team1_p2].sort()[1],
-              totalMatches: 0,
-              wins: 0,
-              losses: 0,
-              winRate: 0,
-              combinedScore: 0,
+              data: {
+                player1: [team1_p1, team1_p2].sort()[0],
+                player2: [team1_p1, team1_p2].sort()[1],
+                totalMatches: 0,
+                wins: 0,
+                losses: 0,
+                winRate: 0,
+                combinedScore: 0,
+                longestStreak: 0,
+              },
+              history: [],
             });
           }
-          const p = partnershipMap.get(key)!;
+          const entry = partnershipMap.get(key)!;
+          const p = entry.data;
           p.totalMatches++;
           const score1 = match.team1_score ?? 0;
           const score2 = match.team2_score ?? 0;
           p.combinedScore += score1;
-          if (match.winner === 'team1') p.wins++;
+          const won = match.winner === 'team1';
+          entry.history.push(won);
+          if (won) p.wins++;
           else if (match.winner === 'team2') p.losses++;
         }
 
@@ -342,34 +450,55 @@ export default function LeaderboardPage() {
           const key = [team2_p1, team2_p2].sort().join('|');
           if (!partnershipMap.has(key)) {
             partnershipMap.set(key, {
-              player1: [team2_p1, team2_p2].sort()[0],
-              player2: [team2_p1, team2_p2].sort()[1],
-              totalMatches: 0,
-              wins: 0,
-              losses: 0,
-              winRate: 0,
-              combinedScore: 0,
+              data: {
+                player1: [team2_p1, team2_p2].sort()[0],
+                player2: [team2_p1, team2_p2].sort()[1],
+                totalMatches: 0,
+                wins: 0,
+                losses: 0,
+                winRate: 0,
+                combinedScore: 0,
+                longestStreak: 0,
+              },
+              history: [],
             });
           }
-          const p = partnershipMap.get(key)!;
+          const entry = partnershipMap.get(key)!;
+          const p = entry.data;
           p.totalMatches++;
           const score2 = match.team2_score ?? 0;
           p.combinedScore += score2;
-          if (match.winner === 'team2') p.wins++;
+          const won = match.winner === 'team2';
+          entry.history.push(won);
+          if (won) p.wins++;
           else if (match.winner === 'team1') p.losses++;
         }
       }
 
+      // Calculate longestStreak for each partnership
+      partnershipMap.forEach((entry) => {
+        let longestStreak = 0, currentStreak = 0;
+        for (const won of entry.history) {
+          if (won) {
+            currentStreak++;
+            longestStreak = Math.max(longestStreak, currentStreak);
+          } else {
+            currentStreak = 0;
+          }
+        }
+        entry.data.longestStreak = longestStreak;
+      });
+
       // Filter partnerships with minimum 2 matches and calculate win rate
       const qualifiedPartnerships = Array.from(partnershipMap.values())
-        .filter(p => p.totalMatches >= 2)
-        .map(p => ({
-          ...p,
-          winRate: p.totalMatches > 0 ? Math.round((p.wins / p.totalMatches) * 100) : 0,
+        .filter(entry => entry.data.totalMatches >= 2)
+        .map(entry => ({
+          ...entry.data,
+          winRate: entry.data.totalMatches > 0 ? Math.round((entry.data.wins / entry.data.totalMatches) * 100) : 0,
         }));
 
       setPartnerships(qualifiedPartnerships);
-      setStats(statsWithScores);
+      setStats(statsWithChanges);
     } catch (e) {
       console.error(e);
     } finally {
@@ -734,155 +863,197 @@ export default function LeaderboardPage() {
               const topPartnerships = [...sortedPartnerships].slice(0, 3);
               const medals = ['🥇', '🥈', '🥉'];
               const medalColors = [
-                'border-yellow-500/60 bg-gradient-to-br from-slate-900 to-slate-800',
-                'border-gray-400/60 bg-gradient-to-br from-slate-800 to-slate-700',
-                'border-orange-400/60 bg-gradient-to-br from-slate-700 to-slate-600',
+                'border-yellow-400 bg-gradient-to-br from-yellow-900/40 to-yellow-800/40',
+                'border-gray-300 bg-gradient-to-br from-gray-700/40 to-gray-600/40',
+                'border-orange-300 bg-gradient-to-br from-orange-700/40 to-orange-600/40',
               ];
-              const textColors = ['text-yellow-300', 'text-gray-300', 'text-orange-300'];
+              const textColors = ['text-yellow-300', 'text-gray-200', 'text-orange-300'];
 
               return (
-                <div className="space-y-6">
+                <div className="space-y-8">
+                  {/* Add animations */}
+                  <style>{`
+                    @keyframes pulse-glow {
+                      0%, 100% { filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6)); }
+                      50% { filter: drop-shadow(0 0 40px rgba(251, 191, 36, 0.9)); }
+                    }
+                    @keyframes float {
+                      0%, 100% { transform: translateY(0); }
+                      50% { transform: translateY(-8px); }
+                    }
+                    @keyframes count-up {
+                      from { opacity: 0; }
+                      to { opacity: 1; }
+                    }
+                    .pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
+                    .float { animation: float 3s ease-in-out infinite; }
+                  `}</style>
+
                   {/* Partnership Podium */}
-                  <div className="flex flex-col sm:flex-row items-flex-end justify-center gap-3 sm:gap-4 md:gap-6 min-h-[24rem] sm:min-h-[28rem] md:min-h-[400px] px-2 sm:px-4">
-                    {/* 2nd Place */}
+                  <div className="flex flex-col sm:flex-row items-flex-end justify-center gap-4 sm:gap-5 md:gap-7 min-h-[28rem] sm:min-h-[36rem] md:min-h-[550px] px-2 sm:px-4">
+                    {/* 2nd Place - Left */}
                     <div className="flex flex-col items-center w-full sm:w-auto">
                       {topPartnerships[1] ? (
                         <>
-                          <div className={`rounded-lg p-4 sm:p-6 sm:p-7 border-2 shadow-lg ${medalColors[1]} transition-all duration-300 w-full sm:w-48 md:w-56`}>
-                            <div className="flex justify-center mb-3 sm:mb-4">
-                              <span className="text-3xl sm:text-4xl">{medals[1]}</span>
+                          {/* Medal Badge - Top */}
+                          <div className="text-5xl sm:text-6xl mb-0 drop-shadow-lg">
+                            {medals[1]}
+                          </div>
+
+                          {/* Partnership Characters - NO BORDER */}
+                          <div className="flex justify-center gap-3 sm:gap-4 mb-0">
+                            <div className="relative sm:w-24 sm:h-52 w-20 h-44">
+                              <img
+                                key={`partnership-2nd-p1-${topPartnerships[1].player1}`}
+                                src={getChibiImagePath(topPartnerships[1].player1)}
+                                alt={topPartnerships[1].player1}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </div>
-                            <div className="flex justify-center gap-3 sm:gap-4 mb-4 sm:mb-5">
-                              <div className="relative sm:w-16 sm:h-36 w-12 h-28 bg-gray-500/10 rounded-lg overflow-hidden border border-gray-400">
-                                <img
-                                  key={`partnership-2nd-p1-${topPartnerships[1].player1}`}
-                                  src={getChibiImagePath(topPartnerships[1].player1)}
-                                  alt={topPartnerships[1].player1}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
-                              <div className="relative sm:w-16 sm:h-36 w-12 h-28 bg-gray-500/10 rounded-lg overflow-hidden border border-gray-400">
-                                <img
-                                  key={`partnership-2nd-p2-${topPartnerships[1].player2}`}
-                                  src={getChibiImagePath(topPartnerships[1].player2)}
-                                  alt={topPartnerships[1].player2}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
+                            <div className="relative sm:w-24 sm:h-52 w-20 h-44">
+                              <img
+                                key={`partnership-2nd-p2-${topPartnerships[1].player2}`}
+                                src={getChibiImagePath(topPartnerships[1].player2)}
+                                alt={topPartnerships[1].player2}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </div>
-                            <div className={`text-xs sm:text-sm font-bold text-center ${textColors[1]} mb-1 line-clamp-2`}>
+                          </div>
+
+                          {/* Info Card */}
+                          <div className={`rounded-lg p-4 sm:p-5 border-2 shadow-lg w-full sm:w-56 md:w-64 text-center mb-0 ${medalColors[1]}`}>
+                            <div className={`text-sm sm:text-base font-bold ${textColors[1]} mb-1`}>
                               {topPartnerships[1].player1} & {topPartnerships[1].player2}
                             </div>
-                            <div className="text-xs text-gray-400 text-center line-clamp-2">
+                            <div className="text-xs text-gray-300 font-semibold">
                               {topPartnerships[1].wins}W - {topPartnerships[1].winRate}%
                             </div>
                           </div>
-                          <div className="w-full sm:w-48 md:w-56 h-16 sm:h-20 md:h-24 bg-gradient-to-b from-slate-600 to-slate-700 border-2 border-slate-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
-                            <span className="text-3xl sm:text-4xl font-black text-gray-300">2</span>
+
+                          {/* Podium Rank */}
+                          <div className="w-full sm:w-56 md:w-64 h-16 sm:h-20 md:h-28 bg-gradient-to-b from-gray-500 to-gray-600 border-2 border-gray-700 shadow-lg flex items-center justify-center">
+                            <span className="text-4xl sm:text-5xl font-black text-gray-300">2</span>
                           </div>
                         </>
                       ) : (
-                        <div className="text-center text-gray-400 py-4">-</div>
+                        <div className="text-center text-gray-400 py-8">-</div>
                       )}
                     </div>
 
-                    {/* 1st Place */}
-                    <div className="flex flex-col items-center mb-0 sm:mb-8 md:mb-12 w-full sm:w-auto order-first sm:order-none">
+                    {/* 1st Place - Center High - CHAMPION */}
+                    <div className="flex flex-col items-center mb-0 sm:mb-10 md:mb-16 w-full sm:w-auto order-first sm:order-none">
                       {topPartnerships[0] ? (
                         <>
-                          <div className={`rounded-lg p-5 sm:p-7 sm:p-8 border-3 shadow-2xl ${medalColors[0]} transition-all duration-300 w-full sm:w-56 md:w-64`}>
-                            <div className="flex justify-center mb-3 sm:mb-5">
-                              <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-lg">{medals[0]}</span>
+                          {/* Medal Badge - Top with Glow */}
+                          <div className="pulse-glow text-6xl sm:text-7xl md:text-8xl mb-0 drop-shadow-lg animate-bounce">
+                            {medals[0]}
+                          </div>
+
+                          {/* Partnership Characters - Champion - NO BORDER */}
+                          <div className="flex justify-center gap-4 sm:gap-5 mb-0">
+                            <div className="relative sm:w-28 sm:h-60 w-24 h-52">
+                              <img
+                                key={`partnership-1st-p1-${topPartnerships[0].player1}`}
+                                src={getChibiImagePath(topPartnerships[0].player1)}
+                                alt={topPartnerships[0].player1}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </div>
-                            <div className="flex justify-center gap-3 sm:gap-4 md:gap-5 mb-4 sm:mb-6">
-                              <div className="relative sm:w-20 sm:h-44 w-16 h-36 bg-yellow-500/10 rounded-lg overflow-hidden border-2 border-yellow-500">
-                                <img
-                                  key={`partnership-1st-p1-${topPartnerships[0].player1}`}
-                                  src={getChibiImagePath(topPartnerships[0].player1)}
-                                  alt={topPartnerships[0].player1}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
-                              <div className="relative sm:w-20 sm:h-44 w-16 h-36 bg-yellow-500/10 rounded-lg overflow-hidden border-2 border-yellow-500">
-                                <img
-                                  key={`partnership-1st-p2-${topPartnerships[0].player2}`}
-                                  src={getChibiImagePath(topPartnerships[0].player2)}
-                                  alt={topPartnerships[0].player2}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-sm sm:text-base font-black text-yellow-300 line-clamp-2">{topPartnerships[0].player1} & {topPartnerships[0].player2}</div>
-                              <div className="text-xs text-gray-300">{topPartnerships[0].wins}W - {topPartnerships[0].winRate}%</div>
+                            <div className="relative sm:w-28 sm:h-60 w-24 h-52">
+                              <img
+                                key={`partnership-1st-p2-${topPartnerships[0].player2}`}
+                                src={getChibiImagePath(topPartnerships[0].player2)}
+                                alt={topPartnerships[0].player2}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </div>
                           </div>
-                          <div className="w-full sm:w-56 md:w-64 h-20 sm:h-28 md:h-40 bg-gradient-to-b from-yellow-600 to-yellow-700 border-2 border-yellow-800 rounded-t-none shadow-2xl flex items-center justify-center mt-0">
+
+                          {/* Info Card - Champion */}
+                          <div className={`rounded-xl p-6 sm:p-7 md:p-8 border-3 shadow-2xl w-full sm:w-64 md:w-72 text-center mb-0 ${medalColors[0]} backdrop-blur-sm`}>
+                            <div className="absolute -top-3 -right-2 text-3xl sm:text-4xl">👑</div>
+                            <div className="text-lg sm:text-xl font-black text-yellow-300 mb-2 drop-shadow-lg">
+                              {topPartnerships[0].player1} & {topPartnerships[0].player2}
+                            </div>
+                            <div className="text-xs sm:text-sm text-yellow-200 font-semibold">
+                              {topPartnerships[0].wins}W - {topPartnerships[0].winRate}%
+                            </div>
+                          </div>
+
+                          {/* Podium Rank - Champion */}
+                          <div className="w-full sm:w-64 md:w-72 h-24 sm:h-32 md:h-48 bg-gradient-to-b from-yellow-600 to-yellow-700 border-3 border-yellow-800 shadow-2xl flex items-center justify-center">
                             <span className="text-5xl sm:text-6xl md:text-7xl font-black text-yellow-200">1</span>
                           </div>
                         </>
                       ) : (
-                        <div className="text-center text-gray-400 py-4 sm:py-8">-</div>
+                        <div className="text-center text-gray-400 py-8">-</div>
                       )}
                     </div>
 
-                    {/* 3rd Place */}
+                    {/* 3rd Place - Right */}
                     <div className="flex flex-col items-center w-full sm:w-auto">
                       {topPartnerships[2] ? (
                         <>
-                          <div className={`rounded-lg p-4 sm:p-6 sm:p-7 border-2 shadow-lg ${medalColors[2]} transition-all duration-300 w-full sm:w-48 md:w-56`}>
-                            <div className="flex justify-center mb-3 sm:mb-4">
-                              <span className="text-3xl sm:text-4xl">{medals[2]}</span>
+                          {/* Medal Badge - Top */}
+                          <div className="text-5xl sm:text-6xl mb-0 drop-shadow-lg">
+                            {medals[2]}
+                          </div>
+
+                          {/* Partnership Characters - NO BORDER */}
+                          <div className="flex justify-center gap-3 sm:gap-4 mb-0">
+                            <div className="relative sm:w-24 sm:h-52 w-20 h-44">
+                              <img
+                                key={`partnership-3rd-p1-${topPartnerships[2].player1}`}
+                                src={getChibiImagePath(topPartnerships[2].player1)}
+                                alt={topPartnerships[2].player1}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </div>
-                            <div className="flex justify-center gap-3 sm:gap-4 mb-4 sm:mb-5">
-                              <div className="relative sm:w-16 sm:h-36 w-12 h-28 bg-orange-500/10 rounded-lg overflow-hidden border border-orange-400">
-                                <img
-                                  key={`partnership-3rd-p1-${topPartnerships[2].player1}`}
-                                  src={getChibiImagePath(topPartnerships[2].player1)}
-                                  alt={topPartnerships[2].player1}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
-                              <div className="relative sm:w-16 sm:h-36 w-12 h-28 bg-orange-500/10 rounded-lg overflow-hidden border border-orange-400">
-                                <img
-                                  key={`partnership-3rd-p2-${topPartnerships[2].player2}`}
-                                  src={getChibiImagePath(topPartnerships[2].player2)}
-                                  alt={topPartnerships[2].player2}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
+                            <div className="relative sm:w-24 sm:h-52 w-20 h-44">
+                              <img
+                                key={`partnership-3rd-p2-${topPartnerships[2].player2}`}
+                                src={getChibiImagePath(topPartnerships[2].player2)}
+                                alt={topPartnerships[2].player2}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </div>
-                            <div className={`text-xs sm:text-sm font-bold text-center ${textColors[2]} mb-1 line-clamp-2`}>
+                          </div>
+
+                          {/* Info Card */}
+                          <div className={`rounded-lg p-4 sm:p-5 border-2 shadow-lg w-full sm:w-56 md:w-64 text-center mb-0 ${medalColors[2]}`}>
+                            <div className={`text-sm sm:text-base font-bold ${textColors[2]} mb-1`}>
                               {topPartnerships[2].player1} & {topPartnerships[2].player2}
                             </div>
-                            <div className="text-xs text-gray-400 text-center line-clamp-2">
+                            <div className="text-xs text-gray-300 font-semibold">
                               {topPartnerships[2].wins}W - {topPartnerships[2].winRate}%
                             </div>
                           </div>
-                          <div className="w-full sm:w-48 md:w-56 h-12 sm:h-14 md:h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 rounded-t-none shadow-lg flex items-center justify-center mt-0">
+
+                          {/* Podium Rank */}
+                          <div className="w-full sm:w-56 md:w-64 h-10 sm:h-12 md:h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 shadow-lg flex items-center justify-center">
                             <span className="text-3xl sm:text-4xl font-black text-orange-200">3</span>
                           </div>
                         </>
                       ) : (
-                        <div className="text-center text-gray-400 py-4">-</div>
+                        <div className="text-center text-gray-400 py-8">-</div>
                       )}
                     </div>
                   </div>
@@ -919,175 +1090,144 @@ export default function LeaderboardPage() {
                 `}</style>
                 
                 {/* Podium Layout - Responsive */}
-                <div className="flex flex-col sm:flex-row items-flex-end justify-center gap-3 sm:gap-4 md:gap-6 min-h-[24rem] sm:min-h-[32rem] md:min-h-[500px] px-2 sm:px-4">
+                <div className="flex flex-col sm:flex-row items-flex-end justify-center gap-4 sm:gap-5 md:gap-7 min-h-[28rem] sm:min-h-[36rem] md:min-h-[550px] px-2 sm:px-4">
                   {/* 2nd Place - Left */}
-                  <div className="flex flex-col items-center group w-full sm:w-auto">
+                  <div className="flex flex-col items-center w-full sm:w-auto">
                     {top3[1].player ? (
                       <>
-                        {/* Card */}
-                        <div className={`rounded-xl p-3 sm:p-4 md:p-5 border-2 shadow-lg transition-all duration-300 w-full sm:w-32 md:w-36 hover:shadow-2xl hover:scale-105 ${medalColors[1]}`}>
-                          {/* Medal Badge */}
-                          <div className="flex justify-center mb-2 sm:mb-3">
-                            <span className="text-3xl sm:text-4xl">{medals[1]}</span>
-                          </div>
+                        {/* Medal Badge - Top */}
+                        <div className="text-5xl sm:text-6xl mb-0 drop-shadow-lg">
+                          {medals[1]}
+                        </div>
 
-                          {/* Avatar - Chibi Character */}
-                          <div className="flex justify-center mb-2 sm:mb-3">
-                            <div className="relative sm:w-20 sm:h-40 w-16 h-32 bg-gradient-to-b from-gray-500/10 to-gray-700/10 rounded-lg overflow-hidden border-2 border-gray-300">
-                              <img
-                                key={`${activeTab}-2nd-${top3[1].player?.name}`}
-                                src={getChibiImagePath(top3[1].player?.name || '')}
-                                alt={top3[1].player?.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          </div>
+                        {/* Chibi Character - NO BORDER */}
+                        <div className="relative sm:w-28 sm:h-56 w-24 h-48 mb-0">
+                          <img
+                            key={`${activeTab}-2nd-${top3[1].player?.name}`}
+                            src={getChibiImagePath(top3[1].player?.name || '')}
+                            alt={top3[1].player?.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
 
-                          {/* Name */}
-                          <div className={`text-xs sm:text-sm font-bold truncate text-center ${textColors[1]} mb-1 sm:mb-2`}>
+                        {/* Info Card */}
+                        <div className={`rounded-lg p-5 sm:p-6 border-2 shadow-lg w-full sm:w-52 md:w-60 text-center mb-0 ${medalColors[1]}`}>
+                          <div className={`text-sm sm:text-base font-bold ${textColors[1]} mb-1`}>
                             {top3[1].player?.name}
                           </div>
-
-                          {/* Achievement Badge */}
                           {activeTab !== 'paling-rajin' && (
-                            <div className="text-xs text-gray-300 text-center mb-1 sm:mb-2 font-semibold">
+                            <div className="text-xs text-gray-300 mb-1 font-semibold">
                               {top3[1].player?.winRate || 0}% WR
                             </div>
                           )}
-
-                          {/* Metric */}
-                          <div className="text-xs text-gray-400 text-center line-clamp-2">{top3[1].metric}</div>
+                          <div className="text-xs text-gray-400 line-clamp-2">{top3[1].metric}</div>
                         </div>
 
-                        {/* Podium Beam */}
-                        <div className="w-full sm:w-32 md:w-36 h-16 sm:h-24 md:h-28 bg-gradient-to-b from-gray-500 to-gray-600 border-2 border-gray-700 rounded-b-lg shadow-lg flex items-center justify-center">
-                          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-300">2</span>
+                        {/* Podium Rank */}
+                        <div className="w-full sm:w-52 md:w-60 h-16 sm:h-20 md:h-28 bg-gradient-to-b from-gray-500 to-gray-600 border-2 border-gray-700 shadow-lg flex items-center justify-center">
+                          <span className="text-4xl sm:text-5xl font-black text-gray-300">2</span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center text-gray-400 py-4 sm:py-8">-</div>
+                      <div className="text-center text-gray-400 py-8">-</div>
                     )}
                   </div>
 
                   {/* 1st Place - Center High - CHAMPION */}
-                  <div className="flex flex-col items-center mb-0 sm:mb-8 md:mb-12 w-full sm:w-auto order-first sm:order-none">
+                  <div className="flex flex-col items-center mb-0 sm:mb-10 md:mb-16 w-full sm:w-auto order-first sm:order-none">
                     {top3[0].player ? (
                       <>
-                        {/* Champion Card with Glow & Float */}
-                        <div className="pulse-glow float">
-                          <div className={`rounded-2xl p-4 sm:p-5 md:p-6 border-4 shadow-2xl transition-all duration-300 w-full sm:w-40 md:w-48 hover:shadow-3xl hover:scale-110 relative bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-yellow-400 backdrop-blur-sm`}>
-                            {/* Crown Icon - Top Right */}
-                            <div className="absolute -top-2 sm:-top-3 -right-2 sm:-right-3 text-3xl sm:text-4xl drop-shadow-lg">👑</div>
-
-                            {/* Medal Badge */}
-                            <div className="flex justify-center mb-2 sm:mb-3">
-                              <span className="text-5xl sm:text-6xl drop-shadow-lg animate-bounce">{medals[0]}</span>
-                            </div>
-
-                            {/* Chibi Character - Champion */}
-                            <div className="flex justify-center mb-3 sm:mb-4">
-                              <div className="relative sm:w-24 sm:h-48 w-20 h-40 bg-gradient-to-b from-yellow-400/10 to-yellow-600/10 rounded-lg overflow-hidden border-2 border-yellow-400/50">
-                                <img
-                                  key={`${activeTab}-1st-${top3[0].player?.name}`}
-                                  src={getChibiImagePath(top3[0].player?.name || '')}
-                                  alt={top3[0].player?.name}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Name - Bold & Gold */}
-                            <div className="text-center mb-1 sm:mb-2">
-                              <div className="text-lg sm:text-xl font-black text-yellow-300 line-clamp-1 drop-shadow-lg">{top3[0].player?.name}</div>
-                            </div>
-
-                            {/* Achievement Signal */}
-                            {activeTab !== 'paling-rajin' && (
-                              <div className="text-xs sm:text-sm text-yellow-200 text-center mb-2 sm:mb-3 font-semibold">
-                                {top3[0].player && top3[0].player.longestWinStreak >= 3 ? (
-                                  <span>🔥 {top3[0].player.longestWinStreak}x Streak - ON FIRE</span>
-                                ) : (
-                                  <span>💯 {top3[0].player?.winRate || 0}% Win Rate</span>
-                                )}
-                              </div>
-                            )}
-                            {activeTab === 'paling-rajin' && (
-                              <div className="text-xs sm:text-sm text-yellow-200 text-center mb-2 sm:mb-3 font-semibold">
-                                {/* Empty space for consistency */}
-                              </div>
-                            )}
-
-                            {/* Metric */}
-                            <div className="text-xs text-yellow-100 text-center line-clamp-2">{top3[0].metric}</div>
-                          </div>
+                        {/* Medal Badge - Top with Glow */}
+                        <div className="pulse-glow text-6xl sm:text-7xl md:text-8xl mb-0 drop-shadow-lg animate-bounce">
+                          {medals[0]}
                         </div>
 
-                        {/* Podium Beam - Prominent & Gold */}
-                        <div className="w-full sm:w-40 md:w-48 h-24 sm:h-32 md:h-48 bg-gradient-to-b from-yellow-500 to-yellow-600 border-4 border-yellow-700 rounded-b-2xl shadow-2xl flex items-center justify-center relative">
-                          <span className="text-6xl sm:text-7xl md:text-8xl font-black text-yellow-200 drop-shadow-lg">1</span>
-                          <div className="absolute inset-0 rounded-b-2xl border-4 border-yellow-400/30 pointer-events-none"></div>
+                        {/* Chibi Character - Champion - NO BORDER */}
+                        <div className="relative sm:w-32 sm:h-64 w-28 h-56 mb-0">
+                          <img
+                            key={`${activeTab}-1st-${top3[0].player?.name}`}
+                            src={getChibiImagePath(top3[0].player?.name || '')}
+                            alt={top3[0].player?.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+
+                        {/* Info Card - Champion */}
+                        <div className={`rounded-xl p-6 sm:p-7 md:p-8 border-3 shadow-2xl w-full sm:w-60 md:w-72 text-center mb-0 ${medalColors[0]} backdrop-blur-sm`}>
+                          <div className="absolute -top-3 -right-2 text-3xl sm:text-4xl">👑</div>
+                          <div className="text-lg sm:text-xl font-black text-yellow-300 mb-2 drop-shadow-lg">
+                            {top3[0].player?.name}
+                          </div>
+                          {activeTab !== 'paling-rajin' && (
+                            <div className="text-xs sm:text-sm text-yellow-200 mb-2 font-semibold">
+                              {top3[0].player && top3[0].player.longestWinStreak >= 3 ? (
+                                <span>🔥 {top3[0].player.longestWinStreak}x Streak - ON FIRE</span>
+                              ) : (
+                                <span>💯 {top3[0].player?.winRate || 0}% Win Rate</span>
+                              )}
+                            </div>
+                          )}
+                          <div className="text-xs text-yellow-100 line-clamp-2">{top3[0].metric}</div>
+                        </div>
+
+                        {/* Podium Rank - Champion */}
+                        <div className="w-full sm:w-60 md:w-72 h-24 sm:h-32 md:h-48 bg-gradient-to-b from-yellow-600 to-yellow-700 border-3 border-yellow-800 shadow-2xl flex items-center justify-center">
+                          <span className="text-5xl sm:text-6xl md:text-8xl font-black text-yellow-200">1</span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center text-gray-400 py-8 sm:py-12">-</div>
+                      <div className="text-center text-gray-400 py-8">-</div>
                     )}
                   </div>
 
                   {/* 3rd Place - Right */}
-                  <div className="flex flex-col items-center group w-full sm:w-auto">
+                  <div className="flex flex-col items-center w-full sm:w-auto">
                     {top3[2].player ? (
                       <>
-                        {/* Card */}
-                        <div className={`rounded-xl p-3 sm:p-4 md:p-5 border-2 shadow-lg transition-all duration-300 w-full sm:w-32 md:w-36 hover:shadow-2xl hover:scale-105 ${medalColors[2]}`}>
-                          {/* Medal Badge */}
-                          <div className="flex justify-center mb-2 sm:mb-3">
-                            <span className="text-3xl sm:text-4xl">{medals[2]}</span>
-                          </div>
+                        {/* Medal Badge - Top */}
+                        <div className="text-5xl sm:text-6xl mb-0 drop-shadow-lg">
+                          {medals[2]}
+                        </div>
 
-                          {/* Avatar - Chibi Character */}
-                          <div className="flex justify-center mb-2 sm:mb-3">
-                            <div className="relative sm:w-20 sm:h-40 w-16 h-32 bg-gradient-to-b from-orange-500/10 to-orange-700/10 rounded-lg overflow-hidden border-2 border-orange-300">
-                              <img
-                                key={`${activeTab}-3rd-${top3[2].player?.name}`}
-                                src={getChibiImagePath(top3[2].player?.name || '')}
-                                alt={top3[2].player?.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          </div>
+                        {/* Chibi Character - NO BORDER */}
+                        <div className="relative sm:w-28 sm:h-56 w-24 h-48 mb-0">
+                          <img
+                            key={`${activeTab}-3rd-${top3[2].player?.name}`}
+                            src={getChibiImagePath(top3[2].player?.name || '')}
+                            alt={top3[2].player?.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
 
-                          {/* Name */}
-                          <div className={`text-xs sm:text-sm font-bold truncate text-center ${textColors[2]} mb-1 sm:mb-2`}>
+                        {/* Info Card */}
+                        <div className={`rounded-lg p-5 sm:p-6 border-2 shadow-lg w-full sm:w-52 md:w-60 text-center mb-0 ${medalColors[2]}`}>
+                          <div className={`text-sm sm:text-base font-bold ${textColors[2]} mb-1`}>
                             {top3[2].player?.name}
                           </div>
-
-                          {/* Achievement Badge */}
                           {activeTab !== 'paling-rajin' && (
-                            <div className="text-xs text-orange-100 text-center mb-1 sm:mb-2 font-semibold">
+                            <div className="text-xs text-gray-300 mb-1 font-semibold">
                               {top3[2].player?.winRate || 0}% WR
                             </div>
                           )}
-
-                          {/* Metric */}
-                          <div className="text-xs text-gray-400 text-center line-clamp-2">{top3[2].metric}</div>
+                          <div className="text-xs text-gray-400 line-clamp-2">{top3[2].metric}</div>
                         </div>
 
-                        {/* Podium Beam */}
-                        <div className="w-full sm:w-32 md:w-36 h-12 sm:h-16 md:h-20 bg-gradient-to-b from-orange-500 to-orange-600 border-2 border-orange-700 rounded-b-lg shadow-lg flex items-center justify-center">
-                          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-orange-200">3</span>
+                        {/* Podium Rank */}
+                        <div className="w-full sm:w-52 md:w-60 h-10 sm:h-12 md:h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 shadow-lg flex items-center justify-center">
+                          <span className="text-3xl sm:text-4xl font-black text-orange-200">3</span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center text-gray-400 py-4 sm:py-8">-</div>
+                      <div className="text-center text-gray-400 py-8">-</div>
                     )}
                   </div>
                 </div>
@@ -1182,15 +1322,18 @@ export default function LeaderboardPage() {
                           </div>
                         </td>
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm">
-                          <div className="flex items-center justify-end gap-1 sm:gap-2">
+                          <div className="flex items-center justify-end gap-1">
                             <span className="font-semibold text-gray-900 dark:text-white">
                               {(s as any).bestPlayerScore?.toFixed(1) || '-'}
                             </span>
-                            {!isPlayerInactive(s) && streakUp && s.currentStreak >= 3 && (
-                              <span className="text-orange-500 dark:text-orange-400 text-sm">↑</span>
-                            )}
-                            {streakDown && Math.abs(s.currentStreak) >= 3 && (
-                              <span className="text-blue-400 text-sm">↓</span>
+                            {/* Rank change indicator - arrow beside points */}
+                            {/* Only show if: has match data AND not inactive (played within last 7 days) */}
+                            {s.totalMatches > 0 && !isPlayerInactive(s) && s.rankChange !== undefined && s.rankChange !== 0 && (
+                              s.rankChange > 0 ? (
+                                <span className="text-green-500 dark:text-green-400 text-sm">↑</span>
+                              ) : (
+                                <span className="text-red-500 dark:text-red-400 text-sm">↓</span>
+                              )
                             )}
                           </div>
                         </td>
@@ -1262,13 +1405,14 @@ export default function LeaderboardPage() {
                       </span>
                       {' '}Win%
                     </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold text-gray-500 dark:text-zinc-400 hidden sm:table-cell">Streak</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-zinc-700/50">
                   {sortedPartnerships.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-3 sm:px-4 py-4 sm:py-8 text-center text-gray-400 dark:text-zinc-500 text-xs sm:text-sm">
-                        Belum ada pasangan dengan minimal 5 pertandingan
+                      <td colSpan={6} className="px-3 sm:px-4 py-4 sm:py-8 text-center text-gray-400 dark:text-zinc-500 text-xs sm:text-sm">
+                        Belum ada pasangan dengan minimal 2 pertandingan
                       </td>
                     </tr>
                   ) : (
@@ -1296,6 +1440,9 @@ export default function LeaderboardPage() {
                           <span className={`font-bold ${p.winRate >= 70 ? 'text-green-600 dark:text-green-400' : p.winRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-orange-600 dark:text-orange-400'}`}>
                             {p.winRate}%
                           </span>
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-500 dark:text-zinc-400 hidden sm:table-cell text-xs sm:text-sm">
+                          {p.longestStreak > 1 ? <span className="text-orange-500 dark:text-orange-400 font-bold">🔥 {p.longestStreak}x</span> : '-'}
                         </td>
                       </tr>
                     ))
