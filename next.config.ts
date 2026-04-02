@@ -8,26 +8,8 @@ const nextConfig: NextConfig = {
   experimental: {
     serverSourceMaps: false,
   },
-  // Optimize webpack for smaller function size
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            default: false,
-            vendors: false,
-          },
-        },
-      };
-    }
-    return config;
-  },
-  // Use SWC minifier for better compression
-  swcMinify: true,
-  // Compress HTML
-  compress: true,
+  // Use turbopack for faster builds
+  turbopack: {},
   images: {
     remotePatterns: [
       {
