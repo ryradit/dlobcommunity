@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import SmartCropImage from '@/components/SmartCropImage';
 import ZoomableImage from '@/components/ZoomableImage';
 
+// Supabase storage base URL for videos
+const SUPABASE_VIDEO_URL = 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos';
+
 interface ColorVariant {
   id: string;
   name: string;
@@ -93,9 +96,9 @@ const products: Product[] = [
     comingSoon: false,
     // Introductory videos - will shuffle automatically
     introductionVideos: [
-      '/images/members/model/videomodel2.mp4',
-      '/images/members/model/videomodel3.mp4',
-      '/images/members/model/videomodel5.mp4',
+      `${SUPABASE_VIDEO_URL}/videomodel2.mp4`,
+      `${SUPABASE_VIDEO_URL}/videomodel3.mp4`,
+      `${SUPABASE_VIDEO_URL}/videomodel5.mp4`,
     ],
   },
   {
@@ -116,9 +119,9 @@ const products: Product[] = [
     comingSoon: true,
     // Introductory video - highlights the Noir edition
     introductionVideos: [
-      '/images/members/model/videomodel4.mp4',
-      '/images/members/model/videomodel6.mp4',
-      '/images/members/model/videomodel7.mp4',
+      `${SUPABASE_VIDEO_URL}/videomodel4.mp4`,
+      `${SUPABASE_VIDEO_URL}/videomodel6.mp4`,
+      `${SUPABASE_VIDEO_URL}/videomodel7.mp4`,
     ],
   },
 ];
