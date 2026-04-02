@@ -301,7 +301,6 @@ export default function StorePage() {
   const [selectedSleeve, setSelectedSleeve]         = useState<'pendek' | 'panjang'>('pendek');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
-  const [heroHovered, setHeroHovered]               = useState(false);
   const router = useRouter();
 
   const selectedProduct  = products.find((p) => p.id === selectedProductId) ?? null;
@@ -395,12 +394,7 @@ export default function StorePage() {
       {!selectedProductId && (
         <>
           {/* Hero */}
-          <div 
-            className="relative w-full overflow-hidden" 
-            style={{ minHeight: '85vh' }}
-            onMouseEnter={() => setHeroHovered(true)}
-            onMouseLeave={() => setHeroHovered(false)}
-          >
+          <div className="relative w-full overflow-hidden" style={{ minHeight: '85vh' }}>
             {/* Background image */}
             <img
               src="/images/members/model/storeheroimage4.jpeg"
@@ -409,20 +403,6 @@ export default function StorePage() {
               style={{ imageRendering: 'auto', WebkitFontSmoothing: 'antialiased' }}
               loading="eager"
               draggable={false}
-            />
-            
-            {/* Background video layer - shows on hover */}
-            <video
-              src="/images/members/model/videopromotionnoirblossom.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              crossOrigin="anonymous"
-              poster="/images/members/model/storeheroimage4.jpeg"
-              className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-300"
-              style={{ opacity: heroHovered ? 1 : 0, zIndex: 5 }}
             />
             
             {/* Dark overlay — lighter to preserve image clarity */}

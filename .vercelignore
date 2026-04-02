@@ -46,6 +46,9 @@ ALL-DASHBOARDS-OPTIMIZATION.md
 # Exclude JS utilities not needed in build
 export-member-credentials.js
 
+# Exclude videos to reduce deployment size - Vercel has 250MB limit
+public/images/members/model/*.mp4
+
 # Exclude local env and logs
 .env.local
 .env.*.local
