@@ -150,22 +150,12 @@ function CatalogCard({
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [visible, setVisible]     = useState(true);
-  const [videoErrors, setVideoErrors] = useState<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const isVideo = (src: string) => src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov');
   const currentMedia = mediaItems[activeIdx] ?? null;
-  const currentIsVideo = currentMedia ? isVideo(currentMedia) && !videoErrors.has(currentMedia) : false;
-
-  // Get fallback image for video failures
-  const getFallbackImage = () => {
-    return product.coverImage || product.colorVariants[0]?.images[0] || null;
-  };
-
-  const handleVideoError = (failedSrc: string) => {
-    setVideoErrors((prev) => new Set(prev).add(failedSrc));
-  };
+  const currentIsVideo = currentMedia ? isVideo(currentMedia) : false;
 
   useEffect(() => {
     // Only auto-rotate if multiple items available
@@ -208,39 +198,9 @@ function CatalogCard({
                 playsInline
                 loop={mediaItems.length === 1}
                 className="w-full h-full object-cover bg-black"
-                onError={() => handleVideoError(currentMedia)}
-                onCanPlay={() => {
-                  // Video loaded successfully, ensure error is removed if it exists
-                  setVideoErrors((prev) => {
-                    const next = new Set(prev);
-                    next.delete(currentMedia);
-                    return next;
-                  });
-                }}
               />
             ) : (
-              <>
-                {isVideo(currentMedia) && videoErrors.has(currentMedia) ? (
-                  // Video failed: show fallback image
-                  getFallbackImage() ? (
-                    <SmartCropImage 
-                      src={getFallbackImage()!} 
-                      alt={product.name} 
-                      name={product.name} 
-                      objectPositionOverride={getFallbackImage()?.includes('pink8') ? '20% 50%' : undefined} 
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900" />
-                  )
-                ) : (
-                  <SmartCropImage 
-                    src={currentMedia} 
-                    alt={product.name} 
-                    name={product.name} 
-                    objectPositionOverride={currentMedia.includes('pink8') ? '20% 50%' : undefined} 
-                  />
-                )}
-              </>
+              <SmartCropImage src={currentMedia} alt={product.name} name={product.name} objectPositionOverride={currentMedia.includes('pink8') ? '20% 50%' : undefined} />
             )}
           </div>
         ) : (
@@ -308,6 +268,7 @@ export default function StorePage() {
   const [selectedSleeve, setSelectedSleeve]         = useState<'pendek' | 'panjang'>('pendek');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
+  const [heroHovered, setHeroHovered]               = useState(false);
   const router = useRouter();
 
   const selectedProduct  = products.find((p) => p.id === selectedProductId) ?? null;
@@ -401,7 +362,12 @@ export default function StorePage() {
       {!selectedProductId && (
         <>
           {/* Hero */}
-          <div className="relative w-full overflow-hidden" style={{ minHeight: '85vh' }}>
+          <div 
+            className="relative w-full overflow-hidden" 
+            style={{ minHeight: '85vh' }}
+            onMouseEnter={() => setHeroHovered(true)}
+            onMouseLeave={() => setHeroHovered(false)}
+          >
             {/* Background image */}
             <img
               src="/images/members/model/storeheroimage4.jpeg"
@@ -410,6 +376,17 @@ export default function StorePage() {
               style={{ imageRendering: 'auto', WebkitFontSmoothing: 'antialiased' }}
               loading="eager"
               draggable={false}
+            />
+            
+            {/* Background video layer - shows on hover */}
+            <video
+              src="/images/members/model/videopromotionnoirblossom.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-300"
+              style={{ opacity: heroHovered ? 1 : 0, zIndex: 5 }}
             />
             
             {/* Dark overlay — lighter to preserve image clarity */}
