@@ -150,12 +150,21 @@ function CatalogCard({
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [visible, setVisible]     = useState(true);
+  const [videoErrors, setVideoErrors] = useState<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const isVideo = (src: string) => src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov');
   const currentMedia = mediaItems[activeIdx] ?? null;
-  const currentIsVideo = currentMedia ? isVideo(currentMedia) : false;
+  const currentIsVideo = currentMedia ? isVideo(currentMedia) && !videoErrors.has(currentMedia) : false;
+
+  const getFallbackImage = () => {
+    return product.coverImage || product.colorVariants[0]?.images[0] || null;
+  };
+
+  const handleVideoError = (failedSrc: string) => {
+    setVideoErrors((prev) => new Set(prev).add(failedSrc));
+  };
 
   useEffect(() => {
     // Only auto-rotate if multiple items available
@@ -197,10 +206,34 @@ function CatalogCard({
                 muted
                 playsInline
                 loop={mediaItems.length === 1}
+                preload="auto"
+                crossOrigin="anonymous"
+                poster={getFallbackImage() || undefined}
                 className="w-full h-full object-cover bg-black"
+                onError={() => handleVideoError(currentMedia)}
               />
             ) : (
-              <SmartCropImage src={currentMedia} alt={product.name} name={product.name} objectPositionOverride={currentMedia.includes('pink8') ? '20% 50%' : undefined} />
+              <>
+                {isVideo(currentMedia) && videoErrors.has(currentMedia) ? (
+                  getFallbackImage() ? (
+                    <SmartCropImage 
+                      src={getFallbackImage()!} 
+                      alt={product.name} 
+                      name={product.name} 
+                      objectPositionOverride={getFallbackImage()?.includes('pink8') ? '20% 50%' : undefined} 
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900" />
+                  )
+                ) : (
+                  <SmartCropImage 
+                    src={currentMedia} 
+                    alt={product.name} 
+                    name={product.name} 
+                    objectPositionOverride={currentMedia.includes('pink8') ? '20% 50%' : undefined} 
+                  />
+                )}
+              </>
             )}
           </div>
         ) : (
@@ -385,6 +418,9 @@ export default function StorePage() {
               muted
               loop
               playsInline
+              preload="auto"
+              crossOrigin="anonymous"
+              poster="/images/members/model/storeheroimage4.jpeg"
               className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-300"
               style={{ opacity: heroHovered ? 1 : 0, zIndex: 5 }}
             />
