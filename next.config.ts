@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
   productionBrowserSourceMaps: false,
+  // Disable source maps in production
+  experimental: {
+    serverSourceMaps: false,
+  },
   images: {
     remotePatterns: [
       {

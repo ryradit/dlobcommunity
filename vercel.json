@@ -1,6 +1,9 @@
 {
   "buildCommand": "next build",
   "outputDirectory": ".next",
+  "env": {
+    "VERCEL_ANALYZE_BUILD_OUTPUT": "1"
+  },
   "headers": [
     {
       "source": "/public/images/members/model/:path*",
