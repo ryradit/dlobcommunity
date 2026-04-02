@@ -94,6 +94,13 @@ export-member-credentials.js
 # Exclude videos to reduce deployment size for Vercel Hobby plan (2048MB limit)
 public/images/members/model/*.mp4
 
+# Exclude heavy dependencies only used on client-side from server bundle
+node_modules/html2canvas
+node_modules/jspdf
+node_modules/@react-pdf
+node_modules/tesseract.js
+node_modules/@vladmandic/face-api
+
 # Exclude local env and logs
 .env.local
 .env.*.local
