@@ -46,8 +46,8 @@ ALL-DASHBOARDS-OPTIMIZATION.md
 # Exclude JS utilities not needed in build
 export-member-credentials.js
 
-# Exclude only truly non-essential, unused images
-# Keeping all images in public/ to ensure UI works correctly
+# Exclude videos to reduce deployment size
+public/images/members/model/*.mp4
 
 # Exclude local env and logs
 .env.local
@@ -58,6 +58,7 @@ export-member-credentials.js
 # Git and version control
 .git
 .gitignore
+
 
 
 
