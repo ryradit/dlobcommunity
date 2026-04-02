@@ -46,23 +46,23 @@ ALL-DASHBOARDS-OPTIMIZATION.md
 # Exclude JS utilities not needed in build
 export-member-credentials.js
 
+# Exclude large image assets that aren't essential
+public/images/jersey/*.png
+public/images/potrait/*.jpg
+public/images/*.jpg
+public/images/*.png
+public/images/dlob*.png
+
+# Keep model images and videos since they're used in store/versus-game
+# But compress would be ideal
+
 # Exclude local env and logs
 .env.local
 .env.*.local
 *.log
 .DS_Store
-.next
-node_modules
-dist
-build
 
 # Git and version control
 .git
 .gitignore
 
-# Tests
-__tests__
-*.test.ts
-*.test.tsx
-*.spec.ts
-*.spec.tsx

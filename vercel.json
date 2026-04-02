@@ -4,9 +4,11 @@
   "env": {
     "VERCEL_ANALYZE_BUILD_OUTPUT": "1"
   },
+  "cleanUrls": true,
+  "trailingSlash": false,
   "headers": [
     {
-      "source": "/public/images/members/model/:path*",
+      "source": "/images/:path*",
       "headers": [
         {
           "key": "Cache-Control",
@@ -20,10 +22,6 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
-        },
-        {
-          "key": "Content-Type",
-          "value": "video/mp4"
         }
       ]
     }
