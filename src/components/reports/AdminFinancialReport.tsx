@@ -3,6 +3,8 @@
  * Generates financial reports for admin dashboard
  */
 
+'use client';
+
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 

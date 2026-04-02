@@ -3,6 +3,8 @@
  * Handles PDF generation and sharing for DLOB Community reports
  */
 
+'use client';
+
 import html2canvas from 'html2canvas';
 
 /**
