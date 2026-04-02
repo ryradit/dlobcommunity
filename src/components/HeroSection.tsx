@@ -200,21 +200,21 @@ export default function HeroSection() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
-                    ✓
+                    🤖
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Pelacakan Kehadiran</p>
-                    <p className="text-[10px] text-zinc-300 font-medium">Sistem AI real-time</p>
+                    <p className="text-xs font-semibold text-white">AI Coaching</p>
+                    <p className="text-[10px] text-zinc-300 font-medium">Wawasan mendalam</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
-                    📅
+                    🏆
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Penjadwalan Cerdas</p>
-                    <p className="text-[10px] text-zinc-300 font-medium">Algoritma pintar</p>
+                    <p className="text-xs font-semibold text-white">Ranking System</p>
+                    <p className="text-[10px] text-zinc-300 font-medium">Leaderboard realtime</p>
                   </div>
                 </div>
                 

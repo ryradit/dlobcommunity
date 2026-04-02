@@ -94,6 +94,15 @@ const ADMIN_TOOLS = [
     },
   },
   {
+    name: 'get_player_ranking',
+    description: 'Dapatkan ranking pemain tertentu di leaderboard — posisi rank, best player score, statistik (match, wins, win rate, avg score, streak).',
+    parameters: {
+      type: 'object',
+      properties: { player_name: { type: 'string', description: 'Nama lengkap pemain' } },
+      required: ['player_name'],
+    },
+  },
+  {
     name: 'get_member_billing_summary',
     description: 'Dapatkan total tagihan (paid + pending) untuk anggota tertentu, bisa untuk semua bulan atau bulan/tahun tertentu. Menampilkan breakdown per pertandingan beserta status pembayaran. Jika hasilnya ambiguous=true, berarti ditemukan beberapa nama yang mirip dan harus ditanyakan kembali ke admin nama mana yang dimaksud.',
     parameters: {
@@ -127,6 +136,20 @@ const MEMBER_TOOLS = [
     name: 'get_my_match_stats',
     description: 'Dapatkan statistik pertandingan saya: total match, win rate, streak.',
     parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'get_my_ranking',
+    description: 'Dapatkan ranking saya di leaderboard hari ini — posisi rank, best player score, dan perubahan dibanding hari kemarin.',
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'get_player_ranking',
+    description: 'Dapatkan ranking pemain tertentu di leaderboard — posisi rank, best player score, statistik (match, wins, win rate, avg score, streak).',
+    parameters: {
+      type: 'object',
+      properties: { player_name: { type: 'string', description: 'Nama lengkap pemain' } },
+      required: ['player_name'],
+    },
   },
   {
     name: 'get_my_membership',
@@ -169,6 +192,130 @@ async function suggestMemberNames(query: string, limit = 4): Promise<string[]> {
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map(x => x.name);
+}
+
+// ─── Ranking calculator helper ───────────────────────────────────────────────
+async function getPlayerRankingInfo(playerName: string): Promise<
+  { rank: number; name: string; bestPlayerScore: number; totalMatches: number; wins: number; losses: number; winRate: number; avgScore: number; longestWinStreak: number; currentStreak: number } | 
+  { error: string }
+> {
+  try {
+    // Fetch all match members data
+    const { data: allMatches } = await supabaseAdmin
+      .from('match_members')
+      .select('member_name, score, matches(match_date, team1_player1, team1_player2, team2_player1, team2_player2, winner)');
+
+    if (!allMatches || allMatches.length === 0) return { error: 'No match data found' };
+
+    // Build stats for all players
+    const playerStats: Record<string, {
+      totalMatches: number; wins: number; losses: number; totalScore: number;
+      matchHistory: boolean[];
+    }> = {};
+
+    for (const match of allMatches) {
+      const name = match.member_name;
+      if (!playerStats[name]) {
+        playerStats[name] = { totalMatches: 0, wins: 0, losses: 0, totalScore: 0, matchHistory: [] };
+      }
+      
+      const m = (match.matches as any);
+      if (!m) continue;
+
+      const team1 = [m.team1_player1, m.team1_player2].map((n: string) => n?.toLowerCase());
+      const team2 = [m.team2_player1, m.team2_player2].map((n: string) => n?.toLowerCase());
+      const inTeam1 = team1.includes(name.toLowerCase());
+      const inTeam2 = team2.includes(name.toLowerCase());
+
+      if (inTeam1 || inTeam2) {
+        playerStats[name].totalMatches++;
+        playerStats[name].totalScore += match.score || 0;
+        const won = (inTeam1 && m.winner === 'team1') || (inTeam2 && m.winner === 'team2');
+        if (won) playerStats[name].wins++;
+        else playerStats[name].losses++;
+        playerStats[name].matchHistory.push(won);
+      }
+    }
+
+    // Calculate best player score (same algorithm as leaderboard)
+    const maxStats = {
+      matches: Math.max(...Object.values(playerStats).map(s => s.totalMatches), 1),
+      wins: Math.max(...Object.values(playerStats).map(s => s.wins), 1),
+      losses: Math.max(...Object.values(playerStats).map(s => s.losses), 1),
+      avgScore: Math.max(...Object.values(playerStats).map(s => s.totalMatches > 0 ? s.totalScore / s.totalMatches : 0), 1),
+      streak: 0,
+    };
+
+    // Calculate longest streak for max
+    for (const stats of Object.values(playerStats)) {
+      let current = 0, longest = 0;
+      for (const won of stats.matchHistory) {
+        if (won) { current++; longest = Math.max(longest, current); }
+        else { current = 0; }
+      }
+      maxStats.streak = Math.max(maxStats.streak, longest);
+    }
+
+    // Calculate score for each player
+    const playerScores: Array<{ name: string; score: number; stats: { totalMatches: number; wins: number; losses: number; totalScore: number; matchHistory: boolean[]; winRate: number; avgScore: number; longestWinStreak: number; currentStreak: number } }> = [];
+    for (const [name, stats] of Object.entries(playerStats)) {
+      if (stats.totalMatches === 0) continue;
+
+      const winRate = (stats.wins / stats.totalMatches) * 100;
+      const avgScore = stats.totalMatches > 0 ? stats.totalScore / stats.totalMatches : 0;
+      
+      let longestStreak = 0, currentStreak = 0;
+      for (const won of stats.matchHistory) {
+        if (won) { currentStreak++; longestStreak = Math.max(longestStreak, currentStreak); }
+        else { currentStreak = 0; }
+      }
+
+      const normMatches = (stats.totalMatches / maxStats.matches) * 100;
+      const normWins = (stats.wins / maxStats.wins) * 100;
+      const normAvgScore = (avgScore / maxStats.avgScore) * 100;
+      const normStreak = (longestStreak / Math.max(maxStats.streak, 1)) * 100;
+
+      const score = (normMatches * 0.25) + (normWins * 0.20) + (winRate * 0.20) + (normAvgScore * 0.15) + (normStreak * 0.10);
+      
+      playerScores.push({
+        name,
+        score: Math.round(score * 10) / 10,
+        stats: {
+          totalMatches: stats.totalMatches,
+          wins: stats.wins,
+          losses: stats.losses,
+          totalScore: stats.totalScore,
+          matchHistory: stats.matchHistory,
+          winRate: Math.round(winRate),
+          avgScore: Math.round(avgScore * 10) / 10,
+          longestWinStreak: longestStreak,
+          currentStreak: currentStreak,
+        },
+      });
+    }
+
+    // Sort by score and find rank
+    playerScores.sort((a, b) => b.score - a.score);
+    const playerIndex = playerScores.findIndex(p => p.name.toLowerCase() === playerName.toLowerCase());
+
+    if (playerIndex === -1) return { error: `Pemain "${playerName}" tidak ditemukan` };
+
+    const player = playerScores[playerIndex];
+    return {
+      rank: playerIndex + 1,
+      name: player.name,
+      bestPlayerScore: player.score,
+      totalMatches: player.stats.totalMatches,
+      wins: player.stats.wins,
+      losses: player.stats.losses,
+      winRate: player.stats.winRate,
+      avgScore: player.stats.avgScore,
+      longestWinStreak: player.stats.longestWinStreak,
+      currentStreak: player.stats.currentStreak,
+    };
+  } catch (err) {
+    return { error: `Error calculating ranking: ${err}` };
+  }
 }
 
 /**
@@ -553,6 +700,35 @@ async function executeAdminTool(name: string, args: any): Promise<any> {
     return { videos };
   }
 
+  if (name === 'get_player_ranking') {
+    const playerName: string = args.player_name;
+    const resolution = await resolveMemberName(playerName);
+
+    if ('notFound' in resolution) {
+      return {
+        found: false,
+        query: playerName,
+        suggestions: resolution.suggestions,
+        message: resolution.suggestions.length
+          ? `Pemain "${playerName}" tidak ditemukan. Mungkin maksudnya: ${resolution.suggestions.join(', ')}?`
+          : `Pemain "${playerName}" tidak ditemukan di sistem.`,
+      };
+    }
+
+    if ('ambiguous' in resolution) {
+      return {
+        found: false,
+        ambiguous: true,
+        query: playerName,
+        candidates: resolution.ambiguous,
+        message: `Ditemukan beberapa pemain dengan nama mirip: ${resolution.ambiguous.join(', ')}. Sebutkan nama lengkap yang dimaksud.`,
+      };
+    }
+
+    const rankInfo = await getPlayerRankingInfo(resolution.resolved);
+    return { ...(resolution.autocorrected ? { note: `Nama dikoreksi dari "${resolution.autocorrected}" ke "${resolution.resolved}"` } : {}), ...rankInfo };
+  }
+
   return { error: `Unknown admin tool: ${name}` };
   } catch (err: any) {
     console.error(`[executeAdminTool:${name}] Error:`, err?.message || err);
@@ -629,6 +805,40 @@ async function executeMemberTool(name: string, args: any, memberName: string, me
   if (name === 'search_youtube') {
     const videos = await searchYouTube(args.keyword);
     return { videos };
+  }
+
+  if (name === 'get_my_ranking') {
+    const rankInfo = await getPlayerRankingInfo(memberName);
+    return rankInfo;
+  }
+
+  if (name === 'get_player_ranking') {
+    const playerName: string = args.player_name;
+    const resolution = await resolveMemberName(playerName);
+
+    if ('notFound' in resolution) {
+      return {
+        found: false,
+        query: playerName,
+        suggestions: resolution.suggestions,
+        message: resolution.suggestions.length
+          ? `Pemain "${playerName}" tidak ditemukan. Mungkin maksudnya: ${resolution.suggestions.join(', ')}?`
+          : `Pemain "${playerName}" tidak ditemukan di sistem.`,
+      };
+    }
+
+    if ('ambiguous' in resolution) {
+      return {
+        found: false,
+        ambiguous: true,
+        query: playerName,
+        candidates: resolution.ambiguous,
+        message: `Ditemukan beberapa pemain dengan nama mirip: ${resolution.ambiguous.join(', ')}. Sebutkan nama lengkap yang dimaksud.`,
+      };
+    }
+
+    const rankInfo = await getPlayerRankingInfo(resolution.resolved);
+    return { ...(resolution.autocorrected ? { note: `Nama dikoreksi dari "${resolution.autocorrected}" ke "${resolution.resolved}"` } : {}), ...rankInfo };
   }
 
   return { error: `Unknown member tool: ${name}` };

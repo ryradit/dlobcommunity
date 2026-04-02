@@ -204,6 +204,250 @@ A: Dalam sekitar 1-2 detik setelah pertandingan disimpan, leaderboard
    otomatis refresh untuk semua orang yang sedang membuka halaman tersebut.
 
 ────────────────────────────────────────
+🎯 ALGORITMA PERHITUNGAN LEADERBOARD (TEKHNIS)
+────────────────────────────────────────
+
+BAGIAN 1: SCORING PEMAIN TERBAIK (BEST PLAYER SCORE)
+────────────────────────────────────────
+Leaderboard menggunakan algoritma scoring komprehensif untuk menentukan "Pemain Terbaik".
+Bukan hanya berdasarkan kemenangan, tetapi kombinasi 5 metrik penting:
+
+METRIK YANG DIUKUR:
+1. Total Pertandingan (Participation & Consistency) — bobot 25%
+   - Semakin banyak main = semakin konsisten dan loyal
+   - Formula: (jumlah pertandingan pemain ÷ max pertandingan di sistem) × 100
+
+2. Total Kemenangan (Win Count) — bobot 20%
+   - Semakin banyak menang = semakin kuat
+   - Formula: (jumlah menang pemain ÷ max kemenangan di sistem) × 100
+
+3. Win Rate (Konsistensi Ratio) — bobot 20%
+   - Persentase kemenangan dari total pertandingan
+   - Formula: (menang ÷ total pertandingan) × 100
+   - Range: 0-100%
+   - Metrik ini TIDAK dinormalisasi terhadap max (sudah dalam bentuk persen)
+
+4. Rata-rata Skor (Individual Contribution) — bobot 15%
+   - Kontribusi poin rata-rata per game
+   - Formula: (total poin ÷ jumlah pertandingan) = skor desimal
+   - Dinormalisasi: (avg skor pemain ÷ max avg skor di sistem) × 100
+   - Menunjukkan kemampuan individu mencetak poin
+
+5. Longest Win Streak (Peak Performance) — bobot 10%
+   - Rekor rangkaian kemenangan beruntun terpanjang sepanjang waktu
+   - Formula: (longest streak pemain ÷ max longest streak di sistem) × 100
+   - Menunjukkan konsistensi & momentum maksimal
+
+RUMUS FINAL BEST PLAYER SCORE:
+Score = (norm_matches × 0.25) + (norm_wins × 0.20) + (winRate × 0.20) + (norm_avgScore × 0.15) + (norm_streak × 0.10)
+
+CONTOH PERHITUNGAN:
+Anggap pemain "Ardo" dengan data:
+- Total: 25 pertandingan, Max di sistem: 50 → norm_matches = (25 ÷ 50) × 100 = 50
+- Menang: 17 game, Max di sistem: 30 → norm_wins = (17 ÷ 30) × 100 = 56.67
+- Win rate: 17 ÷ 25 = 68% → winRate = 68 (tidak dinormalisasi)
+- Avg score: 16.5 poin, Max di sistem: 21 → norm_avgScore = (16.5 ÷ 21) × 100 = 78.57
+- Longest streak: 8 game, Max di sistem: 12 → norm_streak = (8 ÷ 12) × 100 = 66.67
+
+Score = (50 × 0.25) + (56.67 × 0.20) + (68 × 0.20) + (78.57 × 0.15) + (66.67 × 0.10)
+       = 12.5 + 11.33 + 13.6 + 11.79 + 6.67
+       = 55.89 poin
+
+Ardo mendapat score "Pemain Terbaik" = 55.89 (dibulatkan menjadi 55.9)
+
+RANKING BERDASARKAN SCORE:
+- Diurutkan dari Score tertinggi ke terendah
+- Score tertinggi = Rank 1 (Pemain Terbaik)
+- Jika 2 pemain punya score sama, urutan ditentukan oleh sistem (abjad atau ID)
+
+────────────────────────────────────────
+BAGIAN 2: HISTORY & PERUBAHAN RANKING
+────────────────────────────────────────
+Sistem menyimpan score history untuk tracking perubahan rank dan progress.
+
+SCORE HISTORY:
+- Disimpan di tabel score_history
+- Snapshot diambil minimal 3 hari yang lalu (untuk perbandingan)
+- Jika tidak ada history ≥3 hari lalu, tidak ada rankChange/scoreChange
+- History otomatis dibuat saat pertandingan baru diinput
+
+KALKULASI RANK CHANGE & SCORE CHANGE:
+- Rank kemarin (previousRank) vs Rank hari ini (todayRank)
+- rankChange = previousRank - todayRank
+  → Positif: naik rank (lebih baik) — contoh dari rank 10 ke 8 = +2
+  → Negatif: turun rank (lebih buruk) — contoh dari rank 8 ke 10 = -2
+  → Nol: tidak berubah rank
+- scoreChange = todayScore - yesterdayScore
+  → Positif: score naik (lebih baik performa)
+  → Negatif: score turun (performa menurun)
+
+INDICATOR VISUAL:
+- ⬆️ Hijau: rank naik atau score naik (improvement)
+- ⬇️ Merah: rank turun atau score turun (decline)
+- ➡️ Abu: tidak ada perubahan
+
+────────────────────────────────────────
+BAGIAN 3: STATUS INACTIVE (7 HARI TIDAK MAIN)
+────────────────────────────────────────
+Sistem otomatis menandai pemain sebagai "inactive" jika tidak main selama 7 hari.
+
+KRITERIA INACTIVE:
+- Jika lastMatchDate kosong → inactive
+- Jika hari ini - lastMatchDate > 7 hari → inactive
+
+HANDLING INACTIVE:
+- Score frozen (tidak naik, tidak turun) saat inactive
+- Tetap ditampilkan di leaderboard
+- Badge atau visual khusus bisa diberikan (opsional)
+- Saat main lagi, score dan status otomatis update
+
+────────────────────────────────────────
+BAGIAN 4: PERHITUNGAN WIN RATE & AVG SCORE
+────────────────────────────────────────
+Win Rate:
+- Formula: (total_menang ÷ total_pertandingan) × 100
+- Dibulatkan ke angka bulat (integer)
+- Range: 0-100%
+- Jika belum main sama sekali (total_pertandingan = 0) → win rate = 0%
+
+Average Score:
+- Formula: (total_poin_semua_game ÷ total_pertandingan)
+- Dibulatkan ke 1 desimal
+- Contoh: 331 poin ÷ 20 game = 16.55, dibulatkan jadi 16.6
+
+────────────────────────────────────────
+BAGIAN 5: STREAK CALCULATION (RANGKAIAN KEMENANGAN/KEKALAHAN)
+────────────────────────────────────────
+Sistem menghitung 2 jenis streak:
+
+1. LONGEST WIN STREAK (Rekor terpanjang):
+   - Dihitung dengan scan keseluruhan history pertandingan pemain
+   - Mencari urutan kemenangan terpanjang berturut-turut
+   - Disimpan sebagai best achievement sepanjang waktu
+   - Contoh: WLWWWWLW → longest streak = 4 (WWWW)
+
+2. CURRENT STREAK (Streak terkini):
+   - Dihitung dengan scan dari pertandingan PALING BARU ke belakang
+   - Berhenti saat hasil berbeda
+   - Positif (+): rangkaian menang terkini
+   - Negatif (-): rangkaian kalah terkini
+   - Contoh: WLWWWWLWWW → current streak = +3 (3 menang terakhir)
+
+ALGORITMA:
+Untuk longest streak:
+  - Inisialisasi: longest = 0, current = 0
+  - Loop setiap game dari awal ke akhir:
+    - Jika menang: current++, longest = max(longest, current)
+    - Jika kalah: current = 0
+  - Return longest
+
+Untuk current streak:
+  - Loop dari game terakhir ke belakang
+  - Hitung berapa banyak game hasil sama dengan game terakhir
+  - Return nilai positif jika menang, negatif jika kalah
+  - Contoh: 3 menang berturut-turut terakhir → current streak = +3
+
+VISUAL REPRESENTATION:
+- Current streak dipajang di sebelah nama (badge)
+- 🔥 Angka merah: jika current streak kemenangan ≥ 3
+- ❄️ Angka biru: jika current streak kekalahan ≥ 3
+- Angka itu sendiri menunjukkan panjang streak (contoh: 🔥5 = menang 5 beruntun)
+
+────────────────────────────────────────
+BAGIAN 6: PARTNERSHIP STATISTICS (STATISTIK PAIR/PASANGAN)
+────────────────────────────────────────
+Leaderboard menampilkan tab khusus untuk statisitik partnership (kerjasama 2 pemain).
+
+DATA PARTNERSHIP YANG DICATAT:
+1. Total Match Pair: berapa kali 2 pemain bermain bersama (sebagai partner)
+2. Partnership Wins: total kemenangan saat bermain bersama
+3. Partnership Losses: total kekalahan saat bermain bersama
+4. Partnership Win Rate: (wins ÷ total matches) × 100
+5. Combined Score: total poin yang dicetak pair tsb (gabungan kedua pemain)
+6. Longest Pair Streak: rekor kemenangan beruntun terbagi sebagai pasangan
+
+FILTERING:
+- Hanya partnership dengan minimal 2 games ditampilkan
+- Partnership dengan 1 game saja diabaikan (data tidak signifikan)
+
+SORTING OPTIONS:
+- Berdasarkan win rate
+- Berdasarkan jumlah wins
+- Berdasarkan total matches
+- Berdasarkan longest streak
+- Berdasarkan combined score
+
+CONTOH:
+Partnership "Ardo + Danif":
+- Bermain bersama 8 kali
+- Menang 6, Kalah 2
+- Win rate: 75%
+- Combined score: 154 poin (rata-rata 19.25 per game)
+- Longest streak: 4 (4 menang berturut-turut)
+
+────────────────────────────────────────
+BAGIAN 7: COLUMN SORTING & TIEBREAKERS
+────────────────────────────────────────
+Leaderboard support sorting dinamis. Saat klik kolom, urutan berubah.
+
+SORTING LOGIC:
+- Ascending / Descending: bisa diflip setiap kali klik
+- Tiebreaker otomatis jika nilai primary sama:
+
+TIEBREAKER PER KOLOM:
+1. Wins → Tiebreaker: Avg Score, lalu Longest Streak
+2. Losses → Tiebreaker: Avg Score (ascending/lowest first)
+3. Win Rate → Tiebreaker: Total Pertandingan, lalu Attendances
+4. Longest Streak → Tiebreaker: Losses (lower is better, independent dari sort direction)
+
+────────────────────────────────────────
+BAGIAN 8: METRIK PERTANDINGAN
+────────────────────────────────────────
+Detail data yang direkam per pertandingan:
+
+DATA PER PERTANDINGAN:
+- Match ID: ID unik pertandingan
+- Match Date: tanggal pertandingan
+- Team 1 (Players + Score): nama pemain team 1 dan skor
+- Team 2 (Players + Score): nama pemain team 2 dan skor
+- Winner: team mana yang menang (team1 atau team2)
+- Shuttlecock Count: berapa banyak kok yang dipakai
+- Team Members: semua nama yang ikut serta
+
+PERHITUNGAN PERTANDINGAN:
+- Setiap game = 1 pertandingan (bukan 1 sesi)
+- Sesi bisa terdiri dari multiple games
+- Masing-masing game diinput terpisah dengan score terpisah
+
+────────────────────────────────────────
+BAGIAN 9: REAL-TIME SYNC & LIVE UPDATES
+────────────────────────────────────────
+Leaderboard menggunakan real-time database subscription (Supabase Realtime).
+
+CARA KERJA:
+1. Browser user subscribe ke changes di database (matches, match_members, score_history)
+2. Saat admin input pertandingan baru → database update
+3. Subscription di semua browser membaca perubahan
+4. UI otomatis re-render dengan data terbaru dalam 1-2 detik
+5. Tidak perlu refresh manual
+
+LIVE INDICATOR:
+- Titik hijau di header: menunjukkan sistem sedang aktif monitoring
+- Text "LIVE": leaderboard sedang real-time
+- Jika koneksi putus, status akan menunjukkan "last updated at..."
+
+────────────────────────────────────────
+BAGIAN 10: DATA INTEGRITY & NOTES
+────────────────────────────────────────
+PENTING:
+- Semua dihitung mulai dari pertandingan PERTAMA tercatat di sistem
+- Jangan ada retroactive changes tanpa notifikasi user
+- Nama yang dicatat harus PERSIS sama dengan profile (case-sensitive bisa jadi issue)
+- Akun test/dummy (is_test_account = true) tidak ditampilkan
+- Jika admin edit pertandingan lama → leaderboard otomatis recalculate
+- Score history selalu tersimpan untuk audit trail
+
+────────────────────────────────────────
 📞 KONTAK & BANTUAN
 ────────────────────────────────────────
 - Hubungi admin DLOB via WhatsApp untuk pertanyaan pembayaran, pendaftaran,

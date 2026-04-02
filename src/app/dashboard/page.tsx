@@ -6,12 +6,13 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock, HelpCircle, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock, HelpCircle, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import WeatherWidget from '@/components/WeatherWidget';
 import HeadToHead from '@/components/HeadToHead';
+import DashboardWelcomeModal from '@/components/DashboardWelcomeModal';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
 
@@ -60,6 +61,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [memberName, setMemberName] = useState('');
   const [isFirstLogin, setIsFirstLogin] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [expandRecentMatches, setExpandRecentMatches] = useState(true);
 
   // Tutorial for member dashboard
@@ -96,6 +98,7 @@ export default function DashboardPage() {
         // Check if this is first time visiting dashboard
         const isFirst = !profile?.last_dashboard_visit;
         setIsFirstLogin(isFirst);
+        setShowWelcomeModal(isFirst);
 
         // Update last_dashboard_visit timestamp (do this in background, don't wait)
         if (isFirst) {
@@ -247,12 +250,21 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <WeatherWidget />
           <button
-          onClick={toggleTutorial}
-          className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10 hover:bg-blue-200 dark:hover:bg-blue-500/20 border-2 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 transition-colors duration-300"
-          title="Tampilkan panduan fitur"
-        >
-          <HelpCircle className="w-5 h-5" />
-        </button>
+            onClick={() => setShowWelcomeModal(true)}
+            className="p-2 rounded-lg bg-purple-100 dark:bg-purple-500/10 hover:bg-purple-200 dark:hover:bg-purple-500/20 border-2 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Lihat panduan fitur dashboard"
+            disabled={showWelcomeModal}
+          >
+            <BookOpen className="w-5 h-5" />
+          </button>
+          <button
+            onClick={toggleTutorial}
+            className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10 hover:bg-blue-200 dark:hover:bg-blue-500/20 border-2 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Tampilkan panduan interaktif"
+            disabled={showWelcomeModal}
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
@@ -464,12 +476,21 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Tutorial Overlay */}
-      <TutorialOverlay
-        steps={tutorialSteps}
-        isActive={isTutorialActive}
-        onClose={closeTutorial}
-        tutorialKey="member-dashboard"
+      {/* Tutorial Overlay - Disabled while welcome modal is open */}
+      {!showWelcomeModal && (
+        <TutorialOverlay
+          steps={tutorialSteps}
+          isActive={isTutorialActive}
+          onClose={closeTutorial}
+          tutorialKey="member-dashboard"
+        />
+      )}
+
+      {/* Welcome Modal - Shows on first login */}
+      <DashboardWelcomeModal
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        memberName={memberName}
       />
     </div>
   );

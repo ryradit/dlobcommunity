@@ -77,14 +77,6 @@ export default function ArtikelPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Header Navigation */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-[#3e6461] transition-colors font-medium">
-          <ArrowLeft className="w-4 h-4" />
-          Kembali ke Beranda
-        </Link>
-      </div>
-
       {loading ? (
         <section className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

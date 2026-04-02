@@ -32,6 +32,7 @@ const circuitNoirColorVariants: ColorVariant[] = [
   { id: 'midnight',  name: 'Midnight Black',   color: 'Midnight Black',   images: ['/images/members/model/hitam1.jpeg','/images/members/model/hitam2.jpeg','/images/members/model/hitam3.jpeg'], bgColor: '#0d0d0d' },
   { id: 'charcoal',  name: 'Charcoal Grey',    color: 'Charcoal Grey',    images: ['/images/members/model/grey1.png','/images/members/model/grey2.jpeg','/images/members/model/grey3.png'], bgColor: '#3a3a3a' },
   { id: 'steelblue', name: 'Steel Blue Night', color: 'Steel Blue Night', images: ['/images/members/model/bluenight1.jpeg','/images/members/model/bluenight2.jpeg','/images/members/model/bluenight3.jpeg'], bgColor: '#1e2d40' },
+  { id: 'blossomrose', name: 'Blossom Rose', color: 'Blossom Rose', images: ['/images/members/model/magentaspecial.png','/images/members/model/magentaspecial2.png','/images/members/model/magentaspecial3.png','/images/members/model/magentaspecial4.png','/images/members/model/magentaspecial5.png'], bgColor: '#c8a19c' },
 ];
 
 const sizePrices: SizePrice[] = [
@@ -116,6 +117,8 @@ const products: Product[] = [
     // Introductory video - highlights the Noir edition
     introductionVideos: [
       '/images/members/model/videomodel4.mp4',
+      '/images/members/model/videomodel6.mp4',
+      '/images/members/model/videomodel7.mp4',
     ],
   },
 ];
@@ -368,6 +371,18 @@ export default function StorePage() {
               loading="eager"
               draggable={false}
             />
+            
+            {/* Background video layer */}
+            <video
+              src="/images/members/model/videopromotionnoirblossom.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover object-center opacity-0 hover:opacity-100 transition-opacity duration-300"
+              style={{ zIndex: 5 }}
+            />
+            
             {/* Dark overlay — lighter to preserve image clarity */}
             <div className="absolute inset-0 bg-linear-to-b from-black/10 via-transparent to-black/65" />
 

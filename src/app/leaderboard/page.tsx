@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import FloatingAIChat from '@/components/FloatingAIChat';
 import {
   Trophy, Calendar, Flame, Users, RefreshCw, Zap, Info, ArrowLeft, ArrowUp, ArrowDown,
 } from 'lucide-react';
@@ -1529,6 +1530,9 @@ export default function LeaderboardPage() {
           DLOB Community · Data diperbarui otomatis · Statistik berdasarkan pertandingan yang diinput
         </div>
       </div>
+      
+      {/* Floating AI Chat */}
+      <FloatingAIChat />
     </div>
   );
 }
