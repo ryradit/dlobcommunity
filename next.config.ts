@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  swcMinify: true,
+  productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [
       {
@@ -26,6 +28,17 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    // Optimize images more aggressively
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 31536000,
+  },
+  webpack: (config, { isServer }) => {
+    // Exclude video files from being bundled
+    config.module.rules.push({
+      test: /\.(mp4|webm|ogg|mov)$/,
+      type: 'asset/resource',
+    });
+    return config;
   },
 };
 
