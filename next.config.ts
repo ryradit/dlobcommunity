@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  reactCompiler: true,
+  reactCompiler: false,
   productionBrowserSourceMaps: false,
+  // Optimized for Vercel deployment
   // Disable source maps in production
   experimental: {
     serverSourceMaps: false,
