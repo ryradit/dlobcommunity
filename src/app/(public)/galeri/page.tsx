@@ -31,6 +31,13 @@ export default function GaleriPage() {
   const [latihanImages, setLatihanImages] = useState<GalleryItem[]>([]);
   const [sparringImages, setSparringImages] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mobileGridCols, setMobileGridCols] = useState<1 | 2>(1);
+  const [semuaPage, setSemuaPage] = useState(1);
+  const [pertandinganPage, setPertandinganPage] = useState(1);
+  const [latihanPage, setLatihanPage] = useState(1);
+  const [sparringPage, setSparringPage] = useState(1);
+  const [modalImageLoading, setModalImageLoading] = useState(false);
+  const itemsPerPage = 50;
 
   // Fetch YouTube videos from channel
   useEffect(() => {
@@ -83,17 +90,22 @@ export default function GaleriPage() {
   useEffect(() => {
     const fetchGoogleDriveImages = async (folderId: string, category: 'latihan' | 'sparring') => {
       try {
+        console.log(`🔄 Fetching ${category} images from folder: ${folderId}`);
+        
         // Use server-side API route for proper authentication
         const response = await fetch(
-          `/api/drive/images?folderId=${folderId}&category=${category}`
+          `/api/drive/images?folderId=${folderId}&category=${category}&limit=250`
         );
 
         if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
+          const errorData = await response.json();
+          throw new Error(`API error: ${response.status} - ${errorData.error}`);
         }
 
         const data = await response.json();
         const images: GalleryItem[] = data.images || [];
+
+        console.log(`✅ Fetched ${images.length} ${category} images`);
 
         if (category === 'latihan') {
           setLatihanImages(images);
@@ -101,7 +113,7 @@ export default function GaleriPage() {
           setSparringImages(images);
         }
       } catch (error) {
-        console.error(`Error fetching ${category} images:`, error);
+        console.error(`❌ Error fetching ${category} images:`, error);
       }
     };
 
@@ -134,32 +146,107 @@ export default function GaleriPage() {
     ...sparringImages,
   ];
 
-  // Filter items based on active tab
+  // Filter items based on active tab and apply pagination
   const getFilteredItems = () => {
+    let items: GalleryItem[] = [];
+    let currentPage = 1;
+
     switch (activeTab) {
       case 'semua':
-        return allItems;
+        items = allItems;
+        currentPage = semuaPage;
+        break;
       case 'pertandingan':
-        return pertandinganItems;
+        items = pertandinganItems;
+        currentPage = pertandinganPage;
+        break;
       case 'latihan':
-        return latihanImages;
+        items = latihanImages;
+        currentPage = latihanPage;
+        break;
       case 'sparring':
-        return sparringImages;
+        items = sparringImages;
+        currentPage = sparringPage;
+        break;
       default:
-        return allItems;
+        items = allItems;
+    }
+
+    // Apply pagination to all tabs with 50 items per page
+    if (items.length > 50) {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      
+      console.log(`📄 Pagination: Tab=${activeTab}, Page=${currentPage}, Total=${items.length}, Range=[${startIndex}-${endIndex}]`);
+      
+      return items.slice(startIndex, endIndex);
+    }
+
+    return items;
+  };
+
+  // Get total pages for current tab
+  const getTotalPages = () => {
+    switch (activeTab) {
+      case 'semua':
+        return Math.ceil(allItems.length / itemsPerPage);
+      case 'pertandingan':
+        return Math.ceil(pertandinganItems.length / itemsPerPage);
+      case 'latihan':
+        return Math.ceil(latihanImages.length / itemsPerPage);
+      case 'sparring':
+        return Math.ceil(sparringImages.length / itemsPerPage);
+      default:
+        return 1;
     }
   };
 
+  // Get current page
+  const getCurrentPage = () => {
+    switch (activeTab) {
+      case 'semua':
+        return semuaPage;
+      case 'pertandingan':
+        return pertandinganPage;
+      case 'latihan':
+        return latihanPage;
+      case 'sparring':
+        return sparringPage;
+      default:
+        return 1;
+    }
+  };
+
+  // Change page handler
+  const handlePageChange = (newPage: number) => {
+    console.log(`🔄 Page change: activeTab=${activeTab}, currentPage=${getCurrentPage()} → newPage=${newPage}`);
+    
+    switch (activeTab) {
+      case 'semua':
+        setSemuaPage(newPage);
+        console.log(`✅ Set semuaPage to ${newPage}`);
+        break;
+      case 'pertandingan':
+        setPertandinganPage(newPage);
+        console.log(`✅ Set pertandinganPage to ${newPage}`);
+        break;
+      case 'latihan':
+        setLatihanPage(newPage);
+        console.log(`✅ Set latihanPage to ${newPage}`);
+        break;
+      case 'sparring':
+        setSparringPage(newPage);
+        console.log(`✅ Set sparringPage to ${newPage}`);
+        break;
+    }
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const filteredItems = getFilteredItems();
-  const tabs: { label: string; value: TabType }[] = [
-    { label: 'Semua', value: 'semua' },
-    { label: 'Pertandingan', value: 'pertandingan' },
-    { label: 'Latihan', value: 'latihan' },
-    { label: 'Sparring', value: 'sparring' },
-  ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <main className="min-h-screen bg-linear-to-b from-slate-50 to-white">
       {/* Hero Section with Animated Marquee */}
       <AnimatedMarqueeHero
         tagline="Galeri DLOB"
@@ -210,15 +297,25 @@ export default function GaleriPage() {
       />
 
       {/* Tabs Section */}
-      <section className="py-12 bg-gradient-to-b from-slate-50 to-white">
+      <section className="py-12 bg-linear-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
-          <div className="flex flex-wrap gap-3 bg-gray-100 p-1.5 rounded-full inline-flex">
-            {tabs.map((tab) => (
+          <div className="flex flex-wrap gap-3 bg-gray-100 p-1.5 rounded-full">
+            {[
+              { label: 'Semua', value: 'semua' },
+              { label: 'Pertandingan', value: 'pertandingan' },
+              { label: 'Latihan', value: 'latihan' },
+              { label: 'Sparring', value: 'sparring' },
+            ].map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => {
-                  setActiveTab(tab.value);
+                  setActiveTab(tab.value as TabType);
                   setSelectedVideo(null);
+                  // Reset pagination for all tabs when switching
+                  setSemuaPage(1);
+                  setPertandinganPage(1);
+                  setLatihanPage(1);
+                  setSparringPage(1);
                 }}
                 className={`px-6 py-2.5 font-semibold rounded-full transition-all ${
                   activeTab === tab.value
@@ -249,8 +346,43 @@ export default function GaleriPage() {
                   <p className="text-gray-500 text-lg">Belum ada konten untuk tab ini</p>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredItems.map((item) => (
+                <>
+                  {/* Mobile Grid Toggle - Only visible on mobile */}
+                  <div className="md:hidden flex justify-end mb-6 gap-2">
+                    <button
+                      onClick={() => setMobileGridCols(1)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                        mobileGridCols === 1
+                          ? 'bg-[#1e4843] text-white shadow-lg'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                      title="Tampilkan 1 kolom"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <rect x="2" y="2" width="16" height="16" rx="2" ry="2" opacity="0.5" />
+                      </svg>
+                      1
+                    </button>
+                    <button
+                      onClick={() => setMobileGridCols(2)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                        mobileGridCols === 2
+                          ? 'bg-[#1e4843] text-white shadow-lg'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                      title="Tampilkan 2 kolom"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <rect x="2" y="2" width="7" height="16" rx="1" ry="1" opacity="0.5" />
+                        <rect x="11" y="2" width="7" height="16" rx="1" ry="1" opacity="0.5" />
+                      </svg>
+                      2
+                    </button>
+                  </div>
+
+                  {/* Gallery Grid */}
+                  <div className={`grid ${mobileGridCols === 1 ? 'grid-cols-1' : 'grid-cols-2'} md:grid-cols-2 lg:grid-cols-3 gap-6`}>
+                    {filteredItems.map((item) => (
                     <div
                       key={item.id}
                       className="group rounded-2xl overflow-hidden hover:shadow-2xl transition-all cursor-pointer bg-white border border-gray-200 hover:border-[#3e6461]"
@@ -317,7 +449,79 @@ export default function GaleriPage() {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+
+                  {/* Pagination for all tabs with more than 50 items */}
+                  {getTotalPages() > 1 && (
+                    <div className="mt-12 flex flex-col items-center gap-6">
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {/* Previous Button */}
+                        <button
+                          onClick={() => handlePageChange(getCurrentPage() - 1)}
+                          disabled={getCurrentPage() === 1}
+                          className="px-4 py-2 rounded-lg border border-gray-300 hover:border-[#3e6461] hover:bg-[#3e6461]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          ← Sebelumnya
+                        </button>
+
+                        {/* Page Numbers */}
+                        {Array.from({ length: getTotalPages() }, (_, i) => i + 1).map((pageNum) => {
+                          // Show first page, last page, current page, and neighbors
+                          const totalPages = getTotalPages();
+                          const currentPage = getCurrentPage();
+                          const isVisible = 
+                            pageNum === 1 || 
+                            pageNum === totalPages || 
+                            (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+
+                          if (!isVisible) {
+                            if ((pageNum === currentPage - 2 || pageNum === currentPage + 2) && pageNum > 1 && pageNum < totalPages) {
+                              return (
+                                <span key={pageNum} className="px-2 text-gray-400">
+                                  ...
+                                </span>
+                              );
+                            }
+                            return null;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => handlePageChange(pageNum)}
+                              className={`px-3 py-2 rounded-lg transition-colors ${
+                                pageNum === currentPage
+                                  ? 'bg-[#1e4843] text-white font-semibold shadow-lg'
+                                  : 'border border-gray-300 hover:border-[#3e6461] hover:bg-[#3e6461]/5'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+
+                        {/* Next Button */}
+                        <button
+                          onClick={() => handlePageChange(getCurrentPage() + 1)}
+                          disabled={getCurrentPage() === getTotalPages()}
+                          className="px-4 py-2 rounded-lg border border-gray-300 hover:border-[#3e6461] hover:bg-[#3e6461]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Selanjutnya →
+                        </button>
+                      </div>
+
+                      {/* Page Info */}
+                      <p className="text-sm text-gray-600">
+                        Halaman {getCurrentPage()} dari {getTotalPages()} (Total: {
+                          activeTab === 'semua' ? allItems.length :
+                          activeTab === 'pertandingan' ? pertandinganItems.length :
+                          activeTab === 'latihan' ? latihanImages.length :
+                          sparringImages.length
+                        } item)
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
@@ -373,29 +577,72 @@ export default function GaleriPage() {
       {selectedImage && (
         <div 
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedImage(null)}
+          onClick={() => {
+            setSelectedImage(null);
+            setModalImageLoading(false);
+          }}
         >
           <div 
-            className="relative w-full max-w-4xl max-h-[90vh] bg-black rounded-2xl overflow-hidden"
+            className="relative w-full max-w-5xl max-h-[90vh] bg-black rounded-2xl overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
             <button
-              onClick={() => setSelectedImage(null)}
+              onClick={() => {
+                setSelectedImage(null);
+                setModalImageLoading(false);
+              }}
               className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* Image */}
-            <div className="flex items-center justify-center h-full">
+            {/* Image Container with Loading Spinner */}
+            <div className="flex-1 flex items-center justify-center min-h-0 overflow-auto relative">
+              {/* Thumbnail Blur Background (shows while loading) */}
+              <img 
+                src={selectedImage.thumbnail}
+                alt={selectedImage.title}
+                className="absolute inset-0 w-full h-full object-contain blur-sm opacity-30 pointer-events-none"
+              />
+              
+              {/* Loading Spinner */}
+              {modalImageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                </div>
+              )}
+
+              {/* Full Resolution Image */}
               <img 
                 src={`https://drive.google.com/uc?export=view&id=${selectedImage.id}`}
                 alt={selectedImage.title}
-                className="w-full h-full object-contain"
+                className="w-full h-auto max-h-full object-contain relative z-10"
+                onLoadStart={() => setModalImageLoading(true)}
+                onLoad={() => setModalImageLoading(false)}
                 onError={(e) => {
-                  console.warn('Modal image failed to load:', selectedImage.id);
-                  (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${selectedImage.id}&sz=w1000`;
+                  console.warn('Modal image failed with export=view, trying alternative URL:', selectedImage.id);
+                  const img = e.target as HTMLImageElement;
+                  
+                  // Fallback strategy: try different sizes and formats
+                  if (!img.src.includes('export=download')) {
+                    // Try download export with medium size
+                    img.src = `https://drive.google.com/uc?export=download&id=${selectedImage.id}`;
+                    console.log('Trying export=download');
+                  } else if (!img.src.includes('sz=w800')) {
+                    // Try smaller size (800px) which might load faster
+                    img.src = `https://drive.google.com/uc?export=view&id=${selectedImage.id}&sz=w800`;
+                    console.log('Trying sz=w800');
+                  } else if (!img.src.includes('sz=w400')) {
+                    // Try even smaller size (400px)
+                    img.src = `https://drive.google.com/uc?export=view&id=${selectedImage.id}&sz=w400`;
+                    console.log('Trying sz=w400');
+                  } else {
+                    // Use thumbnail as final fallback
+                    img.src = selectedImage.thumbnail;
+                    console.warn('Using thumbnail as last resort fallback');
+                  }
+                  setModalImageLoading(false);
                 }}
               />
             </div>

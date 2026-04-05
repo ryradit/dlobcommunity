@@ -47,33 +47,59 @@ function winRateColor(wr: number) {
   return 'text-orange-600 dark:text-orange-400';
 }
 
+// Calculate smooth decay weight based on match age (90-day rolling window)
+// 0 days old = 1.0 weight, 90 days old = 0.0 weight
+function getDecayWeight(matchDate: string | null): number {
+  if (!matchDate) return 0;
+  
+  const DECAY_DAYS = 90;
+  const match = new Date(matchDate);
+  const now = new Date();
+  const daysSinceMatch = (now.getTime() - match.getTime()) / (1000 * 60 * 60 * 24);
+  
+  if (daysSinceMatch < 0) return 1.0; // Future date (shouldn't happen)
+  if (daysSinceMatch >= DECAY_DAYS) return 0; // Older than 90 days = 0 weight
+  
+  // Linear decay: 1.0 - (daysSinceMatch / DECAY_DAYS)
+  return Math.max(0, 1 - (daysSinceMatch / DECAY_DAYS));
+}
+
 // Calculate weighted Pemain Terbaik score based on normalized metrics
-// Score freezes for players who haven't played in 7+ days (no increase, no decrease)
-function calculateBestPlayerScore(player: MemberStat, maxStats: {
+// Option C: Win Rate 40%, Win Count 30%, Average Score 20%, Longest Streak 10%
+// Smooth progressive decay over 90 days (rolling window)
+function calculateBestPlayerScore(player: MemberStat & { 
+  weightedWins?: number;
+  weightedMatches?: number;
+}, maxStats: {
   matches: number;
   wins: number;
   losses: number;
   avgScore: number;
   streak: number;
+  weightedMatches?: number;
+  weightedWins?: number;
 }): number {
+  // Use weighted metrics if available (from 90-day decay), otherwise fall back to all-time
+  const wins = player.weightedWins ?? player.wins;
+  const matches = player.weightedMatches ?? player.totalMatches;
+  const maxWins = maxStats.weightedWins ?? maxStats.wins;
+  const maxMatches = maxStats.weightedMatches ?? maxStats.matches;
+  
   // Normalize each metric to 0-100 scale
-  const normMatches = maxStats.matches > 0 ? (player.totalMatches / maxStats.matches) * 100 : 0;
-  const normWins = maxStats.wins > 0 ? (player.wins / maxStats.wins) * 100 : 0;
+  const normWins = maxWins > 0 ? (wins / maxWins) * 100 : 0;
   const normAvgScore = maxStats.avgScore > 0 ? (player.avgScore / maxStats.avgScore) * 100 : 0;
   const normStreak = maxStats.streak > 0 ? (player.longestWinStreak / maxStats.streak) * 100 : 0;
   const winRate = player.winRate; // Already 0-100
 
-  // Apply weights to all players
+  // Weights - Win Count focused (user proposal)
   const weights = {
-    matches: 0.25,     // Participation & consistency
-    wins: 0.20,        // Win count
-    winRate: 0.20,     // Consistency ratio
-    avgScore: 0.15,    // Individual contribution per match
+    wins: 0.40,        // Win count (highest priority)
+    winRate: 0.30,     // Win consistency (second highest)
+    avgScore: 0.20,    // Individual contribution per match
     streak: 0.10,      // Peak performance
   };
 
   const score =
-    (normMatches * weights.matches) +
     (normWins * weights.wins) +
     (winRate * weights.winRate) +
     (normAvgScore * weights.avgScore) +
@@ -251,6 +277,8 @@ export default function LeaderboardPage() {
       }
 
       const playerMatchHistory = new Map<string, boolean[]>();
+      // Track weighted metrics for 90-day rolling window
+      const playerWeightedStats = new Map<string, { weightedWins: number; weightedMatches: number }>();
 
       for (const match of matches) {
         const players = [
@@ -266,16 +294,30 @@ export default function LeaderboardPage() {
           const won = match.winner === team;
           const lost = match.winner && match.winner !== team;
           const score = team === 'team1' ? (match.team1_score ?? 0) : (match.team2_score ?? 0);
+          
           s.totalMatches++;
           s.totalScore += score;
           if (won) s.wins++;
           if (lost) s.losses++;
+          
           // Track last match date - will be updated to the most recent match
           if (match.match_date) {
             s.lastMatchDate = new Date(match.match_date).toISOString().slice(0, 10);
           }
+          
           if (!playerMatchHistory.has(name)) playerMatchHistory.set(name, []);
           playerMatchHistory.get(name)!.push(won);
+          
+          // Calculate decay weight for 90-day rolling window
+          const decayWeight = getDecayWeight(match.match_date);
+          if (decayWeight > 0) {
+            if (!playerWeightedStats.has(name)) {
+              playerWeightedStats.set(name, { weightedWins: 0, weightedMatches: 0 });
+            }
+            const ws = playerWeightedStats.get(name)!;
+            ws.weightedMatches += decayWeight;
+            if (won) ws.weightedWins += decayWeight;
+          }
         }
       }
 
@@ -301,18 +343,31 @@ export default function LeaderboardPage() {
 
       // Calculate best player scores for all members
       const allStats = Array.from(statMap.values());
+      
+      // Calculate max stats for normalization (using weighted metrics where available)
       const maxStats = {
         matches: Math.max(...allStats.map(s => s.totalMatches), 1),
         wins: Math.max(...allStats.map(s => s.wins), 1),
         losses: Math.max(...allStats.map(s => s.losses), 1),
         avgScore: Math.max(...allStats.map(s => s.avgScore), 1),
         streak: Math.max(...allStats.map(s => s.longestWinStreak), 1),
+        weightedMatches: Math.max(...Array.from(playerWeightedStats.values()).map(w => w.weightedMatches), 1),
+        weightedWins: Math.max(...Array.from(playerWeightedStats.values()).map(w => w.weightedWins), 1),
       };
 
-      const statsWithScores = allStats.map(s => ({
-        ...s,
-        bestPlayerScore: calculateBestPlayerScore(s, maxStats),
-      }));
+      const statsWithScores = allStats.map(s => {
+        const weightedStats = playerWeightedStats.get(s.name);
+        return {
+          ...s,
+          weightedWins: weightedStats?.weightedWins,
+          weightedMatches: weightedStats?.weightedMatches,
+          bestPlayerScore: calculateBestPlayerScore({
+            ...s,
+            weightedWins: weightedStats?.weightedWins,
+            weightedMatches: weightedStats?.weightedMatches,
+          }, maxStats),
+        };
+      });
 
       // Fetch previous match week's score history for rank/score comparison
       // Get all unique snapshot dates, ordered descending
@@ -1473,43 +1528,48 @@ export default function LeaderboardPage() {
               <div className="px-4 sm:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4 max-h-[60vh] overflow-y-auto">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-700 dark:text-zinc-300 mb-2 sm:mb-3">
-                    <strong>Points</strong> adalah skor komprehensif yang menggabungkan berbagai metrik performa pemain. Semakin tinggi points, semakin baik performa keseluruhan.
+                    <strong>Points</strong> adalah skor komprehensif berbasis performa terbaru. Semakin tinggi points, semakin baik performa Anda. Sistem ini menggunakan <strong>rolling 90 hari</strong> dengan decay progresif untuk menghargai performa konsisten dari waktu ke waktu.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm">Komponen Perhitungan:</h4>
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm">📊 Komponen Perhitungan:</h4>
                   <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-600 dark:text-zinc-400">
                     <li className="flex items-start gap-2">
-                      <span className="font-semibold text-purple-600 dark:text-purple-400 min-w-fit">25%</span>
-                      <span><strong>Total Pertandingan</strong> - Konsistensi & partisipasi aktif</span>
+                      <span className="font-semibold text-blue-600 dark:text-blue-400 min-w-fit">40%</span>
+                      <span><strong>Total Menang</strong> - Jumlah kemenangan absolut (prioritas utama)</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="font-semibold text-green-600 dark:text-green-400 min-w-fit">20%</span>
-                      <span><strong>Total Menang</strong> - Kemampuan memenangkan pertandingan</span>
+                      <span className="font-semibold text-green-600 dark:text-green-400 min-w-fit">30%</span>
+                      <span><strong>Win Rate</strong> - Konsistensi & rasio kemenangan</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="font-semibold text-yellow-600 dark:text-yellow-400 min-w-fit">20%</span>
-                      <span><strong>Win Rate</strong> - Rasio kemenangan vs kekalahan</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="font-semibold text-blue-600 dark:text-blue-400 min-w-fit">15%</span>
                       <span><strong>Rata-rata Skor</strong> - Kontribusi poin per pertandingan</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="font-semibold text-orange-600 dark:text-orange-400 min-w-fit">10%</span>
-                      <span><strong>Streak Terpanjang</strong> - Performa puncak</span>
+                      <span><strong>Streak Terpanjang</strong> - Performa puncak maksimal</span>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <span className="font-semibold text-red-600 dark:text-red-400 min-w-fit">-10%</span>
-                      <span><strong>Total Kekalahan</strong> - Pengurangan untuk konsistensi</span>
-                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-zinc-800/50 rounded-lg p-2 sm:p-3 border border-blue-200 dark:border-zinc-700">
+                  <h4 className="text-xs sm:text-sm font-semibold text-blue-900 dark:text-blue-300 mb-1.5">⏳ Rolling 90 Hari - Decay Progresif</h4>
+                  <p className="text-xs text-blue-800 dark:text-blue-400 mb-2">
+                    Pertandingan lama secara bertahap kehilangan bobot seiring waktu. Setiap kemenangan baru lebih berharga:
+                  </p>
+                  <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
+                    <li>• <strong>0-30 hari:</strong> 100% bobot (kemenangan terbaru paling berharga)</li>
+                    <li>• <strong>30-60 hari:</strong> Decay progresif</li>
+                    <li>• <strong>60-90 hari:</strong> Terus berkurang</li>
+                    <li>• <strong>90+ hari:</strong> Tidak dihitung dalam score</li>
                   </ul>
                 </div>
 
                 <div className="bg-purple-50 dark:bg-zinc-800/50 rounded-lg p-2 sm:p-3">
                   <p className="text-xs text-gray-700 dark:text-zinc-300">
-                    💡 <strong>Tips:</strong> Klik kolom <strong>Points</strong> untuk mengurutkan pemain berdasarkan skor keseluruhan. Status 🔥 menunjukkan pemain sedang panas (streak positif).
+                    💡 <strong>Tips:</strong> Fokus pada <strong>jumlah kemenangan</strong> untuk skor maksimal. Semakin banyak menang, semakin tinggi score. Konsistensi (win rate) tetap penting, tapi volume kemenangan adalah kunci utama!
                   </p>
                 </div>
               </div>

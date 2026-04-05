@@ -1,13 +1,22 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Heart, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SmartCropImage from '@/components/SmartCropImage';
 import ZoomableImage from '@/components/ZoomableImage';
 
-// Supabase storage base URL for videos
-const SUPABASE_VIDEO_URL = 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos';
+// Supabase storage public URLs for videos (simpler, better Range request support for streaming)
+const SUPABASE_VIDEOS = {
+  videomodel1: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel1.mp4',
+  videomodel2: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel2.mp4',
+  videomodel3: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel3.mp4',
+  videomodel4: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel4.mp4',
+  videomodel5: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel5.mp4',
+  videomodel6: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel6.mp4',
+  videomodel7: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel7.mp4',
+  videopromotionnoirblossom: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videopromotionnoirblossom.mp4',
+};
 
 interface ColorVariant {
   id: string;
@@ -25,17 +34,60 @@ interface SizePrice {
 
 // --- Jersey DLOB Official ---
 const officialColorVariants: ColorVariant[] = [
-  { id: 'biru',   name: 'Biru Navy', color: 'Biru Navy', images: ['/images/members/model/biru3.png','/images/members/model/biru4.png','/images/members/model/biru5.png'], bgColor: '#0b244c' },
-  { id: 'pink',   name: 'Pink',      color: 'Pink',      images: ['/images/members/model/pink8.png','/images/members/model/pink6.png','/images/members/model/pink7.png','/images/members/model/pink9.png'], bgColor: '#c8a19c' },
-  { id: 'kuning', name: 'Kuning', color: 'Kuning', images: ['/images/members/model/kuning3.png','/images/members/model/kuning4.png','/images/members/model/kuning 5.png','/images/members/model/kuning6.png'], bgColor: '#fecb00' },
+  { 
+    id: 'biru',   
+    name: 'Biru Navy', 
+    color: 'Biru Navy', 
+    images: ['/images/members/model/biru3.png','/images/members/model/biru4.png','/images/members/model/biru5.png'], 
+    bgColor: '#0b244c',
+  },
+  { 
+    id: 'pink',   
+    name: 'Pink',      
+    color: 'Pink',      
+    images: ['/images/members/model/pink8.png','/images/members/model/pink6.png','/images/members/model/pink7.png','/images/members/model/pink9.png'], 
+    bgColor: '#c8a19c',
+  },
+  { 
+    id: 'kuning', 
+    name: 'Kuning', 
+    color: 'Kuning', 
+    images: ['/images/members/model/kuning3.png','/images/members/model/kuning4.png','/images/members/model/kuning 5.png','/images/members/model/kuning6.png'], 
+    bgColor: '#fecb00',
+  },
 ];
 
 // --- DLOB Jersey - Noir ---
 const circuitNoirColorVariants: ColorVariant[] = [
-  { id: 'midnight',  name: 'Midnight Black',   color: 'Midnight Black',   images: ['/images/members/model/hitam1.jpeg','/images/members/model/hitam2.jpeg','/images/members/model/hitam3.jpeg'], bgColor: '#0d0d0d' },
-  { id: 'charcoal',  name: 'Charcoal Grey',    color: 'Charcoal Grey',    images: ['/images/members/model/grey1.png','/images/members/model/grey2.jpeg','/images/members/model/grey3.png'], bgColor: '#3a3a3a' },
-  { id: 'steelblue', name: 'Steel Blue Night', color: 'Steel Blue Night', images: ['/images/members/model/bluenight1.jpeg','/images/members/model/bluenight2.jpeg','/images/members/model/bluenight3.jpeg'], bgColor: '#1e2d40' },
-  { id: 'blossomrose', name: 'Blossom Rose', color: 'Blossom Rose', images: ['/images/members/model/magentaspecial.png','/images/members/model/magentaspecial2.png','/images/members/model/magentaspecial3.png','/images/members/model/magentaspecial4.png','/images/members/model/magentaspecial5.png'], bgColor: '#c8a19c' },
+  { 
+    id: 'midnight',  
+    name: 'Midnight Black',   
+    color: 'Midnight Black',   
+    images: ['/images/members/model/hitam1.jpeg','/images/members/model/hitam2.jpeg','/images/members/model/hitam3.jpeg'], 
+    bgColor: '#0d0d0d',
+  },
+  { 
+    id: 'charcoal',  
+    name: 'Charcoal Grey',    
+    color: 'Charcoal Grey',    
+    images: ['/images/members/model/grey1.png','/images/members/model/grey2.jpeg','/images/members/model/grey3.png'], 
+    bgColor: '#3a3a3a',
+    // No videos for Charcoal Grey
+  },
+  { 
+    id: 'steelblue', 
+    name: 'Steel Blue Night', 
+    color: 'Steel Blue Night', 
+    images: ['/images/members/model/bluenight1.jpeg','/images/members/model/bluenight2.jpeg','/images/members/model/bluenight3.jpeg'], 
+    bgColor: '#1e2d40',
+  },
+  { 
+    id: 'blossomrose', 
+    name: 'Blossom Rose', 
+    color: 'Blossom Rose', 
+    images: ['/images/members/model/magentaspecial.png','/images/members/model/magentaspecial2.png','/images/members/model/magentaspecial3.png','/images/members/model/magentaspecial4.png','/images/members/model/magentaspecial5.png'], 
+    bgColor: '#c8a19c',
+  },
 ];
 
 const sizePrices: SizePrice[] = [
@@ -96,9 +148,9 @@ const products: Product[] = [
     comingSoon: false,
     // Introductory videos - will shuffle automatically
     introductionVideos: [
-      `${SUPABASE_VIDEO_URL}/videomodel2.mp4`,
-      `${SUPABASE_VIDEO_URL}/videomodel3.mp4`,
-      `${SUPABASE_VIDEO_URL}/videomodel5.mp4`,
+      SUPABASE_VIDEOS.videomodel1,
+      SUPABASE_VIDEOS.videomodel3,
+      SUPABASE_VIDEOS.videomodel5,
     ],
   },
   {
@@ -117,11 +169,11 @@ const products: Product[] = [
     preOrder: true,
     estimatedDelivery: 'TBA',
     comingSoon: true,
-    // Introductory video - highlights the Noir edition
+    // Introductory videos - highlights the Noir edition
     introductionVideos: [
-      `${SUPABASE_VIDEO_URL}/videomodel4.mp4`,
-      `${SUPABASE_VIDEO_URL}/videomodel6.mp4`,
-      `${SUPABASE_VIDEO_URL}/videomodel7.mp4`,
+      SUPABASE_VIDEOS.videomodel4,
+      SUPABASE_VIDEOS.videomodel6,
+      SUPABASE_VIDEOS.videopromotionnoirblossom,
     ],
   },
 ];
@@ -154,8 +206,11 @@ function CatalogCard({
   const [activeIdx, setActiveIdx] = useState(0);
   const [visible, setVisible]     = useState(true);
   const [videoErrors, setVideoErrors] = useState<Set<string>>(new Set());
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const isVideo = (src: string) => src.endsWith('.mp4') || src.endsWith('.webm') || src.endsWith('.mov');
   const currentMedia = mediaItems[activeIdx] ?? null;
@@ -165,29 +220,121 @@ function CatalogCard({
     return product.coverImage || product.colorVariants[0]?.images[0] || null;
   };
 
-  const handleVideoError = (failedSrc: string) => {
+  const handleVideoError = (failedSrc: string, videoElement?: HTMLVideoElement, isTimeout: boolean = false) => {
+    console.warn(`❌ Video failed to load: ${failedSrc}`);
+    const video = videoElement || videoRef.current;
+    
+    if (isTimeout) {
+      console.error(`🔴 Video Timeout Error:`, {
+        url: failedSrc,
+        reason: 'Video took too long to load (>20 seconds)',
+        fallback: 'Showing preview image instead'
+      });
+    } else if (video && video.error) {
+      const error = video.error;
+      const errorCode = error.code;
+      const errorMsg = {
+        1: 'MEDIA_ERR_ABORTED - Loading aborted',
+        2: 'MEDIA_ERR_NETWORK - Network error',
+        3: 'MEDIA_ERR_DECODE - Decoding error (unsupported format or corrupted file)',
+        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Source not supported'
+      }[errorCode] || 'Unknown error';
+      
+      console.error(`🔴 Video Error Details:`, {
+        url: failedSrc,
+        errorCode,
+        errorMessage: errorMsg,
+        errorText: error.message,
+        debugMessage: error.toString(),
+        networkState: video.networkState,
+        readyState: video.readyState,
+      });
+    } else {
+      console.error(`🔴 Video Error (no error details):`, {
+        url: failedSrc,
+        videoState: video ? {
+          networkState: video.networkState,
+          readyState: video.readyState,
+          currentSrc: video.currentSrc,
+        } : 'video element not found'
+      });
+    }
+    
     setVideoErrors((prev) => new Set(prev).add(failedSrc));
+    setVideoReady(false);
   };
+
+  // Verify video URLs on mount
+  useEffect(() => {
+    const videosToCheck = mediaItems.filter(item => isVideo(item));
+    if (videosToCheck.length === 0) return;
+
+    console.log('📹 Video sources ready:', videosToCheck);
+  }, []);
+
+  // Cleanup function for video playback
+  const cleanupVideo = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+      videoRef.current.src = '';
+    }
+    // Cancel any pending fetch requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
+
+  // Handle video metadata loaded
+  const handleVideoReady = useCallback(() => {
+    console.log(`✅ Video ready: ${currentMedia}`);
+    setVideoReady(true);
+    setVideoLoading(false);
+  }, [currentMedia]);
+
+  // Preload next video in queue
+  useEffect(() => {
+    if (!currentIsVideo || !videoRef.current) return;
+    
+    const video = videoRef.current;
+    setVideoReady(false);
+    setVideoLoading(true);
+    
+    console.log(`⏳ Loading video: ${currentMedia}`);
+  }, [currentMedia, currentIsVideo]);
 
   useEffect(() => {
     // Only auto-rotate if multiple items available
     if (mediaItems.length <= 1) return;
     
+    // Longer duration for videos to load + play
+    const duration = currentIsVideo ? 20000 : 10000; // 20s for videos, 10s for images
+    
     const interval = setInterval(() => {
       // fade out
       setVisible(false);
       timerRef.current = setTimeout(() => {
+        // Cleanup current video before switching
+        cleanupVideo();
+        
+        // Move to next item
         setActiveIdx((i) => (i + 1) % mediaItems.length);
-        setVisible(true);
-      }, 800); // Longer fade-out (800ms) for smoother transitions
-    }, currentIsVideo ? 9000 : 10000); // 9s for videos (includes fade), 10s for images
+        
+        // Small delay before showing new media
+        setTimeout(() => {
+          setVisible(true);
+          setVideoReady(false);
+        }, 100);
+      }, 800);
+    }, duration);
     
     return () => {
       clearInterval(interval);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaItems.length, activeIdx]);
+  }, [mediaItems.length, activeIdx, currentIsVideo, cleanupVideo]);
 
   return (
     <button
@@ -202,19 +349,29 @@ function CatalogCard({
           >
             {currentIsVideo ? (
               <video
-                key={currentMedia}
+                key={`${product.id}-${currentMedia}-${activeIdx}`}
                 ref={videoRef}
-                src={currentMedia}
                 autoPlay
                 muted
                 playsInline
-                loop={mediaItems.length === 1}
-                preload="auto"
+                loop={false}
+                preload="metadata"
                 crossOrigin="anonymous"
                 poster={getFallbackImage() || undefined}
                 className="w-full h-full object-cover bg-black"
-                onError={() => handleVideoError(currentMedia)}
-              />
+                onError={(e) => {
+                  const videoElement = e.currentTarget as HTMLVideoElement;
+                  console.error(`❌ Video error for ${currentMedia}`);
+                  handleVideoError(currentMedia, videoElement);
+                }}
+                onCanPlay={handleVideoReady}
+                onLoadedData={handleVideoReady}
+                onLoadedMetadata={handleVideoReady}
+                style={{ width: '100%', height: '100%', display: 'block' }}
+              >
+                <source src={currentMedia} type="video/mp4" />
+                Your browser does not support HTML5 video.
+              </video>
             ) : (
               <>
                 {isVideo(currentMedia) && videoErrors.has(currentMedia) ? (
@@ -226,7 +383,7 @@ function CatalogCard({
                       objectPositionOverride={getFallbackImage()?.includes('pink8') ? '20% 50%' : undefined} 
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900" />
+                    <div className="w-full h-full bg-linear-to-br from-gray-800 to-gray-900" />
                   )
                 ) : (
                   <SmartCropImage 
@@ -396,16 +553,39 @@ export default function StorePage() {
       {/* -- CATALOG VIEW ----------------------------------------------- */}
       {!selectedProductId && (
         <>
-          {/* Hero */}
-          <div className="relative w-full overflow-hidden" style={{ minHeight: '85vh' }}>
-            {/* Background image */}
+          {/* Hero with Video on Hover */}
+          <div 
+            className="relative w-full overflow-hidden group cursor-pointer" 
+            style={{ minHeight: '85vh' }}
+            onMouseEnter={() => {
+              const video = document.getElementById('hero-video') as HTMLVideoElement;
+              if (video) video.play();
+            }}
+            onMouseLeave={() => {
+              const video = document.getElementById('hero-video') as HTMLVideoElement;
+              if (video) video.pause();
+            }}
+          >
+            {/* Background image (default) */}
             <img
               src="/images/members/model/storeheroimage4.jpeg"
               alt="DLOB Store Hero"
-              className="absolute inset-0 w-full h-full object-cover object-center"
+              className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-300 group-hover:opacity-0"
               style={{ imageRendering: 'auto', WebkitFontSmoothing: 'antialiased' }}
               loading="eager"
               draggable={false}
+            />
+            
+            {/* Video (on hover) */}
+            <video
+              id="hero-video"
+              src={SUPABASE_VIDEOS.videopromotionnoirblossom}
+              className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              muted
+              loop
+              preload="auto"
+              playsInline
+              crossOrigin="anonymous"
             />
             
             {/* Dark overlay — lighter to preserve image clarity */}

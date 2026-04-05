@@ -57,7 +57,7 @@ export const AnimatedMarqueeHero: React.FC<AnimatedMarqueeHeroProps> = ({
   return (
     <section
       className={cn(
-        "relative w-full h-screen overflow-hidden bg-background flex flex-col items-center justify-center text-center px-4 -mt-64",
+        "relative w-full min-h-screen md:h-screen overflow-hidden bg-background flex flex-col items-center justify-center text-center px-4 sm:px-6 py-12 sm:py-0 sm:-mt-64",
         className
       )}
     >
@@ -84,7 +84,7 @@ export const AnimatedMarqueeHero: React.FC<AnimatedMarqueeHeroProps> = ({
               },
             },
           }}
-          className="text-5xl md:text-7xl font-bold tracking-tighter text-foreground"
+          className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter text-foreground leading-tight"
         >
           {typeof title === 'string' ? (
             title.split(" ").map((word, i) => (
@@ -107,7 +107,7 @@ export const AnimatedMarqueeHero: React.FC<AnimatedMarqueeHeroProps> = ({
           animate="show"
           variants={FADE_IN_ANIMATION_VARIANTS}
           transition={{ delay: 0.5 }}
-          className="mt-6 max-w-xl text-lg text-muted-foreground"
+          className="mt-4 sm:mt-6 max-w-xl text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed"
         >
           {description}
         </motion.p>
@@ -125,7 +125,7 @@ export const AnimatedMarqueeHero: React.FC<AnimatedMarqueeHeroProps> = ({
 
       {/* Animated Image Marquee */}
       {filteredImages.length > 0 && (
-        <div className="absolute bottom-0 left-0 w-full h-1/3 md:h-2/5 [mask-image:linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]">
+        <div className="absolute bottom-0 left-0 w-full h-1/4 sm:h-1/3 md:h-2/5 mask-[linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]">
           <motion.div
             className="flex gap-4"
             animate={{ x: "-100%" }}
@@ -140,7 +140,7 @@ export const AnimatedMarqueeHero: React.FC<AnimatedMarqueeHeroProps> = ({
             {duplicatedImages.map((src, index) => (
               <div
                 key={index}
-                className="relative aspect-[3/4] h-48 md:h-64 flex-shrink-0 overflow-hidden rounded-2xl"
+                className="relative aspect-3/4 h-32 sm:h-40 md:h-56 lg:h-64 shrink-0 overflow-hidden rounded-xl sm:rounded-2xl"
                 style={{
                   transform: `rotate(${index % 2 === 0 ? -2 : 5}deg)`,
                 }}
