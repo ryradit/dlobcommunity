@@ -1,8 +1,9 @@
 {
   "buildCommand": "next build",
   "outputDirectory": ".next",
+  "buildMemory": 3008,
   "env": {
-    "VERCEL_ANALYZE_BUILD_OUTPUT": "1"
+    "VERCEL_ANALYZE_BUILD_OUTPUT": "0"
   },
   "cleanUrls": true,
   "trailingSlash": false,
