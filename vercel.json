@@ -1,7 +1,6 @@
 {
   "buildCommand": "next build",
   "outputDirectory": ".next",
-  "buildMemory": 3008,
   "env": {
     "VERCEL_ANALYZE_BUILD_OUTPUT": "0"
   },
