@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Play, X, Download, ZoomIn } from 'lucide-react';
 import { AnimatedMarqueeHero } from '@/components/AnimatedMarqueeHero';
+import { FaceGalleryCarousel } from '@/components/FaceGalleryCarousel';
 
 type TabType = 'semua' | 'pertandingan' | 'latihan' | 'sparring';
 
@@ -37,6 +38,9 @@ export default function GaleriPage() {
   const [latihanPage, setLatihanPage] = useState(1);
   const [sparringPage, setSparringPage] = useState(1);
   const [modalImageLoading, setModalImageLoading] = useState(false);
+  const [faceSearchResults, setFaceSearchResults] = useState<string[]>([]);
+  const [isFilteringByFace, setIsFilteringByFace] = useState(false);
+  const [selectedFaceId, setSelectedFaceId] = useState<string | null>(null);
   const itemsPerPage = 50;
 
   // Fetch YouTube videos from channel
@@ -172,6 +176,12 @@ export default function GaleriPage() {
         items = allItems;
     }
 
+    // Apply face search filter if active (works on all tabs, but most useful on latihan)
+    if (isFilteringByFace && faceSearchResults.length > 0) {
+      items = items.filter(item => faceSearchResults.includes(item.id));
+      console.log(`🔍 Applied face filter: ${faceSearchResults.length} image results, Tab=${activeTab}`);
+    }
+
     // Apply pagination to all tabs with 50 items per page
     if (items.length > 50) {
       const startIndex = (currentPage - 1) * itemsPerPage;
@@ -243,7 +253,123 @@ export default function GaleriPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Initialize modal loading state when image is selected
+  useEffect(() => {
+    if (selectedImage) {
+      console.log('📸 Modal opened for image:', {
+        id: selectedImage.id,
+        title: selectedImage.title,
+        thumbnail: selectedImage.thumbnail,
+        url: `https://drive.google.com/uc?export=view&id=${selectedImage.id}`,
+      });
+      setModalImageLoading(true);
+    }
+  }, [selectedImage]);
+
   const filteredItems = getFilteredItems();
+
+  const handleFaceSelect = async (faceId: string) => {
+    if (!faceId) {
+      // Clear filter
+      console.log('🧹 Clearing face filter');
+      setFaceSearchResults([]);
+      setIsFilteringByFace(false);
+      setSelectedFaceId(null);
+      return;
+    }
+
+    try {
+      console.log(`🔍 Searching for faces similar to: ${faceId}`);
+      
+      // Use advanced ML embedding endpoint for better accuracy
+      // Threshold adjusted for realistic matching with landmark-based features
+      // 0.65 = Good balance between recall and precision
+      const url = `/api/face/similar-advanced?faceId=${encodeURIComponent(faceId)}&threshold=0.65&topK=100`;
+      console.log(`📡 Calling API: ${url}`);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ API error:', error);
+        
+        // Fallback to old endpoint if advanced is not available
+        console.warn('⚠️ Advanced endpoint not available, falling back to legacy endpoint');
+        const fallbackResponse = await fetch(
+          `/api/face/similar?faceId=${encodeURIComponent(faceId)}`
+        );
+        
+        if (!fallbackResponse.ok) {
+          const fallbackError = await fallbackResponse.json();
+          alert(`❌ Gagal menemukan wajah serupa: ${fallbackError.error || 'Unknown error'}`);
+          setFaceSearchResults([]);
+          setIsFilteringByFace(false);
+          return;
+        }
+        
+        const fallbackData = await fallbackResponse.json();
+        const imageIds = fallbackData.results.map((r: any) => r.imageId);
+        console.log(`✅ Legacy endpoint found ${imageIds.length} similar images:`, imageIds);
+        
+        setFaceSearchResults(imageIds);
+        setIsFilteringByFace(true);
+        setSelectedFaceId(faceId);
+        setLatihanPage(1);
+        console.log(`✨ Applied face filter with ${imageIds.length} images`);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('📊 API Response:', {
+        success: data.success,
+        totalMatches: data.results?.totalMatches,
+        uniqueImages: data.results?.uniqueImages,
+        imageCount: data.results?.images?.length
+      });
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Pencarian gagal');
+      }
+      
+      if (!data.results || !data.results.images) {
+        console.warn('⚠️ API returned unexpected format');
+        throw new Error('Format respons tidak valid');
+      }
+      
+      const imageIds = data.results.images.map((img: any) => img.imageId);
+      console.log(`✅ Found ${imageIds.length} similar images:`, imageIds);
+      
+      if (imageIds.length === 0) {
+        // Check if API provided a hint
+        const hint = data.debug?.hint || data.debug?.warning || '';
+        const message = hint.includes('reprocessed') 
+          ? `❌ Embeddings belum diproses. Silakan hubungi admin untuk memproses ulang wajah.\n\n${hint}`
+          : `⚠️ Tidak ada gambar dengan wajah serupa ditemukan. Coba pilih wajah lain atau hubungi admin.`;
+        
+        alert(message);
+        console.log('API hint:', hint);
+        console.log('API debug info:', data.debug);
+        
+        setFaceSearchResults([]);
+        setIsFilteringByFace(false);
+        setSelectedFaceId(faceId);
+        return;
+      }
+      
+      setFaceSearchResults(imageIds);
+      setIsFilteringByFace(true);
+      setSelectedFaceId(faceId);
+      setLatihanPage(1);  // Reset pagination to page 1 when filtering
+      
+      console.log(`✨ Applied face filter: ${imageIds.length} images, Quality: ${(data.results.sourceQuality * 100).toFixed(1)}%`);
+    } catch (error) {
+      console.error('❌ Error finding similar faces:', error);
+      alert(`❌ Error finding similar faces: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setFaceSearchResults([]);
+      setIsFilteringByFace(false);
+      setSelectedFaceId(null);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-linear-to-b from-slate-50 to-white">
@@ -333,6 +459,14 @@ export default function GaleriPage() {
       {/* Content Section */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Face Gallery Carousel - Temporarily Disabled (pending implementation) */}
+          {false && activeTab === 'latihan' && (
+            <FaceGalleryCarousel 
+              onFaceSelect={handleFaceSelect}
+              selectedFaceId={selectedFaceId}
+            />
+          )}
+
           {/* Gallery Grid */}
           {(
             <>
@@ -347,6 +481,33 @@ export default function GaleriPage() {
                 </div>
               ) : (
                 <>
+                  {/* Filter Status Banner */}
+                  {isFilteringByFace && faceSearchResults.length > 0 && (
+                    <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v8.586a1 1 0 01-1.414 1.414l-4-4A1 1 0 013 16.586v-5.172a1 1 0 00-.293-.707L.293 6.707A1 1 0 010 6V4z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <p className="font-semibold text-blue-900">
+                            🔍 Hasil Pencarian: {faceSearchResults.length} gambar dengan wajah serupa
+                          </p>
+                          <p className="text-sm text-blue-700">
+                            Menampilkan hanya gambar yang memiliki wajah mirip dengan yang Anda pilih
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleFaceSelect('')}
+                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap"
+                        title="Hapus filter dan tampilkan semua gambar"
+                      >
+                        <X className="w-4 h-4" />
+                        Hapus Filter
+                      </button>
+                    </div>
+                  )}
+
                   {/* Mobile Grid Toggle - Only visible on mobile */}
                   <div className="md:hidden flex justify-end mb-6 gap-2">
                     <button
@@ -385,7 +546,7 @@ export default function GaleriPage() {
                     {filteredItems.map((item) => (
                     <div
                       key={item.id}
-                      className="group rounded-2xl overflow-hidden hover:shadow-2xl transition-all cursor-pointer bg-white border border-gray-200 hover:border-[#3e6461]"
+                      className="group rounded-2xl overflow-hidden hover:shadow-2xl transition-all cursor-pointer bg-white border border-gray-200 hover:border-[#3e6461] relative"
                       onClick={() => {
                         if (item.type === 'video') {
                           setSelectedVideo({
@@ -399,6 +560,19 @@ export default function GaleriPage() {
                         }
                       }}
                     >
+                      {/* Download Button - Fixed top-right for images */}
+                      {item.type === 'image' && (
+                        <a
+                          href={`https://drive.google.com/uc?export=download&id=${item.id}`}
+                          download={item.title}
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute top-3 right-3 z-20 flex items-center justify-center w-10 h-10 bg-[#1e4843] hover:bg-[#162f2c] text-white rounded-lg transition-all hover:scale-110 shadow-lg"
+                          title="Download image"
+                        >
+                          <Download className="w-5 h-5" />
+                        </a>
+                      )}
+
                       {/* Image/Thumbnail Container */}
                       <div className="relative bg-gray-100 h-64 flex items-center justify-center text-6xl overflow-hidden group-hover:scale-110 transition-transform">
                         {item.type === 'image' ? (
@@ -424,7 +598,7 @@ export default function GaleriPage() {
                                 }
                               }}
                             />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                           </>
                         ) : (
                           <>
@@ -573,94 +747,92 @@ export default function GaleriPage() {
         </div>
       </section>
 
-      {/* Image Zoom Modal */}
+      {/* Image Modal - Fresh Start */}
       {selectedImage && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => {
-            setSelectedImage(null);
-            setModalImageLoading(false);
-          }}
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
         >
           <div 
-            className="relative w-full max-w-5xl max-h-[90vh] bg-black rounded-2xl overflow-hidden flex flex-col"
+            className="relative w-full max-w-5xl max-h-[90vh] bg-black rounded-2xl overflow-auto flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
             <button
-              onClick={() => {
-                setSelectedImage(null);
-                setModalImageLoading(false);
-              }}
-              className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 z-40 flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* Image Container with Loading Spinner */}
-            <div className="flex-1 flex items-center justify-center min-h-0 overflow-auto relative">
-              {/* Thumbnail Blur Background (shows while loading) */}
-              <img 
-                src={selectedImage.thumbnail}
-                alt={selectedImage.title}
-                className="absolute inset-0 w-full h-full object-contain blur-sm opacity-30 pointer-events-none"
-              />
-              
-              {/* Loading Spinner */}
-              {modalImageLoading && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-                </div>
-              )}
+            {/* Image Display Area */}
+            <div className="flex-1 flex items-center justify-center bg-black p-4 min-h-64">
+              <div className="relative w-full h-full flex items-center justify-center">
+                {/* Image */}
+                <img
+                  key={selectedImage.id}
+                  src={`https://drive.google.com/uc?export=view&id=${selectedImage.id}`}
+                  alt={selectedImage.title}
+                  className="max-w-full max-h-full object-contain"
+                  onLoad={() => {
+                    console.log('✅ Image loaded:', selectedImage.title);
+                    setModalImageLoading(false);
+                  }}
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    
+                    console.warn('⚠️ export=view failed, trying alternatives...');
+                    
+                    // Fallback 1: try export=download
+                    if (!img.src.includes('export=download')) {
+                      console.log('🔄 Fallback 1: export=download');
+                      img.src = `https://drive.google.com/uc?export=download&id=${selectedImage.id}`;
+                    }
+                    // Fallback 2: try with size parameter
+                    else if (!img.src.includes('sz=')) {
+                      console.log('🔄 Fallback 2: with size parameter');
+                      img.src = `https://drive.google.com/uc?export=view&id=${selectedImage.id}&sz=w1600`;
+                    }
+                    // Fallback 3: use thumbnail
+                    else if (selectedImage.thumbnail && img.src !== selectedImage.thumbnail) {
+                      console.log('🔄 Fallback 3: using thumbnail');
+                      img.src = selectedImage.thumbnail;
+                    }
+                    // All failed
+                    else {
+                      console.warn('⚠️ All attempts failed - showing thumbnail as final fallback');
+                      setModalImageLoading(false);
+                    }
+                  }}
+                />
 
-              {/* Full Resolution Image */}
-              <img 
-                src={`https://drive.google.com/uc?export=view&id=${selectedImage.id}`}
-                alt={selectedImage.title}
-                className="w-full h-auto max-h-full object-contain relative z-10"
-                onLoadStart={() => setModalImageLoading(true)}
-                onLoad={() => setModalImageLoading(false)}
-                onError={(e) => {
-                  console.warn('Modal image failed with export=view, trying alternative URL:', selectedImage.id);
-                  const img = e.target as HTMLImageElement;
-                  
-                  // Fallback strategy: try different sizes and formats
-                  if (!img.src.includes('export=download')) {
-                    // Try download export with medium size
-                    img.src = `https://drive.google.com/uc?export=download&id=${selectedImage.id}`;
-                    console.log('Trying export=download');
-                  } else if (!img.src.includes('sz=w800')) {
-                    // Try smaller size (800px) which might load faster
-                    img.src = `https://drive.google.com/uc?export=view&id=${selectedImage.id}&sz=w800`;
-                    console.log('Trying sz=w800');
-                  } else if (!img.src.includes('sz=w400')) {
-                    // Try even smaller size (400px)
-                    img.src = `https://drive.google.com/uc?export=view&id=${selectedImage.id}&sz=w400`;
-                    console.log('Trying sz=w400');
-                  } else {
-                    // Use thumbnail as final fallback
-                    img.src = selectedImage.thumbnail;
-                    console.warn('Using thumbnail as last resort fallback');
-                  }
-                  setModalImageLoading(false);
-                }}
-              />
+                {/* Loading Spinner */}
+                {modalImageLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-600 border-t-white"></div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Download Button */}
-            <a
-              href={`https://drive.google.com/uc?export=download&id=${selectedImage.id}`}
-              download={selectedImage.title}
-              className="absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2 bg-[#1e4843] hover:bg-[#162f2c] text-white rounded-lg transition-colors z-10"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Download className="w-4 h-4" />
-              Download
-            </a>
+            {/* Footer with Actions */}
+            <div className="flex items-center justify-between gap-4 p-4 bg-black/50 border-t border-white/10">
+              <h3 className="text-white font-semibold truncate flex-1">
+                {selectedImage.title}
+              </h3>
+              <a
+                href={`https://drive.google.com/uc?export=download&id=${selectedImage.id}`}
+                download={selectedImage.title}
+                className="px-4 py-2 bg-[#1e4843] hover:bg-[#162f2c] text-white rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+            </div>
           </div>
         </div>
       )}
     </main>
   );
 }
+
