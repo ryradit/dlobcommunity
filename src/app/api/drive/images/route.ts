@@ -74,17 +74,15 @@ export async function GET(request: NextRequest) {
       })
       .slice(0, limit)
       .map((file: any) => {
-        // For HEIC and other formats, use Google's export/view URL which auto-converts
-        const imageUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
-        // Use smaller size for thumbnail to load faster as blur background
-        const thumbnailUrl = `https://drive.google.com/uc?export=view&id=${file.id}&sz=w200`;
+        // Use proxy route for better compatibility with all image formats (including HEIC)
+        const proxyUrl = `/api/drive/image-proxy?id=${file.id}`;
         
         return {
           id: file.id,
           title: file.name,
-          thumbnail: thumbnailUrl,
+          thumbnail: proxyUrl,  // Use proxy for thumbnails
           type: 'image',
-          url: imageUrl,
+          url: proxyUrl,  // Use proxy for full images
           category,
         };
       });
