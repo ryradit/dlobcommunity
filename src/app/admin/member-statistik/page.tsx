@@ -65,6 +65,9 @@ interface MemberStat {
   attendances: number;   // distinct play dates (sessions) attended
   totalScore: number;
   lastMatchDate: string | null; // ISO date string - for inactivity detection
+  bestPlayerScore?: number; // Weighted score (40% wins, 30% WR, 20% avg, 10% streak)
+  weightedWins?: number;   // Wins weighted with 90-day decay
+  weightedMatches?: number; // Matches weighted with 90-day decay
 }
 
 interface DuoStat {
@@ -126,32 +129,58 @@ function duoChemistry(winRate: number, total: number): { label: string; color: s
   return                                    { label: 'Masih Berkembang', color: 'bg-gray-100 dark:bg-zinc-700/50 text-gray-500 dark:text-zinc-400 border-gray-300 dark:border-zinc-600',           emoji: '🌱' };
 }
 
-// ─── Calculate weighted Pemain Terbaik score ───────────────────────────────
+// Calculate smooth decay weight based on match age (90-day rolling window)
+// 0 days old = 1.0 weight, 90 days old = 0.0 weight
+function getDecayWeight(matchDate: string | null): number {
+  if (!matchDate) return 0;
+  
+  const DECAY_DAYS = 90;
+  const match = new Date(matchDate);
+  const now = new Date();
+  const daysSinceMatch = (now.getTime() - match.getTime()) / (1000 * 60 * 60 * 24);
+  
+  if (daysSinceMatch < 0) return 1.0; // Future date (shouldn't happen)
+  if (daysSinceMatch >= DECAY_DAYS) return 0; // Older than 90 days = 0 weight
+  
+  // Linear decay: 1.0 - (daysSinceMatch / DECAY_DAYS)
+  return Math.max(0, 1 - (daysSinceMatch / DECAY_DAYS));
+}
 
-function calculateBestPlayerScore(player: MemberStat, maxStats: {
+// Calculate weighted Pemain Terbaik score based on normalized metrics (SAME AS LEADERBOARD)
+// Win Count 40%, Win Rate 30%, Average Score 20%, Longest Streak 10%
+// Uses 90-day decay weighted metrics when available
+function calculateBestPlayerScore(player: MemberStat & { 
+  weightedWins?: number;
+  weightedMatches?: number;
+}, maxStats: {
   matches: number;
   wins: number;
   avgScore: number;
   streak: number;
+  weightedMatches?: number;
+  weightedWins?: number;
 }): number {
+  // Use weighted metrics if available (from 90-day decay), otherwise fall back to all-time
+  const wins = player.weightedWins ?? player.wins;
+  const matches = player.weightedMatches ?? player.totalMatches;
+  const maxWins = maxStats.weightedWins ?? maxStats.wins;
+  const maxMatches = maxStats.weightedMatches ?? maxStats.matches;
+  
   // Normalize each metric to 0-100 scale
-  const normMatches = maxStats.matches > 0 ? (player.totalMatches / maxStats.matches) * 100 : 0;
-  const normWins = maxStats.wins > 0 ? (player.wins / maxStats.wins) * 100 : 0;
+  const normWins = maxWins > 0 ? (wins / maxWins) * 100 : 0;
   const normAvgScore = maxStats.avgScore > 0 ? (player.avgScore / maxStats.avgScore) * 100 : 0;
   const normStreak = maxStats.streak > 0 ? (player.longestWinStreak / maxStats.streak) * 100 : 0;
   const winRate = player.winRate; // Already 0-100
 
-  // Apply weights to all players
+  // Weights - Win Count focused (SAME AS LEADERBOARD)
   const weights = {
-    matches: 0.25,     // Participation & consistency
-    wins: 0.20,        // Win count
-    winRate: 0.20,     // Consistency ratio
-    avgScore: 0.15,    // Individual contribution per match
+    wins: 0.40,        // Win count (highest priority)
+    winRate: 0.30,     // Win consistency (second highest)
+    avgScore: 0.20,    // Individual contribution per match
     streak: 0.10,      // Peak performance
   };
 
   const score =
-    (normMatches * weights.matches) +
     (normWins * weights.wins) +
     (winRate * weights.winRate) +
     (normAvgScore * weights.avgScore) +
@@ -291,6 +320,8 @@ export default function MemberStatistikPage() {
 
       // Process matches in chronological order for streaks
       const playerMatchHistory = new Map<string, boolean[]>(); // true=win
+      // Track weighted metrics for 90-day rolling window (SAME AS LEADERBOARD)
+      const playerWeightedStats = new Map<string, { weightedWins: number; weightedMatches: number }>();
 
       for (const match of matches) {
         const players = [
@@ -319,6 +350,17 @@ export default function MemberStatistikPage() {
 
           if (!playerMatchHistory.has(name)) playerMatchHistory.set(name, []);
           playerMatchHistory.get(name)!.push(won);
+          
+          // Calculate decay weight for 90-day rolling window (SAME AS LEADERBOARD)
+          const decayWeight = getDecayWeight(match.match_date);
+          if (decayWeight > 0) {
+            if (!playerWeightedStats.has(name)) {
+              playerWeightedStats.set(name, { weightedWins: 0, weightedMatches: 0 });
+            }
+            const ws = playerWeightedStats.get(name)!;
+            ws.weightedMatches += decayWeight;
+            if (won) ws.weightedWins += decayWeight;
+          }
         }
       }
 
@@ -348,7 +390,34 @@ export default function MemberStatistikPage() {
         s.avgScore = s.totalMatches > 0 ? Math.round((s.totalScore / s.totalMatches) * 10) / 10 : 0;
       }
 
-      setStats(Array.from(statMap.values()));
+      // Calculate best player scores for all members (SAME AS LEADERBOARD)
+      const allStats = Array.from(statMap.values());
+      
+      // Calculate max stats for normalization (using weighted metrics where available)
+      const maxStats = {
+        matches: Math.max(...allStats.map(s => s.totalMatches), 1),
+        wins: Math.max(...allStats.map(s => s.wins), 1),
+        avgScore: Math.max(...allStats.map(s => s.avgScore), 1),
+        streak: Math.max(...allStats.map(s => s.longestWinStreak), 1),
+        weightedMatches: Math.max(...Array.from(playerWeightedStats.values()).map(w => w.weightedMatches), 1),
+        weightedWins: Math.max(...Array.from(playerWeightedStats.values()).map(w => w.weightedWins), 1),
+      };
+
+      const statsWithScores = allStats.map(s => {
+        const weightedStats = playerWeightedStats.get(s.name);
+        return {
+          ...s,
+          weightedWins: weightedStats?.weightedWins,
+          weightedMatches: weightedStats?.weightedMatches,
+          bestPlayerScore: calculateBestPlayerScore({
+            ...s,
+            weightedWins: weightedStats?.weightedWins,
+            weightedMatches: weightedStats?.weightedMatches,
+          }, maxStats),
+        };
+      });
+
+      setStats(statsWithScores as any);
 
       // Duo stats — track history per pair for streak calculation
       const duoMap = new Map<string, { wins: number; total: number; history: boolean[] }>();
@@ -402,19 +471,9 @@ export default function MemberStatistikPage() {
     let sorted: MemberStat[];
     switch (activeCategory) {
       case 'best-player': {
-        const maxStats = {
-          matches: Math.max(...stats.map(s => s.totalMatches), 1),
-          wins: Math.max(...stats.map(s => s.wins), 1),
-          avgScore: Math.max(...stats.map(s => s.avgScore), 1),
-          streak: Math.max(...stats.map(s => s.longestWinStreak), 1),
-        };
         sorted = [...stats]
           .filter(s => s.totalMatches > 0)
-          .map(s => ({
-            ...s,
-            bestPlayerScore: calculateBestPlayerScore(s, maxStats),
-          }))
-          .sort((a, b) => (b as any).bestPlayerScore - (a as any).bestPlayerScore);
+          .sort((a, b) => (b.bestPlayerScore ?? 0) - (a.bestPlayerScore ?? 0));
         break;
       }
       case 'attendance': sorted = [...stats].sort((a, b) => b.attendances - a.attendances || b.totalMatches - a.totalMatches); break;
@@ -432,7 +491,7 @@ export default function MemberStatistikPage() {
 
   function getDisplayValue(s: MemberStat): string {
     switch (activeCategory) {
-      case 'best-player': return `${(s as any).bestPlayerScore?.toFixed(1) || '-'} pts`;
+      case 'best-player': return `${s.bestPlayerScore?.toFixed(1) || '-'} pts`;
       case 'attendance': return `${s.attendances} pertemuan · ${s.totalMatches} main`;
       case 'wins':       return `${s.wins} menang`;
       case 'losses':     return `${s.losses} kalah`;
@@ -465,20 +524,10 @@ export default function MemberStatistikPage() {
   const totalPlayers  = stats.length;
   const totalWithData = stats.filter(s => s.totalMatches > 0).length;
   
-  // Calculate topWinner using same formula as Pemain Terbaik leaderboard
-  const maxStats = {
-    matches: Math.max(...stats.map(s => s.totalMatches), 1),
-    wins: Math.max(...stats.map(s => s.wins), 1),
-    avgScore: Math.max(...stats.map(s => s.avgScore), 1),
-    streak: Math.max(...stats.map(s => s.longestWinStreak), 1),
-  };
+  // Use pre-calculated bestPlayerScore (same formula as Pemain Terbaik leaderboard)
   const topWinner = [...stats]
-    .filter(s => s.totalMatches > 0)
-    .map(s => ({
-      ...s,
-      bestPlayerScore: calculateBestPlayerScore(s, maxStats),
-    }))
-    .sort((a, b) => (b as any).bestPlayerScore - (a as any).bestPlayerScore)[0];
+    .filter(s => s.totalMatches > 0 && s.bestPlayerScore)
+    .sort((a, b) => (b.bestPlayerScore ?? 0) - (a.bestPlayerScore ?? 0))[0];
   const mostActive    = [...stats].sort((a, b) => b.totalMatches - a.totalMatches)[0];
   const bestUnbeatenList = [...stats].filter(s => s.losses === 0 && s.wins > 0).sort((a, b) => b.wins - a.wins);
   const maxUnbeatenWins = bestUnbeatenList[0]?.wins ?? 0;
@@ -603,7 +652,7 @@ export default function MemberStatistikPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-tutorial="spotlight-cards">
           {[
             { label: 'Total Member',       value: totalPlayers,                      sub: `${totalWithData} punya data main`, icon: Users,      color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-500/10'    },
-            { label: 'Pemain Terbaik',      value: topWinner?.name ?? '-',            sub: `${(topWinner as any)?.bestPlayerScore?.toFixed(1) ?? '-'} pts · ${topWinner?.winRate ?? 0}% WR`,             icon: Trophy,     color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-500/10' },
+            { label: 'Pemain Terbaik',      value: topWinner?.name ?? '-',            sub: `${topWinner?.bestPlayerScore?.toFixed(1) ?? '-'} pts · ${topWinner?.winRate ?? 0}% WR`,             icon: Trophy,     color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-500/10' },
             { label: 'Paling Tak Terkalahkan', value: bestUnbeaten.map(m => m.name).join(', ') ?? '-',      sub: `${maxUnbeatenWins} M - 0 K`, icon: Flame,      color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
             { label: 'Streak Terpanjang',   value: kingStreak?.name ?? '-',           sub: `${kingStreak?.longestWinStreak ?? 0}x beruntun`, icon: Flame,      color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10'  },
           ].map(card => (

@@ -856,21 +856,10 @@ export default function LeaderboardPage() {
 
             if (activeTab === 'pemain-terbaik') {
               // Calculate max values for normalization
-              const maxStats = {
-                matches: Math.max(...stats.map(s => s.totalMatches), 1),
-                wins: Math.max(...stats.map(s => s.wins), 1),
-                losses: Math.max(...stats.map(s => s.losses), 1),
-                avgScore: Math.max(...stats.map(s => s.avgScore), 1),
-                streak: Math.max(...stats.map(s => s.longestWinStreak), 1),
-              };
-
+              // Use pre-calculated bestPlayerScore (consistent with stored values using weighted maxStats)
               const sorted = [...stats]
-                .filter(s => s.totalMatches > 0)
-                .map(s => ({
-                  ...s,
-                  bestPlayerScore: calculateBestPlayerScore(s, maxStats),
-                }))
-                .sort((a, b) => b.bestPlayerScore - a.bestPlayerScore);
+                .filter(s => s.totalMatches > 0 && s.bestPlayerScore)
+                .sort((a, b) => (b.bestPlayerScore ?? 0) - (a.bestPlayerScore ?? 0));
 
               top3 = [
                 { rank: 1, player: sorted[0] || null, metric: `Points: ${sorted[0]?.bestPlayerScore ?? 0} · ${sorted[0]?.winRate ?? 0}% WR` },
