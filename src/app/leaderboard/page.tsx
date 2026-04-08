@@ -26,6 +26,9 @@ interface MemberStat {
   previousScore?: number; // Yesterday's score
   rankChange?: number; // Rank position change from yesterday (+1 = improved, -1 = declined)
   previousRank?: number; // Yesterday's rank
+  bestPlayerScore?: number; // Weighted score (40% wins, 30% WR, 20% avg, 10% streak)
+  weightedWins?: number; // Wins weighted with 90-day decay
+  weightedMatches?: number; // Matches weighted with 90-day decay
 }
 
 interface PartnershipStat {
