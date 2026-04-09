@@ -768,10 +768,9 @@ export default function GaleriPage() {
             {/* Image Display Area */}
             <div className="flex-1 flex items-center justify-center bg-black p-4 min-h-64">
               <div className="relative w-full h-full flex items-center justify-center">
-                {/* Image */}
+                {/* Image - Using proxy URL for reliable loading */}
                 <img
-                  key={selectedImage.id}
-                  src={`https://drive.google.com/uc?export=view&id=${selectedImage.id}`}
+                  src={selectedImage.url}
                   alt={selectedImage.title}
                   className="max-w-full max-h-full object-contain"
                   onLoad={() => {
@@ -779,39 +778,11 @@ export default function GaleriPage() {
                     setModalImageLoading(false);
                   }}
                   onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    
-                    console.warn('⚠️ export=view failed, trying alternatives...');
-                    
-                    // Fallback 1: try export=download
-                    if (!img.src.includes('export=download')) {
-                      console.log('🔄 Fallback 1: export=download');
-                      img.src = `https://drive.google.com/uc?export=download&id=${selectedImage.id}`;
-                    }
-                    // Fallback 2: try with size parameter
-                    else if (!img.src.includes('sz=')) {
-                      console.log('🔄 Fallback 2: with size parameter');
-                      img.src = `https://drive.google.com/uc?export=view&id=${selectedImage.id}&sz=w1600`;
-                    }
-                    // Fallback 3: use thumbnail
-                    else if (selectedImage.thumbnail && img.src !== selectedImage.thumbnail) {
-                      console.log('🔄 Fallback 3: using thumbnail');
-                      img.src = selectedImage.thumbnail;
-                    }
-                    // All failed
-                    else {
-                      console.warn('⚠️ All attempts failed - showing thumbnail as final fallback');
-                      setModalImageLoading(false);
-                    }
+                    console.error('❌ Image failed to load:', selectedImage.title, selectedImage.url);
                   }}
                 />
 
-                {/* Loading Spinner */}
-                {modalImageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-600 border-t-white"></div>
-                  </div>
-                )}
+
               </div>
             </div>
 
@@ -821,7 +792,7 @@ export default function GaleriPage() {
                 {selectedImage.title}
               </h3>
               <a
-                href={`https://drive.google.com/uc?export=download&id=${selectedImage.id}`}
+                href={`/api/drive/image-proxy?id=${selectedImage.id}&download=true`}
                 download={selectedImage.title}
                 className="px-4 py-2 bg-[#1e4843] hover:bg-[#162f2c] text-white rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap"
               >
