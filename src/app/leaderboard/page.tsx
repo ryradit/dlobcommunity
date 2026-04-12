@@ -582,10 +582,16 @@ export default function LeaderboardPage() {
     const mul = partnershipDir === 'desc' ? -1 : 1;
     if (partnershipSort === 'winRate') {
       if (a.winRate !== b.winRate) return mul * (a.winRate - b.winRate);
+      // Tiebreaker 1: Total Matches (more matches = ranks higher)
+      if (a.totalMatches !== b.totalMatches) return mul * (a.totalMatches - b.totalMatches);
+      // Tiebreaker 2: Wins
       return mul * (a.wins - b.wins);
     }
     if (partnershipSort === 'wins') {
       if (a.wins !== b.wins) return mul * (a.wins - b.wins);
+      // Tiebreaker 1: Total Matches
+      if (a.totalMatches !== b.totalMatches) return mul * (a.totalMatches - b.totalMatches);
+      // Tiebreaker 2: Win Rate
       return mul * (a.winRate - b.winRate);
     }
     return mul * (a[partnershipSort] - b[partnershipSort]);

@@ -963,7 +963,7 @@ export default function AdminMembersPage() {
 
                           {/* Dropdown Menu Items */}
                           {openDropdownId === member.id && (
-                            <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-lg shadow-lg z-40">
+                            <div className="absolute right-0 top-full mt-1 w-48 min-w-max bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-lg shadow-lg z-40 -left-32 sm:-left-auto">
                               {/* Toggle Account Status */}
                               <button
                                 onClick={() => {
@@ -1042,7 +1042,7 @@ export default function AdminMembersPage() {
       {/* Label Info Modal */}
       {showLabelInfo && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowLabelInfo(false)}>
-          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl max-w-lg w-full p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl max-w-sm sm:max-w-lg w-full p-4 sm:p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center">

@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { MemberPerformanceReport, type MemberReportData } from '@/components/reports/MemberPerformanceReport';
 import { AdminFinancialReport, type FinancialReportData } from '@/components/reports/AdminFinancialReport';
+import { ShuttlecockUsageReport, type ShuttlecockUsageReportData } from '@/components/reports/ShuttlecockUsageReport';
 import { 
   captureElementAsImage, 
   getLogoAsBase64, 
@@ -140,9 +141,56 @@ export function useReportGenerator() {
     }
   };
 
+  /**
+   * Generate Shuttlecock Usage Report
+   */
+  const generateShuttlecockReport = async (
+    data: Omit<ShuttlecockUsageReportData, 'logo'>,
+    options?: {
+      share?: boolean;
+    }
+  ) => {
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      // Get logo as base64
+      const logo = await getLogoAsBase64('/dlob.png');
+
+      // Build complete report data
+      const reportData: ShuttlecockUsageReportData = {
+        ...data,
+        logo,
+      };
+
+      // Generate PDF
+      const doc = <ShuttlecockUsageReport data={reportData} />;
+      const blob = await pdf(doc).toBlob();
+      
+      // Generate filename with timestamp
+      const filename = generateReportFilename('Shuttlecock_Usage_Report');
+
+      // Share or download
+      if (options?.share) {
+        await sharePDF(blob, filename);
+      } else {
+        downloadPDF(blob, filename);
+      }
+
+      setIsGenerating(false);
+      return { success: true, filename };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate report';
+      setError(errorMessage);
+      setIsGenerating(false);
+      return { success: false, error: errorMessage };
+    }
+  };
+
   return {
     generateMemberReport,
     generateFinancialReport,
+    generateShuttlecockReport,
     isGenerating,
     error,
   };

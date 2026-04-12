@@ -19,7 +19,7 @@ const supabase = createClient(
 
 interface SmartAction {
   id: string;
-  type: 'auto-confirm' | 'confirm-all' | 'send-reminders' | 'flag-suspicious' | 'generate-report';
+  type: 'auto-confirm' | 'confirm-all' | 'send-reminders' | 'flag-suspicious' | 'generate-payment-report';
   title: string;
   description: string;
   count?: number;
@@ -243,34 +243,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Smart Action 4: Generate monthly report
+    // Smart Action 4: Generate Payment Report
+    const totalPayments = matchMembers.length + memberships.length;
     const totalPaid = matchMembers.filter(m => m.payment_status === 'paid').reduce((sum, m) => sum + m.total_amount, 0)
       + memberships.filter(m => m.payment_status === 'paid').reduce((sum, m) => sum + m.amount, 0);
-
+    
     smartActions.push({
-      id: 'generate-report',
-      type: 'generate-report',
-      title: 'Generate Monthly Report',
-      description: `Laporan lengkap bulan ${new Date(currentYear, currentMonth - 1).toLocaleDateString('id-ID', { month: 'long' })}`,
-      priority: 'low',
-      icon: '📊'
+      id: 'generate-payment-report',
+      type: 'generate-payment-report',
+      title: 'Generate Payment Report',
+      description: `Laporan lengkap pembayaran bulan ${new Date(currentYear, currentMonth - 1).toLocaleDateString('id-ID', { month: 'long' })}`,
+      count: totalPayments,
+      priority: 'medium',
+      icon: '💰'
     });
-
-    // Add info card about report
-    if (totalPaid > 0) {
-      suggestionCards.push({
-        id: 'monthly-summary',
-        type: 'info',
-        title: '📊 Rekap Bulan Ini',
-        description: `Total pendapatan: Rp ${totalPaid.toLocaleString('id-ID')}. Generate laporan lengkap dengan analisa AI?`,
-        action: {
-          label: 'Generate Report',
-          actionType: 'generate-report'
-        },
-        dismissible: true,
-        priority: 4
-      });
-    }
 
     console.log(`✅ Generated ${smartActions.length} smart actions and ${suggestionCards.length} suggestions`);
 

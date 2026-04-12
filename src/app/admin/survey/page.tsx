@@ -260,7 +260,7 @@ export default function AdminSurveyResultsPage() {
         )}
 
         {/* KPI stats */}
-        <div className="survey-kpi-cards grid grid-cols-4 gap-4">
+        <div className="survey-kpi-cards grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
           {[
             { icon: Users, label: 'Total Responden', value: completed.length, color: 'text-gray-900 dark:text-white' },
             {
@@ -289,7 +289,7 @@ export default function AdminSurveyResultsPage() {
 
         {/* Charts: Pain Points + Feature Requests */}
         {(painPoints.length > 0 || featureReqs.length > 0) && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {painPoints.length > 0 && (
               <div className="survey-pain-points bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-200 dark:border-white/5 transition-colors duration-300">
                 <h2 className="font-semibold text-sm text-gray-700 dark:text-zinc-300 mb-4">⚠️ Pain Points Terbanyak</h2>
@@ -368,7 +368,7 @@ export default function AdminSurveyResultsPage() {
         )}
 
         {/* Search + filter */}
-        <div className="survey-search flex gap-3">
+        <div className="survey-search flex flex-col sm:flex-row gap-2 sm:gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-zinc-500 pointer-events-none" />
             <input
@@ -381,7 +381,7 @@ export default function AdminSurveyResultsPage() {
           <select
             value={filterSat}
             onChange={e => setFilterSat(e.target.value)}
-            className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/5 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#3e6461]/50 transition-colors duration-300"
+            className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/5 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#3e6461]/50 transition-colors duration-300 w-full sm:w-auto sm:max-w-xs"
           >
             <option value="">Semua kepuasan</option>
             {SAT_ORDER.map(val => <option key={val} value={val}>{SAT_LABELS[val]}</option>)}
@@ -401,29 +401,29 @@ export default function AdminSurveyResultsPage() {
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center text-gray-400 dark:text-zinc-500">Tidak ada data.</div>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full text-xs sm:text-sm">
               <thead>
                 <tr className="text-gray-500 dark:text-zinc-500 text-xs border-b border-gray-200 dark:border-white/5">
-                  <th className="px-5 py-3 text-left font-medium">Nama</th>
-                  <th className="px-5 py-3 text-left font-medium">Kepuasan</th>
-                  <th className="px-5 py-3 text-left font-medium">Jawaban</th>
-                  <th className="px-5 py-3 text-left font-medium">Tanggal</th>
-                  <th className="px-5 py-3"></th>
+                  <th className="px-2 sm:px-5 py-2 sm:py-3 text-left font-medium">Nama</th>
+                  <th className="hidden sm:table-cell px-5 py-3 text-left font-medium">Kepuasan</th>
+                  <th className="hidden md:table-cell px-5 py-3 text-left font-medium">Jawaban</th>
+                  <th className="hidden md:table-cell px-5 py-3 text-left font-medium">Tanggal</th>
+                  <th className="px-2 sm:px-5 py-2 sm:py-3 text-right"></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(s => (
                   <tr key={s.id} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onClick={() => openModal(s)}>
-                    <td className="px-5 py-3 font-medium text-gray-900 dark:text-white">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
-                        <span>{s.member_name || (s.is_anonymous ? 'Anonim' : 'Tanpa nama')}</span>
+                    <td className="px-2 sm:px-5 py-2 sm:py-3 font-medium text-gray-900 dark:text-white">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
+                        <span className="truncate text-xs sm:text-sm">{s.member_name || (s.is_anonymous ? 'Anonim' : 'Tanpa nama')}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-zinc-400 text-xs">{SAT_LABELS[getSatisfaction(s.answers) ?? ''] ?? '—'}</td>
-                    <td className="px-5 py-3 text-gray-400 dark:text-zinc-500 text-xs">{Object.keys(s.answers).length} jawaban</td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-zinc-400 text-xs">{formatDate(s.completed_at!)}</td>
-                    <td className="px-5 py-3"><Eye className="w-4 h-4 text-gray-400 dark:text-zinc-500" /></td>
+                    <td className="hidden sm:table-cell px-5 py-3 text-gray-500 dark:text-zinc-400 text-xs">{SAT_LABELS[getSatisfaction(s.answers) ?? ''] ?? '—'}</td>
+                    <td className="hidden md:table-cell px-5 py-3 text-gray-400 dark:text-zinc-500 text-xs">{Object.keys(s.answers).length} jawaban</td>
+                    <td className="hidden md:table-cell px-5 py-3 text-gray-500 dark:text-zinc-400 text-xs">{formatDate(s.completed_at!)}</td>
+                    <td className="px-2 sm:px-5 py-2 sm:py-3 text-right"><Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-zinc-500 ml-auto" /></td>
                   </tr>
                 ))}
               </tbody>

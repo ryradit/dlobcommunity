@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, CheckSquare, Square, Sparkles, Send, Zap, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, CheckSquare, Square, Sparkles, Send, Zap, HelpCircle, ChevronLeft, ChevronRight, MoreVertical, Calendar } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -58,6 +58,10 @@ export default function AdminPembayaranPage() {
   const { user } = useAuth();
   const pathname = usePathname();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [filterMode, setFilterMode] = useState<'all' | 'weekly' | 'daily'>('all'); // 'all', 'weekly', 'daily'
+  const [selectedFilterDate, setSelectedFilterDate] = useState<Date | null>(null); // for weekly or daily filter
+  const [showFilterSection, setShowFilterSection] = useState(false); // collapse/expand filters
+  const [selectedWeek, setSelectedWeek] = useState<Date | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchMembers, setMatchMembers] = useState<Record<string, MatchMember[]>>({});
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -139,7 +143,7 @@ export default function AdminPembayaranPage() {
   // Smart Actions & Suggestion Cards states (NEW MVP)
   const [smartActions, setSmartActions] = useState<Array<{
     id: string;
-    type: 'auto-confirm' | 'confirm-all' | 'send-reminders' | 'flag-suspicious' | 'generate-report';
+    type: 'auto-confirm' | 'confirm-all' | 'send-reminders' | 'flag-suspicious' | 'generate-payment-report';
     title: string;
     description: string;
     count?: number;
@@ -165,15 +169,359 @@ export default function AdminPembayaranPage() {
   const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
+  // Attendance info modal
+  const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
+
+  // Custom period report modal
+  const [showCustomPeriodModal, setShowCustomPeriodModal] = useState(false);
+  const [showReportMenu, setShowReportMenu] = useState(false);
+  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+  
+  // Create initial dates as ISO strings to avoid Date serialization issues
+  const getDefaultStartDate = () => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return firstDayOfMonth.toISOString().split('T')[0];
+  };
+  
+  const getDefaultEndDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+  
+  const [customPeriodData, setCustomPeriodData] = useState({
+    startDate: getDefaultStartDate(),
+    endDate: getDefaultEndDate()
+  });
+
   // Tutorial for pembayaran page
   const tutorialSteps = getTutorialSteps('pembayaran');
   const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-pembayaran', tutorialSteps);
   
   // Report generation
-  const { generateFinancialReport, isGenerating: isGeneratingReport } = useReportGenerator();
+  const { generateFinancialReport, generateShuttlecockReport, isGenerating: isGeneratingReport } = useReportGenerator();
 
-  // Attendance info modal
-  const [showAttendanceInfoModal, setShowAttendanceInfoModal] = useState(false);
+  // Helper function to calculate week date range
+  const getWeekDateRange = (weeksBack: number) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const endDate = new Date(today);
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - (weeksBack * 7 - 1)); // -1 because we include today
+    
+    return {
+      start: startDate.toISOString().split('T')[0],
+      end: endDate.toISOString().split('T')[0]
+    };
+  };
+
+  // Get total revenue for a specific date (April 11, 2026)
+  const getTotalRevenueForDate = async (dateStr: string = '2026-04-11') => {
+    try {
+      console.log(`📊 Fetching revenue for ${dateStr}...`);
+      
+      const targetDate = new Date(dateStr);
+      const normalizedTargetDate = new Date(targetDate);
+      normalizedTargetDate.setHours(0, 0, 0, 0);
+      
+      const normalizedEndDate = new Date(targetDate);
+      normalizedEndDate.setHours(23, 59, 59, 999);
+      
+      let totalRevenue = 0;
+      let totalPaidItems = 0;
+      let totalPendingItems = 0;
+      let paymentDetails: Array<{
+        memberName: string;
+        type: string;
+        amount: number;
+        status: string;
+        dueDate: string;
+      }> = [];
+
+      // Fetch ALL matches on this date
+      const { data: matchesOnDate, error: matchesError } = await supabase
+        .from('matches')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (matchesError) throw matchesError;
+
+      if (matchesOnDate && matchesOnDate.length > 0) {
+        // Check each match for the target date
+        const matchIds = matchesOnDate
+          .map(match => {
+            const matchDate = match.match_date ? new Date(match.match_date) : new Date(match.created_at);
+            const normalizedMatchDate = new Date(matchDate);
+            normalizedMatchDate.setHours(0, 0, 0, 0);
+            
+            if (normalizedMatchDate >= normalizedTargetDate && normalizedMatchDate <= normalizedEndDate) {
+              return match.id;
+            }
+            return null;
+          })
+          .filter(id => id !== null);
+
+        // Fetch match members for matching matches
+        if (matchIds.length > 0) {
+          const { data: allMatchMembers, error: membersError } = await supabase
+            .from('match_members')
+            .select('*')
+            .in('match_id', matchIds);
+
+          if (membersError) throw membersError;
+
+          if (allMatchMembers) {
+            allMatchMembers.forEach(member => {
+              if (member.payment_status === 'paid') {
+                totalRevenue += member.total_amount;
+                totalPaidItems += 1;
+              } else if (member.payment_status === 'pending') {
+                totalPendingItems += 1;
+              }
+
+              paymentDetails.push({
+                memberName: member.member_name,
+                type: `Match Payment`,
+                amount: member.total_amount,
+                status: member.payment_status,
+                dueDate: dateStr,
+              });
+            });
+          }
+        }
+      }
+
+      // Fetch memberships on this date
+      const { data: membershipsOnDate, error: membershipsError } = await supabase
+        .from('memberships')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (membershipsError) throw membershipsError;
+
+      if (membershipsOnDate) {
+        membershipsOnDate.forEach(membership => {
+          const membershipDate = new Date(membership.created_at);
+          const normalizedMembershipDate = new Date(membershipDate);
+          normalizedMembershipDate.setHours(0, 0, 0, 0);
+
+          if (normalizedMembershipDate >= normalizedTargetDate && normalizedMembershipDate <= normalizedEndDate) {
+            if (membership.payment_status === 'paid') {
+              totalRevenue += membership.amount;
+              totalPaidItems += 1;
+            } else if (membership.payment_status === 'pending') {
+              totalPendingItems += 1;
+            }
+
+            paymentDetails.push({
+              memberName: membership.member_name,
+              type: 'Monthly Membership',
+              amount: membership.amount,
+              status: membership.payment_status,
+              dueDate: dateStr,
+            });
+          }
+        });
+      }
+
+      const summary = {
+        date: dateStr,
+        totalRevenue,
+        totalPaidItems,
+        totalPendingItems,
+        totalItems: totalPaidItems + totalPendingItems,
+        paymentDetails,
+      };
+
+      console.log(`✅ Revenue for ${dateStr}:`, summary);
+      return summary;
+    } catch (error) {
+      console.error(`❌ Error fetching revenue for ${dateStr}:`, error);
+      alert(`Gagal mengambil data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  };
+
+  // Generate report for specific number of weeks
+  const handleGenerateWeeklyReport = async (weeks: number) => {
+    const dateRange = getWeekDateRange(weeks);
+    const startDateStr = dateRange.start;
+    const endDateStr = dateRange.end;
+    
+    // Convert to Date objects
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    
+    // Format period strings
+    const periodStart = startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const periodEnd = endDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const allPayments: Array<{
+      memberName: string;
+      type: string;
+      amount: number;
+      status: 'paid' | 'pending' | 'overdue';
+      dueDate: string;
+      paidDate?: string;
+    }> = [];
+
+    try {
+      // Fetch ALL matches (not just current month) with their members
+      console.log(`📊 Fetching all matches for ${weeks} week(s):`, startDateStr, 'to', endDateStr);
+      const { data: allMatches, error: matchesError } = await supabase
+        .from('matches')
+        .select('*')
+        .order('match_number', { ascending: false });
+
+      if (matchesError) throw matchesError;
+
+      if (allMatches && allMatches.length > 0) {
+        // Fetch match members for each match
+        const matchMembersMap: Record<string, MatchMember[]> = {};
+        const memberQueries = allMatches.map(match =>
+          supabase
+            .from('match_members')
+            .select('*')
+            .eq('match_id', match.id)
+        );
+        
+        const membersResults = await Promise.allSettled(memberQueries);
+        membersResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const res = result.value as { data: MatchMember[] | null; error: any };
+            if (!res.error && res.data) {
+              matchMembersMap[allMatches[index].id] = res.data;
+            }
+          }
+        });
+
+        // Filter matches within period and their payments
+        allMatches.forEach((match, matchIndex) => {
+          const matchDate = match.match_date ? new Date(match.match_date) : new Date(match.created_at);
+          
+          // Set time boundaries for comparison
+          const normalizedMatchDate = new Date(matchDate);
+          normalizedMatchDate.setHours(0, 0, 0, 0);
+          
+          const normalizedStartDate = new Date(startDate);
+          normalizedStartDate.setHours(0, 0, 0, 0);
+          
+          const normalizedEndDate = new Date(endDate);
+          normalizedEndDate.setHours(23, 59, 59, 999);
+          
+          if (normalizedMatchDate >= normalizedStartDate && normalizedMatchDate <= normalizedEndDate) {
+            const membersList = matchMembersMap[match.id] || [];
+            membersList.forEach(member => {
+              allPayments.push({
+                memberName: member.member_name,
+                type: `Match #${matchIndex + 1}`,
+                amount: member.total_amount,
+                status: member.payment_status === 'paid' ? 'paid' : 
+                        member.payment_status === 'pending' ? 'pending' : 
+                        'overdue',
+                dueDate: match.match_date || match.created_at,
+                paidDate: member.paid_at || undefined,
+              });
+            });
+          }
+        });
+      }
+
+      // Fetch ALL memberships with period filter
+      console.log(`📊 Fetching all memberships for ${weeks} week(s):`, startDateStr, 'to', endDateStr);
+      const { data: allMemberships, error: membershipsError } = await supabase
+        .from('memberships')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (membershipsError) throw membershipsError;
+
+      if (allMemberships) {
+        allMemberships.forEach(membership => {
+          const membershipDate = new Date(membership.created_at);
+          
+          // Set time boundaries
+          const normalizedMembershipDate = new Date(membershipDate);
+          normalizedMembershipDate.setHours(0, 0, 0, 0);
+          
+          const normalizedStartDate = new Date(startDate);
+          normalizedStartDate.setHours(0, 0, 0, 0);
+          
+          const normalizedEndDate = new Date(endDate);
+          normalizedEndDate.setHours(23, 59, 59, 999);
+          
+          if (normalizedMembershipDate >= normalizedStartDate && normalizedMembershipDate <= normalizedEndDate) {
+            allPayments.push({
+              memberName: membership.member_name,
+              type: 'Monthly Membership',
+              amount: membership.amount,
+              status: membership.payment_status === 'paid' ? 'paid' : 
+                      membership.payment_status === 'pending' ? 'pending' : 
+                      'overdue',
+              dueDate: membership.created_at,
+              paidDate: membership.paid_at || undefined,
+            });
+          }
+        });
+      }
+
+      if (allPayments.length === 0) {
+        alert(`Tidak ada data pembayaran untuk ${weeks} minggu terakhir`);
+        return;
+      }
+
+      // Calculate summary for period
+      const totalRevenuePeriod = allPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+      const totalPending = allPayments.filter(p => p.status === 'pending').length;
+      const totalPaid = allPayments.filter(p => p.status === 'paid').length;
+      const collectionRatePeriod = totalPaid > 0 ? ((totalPaid / (totalPaid + totalPending)) * 100).toFixed(1) : '0';
+
+      console.log(`✅ ${weeks} Week Report Summary:`, {
+        period: `${periodStart} - ${periodEnd}`,
+        totalRevenue: totalRevenuePeriod,
+        totalPaidItems: totalPaid,
+        totalPendingItems: totalPending,
+        totalItems: allPayments.length
+      });
+
+      // Prepare report data
+      const reportData = {
+        period: {
+          start: periodStart,
+          end: periodEnd,
+        },
+        summary: {
+          totalRevenue: totalRevenuePeriod,
+          totalPending: totalPending,
+          totalPaid: totalPaid,
+          totalMembers: new Set(allPayments.map(p => p.memberName)).size,
+          paymentRate: parseFloat(collectionRatePeriod as string),
+        },
+        payments: allPayments.sort((a, b) => {
+          // Sort: paid first, then by date
+          if (a.status !== b.status) {
+            return a.status === 'paid' ? -1 : 1;
+          }
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        }),
+      };
+
+      // Generate report
+      const result = await generateFinancialReport(reportData, {
+        share: false,
+      });
+
+      if (result.success) {
+        console.log(`✅ ${weeks} week report generated:`, result.filename);
+      } else {
+        alert(`Gagal membuat laporan: ${result.error}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error generating ${weeks} week report:`, error);
+      alert(`Gagal membuat laporan: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
 
   // Membership rollback states
   const [showRollbackModal, setShowRollbackModal] = useState(false);
@@ -561,6 +909,25 @@ export default function AdminPembayaranPage() {
     }
   }
 
+  // Handle click outside dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const menuButton = document.querySelector('[data-report-menu-button]');
+      const menuDropdown = document.querySelector('[data-report-menu-dropdown]');
+      
+      if (menuButton && menuDropdown && 
+          !menuButton.contains(event.target as Node) && 
+          !menuDropdown.contains(event.target as Node)) {
+        setShowReportMenu(false);
+      }
+    };
+
+    if (showReportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showReportMenu]);
+
   // Load smart suggestions when data changes or month changes
   useEffect(() => {
     if (!loading) {
@@ -585,8 +952,8 @@ export default function AdminPembayaranPage() {
       alert('Reminder feature coming soon!');
     } else if (action.type === 'flag-suspicious') {
       alert('Flagging feature coming soon!');
-    } else if (action.type === 'generate-report') {
-      // Generate financial report
+    } else if (action.type === 'generate-payment-report') {
+      // Generate payment report
       await handleGenerateFinancialReport(false);
     }
   }
@@ -705,7 +1072,500 @@ export default function AdminPembayaranPage() {
     }
   }
 
-  // Helper: Check if creation is allowed based on selected month
+  // Generate Weekly Financial Report
+  async function handleGenerateWeeklyFinancialReport(weekDate: Date, share: boolean = false) {
+    if (matches.length === 0 && memberships.length === 0) {
+      alert('Tidak ada data pembayaran untuk membuat laporan minggu ini');
+      return;
+    }
+
+    // Get Saturday of the week (match day)
+    const saturday = new Date(weekDate);
+    saturday.setDate(saturday.getDate() - saturday.getDay() + 6); // Get Saturday
+    
+    const weekStartDate = new Date(saturday);
+    weekStartDate.setDate(weekStartDate.getDate() - 6); // Sunday before
+    const weekEndDate = new Date(saturday);
+    weekEndDate.setDate(weekEndDate.getDate() + 1); // End of Saturday
+
+    const periodStart = `${weekStartDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })}`;
+    const periodEnd = `${weekEndDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    const weekType = `Minggu (${saturday.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })})`;
+
+    // Filter payments for this week (matches and memberships created/due in this week)
+    const allPayments: Array<{
+      memberName: string;
+      type: string;
+      amount: number;
+      status: 'paid' | 'pending' | 'overdue';
+      dueDate: string;
+      paidDate?: string;
+    }> = [];
+
+    // Add week-specific match payments
+    matches.forEach((match, matchIndex) => {
+      const matchDate = match.match_date ? new Date(match.match_date) : new Date(match.created_at);
+      // Include matches from this week
+      if (matchDate >= weekStartDate && matchDate <= weekEndDate) {
+        const monthlyMatchNumber = matchIndex + 1;
+        const members = matchMembers[match.id] || [];
+        members.forEach(member => {
+          allPayments.push({
+            memberName: member.member_name,
+            type: `Match #${monthlyMatchNumber}`,
+            amount: member.total_amount,
+            status: member.payment_status === 'paid' ? 'paid' : 
+                    member.payment_status === 'pending' ? 'pending' : 
+                    'overdue',
+            dueDate: match.match_date || match.created_at,
+            paidDate: member.paid_at || undefined,
+          });
+        });
+      }
+    });
+
+    // Add week-specific membership payments (if any)
+    memberships.forEach(membership => {
+      const membershipDate = new Date(membership.created_at);
+      if (membershipDate >= weekStartDate && membershipDate <= weekEndDate) {
+        allPayments.push({
+          memberName: membership.member_name,
+          type: 'Monthly Membership',
+          amount: membership.amount,
+          status: membership.payment_status === 'paid' ? 'paid' : 
+                  membership.payment_status === 'pending' ? 'pending' : 
+                  'overdue',
+          dueDate: membership.created_at,
+          paidDate: membership.paid_at || undefined,
+        });
+      }
+    });
+
+    // Calculate weekly summary
+    const weeklyRevenue = allPayments
+      .filter(p => p.status === 'paid')
+      .reduce((sum, p) => sum + p.amount, 0);
+    
+    const weeklyCollectionRate = allPayments.length > 0 
+      ? Math.round((allPayments.filter(p => p.status === 'paid').length / allPayments.length) * 100)
+      : 0;
+
+    // Prepare report data
+    const reportData = {
+      period: {
+        start: periodStart,
+        end: periodEnd,
+      },
+      summary: {
+        totalRevenue: weeklyRevenue,
+        totalPending: allPayments.filter(p => p.status === 'pending').length,
+        totalPaid: allPayments.filter(p => p.status === 'paid').length,
+        totalMembers: new Set(allPayments.map(p => p.memberName)).size,
+        paymentRate: weeklyCollectionRate,
+      },
+      payments: allPayments.sort((a, b) => {
+        // Sort: paid first, then by date
+        if (a.status !== b.status) {
+          return a.status === 'paid' ? -1 : 1;
+        }
+        return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+      }),
+    };
+
+    // Generate report
+    const result = await generateFinancialReport(reportData, {
+      share,
+    });
+
+    if (result.success) {
+      console.log('✅ Weekly financial report generated:', result.filename);
+    } else {
+      alert(`Gagal membuat laporan mingguan: ${result.error}`);
+    }
+  }
+
+  // Generate Custom Period Financial Report
+  async function handleGenerateCustomPeriodReport(share: boolean = false) {
+    const startDateStr = customPeriodData.startDate;
+    const endDateStr = customPeriodData.endDate;
+    
+    // Convert to Date objects
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    
+    // Format period strings
+    const periodStart = startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const periodEnd = endDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const allPayments: Array<{
+      memberName: string;
+      type: string;
+      amount: number;
+      status: 'paid' | 'pending' | 'overdue';
+      dueDate: string;
+      paidDate?: string;
+    }> = [];
+
+    try {
+      // Fetch ALL matches (not just current month) with their members
+      console.log('📊 Fetching all matches for period:', startDateStr, 'to', endDateStr);
+      const { data: allMatches, error: matchesError } = await supabase
+        .from('matches')
+        .select('*')
+        .order('match_number', { ascending: false });
+
+      if (matchesError) throw matchesError;
+
+      if (allMatches && allMatches.length > 0) {
+        // Fetch match members for each match
+        const matchMembersMap: Record<string, MatchMember[]> = {};
+        const memberQueries = allMatches.map(match =>
+          supabase
+            .from('match_members')
+            .select('*')
+            .eq('match_id', match.id)
+        );
+        
+        const membersResults = await Promise.allSettled(memberQueries);
+        membersResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const res = result.value as { data: MatchMember[] | null; error: any };
+            if (!res.error && res.data) {
+              matchMembersMap[allMatches[index].id] = res.data;
+            }
+          }
+        });
+
+        // Filter matches within period and their payments
+        allMatches.forEach((match, matchIndex) => {
+          const matchDate = match.match_date ? new Date(match.match_date) : new Date(match.created_at);
+          
+          // Set time boundaries for comparison
+          const normalizedMatchDate = new Date(matchDate);
+          normalizedMatchDate.setHours(0, 0, 0, 0);
+          
+          const normalizedStartDate = new Date(startDate);
+          normalizedStartDate.setHours(0, 0, 0, 0);
+          
+          const normalizedEndDate = new Date(endDate);
+          normalizedEndDate.setHours(23, 59, 59, 999);
+          
+          if (normalizedMatchDate >= normalizedStartDate && normalizedMatchDate <= normalizedEndDate) {
+            const membersList = matchMembersMap[match.id] || [];
+            membersList.forEach(member => {
+              allPayments.push({
+                memberName: member.member_name,
+                type: `Match #${matchIndex + 1}`,
+                amount: member.total_amount,
+                status: member.payment_status === 'paid' ? 'paid' : 
+                        member.payment_status === 'pending' ? 'pending' : 
+                        'overdue',
+                dueDate: match.match_date || match.created_at,
+                paidDate: member.paid_at || undefined,
+              });
+            });
+          }
+        });
+      }
+
+      // Fetch ALL memberships with period filter
+      console.log('📊 Fetching all memberships for period:', startDateStr, 'to', endDateStr);
+      const { data: allMemberships, error: membershipsError } = await supabase
+        .from('memberships')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (membershipsError) throw membershipsError;
+
+      if (allMemberships) {
+        allMemberships.forEach(membership => {
+          const membershipDate = new Date(membership.created_at);
+          
+          // Set time boundaries
+          const normalizedMembershipDate = new Date(membershipDate);
+          normalizedMembershipDate.setHours(0, 0, 0, 0);
+          
+          const normalizedStartDate = new Date(startDate);
+          normalizedStartDate.setHours(0, 0, 0, 0);
+          
+          const normalizedEndDate = new Date(endDate);
+          normalizedEndDate.setHours(23, 59, 59, 999);
+          
+          if (normalizedMembershipDate >= normalizedStartDate && normalizedMembershipDate <= normalizedEndDate) {
+            allPayments.push({
+              memberName: membership.member_name,
+              type: 'Monthly Membership',
+              amount: membership.amount,
+              status: membership.payment_status === 'paid' ? 'paid' : 
+                      membership.payment_status === 'pending' ? 'pending' : 
+                      'overdue',
+              dueDate: membership.created_at,
+              paidDate: membership.paid_at || undefined,
+            });
+          }
+        });
+      }
+
+      if (allPayments.length === 0) {
+        alert('Tidak ada data pembayaran dalam periode yang dipilih');
+        return;
+      }
+
+      // Calculate summary for period
+      const totalRevenuePeriod = allPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+      const totalPending = allPayments.filter(p => p.status === 'pending').length;
+      const totalPaid = allPayments.filter(p => p.status === 'paid').length;
+      const collectionRatePeriod = totalPaid > 0 ? ((totalPaid / (totalPaid + totalPending)) * 100).toFixed(1) : '0';
+
+      console.log('✅ Custom Period Report Summary:', {
+        period: `${periodStart} - ${periodEnd}`,
+        totalRevenue: totalRevenuePeriod,
+        totalPaidItems: totalPaid,
+        totalPendingItems: totalPending,
+        totalItems: allPayments.length
+      });
+
+      // Prepare report data
+      const reportData = {
+        period: {
+          start: periodStart,
+          end: periodEnd,
+        },
+        summary: {
+          totalRevenue: totalRevenuePeriod,
+          totalPending: totalPending,
+          totalPaid: totalPaid,
+          totalMembers: new Set(allPayments.map(p => p.memberName)).size,
+          paymentRate: parseFloat(collectionRatePeriod as string),
+        },
+        payments: allPayments.sort((a, b) => {
+          // Sort: paid first, then by date
+          if (a.status !== b.status) {
+            return a.status === 'paid' ? -1 : 1;
+          }
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        }),
+      };
+
+      // Generate report
+      const result = await generateFinancialReport(reportData, {
+        share,
+      });
+
+      if (result.success) {
+        console.log('✅ Custom period financial report generated:', result.filename);
+        setShowCustomPeriodModal(false);
+      } else {
+        alert(`Gagal membuat laporan: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Error generating custom period report:', error);
+      alert(`Gagal membuat laporan: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // Generate Shuttlecock Usage Report
+  async function handleGenerateShuttlecockReport() {
+    try {
+      const now = new Date();
+      
+      // Fetch ALL matches for the current year (not just the selected month)
+      const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+      const yearEnd = new Date(Date.UTC(now.getUTCFullYear(), 11, 31, 23, 59, 59));
+      
+      const { data: allYearMatches, error: yearMatchesError } = await supabase
+        .from('matches')
+        .select('*')
+        .gte('match_date', yearStart.toISOString())
+        .lte('match_date', yearEnd.toISOString())
+        .order('match_date', { ascending: false });
+      
+      if (yearMatchesError) {
+        console.error('Error fetching year matches:', yearMatchesError);
+        return;
+      }
+      
+      const reportMatches = allYearMatches || [];
+      
+      console.log(`📊 Fetched ${reportMatches.length} matches for year ${now.getUTCFullYear()}`);
+      
+      // Get current week start (Sunday) - in UTC
+      const currentWeekStart = new Date(now);
+      currentWeekStart.setDate(now.getDate() - now.getDay());
+      currentWeekStart.setUTCHours(0, 0, 0, 0);
+      
+      const currentWeekEnd = new Date(currentWeekStart);
+      currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+      currentWeekEnd.setUTCHours(23, 59, 59, 999);
+      
+      // Get current month boundaries - in UTC
+      const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      currentMonthStart.setUTCHours(0, 0, 0, 0);
+      
+      const currentMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+      currentMonthEnd.setUTCHours(23, 59, 59, 999);
+      
+      // Get current year boundaries - in UTC
+      const currentYearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+      currentYearStart.setUTCHours(0, 0, 0, 0);
+      
+      const currentYearEnd = new Date(Date.UTC(now.getUTCFullYear(), 11, 31));
+      currentYearEnd.setUTCHours(23, 59, 59, 999);
+      
+      // Calculate totals by period from matches array
+      let weeklyShuttlecocks = 0;
+      let weeklyMatches = 0;
+      let monthlyShuttlecocks = 0;
+      let monthlyMatches = 0;
+      let yearlyShuttlecocks = 0;
+      let yearlyMatches = 0;
+      let totalShuttlecocks = 0;
+      let totalMatches = 0;
+      
+      // Initialize monthly aggregates for all 12 months
+      const monthlyAggregates = Array(12).fill(null).map(() => ({ shuttlecocks: 0, matches: 0 }));
+      
+      console.log('📊 Report generation started at:', now.toISOString());
+      console.log('📅 Week boundaries:', currentWeekStart.toISOString(), 'to', currentWeekEnd.toISOString());
+      console.log('📅 Month boundaries:', currentMonthStart.toISOString(), 'to', currentMonthEnd.toISOString());
+      console.log('📅 Year boundaries:', currentYearStart.toISOString(), 'to', currentYearEnd.toISOString());
+      
+      reportMatches.forEach((match, idx) => {
+        // Parse match date properly - could be ISO string or Date
+        let matchDate: Date;
+        const dateSource = match.match_date || match.created_at;
+        
+        if (typeof dateSource === 'string') {
+          matchDate = new Date(dateSource);
+        } else {
+          matchDate = new Date(dateSource);
+        }
+        
+        // Normalize to start of day in UTC for comparison
+        const normalizedMatchDate = new Date(Date.UTC(
+          matchDate.getUTCFullYear(),
+          matchDate.getUTCMonth(),
+          matchDate.getUTCDate()
+        ));
+        
+        const shuttleCount = match.shuttlecock_count || 0;
+        
+        console.log(`Match ${idx + 1}: ${normalizedMatchDate.toISOString()} (${match.match_date || match.created_at}) - ${shuttleCount} shuttlecocks`);
+        
+        totalShuttlecocks += shuttleCount;
+        totalMatches += 1;
+        
+        // Check if match is in current week
+        if (normalizedMatchDate >= currentWeekStart && normalizedMatchDate <= currentWeekEnd) {
+          console.log(`  ✓ Included in This Week`);
+          weeklyShuttlecocks += shuttleCount;
+          weeklyMatches += 1;
+        }
+        
+        // Check if match is in current month
+        if (normalizedMatchDate >= currentMonthStart && normalizedMatchDate <= currentMonthEnd) {
+          console.log(`  ✓ Included in This Month`);
+          monthlyShuttlecocks += shuttleCount;
+          monthlyMatches += 1;
+        }
+        
+        // Check if match is in current year and aggregate by month
+        if (normalizedMatchDate >= currentYearStart && normalizedMatchDate <= currentYearEnd) {
+          console.log(`  ✓ Included in This Year`);
+          yearlyShuttlecocks += shuttleCount;
+          yearlyMatches += 1;
+          
+          // Add to monthly aggregate
+          const matchMonth = matchDate.getUTCMonth();
+          monthlyAggregates[matchMonth].shuttlecocks += shuttleCount;
+          monthlyAggregates[matchMonth].matches += 1;
+        }
+      });
+      
+      console.log('📊 Aggregated Results:', {
+        weekly: { shuttlecocks: weeklyShuttlecocks, matches: weeklyMatches },
+        monthly: { shuttlecocks: monthlyShuttlecocks, matches: monthlyMatches },
+        yearly: { shuttlecocks: yearlyShuttlecocks, matches: yearlyMatches },
+        total: { shuttlecocks: totalShuttlecocks, matches: totalMatches }
+      });
+      
+      // Format month name
+      const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      const yearName = now.getFullYear().toString();
+      
+      // Format week range
+      const weekStart = currentWeekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+      const weekEnd = currentWeekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      
+      // Prepare summaries
+      const summaries = [
+        {
+          periodName: 'This Week',
+          periodLabel: `${weekStart} - ${weekEnd}`,
+          shuttlecocks: weeklyShuttlecocks,
+          matches: weeklyMatches,
+        },
+        {
+          periodName: 'This Month',
+          periodLabel: monthName,
+          shuttlecocks: monthlyShuttlecocks,
+          matches: monthlyMatches,
+        },
+        {
+          periodName: 'This Year',
+          periodLabel: yearName,
+          shuttlecocks: yearlyShuttlecocks,
+          matches: yearlyMatches,
+        },
+        {
+          periodName: 'Total',
+          periodLabel: 'All Time',
+          shuttlecocks: totalShuttlecocks,
+          matches: totalMatches,
+        },
+      ];
+
+      // Add monthly breakdowns only for months that have occurred (up to current month)
+      const monthNamesID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const monthNamesEN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      
+      const monthlySummaries = [];
+      const currentMonthIndex = now.getUTCMonth();
+      
+      for (let monthIndex = 0; monthIndex <= currentMonthIndex; monthIndex++) {
+        monthlySummaries.push({
+          month: `${monthNamesID[monthIndex]} ${yearName}`,
+          monthLabel: monthNamesEN[monthIndex],
+          shuttlecocks: monthlyAggregates[monthIndex].shuttlecocks,
+          matches: monthlyAggregates[monthIndex].matches,
+        });
+      }
+
+      console.log('✅ Shuttlecock Usage Report Summary:', summaries);
+      console.log('✅ Monthly Breakdown:', monthlySummaries);
+
+      // Prepare report data with separate sections
+      const reportData = {
+        reportDate: `Shuttlecock Usage Report - ${now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
+        generatedDate: new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        summaries,
+        monthlySummaries,
+      };
+
+      // Generate report
+      const result = await generateShuttlecockReport(reportData);
+
+      if (result.success) {
+        console.log('✅ Shuttlecock usage report generated:', result.filename);
+      } else {
+        alert(`Gagal membuat laporan: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Error generating shuttlecock report:', error);
+      alert(`Gagal membuat laporan: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   const getCreationPermission = () => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -1791,11 +2651,108 @@ export default function AdminPembayaranPage() {
     }
   }
 
-  const filteredMatches = matches.filter(match =>
-    matchMembers[match.id]?.some(member =>
+  // Helper function to get date string in YYYY-MM-DD format (local date)
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to get the Saturday of a given week (works with local dates)
+  const getSaturdayOfWeek = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay(); // 0 = Sunday, 6 = Saturday
+    
+    // Calculate days to add to reach Saturday
+    const daysToSaturday = (6 - day) % 7;
+    
+    const saturday = new Date(d);
+    saturday.setDate(saturday.getDate() + daysToSaturday);
+    
+    return saturday;
+  };
+
+  // Helper function to get week start and end
+  const getWeekBoundaries = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day; // Sunday
+    const weekStart = new Date(d.setDate(diff));
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    return { weekStart, weekEnd };
+  };
+
+  // Helper function to get day boundaries
+  const getDayBoundaries = (date: Date) => {
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+    
+    return { dayStart, dayEnd };
+  };
+
+  // Helper function to check if a date is within the selected month
+  const isDateInSelectedMonth = (date: Date) => {
+    return date.getFullYear() === selectedMonth.getFullYear() &&
+           date.getMonth() === selectedMonth.getMonth();
+  };
+
+  // Helper function to get the first week that starts in the month
+  const getFirstWeekOfMonth = (month: Date) => {
+    const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+    const { weekStart } = getWeekBoundaries(firstDay);
+    return weekStart;
+  };
+
+  // Helper function to get the last week that contains days in the month
+  const getLastWeekOfMonth = (month: Date) => {
+    const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+    const { weekEnd } = getWeekBoundaries(lastDay);
+    return weekEnd;
+  };
+
+  const filteredMatches = matches.filter(match => {
+    // First filter by search term
+    const matchesSearch = matchMembers[match.id]?.some(member =>
       member.member_name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+    ) ?? true;
+
+    if (!matchesSearch) return false;
+
+    // Then apply date filter if not 'all'
+    if (filterMode === 'all') {
+      return true;
+    }
+
+    const matchDate = new Date(match.match_date || match.created_at);
+
+    if (filterMode === 'weekly' && selectedFilterDate) {
+      // Get date strings in local date format (YYYY-MM-DD)
+      const matchDateStr = getLocalDateString(matchDate);
+      
+      // Get the Saturday of the selected week
+      const targetSaturday = getSaturdayOfWeek(selectedFilterDate);
+      const targetSaturdayStr = getLocalDateString(targetSaturday);
+      
+      // Compare the local date strings directly
+      return matchDateStr === targetSaturdayStr;
+    }
+
+    if (filterMode === 'daily' && selectedFilterDate) {
+      const { dayStart, dayEnd } = getDayBoundaries(selectedFilterDate);
+      return matchDate >= dayStart && matchDate <= dayEnd;
+    }
+
+    return true;
+  });
 
   const filteredMemberships = memberships.filter(membership =>
     membership.member_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1874,13 +2831,203 @@ export default function AdminPembayaranPage() {
             <p className="text-sm sm:text-base text-gray-600 dark:text-zinc-400 transition-colors duration-300">Kelola pembayaran pertandingan dan membership</p>
           </div>
           
-          <button
-            onClick={toggleTutorial}
-            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
-            title="Tampilkan panduan fitur"
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* iOS AssistiveTouch Style Floating Menu */}
+            <div className="relative">
+              {/* Main FAB Button */}
+              <button
+                data-report-menu-button
+                onClick={() => {
+                  setShowReportMenu(!showReportMenu);
+                  setActiveSubmenu(null);
+                }}
+                className={`p-3 rounded-full transition-all duration-300 flex items-center justify-center shadow-lg relative z-40 ${
+                  showReportMenu
+                    ? 'bg-emerald-600 dark:bg-emerald-500 scale-110'
+                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                }`}
+                title="Menu Laporan"
+              >
+                <MoreVertical className={`w-6 h-6 transition-transform duration-300 ${showReportMenu ? 'rotate-90 text-white' : ''}`} />
+              </button>
+
+              {/* Modal Menu - Centered with Blur Background */}
+              {showReportMenu && (
+                <>
+                  {/* Blur Backdrop */}
+                  <div
+                    className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-all duration-300"
+                    onClick={() => {
+                      setShowReportMenu(false);
+                      setActiveSubmenu(null);
+                    }}
+                  />
+
+                  {/* Modal Menu Container - Centered */}
+                  <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+                    <div className="pointer-events-auto">
+                      {/* Main Menu - Grid Layout */}
+                      {!activeSubmenu && (
+                        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl p-8 backdrop-blur-xl border border-gray-200 dark:border-zinc-700">
+                          <div className="text-center mb-2">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Menu Aplikasi</h3>
+                          </div>
+
+                          {/* Menu Grid - 3 items (2 active, 1 disabled) */}
+                          <div className="grid grid-cols-2 gap-6 mb-4">
+                            {/* 📋 Generate Report Payment */}
+                            <button
+                              onClick={() => setActiveSubmenu('laporan')}
+                              className="flex flex-col items-center gap-3 p-6 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900/50 dark:hover:to-blue-800/50 border border-blue-200 dark:border-blue-700/50 transition-all duration-200 hover:scale-105"
+                            >
+                              <span className="text-5xl">📋</span>
+                              <span className="text-sm font-semibold text-gray-900 dark:text-white">Generate Report<br/>Payment</span>
+                            </button>
+
+                            {/* 🏸 Generate Shuttlecock Report */}
+                            <button
+                              onClick={() => {
+                                handleGenerateShuttlecockReport();
+                                setShowReportMenu(false);
+                                setActiveSubmenu(null);
+                              }}
+                              className="flex flex-col items-center gap-3 p-6 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 hover:from-orange-100 hover:to-orange-200 dark:hover:from-orange-900/50 dark:hover:to-orange-800/50 border border-orange-200 dark:border-orange-700/50 transition-all duration-200 hover:scale-105"
+                            >
+                              <span className="text-5xl">🏸</span>
+                              <span className="text-sm font-semibold text-gray-900 dark:text-white">Shuttlecock<br/>Usage</span>
+                            </button>
+                          </div>
+
+                          {/* Second Row */}
+                          <div className="grid grid-cols-2 gap-6">
+                            {/* ⚙️ Pengaturan (Disabled) */}
+                            <div className="flex flex-col items-center gap-3 p-6 rounded-xl bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 opacity-50 cursor-not-allowed">
+                              <span className="text-5xl">⚙️</span>
+                              <span className="text-sm font-semibold text-gray-600 dark:text-zinc-400">Pengaturan</span>
+                              <span className="text-xs text-gray-500 dark:text-zinc-500">Coming soon</span>
+                            </div>
+
+                            {/* 🔄 Aksi Massal (Disabled) */}
+                            <div className="flex flex-col items-center gap-3 p-6 rounded-xl bg-gray-100 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 opacity-50 cursor-not-allowed">
+                              <span className="text-5xl">🔄</span>
+                              <span className="text-sm font-semibold text-gray-600 dark:text-zinc-400">Aksi Massal</span>
+                              <span className="text-xs text-gray-500 dark:text-zinc-500">Coming soon</span>
+                            </div>
+                          </div>
+
+                          {/* Close Button */}
+                          <button
+                            onClick={() => setShowReportMenu(false)}
+                            className="w-full mt-6 px-4 py-2 rounded-lg bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 font-medium transition-colors"
+                          >
+                            Tutup
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Submenu - Report Period Options */}
+                      {activeSubmenu === 'laporan' && (
+                        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl p-8 backdrop-blur-xl border border-gray-200 dark:border-zinc-700">
+                          <div className="text-center mb-4">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Pilih Periode Laporan</h3>
+                            <p className="text-sm text-gray-600 dark:text-zinc-400 mt-1">Buat laporan untuk periode yang diinginkan</p>
+                          </div>
+
+                          {/* Period Options Grid */}
+                          <div className="grid grid-cols-2 gap-4 mb-6">
+                            {/* 1 Minggu */}
+                            <button
+                              onClick={() => {
+                                handleGenerateWeeklyReport(1);
+                                setShowReportMenu(false);
+                                setActiveSubmenu(null);
+                              }}
+                              className="flex flex-col items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/50 dark:hover:to-indigo-800/50 border border-indigo-200 dark:border-indigo-700/50 transition-all duration-200 hover:scale-105"
+                            >
+                              <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">1W</span>
+                              <span className="text-xs font-semibold text-gray-900 dark:text-white">1 Minggu</span>
+                            </button>
+
+                            {/* 2 Minggu */}
+                            <button
+                              onClick={() => {
+                                handleGenerateWeeklyReport(2);
+                                setShowReportMenu(false);
+                                setActiveSubmenu(null);
+                              }}
+                              className="flex flex-col items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/50 dark:hover:to-indigo-800/50 border border-indigo-200 dark:border-indigo-700/50 transition-all duration-200 hover:scale-105"
+                            >
+                              <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">2W</span>
+                              <span className="text-xs font-semibold text-gray-900 dark:text-white">2 Minggu</span>
+                            </button>
+
+                            {/* 3 Minggu */}
+                            <button
+                              onClick={() => {
+                                handleGenerateWeeklyReport(3);
+                                setShowReportMenu(false);
+                                setActiveSubmenu(null);
+                              }}
+                              className="flex flex-col items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/50 dark:hover:to-indigo-800/50 border border-indigo-200 dark:border-indigo-700/50 transition-all duration-200 hover:scale-105"
+                            >
+                              <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">3W</span>
+                              <span className="text-xs font-semibold text-gray-900 dark:text-white">3 Minggu</span>
+                            </button>
+
+                            {/* 1 Bulan */}
+                            <button
+                              onClick={() => {
+                                handleGenerateWeeklyReport(4);
+                                setShowReportMenu(false);
+                                setActiveSubmenu(null);
+                              }}
+                              className="flex flex-col items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/50 dark:hover:to-indigo-800/50 border border-indigo-200 dark:border-indigo-700/50 transition-all duration-200 hover:scale-105"
+                            >
+                              <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">1M</span>
+                              <span className="text-xs font-semibold text-gray-900 dark:text-white">1 Bulan</span>
+                            </button>
+                          </div>
+
+                          {/* Custom Periode - Full Width */}
+                          <button
+                            onClick={() => {
+                              setShowCustomPeriodModal(true);
+                              setShowReportMenu(false);
+                              setActiveSubmenu(null);
+                            }}
+                            className="w-full flex items-center justify-center gap-3 p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 hover:from-emerald-100 hover:to-emerald-200 dark:hover:from-emerald-900/50 dark:hover:to-emerald-800/50 border border-emerald-200 dark:border-emerald-700/50 transition-all duration-200 hover:scale-105 mb-6"
+                          >
+                            <span className="text-2xl">📅</span>
+                            <div className="text-left">
+                              <span className="font-semibold text-gray-900 dark:text-white">Periode Custom</span>
+                              <p className="text-xs text-gray-600 dark:text-zinc-400">Pilih tanggal sendiri</p>
+                            </div>
+                          </button>
+
+                          {/* Back Button */}
+                          <button
+                            onClick={() => setActiveSubmenu(null)}
+                            className="w-full px-4 py-2 rounded-lg bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 font-medium transition-colors"
+                          >
+                            Kembali
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* Tutorial Button */}
+            <button
+              onClick={toggleTutorial}
+              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+              title="Tampilkan panduan fitur"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Monthly Recap */}
@@ -2312,14 +3459,176 @@ export default function AdminPembayaranPage() {
           )}
         </div>
 
+        {/* Filter Controls - Only show for matches tab */}
+        {activeTab === 'matches' && (
+          <div className="mb-6 space-y-4">
+            {/* Filter Toggle Button */}
+            <button
+              onClick={() => setShowFilterSection(!showFilterSection)}
+              className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between"
+            >
+              <span className="font-medium text-gray-900 dark:text-white">Filter Pertandingan</span>
+              <ChevronDown 
+                size={20} 
+                className={`text-gray-600 dark:text-zinc-400 transform transition-transform duration-300 ${showFilterSection ? 'rotate-180' : ''}`} 
+              />
+            </button>
+
+            {/* Collapsible Filter Controls */}
+            {showFilterSection && (
+              <div className="space-y-4">
+                {/* Filter Mode Buttons - 3 Column Grid */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => {
+                      setFilterMode('all');
+                      setSelectedFilterDate(null);
+                    }}
+                    className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${filterMode === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-zinc-700'}`}
+                  >
+                    Semua
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFilterMode('weekly');
+                      if (!selectedFilterDate) {
+                        const saturdayOfCurrentWeek = getSaturdayOfWeek(new Date());
+                        if (!isDateInSelectedMonth(saturdayOfCurrentWeek)) {
+                          const firstDayOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+                          const firstSaturday = getSaturdayOfWeek(firstDayOfMonth);
+                          setSelectedFilterDate(isDateInSelectedMonth(firstSaturday) ? firstSaturday : new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1));
+                        } else {
+                          setSelectedFilterDate(saturdayOfCurrentWeek);
+                        }
+                      }
+                    }}
+                    className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${filterMode === 'weekly' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-zinc-700'}`}
+                  >
+                    Sabtu
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFilterMode('daily');
+                      if (!selectedFilterDate) setSelectedFilterDate(new Date());
+                    }}
+                    className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${filterMode === 'daily' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-zinc-700'}`}
+                  >
+                    Tanggal
+                  </button>
+                </div>
+
+                {/* Date Picker Controls */}
+                {(filterMode === 'weekly' || filterMode === 'daily') && (
+                  <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-lg p-4 space-y-3">
+                    {filterMode === 'weekly' && (
+                      <>
+                        <div className="flex gap-2 items-center flex-wrap">
+                          <button
+                            onClick={() => {
+                              const prevSaturday = new Date(selectedFilterDate || new Date());
+                              prevSaturday.setDate(prevSaturday.getDate() - 7);
+                              if (isDateInSelectedMonth(prevSaturday)) {
+                                setSelectedFilterDate(prevSaturday);
+                              }
+                            }}
+                            disabled={(() => {
+                              const prevSaturday = new Date(selectedFilterDate || new Date());
+                              prevSaturday.setDate(prevSaturday.getDate() - 7);
+                              return !isDateInSelectedMonth(prevSaturday);
+                            })()}
+                            className="px-3 py-2 bg-gray-100 dark:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-white rounded-lg text-sm font-medium flex items-center gap-1"
+                          >
+                            <ChevronLeft size={16} />
+                            <span className="hidden sm:inline">Sabtu Lalu</span>
+                            <span className="sm:hidden">Prev</span>
+                          </button>
+                          <input
+                            type="date"
+                            value={selectedFilterDate?.toISOString().split('T')[0] || ''}
+                            min={new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1).toISOString().split('T')[0]}
+                            max={new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0).toISOString().split('T')[0]}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                const newDate = new Date(e.target.value + 'T00:00:00');
+                                if (isDateInSelectedMonth(newDate)) {
+                                  const saturday = getSaturdayOfWeek(newDate);
+                                  setSelectedFilterDate(saturday);
+                                }
+                              }
+                            }}
+                            className="px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm"
+                          />
+                          <button
+                            onClick={() => {
+                              const nextSaturday = new Date(selectedFilterDate || new Date());
+                              nextSaturday.setDate(nextSaturday.getDate() + 7);
+                              if (isDateInSelectedMonth(nextSaturday)) {
+                                setSelectedFilterDate(nextSaturday);
+                              }
+                            }}
+                            disabled={(() => {
+                              const nextSaturday = new Date(selectedFilterDate || new Date());
+                              nextSaturday.setDate(nextSaturday.getDate() + 7);
+                              return !isDateInSelectedMonth(nextSaturday);
+                            })()}
+                            className="px-3 py-2 bg-gray-100 dark:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-white rounded-lg text-sm font-medium flex items-center gap-1"
+                          >
+                            <span className="hidden sm:inline">Sabtu Depan</span>
+                            <span className="sm:hidden">Next</span>
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+                        {selectedFilterDate && (
+                          <div className="text-sm text-gray-600 dark:text-zinc-400 bg-gray-50 dark:bg-zinc-800/50 px-3 py-2 rounded">
+                            Sabtu, {selectedFilterDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {filterMode === 'daily' && (
+                      <>
+                        <input
+                          type="date"
+                          value={selectedFilterDate?.toISOString().split('T')[0] || ''}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setSelectedFilterDate(new Date(e.target.value + 'T00:00:00'));
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm"
+                        />
+                        {selectedFilterDate && (
+                          <div className="text-sm text-gray-600 dark:text-zinc-400 bg-gray-50 dark:bg-zinc-800/50 px-3 py-2 rounded">
+                            {selectedFilterDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Content */}
         {activeTab === 'matches' ? (
           <div className="payment-table space-y-6">
-            {searchTerm && (
+            {(searchTerm || filterMode !== 'all') && (
               <div className="bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-500/30 rounded-lg p-3 transition-colors duration-300">
                 <p className="text-sm text-gray-700 dark:text-zinc-300 transition-colors duration-300">
                   Menampilkan <span className="font-semibold text-gray-900 dark:text-white transition-colors duration-300">{filteredMatches.length}</span> pertandingan 
-                  dengan anggota yang cocok dengan "{searchTerm}"
+                  {searchTerm && <span> dengan anggota yang cocok dengan "{searchTerm}"</span>}
+                  {filterMode === 'weekly' && selectedFilterDate && (
+                    <span>
+                      {' '}pada hari Sabtu, {selectedFilterDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} (dalam {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })})
+                    </span>
+                  )}
+                  {filterMode === 'daily' && selectedFilterDate && (
+                    <span>
+                      {' '}pada tanggal {new Date(selectedFilterDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  )}
                   {filteredMatches.length === 0 && (
                     <span className="text-yellow-400 ml-2">- Tidak ada hasil</span>
                   )}
@@ -4159,6 +5468,90 @@ export default function AdminPembayaranPage() {
             >
               Tutup
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Period Report Modal */}
+      {showCustomPeriodModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-700 max-w-md w-full p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Laporan Periode Custom</h3>
+              </div>
+              <button
+                onClick={() => setShowCustomPeriodModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">
+                  Tanggal Mulai
+                </label>
+                <input
+                  type="date"
+                  value={customPeriodData.startDate}
+                  onChange={(e) => setCustomPeriodData({
+                    ...customPeriodData,
+                    startDate: e.target.value
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">
+                  Tanggal Akhir
+                </label>
+                <input
+                  type="date"
+                  value={customPeriodData.endDate}
+                  onChange={(e) => setCustomPeriodData({
+                    ...customPeriodData,
+                    endDate: e.target.value
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white transition-colors"
+                />
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Laporan akan dihasilkan untuk periode: <span className="font-semibold">{new Date(customPeriodData.startDate).toLocaleDateString('id-ID')} - {new Date(customPeriodData.endDate).toLocaleDateString('id-ID')}</span>
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCustomPeriodModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-900 dark:text-white rounded-lg transition-colors font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => handleGenerateCustomPeriodReport(false)}
+                  disabled={isGeneratingReport}
+                  className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  {isGeneratingReport ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      Sedang dibuat...
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="w-4 h-4" />
+                      Buat Laporan
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

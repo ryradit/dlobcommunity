@@ -374,8 +374,8 @@ export default function AdminArtikelPage() {
                   if (error) setError('');
                 }}
                 placeholder="Contoh: Tulis artikel tentang teknik smash yang efektif untuk pemain pemula, sertakan tips praktis dan kesalahan yang harus dihindari"
-                className="artikel-prompt-input w-full bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg p-4 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4 font-medium transition-colors duration-300"
-                rows={4}
+                className="artikel-prompt-input w-full bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg p-3 sm:p-4 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4 font-medium transition-colors duration-300 text-sm sm:text-base"
+                rows={3}
                 disabled={isGenerating}
               />
 
@@ -416,7 +416,7 @@ export default function AdminArtikelPage() {
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating || !prompt.trim()}
-                className="artikel-generate-button w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-300 dark:disabled:from-zinc-700 dark:disabled:to-zinc-700 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed border-2 border-transparent hover:border-purple-400 shadow-sm"
+                className="artikel-generate-button w-full px-4 py-2.5 sm:py-3 sm:w-auto sm:px-6 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:from-gray-300 disabled:to-gray-300 dark:disabled:from-zinc-700 dark:disabled:to-zinc-700 text-white text-sm sm:text-base font-bold rounded-lg transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed border-2 border-transparent hover:border-purple-400 shadow-sm"
               >
                 {isGenerating ? (
                   <>
@@ -474,18 +474,18 @@ export default function AdminArtikelPage() {
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t-2 border-gray-200 dark:border-white/10 flex gap-3 transition-colors duration-300">
+            <div className="mt-4 pt-4 border-t-2 border-gray-200 dark:border-white/10 flex flex-col sm:flex-row gap-2.5 transition-colors duration-300">
               <a
                 href={`/artikel/${generatedArticle.slug}`}
                 target="_blank"
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors font-bold border-2 border-blue-600 shadow-sm"
+                className="px-4 py-2 sm:py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm flex items-center justify-center gap-2 transition-colors font-bold border-2 border-blue-600 shadow-sm flex-1 sm:flex-none"
               >
                 <Eye className="w-4 h-4" />
                 Preview
               </a>
               <button
                 onClick={() => handlePublish(generatedArticle.id)}
-                className="artikel-publish-button px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors font-bold border-2 border-green-600 shadow-sm"
+                className="artikel-publish-button px-4 py-2 sm:py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm flex items-center justify-center gap-2 transition-colors font-bold border-2 border-green-600 shadow-sm flex-1 sm:flex-none"
               >
                 <Globe className="w-4 h-4" />
                 Publish

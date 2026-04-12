@@ -116,62 +116,87 @@ ATURAN GAMBAR (WAJIB - SANGAT PENTING):
 - Semua gambar harus punya deskripsi prompt untuk AI image generator
 - Gambar harus relevan 100% dengan konten di sekitarnya
 
-⚠️ ATURAN KHUSUS PROMPT GAMBAR BADMINTON (WAJIB DIIKUTI):
-SETIAP prompt gambar HARUS relevan dengan konteks artikel dan bagiannya:
+⚠️ ANALISIS TOPIK ARTIKEL (WAJIB DILAKUKAN TERLEBIH DAHULU):
+SEBELUM generate gambar, tentukan KATEGORI UTAMA artikel:
+1. BADMINTON FOKUS: Tentang teknik, strategi, latihan, permainan → WAJIB semua gambar tentang badminton/pemain
+2. KOMUNITAS/EVENT: Tentang acara DLOB, gathering, sosialisasi, event komunitas → WAJIB pemain badminton/lapangan DLOB
+3. NUTRISI/DIET: KHUSUS artikel yang FOKUS membahas nutrisi/makanan untuk atlet → Boleh gambar makanan
+4. PERALATAN: KHUSUS review/rekomendasi gear badminton → Boleh gambar peralatan + atlet demonstrasi
+5. KESEHATAN: Tentang injury prevention, kesehatan atlet, recovery → WAJIB gambar pemain demonstrasi/latihan
 
-A. UNTUK GAMBAR PEMAIN/ATLET BADMINTON:
-- WAJIB termasuk kata kunci: "badminton" atau "badminton court" atau "shuttlecock" atau "badminton racket"
-- WAJIB menyebutkan elemen visual: "player holding badminton racket", "shuttlecock in motion", "indoor badminton court with green/blue floor", "badminton net"
-- WAJIB menyebutkan: "wearing DLOB jersey" atau "in DLOB uniform" atau "DLOB badminton team jersey" untuk setiap gambar yang menampilkan pemain
-- Warna jersey DLOB: hitam atau putih dengan logo DLOB
-- PENTING: Sesuaikan usia/demografi pemain dengan target artikel:
-  * Artikel tentang anak-anak → "children aged 6-12" atau "young kids" atau "junior badminton players"
-  * Artikel tentang remaja → "teenage players" atau "youth badminton athletes"
-  * Artikel tentang dewasa → "adult players" atau "professional badminton athletes"
-  * Artikel tentang lansia → "senior players" atau "elderly badminton enthusiasts"
+⚠️ ATURAN KETAT GAMBAR RELEVANSI (BREAKER RULE):
+❌ JANGAN PERNAH GUNAKAN GAMBAR:
+- Sport lain (cycling, running, basketball, football, dll) - ATURAN ABSOLUTE
+- Makanan jika artikel BUKAN fokus nutrisi (hanya menyebut "protein" tidak cukup)
+- Abstract atau umum yang tidak spesifik
+- Wajah tanpa konteks badminton (portrait random)
+- Olahraga outdoor yang bukan badminton
 
-B. UNTUK GAMBAR NON-ATLET (HANYA untuk artikel yang MEMANG tentang nutrisi/makanan/peralatan):
-- ⚠️ PENTING: Jangan gunakan gambar makanan untuk artikel tentang latihan/stamina/kecepatan/teknik!
-- HANYA gunakan gambar makanan jika artikel FOKUS pada nutrisi/diet/makanan
-- Artikel latihan fisik/stamina/kecepatan → HARUS pakai gambar atlet badminton dengan DLOB jersey
-- JIKA artikel MEMANG tentang NUTRISI/MAKANAN (bukan hanya menyebutkan nutrisi):
-  * Gunakan "food photography" atau "meal prep" di prompt
-  * Contoh: "Professional food photography of healthy athlete meal with grilled chicken, brown rice, vegetables and fruits on white plate, clean lighting, top view"
-  * Minimal 1 gambar harus tetap pemain badminton dengan DLOB jersey
-- JIKA tentang PERALATAN (review raket, sepatu, dll):
-  * Gunakan "product photography" di prompt
-  * Contoh: "Professional product photography of badminton racket with shuttlecocks on clean background, studio lighting"
-- JIKA tentang FASILITAS: Tunjukkan lapangan, gedung olahraga, gym
-  * Contoh: "Wide angle shot of professional indoor badminton court with green floor, white net, and stadium seating"
+✅ WAJIB GUNAKAN:
+- Badminton court dengan shuttlecock dan racket
+- Player dengan DLOB jersey (black/white/blue)
+- Indoor sports facility yang spesifik badminton
+- Badminton equipment close-ups
+- Actionable, situational gambar yang relevan dengan narasi
 
-C. ATURAN UMUM:
-- SETIAP gambar harus BERBEDA dan unik - variasikan angle, pose, dan komposisi
-- Hindari prompt yang terlalu abstrak atau umum
-- Pastikan gambar 100% relevan dengan konten bagian artikel tersebut
-- Gunakan kata kunci spesifik untuk hasil terbaik
+ATURAN GAMBAR BERDASARKAN KATEGORI ARTIKEL:
 
-FORMAT OUTPUT (JSON):
+1. ARTIKEL BADMINTON (TEKNIK/STRATEGI/LATIHAN/TIPS):
+   RULE: 100% semua gambar HARUS badminton-related dengan atlet/lapangan/equipment
+   - Hero: "Professional badminton player in action shot during intense rally, wearing DLOB jersey, holding racket mid-swing, indoor badminton court background, sharp focus"
+   - Body A: "Close-up of badminton player demonstrating correct grip technique, hands holding DLOB racket, white background, professional sports photography"
+   - Body B: "Wide shot of indoor badminton court with net, players in DLOB jersey during practice, professional lighting, clear court markings"
+   - CTA: "Inspiring badminton player in DLOB jersey celebrating winning point, dynamic pose, badminton court setting"
+   NO FOOD, NO OTHER SPORTS ALLOWED!
+
+2. ARTIKEL KOMUNITAS/EVENT/SILATURAHMI:
+   RULE: Focus pada pemain badminton, lapangan, gathering moment, but BADMINTON-centric
+   - Hero: "Group of badminton players in DLOB jersey gathered at court during community event, friendly atmosphere, smiling faces"
+   - Body: "Badminton court scene with multiple players during DLOB tournament/gathering, social moment, team spirit"
+   - CTA: "DLOB badminton community members together on court ready to play, unity and friendship"
+   NO UNRELATED SPORTS! No cycling, no random gatherings without badminton context!
+
+3. ARTIKEL NUTRISI (HANYA jika FOKUS pembahasan nutrisi):
+   RULE: Maksimal 60% gambar makanan, minimal 40% tetap pemain badminton
+   - Hero: "Professional food photography of healthy athlete meal with balanced proteins and carbs"
+   - Body 1: Bisa food prep atau meal
+   - Body 2: WAJIB "Badminton player in DLOB jersey training with energy and focus, demonstrating the result of proper nutrition"
+   - CTA: "Badminton athlete eating nutritious meal, energized and ready to train harder"
+
+4. ARTIKEL PERALATAN (raket, sepatu, net, dll):
+   RULE: Mix product + player demonstration
+   - Hero: "Professional product photography of new badminton racket with shuttlecocks"
+   - Body 1: "Close-up detail shot of badminton racket strings and head"
+   - Body 2: "Player in DLOB jersey holding and using the equipment during match/practice"
+   - CTA: "Complete badminton gear display with racket, shoes, and shuttlecock on premium background"
+
+5. ARTIKEL KESEHATAN/INJURY/RECOVERY:
+   RULE: Pemain demonstrasi, physiotherapy, training
+   - Hero: "Badminton player receiving professional physiotherapy massage on shoulder after training, clinical setting"
+   - Body: "Athlete doing recovery exercises or stretching routine"
+   - CTA: "Healthy badminton player in DLOB jersey demonstrating proper form and fitness"
+
+VALIDASI SEBELUM OUTPUT (WAJIB LAKUKAN CHECK):
+❓ Untuk setiap gambar prompt, tanya diri sendiri:
+1. Apakah prompt ini SPESIFIK atau GENERIC? → Harus SPESIFIK
+2. Apakah gambar ini 100% relevan dengan isi artikel/section? → Harus YES
+3. Apakah mencakup badminton elements (racket/court/shuttlecock/jersey) jika memang BADMINTON artikel? → Harus YES
+4. Apakah menghindari unrelated sports? → Harus TIDAK ada olahraga lain
+5. Adalah apakah prompt ini ACTIONABLE dan VISUAL? → Harus YES
+
+Jika ada prompt yang TIDAK memenuhi kriteria ini, REVISI SEBELUM OUTPUT!
+
+FORMAT OUTPUT (JSON - WAJIB IKUTI PARAMETER IMAGE DENGAN KETAT):
 {
   "title": "Judul artikel yang menarik dan SEO-friendly",
-  "category": "pilih: Tips & Trik / Kesehatan / Strategi / Komunitas / Berita",
+  "category": "Tentukan kategori yang AKURAT: Tips & Trik / Strategi / Komunitas / Kesehatan / Berita",
   "tags": ["tag1", "tag2", "tag3"],
   "excerpt": "Ringkasan 2-3 kalimat yang menarik",
   "seo_title": "SEO title maksimal 60 karakter",
   "seo_description": "Meta description maksimal 155 karakter",
-  "hero_image_prompt": "DEFAULT: Atlet badminton dengan DLOB jersey + usia spesifik. HANYA gunakan food/equipment jika artikel MEMANG fokus pada topik tersebut (bukan hanya menyebut). Professional photography, dramatic lighting",
+  "hero_image_prompt": "⚠️ WAJIB IKUTI RULE BERDASARKAN KATEGORI DI ATAS. Jika Tips/Strategi/Kesehatan → Ketik prompt BADMINTON PLAYER dengan DLOB jersey. Jika Komunitas/Event → ketik BADMINTON COURT dengan players berkumpul. Jika FOKUS Nutrisi → bisa food. Jika Equipment Review → product. JANGAN GENERIC, JANGAN UNRELATED SPORTS!",
   "intro": "Paragraf pembuka 2-3 paragraf yang engaging (TANPA MARKDOWN ** atau *)",
-  "sections": [
-    {
-      "heading": "Sub Judul 1",
-      "content": "Konten lengkap 300-500 kata (TANPA MARKDOWN ** atau *)",
-      "has_image": true/false,
-      "image_prompt": "DEFAULT: Atlet DLOB jersey + usia + badminton. KHUSUS artikel nutrisi → 'food photography'. KHUSUS review gear → 'product photography'. Artikel latihan/stamina/teknik → WAJIB atlet DLOB jersey. BERBEDA angle!"
-    }
-  ],
-  "conclusion": "Kesimpulan yang kuat dan memorable (TANPA MARKDOWN ** atau *)",
-  "cta_text": "Ajakan untuk pembaca (misal: Bergabunglah dengan DLOB!) - TANPA MARKDOWN ** atau *",
-  "cta_image_prompt": "DEFAULT: Inspiring badminton player DLOB jersey. KHUSUS artikel nutrisi → bisa food/meal. BERBEDA dari gambar lain"
-}
+  "sections": [\n    {\n      "heading": "Sub Judul 1",\n      "content": "Konten lengkap 300-500 kata (TANPA MARKDOWN ** atau *)",\n      "has_image": true/false,\n      "image_prompt": "⚠️ SANGAT PENTING: Analisis isi section ini. Jika tentang teknik/latihan/strategi → WAJIB 'badminton player DLOB jersey demonstrating [SPECIFIC TECHNIQUE]'. Jika tentang nutrisi KHUSUS → bisa food. Jika tentang komunitas → pemain berkumpul di court. SELALU SPESIFIK, SELALU RELEVAN, TIDAK BOLEH GAMBAR OLAHRAGA LAIN SEPERTI CYCLING/RUNNING!"\n    }\n  ],\n  "conclusion": "Kesimpulan yang kuat dan memorable (TANPA MARKDOWN ** atau *)",\n  "cta_text": "Ajakan untuk pembaca (misal: Bergabunglah dengan DLOB!) - TANPA MARKDOWN ** atau *",\n  "cta_image_prompt": "⚠️ INSPIRATIONAL shot sesuai kategori. BADMINTON articles → player DLOB jersey celebrating/training. NUTRISI articles → athlete meal + badminton context. KOMUNITAS → group playing together. SELALU badminton-related!"\n}
 
 PENTING - VARIASI DAN RELEVANSI GAMBAR:
 - Analisis TOPIK UTAMA artikel untuk tentukan jenis gambar yang dominan
@@ -200,6 +225,14 @@ GAYA PENULISAN:
 - Struktur dengan paragraf yang jelas, tanpa markup
 - Contoh SALAH: "**Badminton**" atau "*penting*"
 - Contoh BENAR: "Badminton" atau "penting"
+
+LANGKAH PERTAMA SEBELUM GENERATE ARTIKEL:
+1. BACA user prompt dengan seksama
+2. TENTUKAN kategori utama artikel (Badminton/Komunitas/Nutrisi/Equipment/Kesehatan?)
+3. REVIEW setiap image prompt untuk memastikan SESUAI dengan kategori
+4. JIKA ada image prompt yang TIDAK sesuai kategori → REVISI SEBELUM OUTPUT
+5. CONTOH CHECK: "Apakah user minta artikel tentang tips latihan smash?" → Ya → Semua gambar HARUS badminton dengan demonstrasi teknik
+6. CONTOH CHECK: "Apakah user minta artikel tentang silaturahmi komunitas?" → Ya → Gambar HARUS pemain berkumpul di lapangan badminton, bukan olahraga lain
 
 PROMPT USER: ${prompt}
 

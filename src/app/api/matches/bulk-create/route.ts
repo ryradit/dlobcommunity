@@ -9,8 +9,8 @@ interface MatchInput {
   team1_player2: string;
   team2_player1: string;
   team2_player2: string;
-  court_number: string;
-  shuttlecock_amount: string;
+  jumlah_kok: string;  // Column 3: Shuttlecock count
+  skor_pertandingan: string;  // Column 4: Match score (e.g., "42-58")
 }
 
 export async function POST(request: NextRequest) {
@@ -113,9 +113,9 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Calculate costs
+        // Calculate costs using jumlah_kok (shuttlecock count from column 3)
         const costPerShuttlecock = 12000;
-        const totalCost = parseInt(match.shuttlecock_amount) * costPerShuttlecock;
+        const totalCost = parseInt(match.jumlah_kok) * costPerShuttlecock;
         const costPerMember = totalCost / 4;
 
         // Get match month and year to check memberships
@@ -162,13 +162,33 @@ export async function POST(request: NextRequest) {
         const matchNumber = matchNumberData || 1;
         console.log(`🔢 Creating match #${matchNumber} for ${matchDateString}`);
 
-        // Create match
+        // Parse match score (format: "42-58" or "21-19")
+        let team1_score = 0;
+        let team2_score = 0;
+        if (match.skor_pertandingan && match.skor_pertandingan.includes('-')) {
+          const scoreParts = match.skor_pertandingan.split('-');
+          team1_score = parseInt(scoreParts[0]) || 0;
+          team2_score = parseInt(scoreParts[1]) || 0;
+        }
+
+        // Determine winner from scores
+        let winner: 'team1' | 'team2' | null = null;
+        if (team1_score > team2_score) {
+          winner = 'team1';
+        } else if (team2_score > team1_score) {
+          winner = 'team2';
+        }
+
+        // Create match with scores extracted directly from image
         const { data: createdMatch, error: matchError } = await supabase
           .from('matches')
           .insert({
-            shuttlecock_count: parseInt(match.shuttlecock_amount) || 4,
+            shuttlecock_count: parseInt(match.jumlah_kok) || 4,  // Now uses jumlah_kok from column 3
             match_date: matchDateObj.toISOString(),
             match_number: matchNumber,
+            team1_score: team1_score,  // Column 4 score - team 1
+            team2_score: team2_score,  // Column 4 score - team 2
+            winner: winner,  // Set winner based on scores from image extraction
           })
           .select()
           .single();
