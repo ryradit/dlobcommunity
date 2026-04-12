@@ -36,8 +36,8 @@ IMPORTANT: This image contains MULTIPLE MATCH ROWS (typically 15-20 matches). Ex
 The image has 4 columns per row:
 - Column 1: Team 1 players (ALWAYS separated by "/" e.g., "Kevin/Solaso" means Kevin AND Solaso)
 - Column 2: Team 2 players (ALWAYS separated by "/" e.g., "Khai/William" means Khai AND William)
-- Column 3: Court number
-- Column 4: Shuttlecock amount
+- Column 3: Jumlah Kok / Shuttlecock amount (e.g., "2", "3", "4")
+- Column 4: Skor Pertandingan (format: "score1-score2" e.g., "42-58", "21-19")
 
 Extract and return ONLY a valid JSON array with ALL matches:
 {
@@ -47,8 +47,8 @@ Extract and return ONLY a valid JSON array with ALL matches:
       "team1_player2": "Second player name",
       "team2_player1": "First player name",
       "team2_player2": "Second player name",
-      "court_number": "Court number",
-      "shuttlecock_amount": "Number of shuttlecocks"
+      "jumlah_kok": "Number of shuttlecocks/kok (e.g., 2, 3, 4)",
+      "skor_pertandingan": "Match score in format team1_score-team2_score (e.g., 42-58, 21-19)"
     },
     ... (repeat for ALL matches found)
   ],
@@ -95,6 +95,31 @@ CRITICAL PARSING RULES:
     }
 
     const extractedData = JSON.parse(jsonMatch[0]);
+
+    // Normalize field names: map old names to new Bahasa names
+    if (extractedData.matches && Array.isArray(extractedData.matches)) {
+      extractedData.matches = extractedData.matches.map((match: any) => {
+        const normalized = { ...match };
+        
+        // Map old kok_usage to jumlah_kok if not already present
+        if (match.kok_usage && !match.jumlah_kok) {
+          normalized.jumlah_kok = match.kok_usage;
+          delete normalized.kok_usage;
+        }
+        
+        // Map old match_score to skor_pertandingan if not already present
+        if (match.match_score && !match.skor_pertandingan) {
+          normalized.skor_pertandingan = match.match_score;
+          delete normalized.match_score;
+        }
+        
+        // Ensure fields have string defaults instead of undefined
+        normalized.jumlah_kok = normalized.jumlah_kok || '';
+        normalized.skor_pertandingan = normalized.skor_pertandingan || '';
+        
+        return normalized;
+      });
+    }
 
     return NextResponse.json({
       success: true,

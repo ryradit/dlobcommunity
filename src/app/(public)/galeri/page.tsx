@@ -769,20 +769,29 @@ export default function GaleriPage() {
             <div className="flex-1 flex items-center justify-center bg-black p-4 min-h-64">
               <div className="relative w-full h-full flex items-center justify-center">
                 {/* Image - Using proxy URL for reliable loading */}
-                <img
-                  src={selectedImage.url}
-                  alt={selectedImage.title}
-                  className="max-w-full max-h-full object-contain"
-                  onLoad={() => {
-                    console.log('✅ Image loaded:', selectedImage.title);
-                    setModalImageLoading(false);
-                  }}
-                  onError={(e) => {
-                    console.error('❌ Image failed to load:', selectedImage.title, selectedImage.url);
-                  }}
-                />
-
-
+                {selectedImage.title.toLowerCase().endsWith('.heic') ? (
+                  <div className="text-center">
+                    <div className="text-white">
+                      <p className="text-lg font-semibold mb-2">HEIC Format</p>
+                      <p className="text-gray-300 text-sm">
+                        Preview not available. Please download to view.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={selectedImage.url}
+                    alt={selectedImage.title}
+                    className="max-w-full max-h-full object-contain"
+                    onLoad={() => {
+                      console.log('✅ Image loaded:', selectedImage.title);
+                      setModalImageLoading(false);
+                    }}
+                    onError={(e) => {
+                      console.error('❌ Image failed to load:', selectedImage.title, selectedImage.url);
+                    }}
+                  />
+                )}
               </div>
             </div>
 
