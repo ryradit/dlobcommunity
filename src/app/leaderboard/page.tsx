@@ -143,11 +143,88 @@ function getChibiImagePath(memberName: string): string {
   return `/images/members/members-chibi/${cleanName}chibi.png`;
 }
 
-// ─── Main component ─────────────────────────────────────────────────────────
+// ─── Quarter System ────────────────────────────────────────────────────────
+
+type QuarterType = 'current' | 'q1' | 'q2' | 'q3' | 'q4' | 'all-time';
+
+interface QuarterRange {
+  name: string;
+  label: string;
+  startDate: Date;
+  endDate: Date;
+}
+
+function getQuarterRange(quarter: QuarterType, year: number = 2026): QuarterRange {
+  switch (quarter) {
+    case 'q1':
+      return {
+        name: 'Q1 2026',
+        label: 'Q1 2026 (Jan - Apr)',
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 3, 30, 23, 59, 59),
+      };
+    case 'q2':
+      return {
+        name: 'Q2 2026',
+        label: 'Q2 2026 (May - Jul)',
+        startDate: new Date(year, 4, 1), // May 1
+        endDate: new Date(year, 6, 31, 23, 59, 59),
+      };
+    case 'q3':
+      return {
+        name: 'Q3 2026',
+        label: 'Q3 2026 (Aug - Oct)',
+        startDate: new Date(year, 7, 1),
+        endDate: new Date(year, 9, 31, 23, 59, 59),
+      };
+    case 'q4':
+      return {
+        name: 'Q4 2026',
+        label: 'Q4 2026 (Nov - Dec)',
+        startDate: new Date(year, 10, 1),
+        endDate: new Date(year, 11, 31, 23, 59, 59),
+      };
+    case 'all-time':
+      return {
+        name: 'All Time',
+        label: 'All Time Records',
+        startDate: new Date(2000, 0, 1),
+        endDate: new Date(2099, 11, 31),
+      };
+    case 'current':
+    default: {
+      const now = new Date();
+      const month = now.getMonth();
+      if (month <= 3) {
+        // Jan-Apr = Q1
+        return getQuarterRange('q1', year);
+      } else if (month <= 6) {
+        // May-Jul = Q2
+        return getQuarterRange('q2', year);
+      } else if (month <= 9) {
+        // Aug-Oct = Q3
+        return getQuarterRange('q3', year);
+      } else {
+        // Nov-Dec = Q4
+        return getQuarterRange('q4', year);
+      }
+    }
+  }
+}
+
+function getCurrentQuarter(): QuarterType {
+  const now = new Date();
+  const month = now.getMonth();
+  if (month <= 3) return 'q1';
+  if (month <= 6) return 'q2';
+  if (month <= 9) return 'q3';
+  return 'q4';
+}
 
 export default function LeaderboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [selectedQuarter, setSelectedQuarter] = useState<QuarterType>('current');
   const [stats, setStats] = useState<MemberStat[]>([]);
   const [recapSort, setRecapSort] = useState<
     'totalMatches' | 'wins' | 'losses' | 'winRate' | 'avgScore' | 'attendances' | 'longestWinStreak' | 'bestPlayerScore'
@@ -210,7 +287,7 @@ export default function LeaderboardPage() {
       supabase.removeChannel(matchesSub);
       supabase.removeChannel(membersSub);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedQuarter]); // Refetch when quarter changes
 
   async function fetchStats() {
     setLoading(true);
@@ -236,7 +313,17 @@ export default function LeaderboardPage() {
 
       if (!matches || !matchMembers) return;
 
-      // First recorded match date
+      // Get quarter date range
+      const quarterRange = getQuarterRange(selectedQuarter);
+      
+      // Filter matches by quarter date range
+      const filteredMatches = matches.filter((m: any) => {
+        if (!m.match_date) return false;
+        const matchDate = new Date(m.match_date);
+        return matchDate >= quarterRange.startDate && matchDate <= quarterRange.endDate;
+      });
+
+      // First recorded match date (from all-time data for context)
       if (matches.length > 0 && matches[0].match_date) {
         const d = new Date(matches[0].match_date);
         setFirstMatchDate(
@@ -244,15 +331,15 @@ export default function LeaderboardPage() {
         );
       }
 
-      // match_id → YYYY-MM-DD
+      // match_id → YYYY-MM-DD (only for filtered matches)
       const matchDateMap = new Map<string, string>();
-      for (const m of matches) {
+      for (const m of filteredMatches) {
         if (m.id && m.match_date) {
           matchDateMap.set(m.id, new Date(m.match_date).toISOString().slice(0, 10));
         }
       }
 
-      // Distinct play dates per member
+      // Distinct play dates per member (only from filtered quarter)
       const attendanceMap = new Map<string, Set<string>>();
       for (const mm of matchMembers) {
         if (!realNames.has(mm.member_name)) continue;
@@ -283,7 +370,7 @@ export default function LeaderboardPage() {
       // Track weighted metrics for 90-day rolling window
       const playerWeightedStats = new Map<string, { weightedWins: number; weightedMatches: number }>();
 
-      for (const match of matches) {
+      for (const match of filteredMatches) {
         const players = [
           { name: match.team1_player1, team: 'team1' },
           { name: match.team1_player2, team: 'team1' },
@@ -823,6 +910,48 @@ export default function LeaderboardPage() {
 
         {/* ── Championship Podium with Tabs ─────────────────────────── */}
         <div className="space-y-4">
+          {/* Quarter Selector */}
+          <div className="flex flex-wrap gap-2 justify-center pb-2 sm:pb-4">
+            <div className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              <span>Season:</span>
+            </div>
+            <div className="flex gap-2 flex-wrap justify-center">
+              {[
+                { id: 'current', label: '📊 Current' },
+                { id: 'q1', label: '📋 Q1 2026' },
+                { id: 'q2', label: '⭐ Q2 2026' },
+                { id: 'q3', label: 'Q3 2026' },
+                { id: 'q4', label: 'Q4 2026' },
+                { id: 'all-time', label: '🏆 All Time' },
+              ].map((quarter) => (
+                <button
+                  key={quarter.id}
+                  onClick={() => {
+                    setSelectedQuarter(quarter.id as QuarterType);
+                    fetchStats();
+                  }}
+                  className={`px-3 py-1 rounded-lg font-semibold text-xs sm:text-sm whitespace-nowrap transition-all duration-300 ${
+                    selectedQuarter === quarter.id
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'
+                  }`}
+                  title={quarter.id === 'q1' ? 'Q1 2026: Jan 1 - Apr 30' : quarter.id === 'q2' ? 'Q2 2026: May 1 - Jul 31' : quarter.id === 'current' ? getCurrentQuarter() === 'q2' ? 'Current Season: May 1 - Jul 31' : 'Current Season' : ''}
+                >
+                  {quarter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Season Info Badge */}
+          {selectedQuarter !== 'all-time' && (
+            <div className="text-center text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded-lg py-2 px-4 mb-2">
+              🗓️ {selectedQuarter === 'current' ? `Current Season (${getQuarterRange('current').name})` : getQuarterRange(selectedQuarter as QuarterType).label}
+              {selectedQuarter === 'q1' && ' - Final Results'}
+            </div>
+          )}
+
           {/* Tab Navigation - Responsive */}
           <div className="flex gap-1 sm:gap-2 pb-2 overflow-x-auto justify-start sm:justify-center scrollbar-hide">
             <style>{`

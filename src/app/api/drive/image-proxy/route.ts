@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const fileId = searchParams.get('id');
     const download = searchParams.get('download') === 'true';
+    const size = searchParams.get('size'); // e.g., '400', '800', '1000'
 
     if (!fileId) {
       return NextResponse.json(
@@ -13,16 +14,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`🖼️ Proxying image: ${fileId}`);
+    console.log(`🖼️ Proxying image: ${fileId}${size ? ` (size: ${size}px)` : ''}`);
 
     // For HEIC files, use Google Drive's built-in PNG conversion
     // For other formats, use export=view for preview or export=download for download
     const isHeic = fileId.toLowerCase().includes('heic');
     
     let url: string;
-    if (isHeic) {
+    
+    // If size is requested, use thumbnail endpoint which supports sz parameter
+    // Otherwise use standard view/download format
+    if (size && !download) {
+      // Use thumbnail endpoint for sized images - supports sz=w400, sz=w800, etc.
+      url = `https://drive.google.com/thumbnail?id=${fileId}&sz=w${size}`;
+      console.log(`📐 Using thumbnail endpoint with size: w${size}`);
+    } else if (isHeic) {
       // Use export=view with PNG conversion for HEIC files
-      // Google Drive can serve HEIC as viewable content
       url = `https://drive.google.com/uc?export=view&id=${fileId}`;
     } else {
       // For JPG, PNG, etc - use export=view for preview
@@ -42,10 +49,13 @@ export async function GET(request: NextRequest) {
       redirect: 'follow',
     });
 
-    // If export=view fails, try export=download
-    if (!response.ok) {
-      console.warn(`⚠️ export=view failed (${response.status}), trying export=download`);
-      url = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    // If thumbnail endpoint fails, try export=view (only if not using size parameter)
+    if (!response.ok && !size) {
+      console.warn(`⚠️ Initial fetch failed (${response.status}), trying fallback method`);
+      url = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      if (download) {
+        url = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      }
       response = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

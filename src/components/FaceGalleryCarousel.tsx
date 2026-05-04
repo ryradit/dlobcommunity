@@ -54,7 +54,7 @@ function FaceThumbnail({ face, isSelected, onSelect }: {
       }`}
       title={`Confidence: ${(face.confidence * 100).toFixed(0)}%`}
     >
-      <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-gray-300 hover:border-[#1e4843] bg-gray-100 flex-shrink-0">
+      <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-gray-300 hover:border-[#1e4843] bg-gray-100 shrink-0">
         {/* Display and crop face image to show only face area */}
         <img
           src={face.imageUrl}

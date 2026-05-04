@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Play, X, Download, ZoomIn } from 'lucide-react';
 import { AnimatedMarqueeHero } from '@/components/AnimatedMarqueeHero';
 import { FaceGalleryCarousel } from '@/components/FaceGalleryCarousel';
+import GalleryComments from '@/components/GalleryComments';
 
 type TabType = 'semua' | 'pertandingan' | 'latihan' | 'sparring';
 
@@ -743,6 +744,18 @@ export default function GaleriPage() {
             <p className="text-sm text-[#2d4a47]">
               ℹ️ Tab Latihan dan Sparring menampilkan foto dari Google Drive secara real-time.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Gallery Comments Section - At the bottom of the page */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-xl shadow-sm p-8">
+            <GalleryComments 
+              galleryItemId="gallery-page" 
+              title="Gallery"
+            />
           </div>
         </div>
       </section>

@@ -176,6 +176,9 @@ export default function AdminPembayaranPage() {
   const [showCustomPeriodModal, setShowCustomPeriodModal] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+
+  // Daily revenue explanation modal
+  const [showDailyRevenueInfoModal, setShowDailyRevenueInfoModal] = useState(false);
   
   // Create initial dates as ISO strings to avoid Date serialization issues
   const getDefaultStartDate = () => {
@@ -2793,6 +2796,65 @@ export default function AdminPembayaranPage() {
     pendingAmount: memberships.filter(m => m.payment_status === 'pending').reduce((sum, m) => sum + m.amount, 0),
   };
 
+  // Calculate daily revenue by Saturday
+  // Get all Saturdays in the selected month
+  const getSaturdayDatesInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const saturdays: Date[] = [];
+    
+    const firstDay = new Date(year, month, 1);
+    let saturdayDate = new Date(firstDay);
+    
+    // Find the first Saturday of the month
+    const daysUntilSaturday = (6 - firstDay.getDay()) % 7 || 7;
+    saturdayDate.setDate(1 + daysUntilSaturday);
+    
+    // Get all Saturdays in this month
+    while (saturdayDate.getMonth() === month) {
+      saturdays.push(new Date(saturdayDate));
+      saturdayDate.setDate(saturdayDate.getDate() + 7);
+    }
+    
+    return saturdays;
+  };
+
+  const saturdayDates = getSaturdayDatesInMonth(selectedMonth);
+  const dailyRevenue = saturdayDates.map(saturday => {
+    // Get matches for this Saturday
+    const matchesForDay = matches.filter(match => {
+      if (!match.match_date) return false;
+      const matchDate = new Date(match.match_date);
+      return matchDate.toDateString() === saturday.toDateString();
+    });
+
+    // Calculate revenue for these matches
+    const dayMatchRevenue = matchesForDay.reduce((sum, match) => {
+      const members = matchMembers[match.id] || [];
+      const paidAmount = members
+        .filter(m => m.payment_status === 'paid')
+        .reduce((total, m) => total + m.total_amount, 0);
+      return sum + paidAmount;
+    }, 0);
+
+    // Get memberships for this Saturday (typically created on the Saturday of that week)
+    const membershipsForDay = memberships.filter(m => {
+      const membershipDate = new Date(m.created_at);
+      return membershipDate.toDateString() === saturday.toDateString() && m.payment_status === 'paid';
+    });
+
+    const dayMembershipRevenue = membershipsForDay.reduce((sum, m) => sum + m.amount, 0);
+    const totalDayRevenue = dayMatchRevenue + dayMembershipRevenue;
+
+    return {
+      date: saturday,
+      matchCount: matchesForDay.length,
+      matchRevenue: dayMatchRevenue,
+      membershipRevenue: dayMembershipRevenue,
+      totalRevenue: totalDayRevenue,
+    };
+  });
+
   // Calculate monthly recap
   const monthlyRecap = {
     totalRevenue: matchesStats.paidAmount + membershipsStats.paidAmount,
@@ -3165,6 +3227,55 @@ export default function AdminPembayaranPage() {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Daily Revenue by Saturday */}
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">Pendapatan Per Hari Pertandingan</h3>
+              <button
+                onClick={() => setShowDailyRevenueInfoModal(true)}
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                title="Lihat penjelasan"
+              >
+                <HelpCircle className="w-4 h-4 text-gray-500 dark:text-zinc-400" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {dailyRevenue.map((day, idx) => (
+                <div key={idx} className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-600 dark:text-zinc-400 transition-colors duration-300">
+                      Sabtu, {day.date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                    {day.matchCount > 0 && (
+                      <span className="text-xs bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 py-1 rounded font-medium transition-colors duration-300">
+                        {day.matchCount} match{day.matchCount !== 1 ? 'es' : ''}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400 transition-colors duration-300">
+                    Rp {day.totalRevenue.toLocaleString('id-ID')}
+                  </p>
+                  {day.totalRevenue > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200 dark:border-white/10 text-xs space-y-1 transition-colors duration-300">
+                      {day.matchRevenue > 0 && (
+                        <div className="flex justify-between text-gray-600 dark:text-zinc-400">
+                          <span>Match:</span>
+                          <span>Rp {day.matchRevenue.toLocaleString('id-ID')}</span>
+                        </div>
+                      )}
+                      {day.membershipRevenue > 0 && (
+                        <div className="flex justify-between text-gray-600 dark:text-zinc-400">
+                          <span>Membership:</span>
+                          <span>Rp {day.membershipRevenue.toLocaleString('id-ID')}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -5229,6 +5340,77 @@ export default function AdminPembayaranPage() {
               <button
                 onClick={() => setShowAttendanceInfoModal(false)}
                 className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Daily Revenue Explanation Modal */}
+      {showDailyRevenueInfoModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 rounded-xl border border-white/10 max-w-md w-full p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-green-400" />
+                <h3 className="text-lg font-semibold text-white">Pendapatan Per Hari Pertandingan</h3>
+              </div>
+              <button
+                onClick={() => setShowDailyRevenueInfoModal(false)}
+                className="p-1 hover:bg-zinc-800 rounded transition-colors"
+              >
+                <X className="w-5 h-5 text-zinc-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-zinc-400 mb-4">
+                Bagian ini menampilkan total pendapatan yang <span className="text-white font-semibold">dikumpulkan</span> setiap hari pertandingan (Sabtu):
+              </p>
+
+              <div className="space-y-3">
+                {/* Match Revenue */}
+                <div className="bg-zinc-800/50 rounded-lg p-3 border border-blue-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-blue-400 font-semibold">Match</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Pendapatan dari <span className="text-white">biaya kehadiran dan biaya pertandingan</span> di hari itu
+                  </p>
+                </div>
+
+                {/* Membership Revenue */}
+                <div className="bg-zinc-800/50 rounded-lg p-3 border border-purple-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-purple-400 font-semibold">Membership</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Pendapatan dari <span className="text-white">membership yang dibeli</span> di hari itu
+                  </p>
+                </div>
+
+                {/* Total */}
+                <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/30">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-green-400 font-semibold">Total Pendapatan</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Jumlah <span className="text-white">Match + Membership</span> yang dikumpulkan di hari itu
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <p className="text-xs text-zinc-500 italic">
+                  💡 Hanya menampilkan pendapatan yang <span className="text-yellow-400">sudah dibayar</span> (status: Lunas)
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowDailyRevenueInfoModal(false)}
+                className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
               >
                 Mengerti
               </button>
