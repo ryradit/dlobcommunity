@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 import { createClient } from '@supabase/supabase-js';
-
-// Initialize Google AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Initialize Supabase
 const supabase = createClient(
@@ -218,7 +215,7 @@ async function generateAIResponse(
   answers: Record<string, any>,
   surveyTitle: string
 ) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+  const model = getGenerativeModelWithFallback({ model: 'gemini-2.5-flash-lite' });
 
   // Build conversation context
   const conversationHistory = conversation
@@ -295,7 +292,7 @@ Respond in this JSON format:
  * Analyze sentiment of conversation using Google AI
  */
 async function analyzeSentiment(conversation: Message[]) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+  const model = getGenerativeModelWithFallback({ model: 'gemini-2.5-flash-lite' });
 
   const userMessages = conversation
     .filter(msg => msg.role === 'user')

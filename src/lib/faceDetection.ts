@@ -4,7 +4,7 @@
 // Results are cached in localStorage (key: dlob_face_v3_{filename}) so each
 // photo is only analysed once — subsequent page loads are instant.
 
-const CACHE_PREFIX = 'dlob_face_v5_';
+const CACHE_PREFIX = 'dlob_face_v6_';
 
 export interface FacePercent {
   /** Horizontal center of the face, 0-100% of image width */

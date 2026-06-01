@@ -126,7 +126,7 @@ export default function ArtikelSection() {
 
         <div className="text-center">
           <Link href="/artikel">
-            <button className="px-10 py-4 bg-[#1e4843] text-white font-bold rounded-full hover:shadow-xl transition-all duration-300 hover:scale-105 text-lg">
+            <button className="px-10 py-4 bg-[#1e4843] text-white font-bold rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105 text-lg">
               Lihat Semua Artikel
             </button>
           </Link>

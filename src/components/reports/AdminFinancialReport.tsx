@@ -156,119 +156,184 @@ export interface FinancialReportData {
   logo?: string;
 }
 
-export const AdminFinancialReport: React.FC<{ data: FinancialReportData }> = ({ data }) => (
-  <Document>
-    <Page size="A4" style={styles.page}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          {data.logo && <Image src={data.logo} style={styles.logo} />}
-        </View>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Financial Report</Text>
-          <Text style={styles.subtitle}>DLOB Community Admin</Text>
-          <Text style={styles.subtitle}>{data.reportDate}</Text>
-        </View>
-      </View>
+export const AdminFinancialReport: React.FC<{ data: FinancialReportData }> = ({ data }) => {
+  // Paginate payments - 15 per page
+  const paymentsPerPage = 15;
+  const pages = Math.ceil(data.payments.length / paymentsPerPage);
+  const paginatedPayments = Array.from({ length: pages }, (_, i) =>
+    data.payments.slice(i * paymentsPerPage, (i + 1) * paymentsPerPage)
+  );
 
-      {/* Report Period */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Report Period</Text>
-        <Text style={{ fontSize: 11, color: '#1e293b' }}>
-          {data.period.start} - {data.period.end}
-        </Text>
-      </View>
-
-      {/* Financial Summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Financial Summary</Text>
-        <View style={styles.summaryGrid}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Total Revenue</Text>
-            <Text style={styles.summaryValue}>
-              {new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR',
-                minimumFractionDigits: 0,
-              }).format(data.summary.totalRevenue)}
-            </Text>
+  return (
+    <Document>
+      {/* First page with header and summary */}
+      <Page size="A4" style={styles.page}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            {data.logo && <Image src={data.logo} style={styles.logo} />}
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Payments Received</Text>
-            <Text style={styles.summaryValue}>{data.summary.totalPaid}</Text>
-          </View>
-          <View style={[styles.summaryCard, { backgroundColor: '#fef3c7', borderColor: '#fde047' }]}>
-            <Text style={[styles.summaryLabel, { color: '#854d0e' }]}>Pending Payments</Text>
-            <Text style={[styles.summaryValue, { color: '#a16207' }]}>
-              {data.summary.totalPending}
-            </Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Payment Rate</Text>
-            <Text style={styles.summaryValue}>{data.summary.paymentRate.toFixed(1)}%</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Financial Report</Text>
+            <Text style={styles.subtitle}>DLOB Community Admin</Text>
+            <Text style={styles.subtitle}>{data.reportDate}</Text>
           </View>
         </View>
-      </View>
 
-      {/* Revenue Chart */}
-      {data.chartImage && (
+        {/* Report Period */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Revenue Trends</Text>
-          <Image src={data.chartImage} style={styles.chartContainer} />
+          <Text style={styles.sectionTitle}>Report Period</Text>
+          <Text style={{ fontSize: 11, color: '#1e293b' }}>
+            {data.period.start} - {data.period.end}
+          </Text>
         </View>
-      )}
 
-      {/* Payment Details Table */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Details</Text>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableColHeader, styles.col1]}>Member</Text>
-            <Text style={[styles.tableColHeader, styles.col2]}>Type</Text>
-            <Text style={[styles.tableColHeader, styles.col3]}>Amount</Text>
-            <Text style={[styles.tableColHeader, styles.col4]}>Status</Text>
-          </View>
-          {data.payments.slice(0, 15).map((payment, index) => (
-            <View key={index} style={styles.tableRow}>
-              <Text style={[styles.tableCol, styles.col1]}>{payment.memberName}</Text>
-              <Text style={[styles.tableCol, styles.col2]}>{payment.type}</Text>
-              <Text style={[styles.tableCol, styles.col3]}>
+        {/* Financial Summary */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Financial Summary</Text>
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>Total Revenue</Text>
+              <Text style={styles.summaryValue}>
                 {new Intl.NumberFormat('id-ID', {
                   style: 'currency',
                   currency: 'IDR',
                   minimumFractionDigits: 0,
-                }).format(payment.amount)}
-              </Text>
-              <Text
-                style={[
-                  styles.tableCol,
-                  styles.col4,
-                  payment.status === 'paid' ? styles.statusPaid :
-                  payment.status === 'pending' ? styles.statusPending :
-                  payment.status === 'overdue' ? styles.statusOverdue : {},
-                ]}
-              >
-                {payment.status.toUpperCase()}
+                }).format(data.summary.totalRevenue)}
               </Text>
             </View>
-          ))}
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>Payments Received</Text>
+              <Text style={styles.summaryValue}>{data.summary.totalPaid}</Text>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: '#fef3c7', borderColor: '#fde047' }]}>
+              <Text style={[styles.summaryLabel, { color: '#854d0e' }]}>Pending Payments</Text>
+              <Text style={[styles.summaryValue, { color: '#a16207' }]}>
+                {data.summary.totalPending}
+              </Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>Payment Rate</Text>
+              <Text style={styles.summaryValue}>{data.summary.paymentRate.toFixed(1)}%</Text>
+            </View>
+          </View>
         </View>
-        {data.payments.length > 15 && (
-          <Text style={{ fontSize: 9, color: '#64748b', marginTop: 10, fontStyle: 'italic' }}>
-            Showing 15 of {data.payments.length} payments
-          </Text>
-        )}
-      </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text>
-          Generated by DLOB Community Platform • Report Date: {data.reportDate}
-        </Text>
-        <Text>Confidential - For Admin Use Only</Text>
-      </View>
-    </Page>
-  </Document>
-);
+        {/* Revenue Chart */}
+        {data.chartImage && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Revenue Trends</Text>
+            <Image src={data.chartImage} style={styles.chartContainer} />
+          </View>
+        )}
+
+        {/* Payment Details Header */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Details</Text>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableColHeader, styles.col1]}>Member</Text>
+              <Text style={[styles.tableColHeader, styles.col2]}>Type</Text>
+              <Text style={[styles.tableColHeader, styles.col3]}>Amount</Text>
+              <Text style={[styles.tableColHeader, styles.col4]}>Status</Text>
+            </View>
+            {paginatedPayments[0]?.map((payment, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={[styles.tableCol, styles.col1]}>{payment.memberName}</Text>
+                <Text style={[styles.tableCol, styles.col2]}>{payment.type}</Text>
+                <Text style={[styles.tableCol, styles.col3]}>
+                  {new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                  }).format(payment.amount)}
+                </Text>
+                <Text
+                  style={[
+                    styles.tableCol,
+                    styles.col4,
+                    payment.status === 'paid' ? styles.statusPaid :
+                    payment.status === 'pending' ? styles.statusPending :
+                    payment.status === 'overdue' ? styles.statusOverdue : {},
+                  ]}
+                >
+                  {payment.status.toUpperCase()}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Footer with pagination info */}
+        <View style={styles.footer}>
+          <Text>
+            Generated by DLOB Community Platform • Report Date: {data.reportDate}
+          </Text>
+          <Text>Confidential - For Admin Use Only</Text>
+          {pages > 1 && (
+            <Text style={{ marginTop: 5, fontSize: 8 }}>
+              Page 1 of {pages} • Showing {paginatedPayments[0]?.length || 0} of {data.payments.length} payments
+            </Text>
+          )}
+        </View>
+      </Page>
+
+      {/* Additional pages with remaining payments */}
+      {paginatedPayments.slice(1).map((pagePayments, pageIndex) => (
+        <Page key={`page-${pageIndex + 2}`} size="A4" style={styles.page}>
+          {/* Page Header */}
+          <View style={[styles.section, { marginBottom: 10 }]}>
+            <Text style={styles.sectionTitle}>Payment Details (continued)</Text>
+          </View>
+
+          {/* Payment Table */}
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableColHeader, styles.col1]}>Member</Text>
+              <Text style={[styles.tableColHeader, styles.col2]}>Type</Text>
+              <Text style={[styles.tableColHeader, styles.col3]}>Amount</Text>
+              <Text style={[styles.tableColHeader, styles.col4]}>Status</Text>
+            </View>
+            {pagePayments.map((payment, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={[styles.tableCol, styles.col1]}>{payment.memberName}</Text>
+                <Text style={[styles.tableCol, styles.col2]}>{payment.type}</Text>
+                <Text style={[styles.tableCol, styles.col3]}>
+                  {new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                  }).format(payment.amount)}
+                </Text>
+                <Text
+                  style={[
+                    styles.tableCol,
+                    styles.col4,
+                    payment.status === 'paid' ? styles.statusPaid :
+                    payment.status === 'pending' ? styles.statusPending :
+                    payment.status === 'overdue' ? styles.statusOverdue : {},
+                  ]}
+                >
+                  {payment.status.toUpperCase()}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Footer with pagination info */}
+          <View style={styles.footer}>
+            <Text>
+              Generated by DLOB Community Platform • Report Date: {data.reportDate}
+            </Text>
+            <Text>Confidential - For Admin Use Only</Text>
+            <Text style={{ marginTop: 5, fontSize: 8 }}>
+              Page {pageIndex + 2} of {pages} • Showing {((pageIndex + 1) * paymentsPerPage) + pagePayments.length} of {data.payments.length} payments
+            </Text>
+          </View>
+        </Page>
+      ))}
+    </Document>
+  );
+};
 
 export default AdminFinancialReport;

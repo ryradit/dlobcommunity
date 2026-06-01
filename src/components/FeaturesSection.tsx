@@ -61,7 +61,7 @@ export default function FeaturesSection() {
               </p>
             </div>
 
-            <Link href="/tentang" className="inline-flex items-center gap-3 bg-[#1e4843] hover:bg-[#162f2c] text-white px-8 py-3 rounded-full font-semibold transition-colors">
+            <Link href="/tentang" className="inline-flex items-center gap-3 bg-[#1e4843] hover:bg-[#162f2c] text-white px-8 py-3 rounded-xl font-semibold transition-colors">
               Pelajari Selengkapnya
               <ArrowRight className="w-5 h-5" />
             </Link>

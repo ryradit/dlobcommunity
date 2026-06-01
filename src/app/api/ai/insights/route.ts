@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 // Use service role key to bypass RLS for server-side caching
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -59,7 +57,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const model = genAI.getGenerativeModel({ 
+    const model = getGenerativeModelWithFallback({ 
       model: 'gemini-2.5-flash-lite',
       generationConfig: {
         temperature: 0.7,

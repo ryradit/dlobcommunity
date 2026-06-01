@@ -788,17 +788,41 @@ export default function PembayaranPage() {
 
   function getPaymentStatus(paymentStatus: string, paymentProof: string | null) {
     if (paymentStatus === 'paid') {
-      return { label: 'Lunas', color: 'bg-green-100 text-green-700', icon: CheckCircle };
+      return { 
+        label: 'Lunas', 
+        badgeClass: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20', 
+        icon: CheckCircle 
+      };
     } else if (paymentStatus === 'rejected') {
-      return { label: 'Ditolak', color: 'bg-red-100 text-red-700', icon: X };
+      return { 
+        label: 'Ditolak', 
+        badgeClass: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20', 
+        icon: X 
+      };
     } else if (paymentStatus === 'cancelled') {
-      return { label: 'Dibatalkan', color: 'bg-gray-100 text-gray-700', icon: X };
+      return { 
+        label: 'Dibatalkan', 
+        badgeClass: 'bg-zinc-50 dark:bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-500/20', 
+        icon: X 
+      };
     } else if (paymentStatus === 'revision') {
-      return { label: 'Revisi', color: 'bg-blue-100 text-blue-700', icon: AlertCircle };
+      return { 
+        label: 'Revisi', 
+        badgeClass: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20', 
+        icon: AlertCircle 
+      };
     } else if (paymentProof) {
-      return { label: 'Menunggu Verifikasi', color: 'bg-yellow-100 text-yellow-700', icon: Clock };
+      return { 
+        label: 'Menunggu Verifikasi', 
+        badgeClass: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20', 
+        icon: Clock 
+      };
     } else {
-      return { label: 'Belum Bayar', color: 'bg-red-100 text-red-700', icon: AlertCircle };
+      return { 
+        label: 'Belum Bayar', 
+        badgeClass: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20', 
+        icon: AlertCircle 
+      };
     }
   }
 
@@ -926,7 +950,7 @@ export default function PembayaranPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 px-4 lg:px-8 py-6 lg:py-8 transition-colors duration-300">
       <ProfileCompletionWarning />
       <div className="space-y-8">
         <div className="flex items-center justify-between">
@@ -942,7 +966,7 @@ export default function PembayaranPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={toggleTutorial}
-              className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10 hover:bg-blue-200 dark:hover:bg-blue-500/20 border-2 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 transition-colors duration-300"
+              className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10 hover:bg-blue-200 dark:hover:bg-blue-500/20 border border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 transition-colors duration-300"
               title="Tampilkan panduan fitur"
             >
               <HelpCircle className="w-5 h-5" />
@@ -963,7 +987,7 @@ export default function PembayaranPage() {
               </button>
 
               {showReceiptDropdown && !generatingReceiptPDF && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-lg shadow-lg z-50 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-lg shadow-lg z-50 overflow-hidden">
                   <button
                     onClick={handleDownloadAllPayments}
                     className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-500/20 transition-colors border-b border-gray-200 dark:border-white/5 flex items-center gap-2"
@@ -1032,7 +1056,7 @@ export default function PembayaranPage() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5 transition-colors duration-300" />
                 <div>
@@ -1157,7 +1181,7 @@ export default function PembayaranPage() {
         {/* Bulk Upload Info Banner - Hide for VIP members */}
         {!isPaymentExempt && (myMatches.some(m => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected') || 
           (myMembership && ((myMembership.payment_status === 'pending' && !myMembership.payment_proof) || myMembership.payment_status === 'rejected'))) && (
-          <div className="bg-linear-to-r from-blue-100 to-cyan-100 dark:from-blue-500/10 dark:to-cyan-500/10 border-2 border-blue-300 dark:border-blue-500/30 rounded-xl p-4 shadow-sm transition-colors duration-300">
+          <div className="bg-linear-to-r from-blue-100 to-cyan-100 dark:from-blue-500/10 dark:to-cyan-500/10 border border-blue-300 dark:border-blue-500/30 rounded-xl p-4 shadow-sm transition-colors duration-300">
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5 transition-colors duration-300" />
               <div>
@@ -1174,7 +1198,7 @@ export default function PembayaranPage() {
         {/* Stats Cards */}
         <div className="member-payment-stats grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Total Due */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Tagihan</p>
@@ -1200,7 +1224,7 @@ export default function PembayaranPage() {
           </div>
 
           {/* Menunggu Verifikasi */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Menunggu Konfirmasi</p>
               <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400 transition-colors duration-300" />
@@ -1210,7 +1234,7 @@ export default function PembayaranPage() {
           </div>
 
           {/* Total Paid */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Terbayar</p>
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 transition-colors duration-300" />
@@ -1222,7 +1246,7 @@ export default function PembayaranPage() {
           </div>
 
           {/* Total Matches */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Pertandingan</p>
               <Users className="w-5 h-5 text-blue-600 dark:text-blue-400 transition-colors duration-300" />
@@ -1234,7 +1258,7 @@ export default function PembayaranPage() {
 
         {/* Membership Payment */}
         {myMembership && (
-          <div className="member-payment-membership bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="member-payment-membership bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Award className="w-6 h-6 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
@@ -1256,7 +1280,7 @@ export default function PembayaranPage() {
                   const status = getPaymentStatus(myMembership.payment_status, myMembership.payment_proof);
                   const Icon = status.icon;
                   return (
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full mt-1 font-bold border-2 transition-colors duration-300 ${status.color.replace('bg-', 'bg-').replace('text-', 'text-').replace('100', '100 dark:bg-').replace('700', '700 dark:text-')} border-${status.color.includes('green') ? 'green' : status.color.includes('red') ? 'red' : status.color.includes('yellow') ? 'yellow' : status.color.includes('blue') ? 'blue' : 'gray'}-300 dark:border-transparent`}>
+                    <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full mt-1 font-bold transition-colors duration-300 ${status.badgeClass}`}>
                       <Icon className="w-3 h-3" />
                       {status.label}
                     </span>
@@ -1274,7 +1298,7 @@ export default function PembayaranPage() {
                     amount: myMembership.amount,
                     label: `Membership ${new Date(myMembership.year, myMembership.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`
                   })}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-gray-300 dark:border-white/10 hover:border-purple-400 dark:hover:border-purple-500/50 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-800/70 transition-colors text-gray-900 dark:text-white shadow-sm font-medium duration-300"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 dark:border-zinc-800/80 hover:border-purple-400 dark:hover:border-purple-500/50 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-800/70 transition-colors text-gray-900 dark:text-white shadow-sm font-medium duration-300"
                 >
                   {isPaymentSelected(myMembership.id, 'membership') ? (
                     <>
@@ -1360,14 +1384,14 @@ export default function PembayaranPage() {
         )}
 
         {/* Payment List */}
-        <div className="member-payment-matches bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl overflow-hidden shadow-sm transition-colors duration-300">
+        <div className="member-payment-matches bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
           <div className="p-6 border-b-2 border-gray-200 dark:border-white/10 transition-colors duration-300">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Riwayat Pembayaran Pertandingan</h2>
               
               {/* Bulk Upload Banner - Hide for VIP members */}
               {!isPaymentExempt && selectedPayments.length > 0 && (
-                <div className="flex items-center gap-4 bg-blue-100 dark:bg-blue-500/10 border-2 border-blue-300 dark:border-blue-500/30 rounded-lg px-4 py-2 shadow-sm transition-colors duration-300">
+                <div className="flex items-center gap-4 bg-blue-100 dark:bg-blue-500/10 border border-blue-300 dark:border-blue-500/30 rounded-lg px-4 py-2 shadow-sm transition-colors duration-300">
                   <span className="text-sm text-blue-700 dark:text-blue-400 font-bold transition-colors duration-300">
                     {selectedPayments.length} item dipilih
                   </span>
@@ -1559,7 +1583,7 @@ export default function PembayaranPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold border-2 transition-colors duration-300 ${status.color} border-${status.color.includes('green') ? 'green' : status.color.includes('red') ? 'red' : status.color.includes('yellow') ? 'yellow' : status.color.includes('blue') ? 'blue' : 'gray'}-300 dark:border-transparent`}>
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold transition-colors duration-300 ${status.badgeClass}`}>
                             <Icon className="w-3 h-3" />
                             {status.label}
                           </span>

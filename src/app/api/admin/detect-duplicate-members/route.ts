@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 import { createClient } from '@supabase/supabase-js';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 interface Member {
   id: string;
@@ -191,7 +189,7 @@ Pertimbangkan:
 - Email domain (jika email berbeda tapi nama sama, lebih mungkin duplikat)`;
 
       try {
-        const model = genAI.getGenerativeModel({
+        const model = getGenerativeModelWithFallback({
           model: 'gemini-2.5-flash-lite',
           generationConfig: { temperature: 0.3, maxOutputTokens: 2000 },
         });

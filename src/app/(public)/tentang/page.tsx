@@ -1,6 +1,10 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import HallOfFameSection from '@/components/HallOfFameSection';
+import { motion, useScroll, useSpring } from 'framer-motion';
 
 const timelineStyles = `
   @keyframes flowDown {
@@ -21,6 +25,18 @@ const timelineStyles = `
 `;
 
 export default function TentangPage() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start center", "end end"]
+  });
+
+  const scaleY = useSpring(scrollYProgress, {
+    damping: 30,
+    stiffness: 100,
+    restDelta: 0.001
+  });
+
   const stats = [
     { number: '50+', label: 'Anggota Aktif' },
     { number: '100+', label: 'Turnamen Diikuti' },
@@ -91,7 +107,7 @@ export default function TentangPage() {
                 </p>
               </div>
 
-              <Link href="/register" className="inline-flex items-center gap-3 bg-[#1e4843] hover:bg-[#162f2c] text-white px-8 py-4 rounded-full font-semibold transition-colors text-lg">
+              <Link href="/register" className="inline-flex items-center gap-3 bg-[#1e4843] hover:bg-[#162f2c] text-white px-8 py-4 rounded-xl font-semibold transition-colors text-lg">
                 Mulai Sekarang
               </Link>
             </div>
@@ -301,13 +317,35 @@ export default function TentangPage() {
             </p>
           </div>
 
-          <div className="relative">
-            {/* Vertical Timeline Line */}
-            <div className="timeline-line hidden lg:block absolute left-1/2 transform -translate-x-1/2 w-1 h-full top-0"></div>
+          <div ref={containerRef} className="relative">
+            {/* Background track line */}
+            <div className="hidden lg:block absolute left-1/2 transform -translate-x-1/2 w-1.5 h-full bg-[#3e6461]/10 top-0 rounded-full"></div>
+
+            {/* Dynamic animated progress line */}
+            <motion.div
+              className="hidden lg:block absolute left-1/2 transform -translate-x-1/2 w-1.5 bg-gradient-to-b from-[#3e6461] via-[#2d4a47] to-[#1e3432] top-0 rounded-full shadow-[0_0_10px_rgba(62,100,97,0.7)]"
+              style={{
+                scaleY: scaleY,
+                originY: 0,
+                height: '100%'
+              }}
+            />
 
             <div className="space-y-16">
             {/* Year 2020 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
+            <div className="grid lg:grid-cols-2 gap-8 items-center relative">
+              {/* Central timeline node */}
+              <div className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 z-10 items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.8, backgroundColor: "#fff", borderColor: "#3e6461" }}
+                  whileInView={{ scale: 1.15, backgroundColor: "#3e6461", borderColor: "#3e6461", boxShadow: "0 0 12px rgba(62,100,97,0.8)" }}
+                  viewport={{ once: false, margin: "-50% 0px -50% 0px" }}
+                  className="w-8 h-8 rounded-full border-4 flex items-center justify-center transition-all duration-300"
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                </motion.div>
+              </div>
+
               <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl">
                 <Image
                   src="/images/dlob8.jpg"
@@ -316,7 +354,7 @@ export default function TentangPage() {
                   className="object-cover"
                 />
               </div>
-              <div className="group">
+              <div className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
                 <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
                   <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2020</span>
@@ -329,8 +367,20 @@ export default function TentangPage() {
             </div>
 
             {/* Year 2021 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="group order-2 lg:order-1">
+            <div className="grid lg:grid-cols-2 gap-8 items-center relative">
+              {/* Central timeline node */}
+              <div className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 z-10 items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.8, backgroundColor: "#fff", borderColor: "#3e6461" }}
+                  whileInView={{ scale: 1.15, backgroundColor: "#3e6461", borderColor: "#3e6461", boxShadow: "0 0 12px rgba(62,100,97,0.8)" }}
+                  viewport={{ once: false, margin: "-50% 0px -50% 0px" }}
+                  className="w-8 h-8 rounded-full border-4 flex items-center justify-center transition-all duration-300"
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                </motion.div>
+              </div>
+
+              <div className="group order-2 lg:order-1 relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
                 <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
                   <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2021</span>
@@ -351,7 +401,19 @@ export default function TentangPage() {
             </div>
 
             {/* Year 2022 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
+            <div className="grid lg:grid-cols-2 gap-8 items-center relative">
+              {/* Central timeline node */}
+              <div className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 z-10 items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.8, backgroundColor: "#fff", borderColor: "#3e6461" }}
+                  whileInView={{ scale: 1.15, backgroundColor: "#3e6461", borderColor: "#3e6461", boxShadow: "0 0 12px rgba(62,100,97,0.8)" }}
+                  viewport={{ once: false, margin: "-50% 0px -50% 0px" }}
+                  className="w-8 h-8 rounded-full border-4 flex items-center justify-center transition-all duration-300"
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                </motion.div>
+              </div>
+
               <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl">
                 <Image
                   src="/images/20211027_205112.jpg"
@@ -360,7 +422,7 @@ export default function TentangPage() {
                   className="object-cover"
                 />
               </div>
-              <div className="group">
+              <div className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
                 <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
                   <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2022</span>
@@ -373,8 +435,20 @@ export default function TentangPage() {
             </div>
 
             {/* Year 2023 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="group order-2 lg:order-1">
+            <div className="grid lg:grid-cols-2 gap-8 items-center relative">
+              {/* Central timeline node */}
+              <div className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 z-10 items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.8, backgroundColor: "#fff", borderColor: "#3e6461" }}
+                  whileInView={{ scale: 1.15, backgroundColor: "#3e6461", borderColor: "#3e6461", boxShadow: "0 0 12px rgba(62,100,97,0.8)" }}
+                  viewport={{ once: false, margin: "-50% 0px -50% 0px" }}
+                  className="w-8 h-8 rounded-full border-4 flex items-center justify-center transition-all duration-300"
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                </motion.div>
+              </div>
+
+              <div className="group order-2 lg:order-1 relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
                 <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
                   <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2023</span>
@@ -395,7 +469,19 @@ export default function TentangPage() {
             </div>
 
             {/* Year 2024 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
+            <div className="grid lg:grid-cols-2 gap-8 items-center relative">
+              {/* Central timeline node */}
+              <div className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 z-10 items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.8, backgroundColor: "#fff", borderColor: "#3e6461" }}
+                  whileInView={{ scale: 1.15, backgroundColor: "#3e6461", borderColor: "#3e6461", boxShadow: "0 0 12px rgba(62,100,97,0.8)" }}
+                  viewport={{ once: false, margin: "-50% 0px -50% 0px" }}
+                  className="w-8 h-8 rounded-full border-4 flex items-center justify-center transition-all duration-300"
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                </motion.div>
+              </div>
+
               <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl">
                 <Image
                   src="/images/dlob12.jpg"
@@ -404,7 +490,7 @@ export default function TentangPage() {
                   className="object-cover"
                 />
               </div>
-              <div className="group">
+              <div className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
                 <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
                   <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2024</span>
@@ -417,8 +503,20 @@ export default function TentangPage() {
             </div>
 
             {/* Year 2025 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="group order-2 lg:order-1">
+            <div className="grid lg:grid-cols-2 gap-8 items-center relative">
+              {/* Central timeline node */}
+              <div className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 z-10 items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.8, backgroundColor: "#fff", borderColor: "#3e6461" }}
+                  whileInView={{ scale: 1.15, backgroundColor: "#3e6461", borderColor: "#3e6461", boxShadow: "0 0 12px rgba(62,100,97,0.8)" }}
+                  viewport={{ once: false, margin: "-50% 0px -50% 0px" }}
+                  className="w-8 h-8 rounded-full border-4 flex items-center justify-center transition-all duration-300"
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                </motion.div>
+              </div>
+
+              <div className="group order-2 lg:order-1 relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
                 <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
                   <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2025</span>
@@ -439,7 +537,19 @@ export default function TentangPage() {
             </div>
 
             {/* Year 2026 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
+            <div className="grid lg:grid-cols-2 gap-8 items-center relative">
+              {/* Central timeline node */}
+              <div className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 z-10 items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.8, backgroundColor: "#fff", borderColor: "#3e6461" }}
+                  whileInView={{ scale: 1.15, backgroundColor: "#3e6461", borderColor: "#3e6461", boxShadow: "0 0 12px rgba(62,100,97,0.8)" }}
+                  viewport={{ once: false, margin: "-50% 0px -50% 0px" }}
+                  className="w-8 h-8 rounded-full border-4 flex items-center justify-center transition-all duration-300"
+                >
+                  <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                </motion.div>
+              </div>
+
               <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl">
                 <Image
                   src="/images/dlob3.jpg"
@@ -448,7 +558,7 @@ export default function TentangPage() {
                   className="object-cover"
                 />
               </div>
-              <div className="group">
+              <div className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
                 <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
                   <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2026</span>
@@ -523,7 +633,7 @@ export default function TentangPage() {
             Jadilah bagian dari komunitas badminton terdepan dan rasakan perbedaannya
           </p>
           <Link href="/register">
-            <button className="inline-block bg-white text-[#3e6461] hover:bg-gray-100 font-bold py-5 px-12 rounded-full text-lg transition-colors shadow-xl hover:shadow-2xl">
+            <button className="inline-block bg-white text-[#3e6461] hover:bg-gray-100 font-bold py-5 px-12 rounded-xl text-lg transition-colors shadow-xl hover:shadow-2xl">
               Mulai Sekarang
             </button>
           </Link>

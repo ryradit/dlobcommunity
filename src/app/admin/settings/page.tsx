@@ -367,7 +367,7 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 px-4 lg:px-8 py-6 lg:py-8 transition-colors duration-300">
       <div>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-300">Pengaturan Admin</h1>
@@ -388,7 +388,7 @@ export default function AdminSettingsPage() {
         )}
 
         {/* Profile Picture Section */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-8 mb-6 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-8 mb-6 shadow-sm transition-colors duration-300">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 transition-colors duration-300">Foto Profil</h2>
           
           <div className="flex items-center gap-6">
@@ -437,7 +437,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Personal Info Section */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-8 mb-6 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-8 mb-6 shadow-sm transition-colors duration-300">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 transition-colors duration-300">Informasi Pribadi</h2>
           
           <form onSubmit={handleSaveName} className="space-y-6">
@@ -451,7 +451,7 @@ export default function AdminSettingsPage() {
                   type="email"
                   value={user?.email || ''}
                   disabled
-                  className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-xl text-gray-400 dark:text-zinc-500 cursor-not-allowed font-medium transition-colors duration-300"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-2xl text-gray-400 dark:text-zinc-500 cursor-not-allowed font-medium transition-colors duration-300"
                 />
               </div>
               <p className="text-xs text-gray-500 dark:text-zinc-500 mt-1 font-semibold transition-colors duration-300">Email tidak dapat diubah</p>
@@ -467,7 +467,7 @@ export default function AdminSettingsPage() {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:border-red-500 focus:outline-none font-medium transition-colors duration-300"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-2xl text-gray-900 dark:text-white focus:border-red-500 focus:outline-none font-medium transition-colors duration-300"
                   placeholder="Masukkan nama lengkap"
                 />
               </div>
@@ -494,11 +494,11 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Change Password Section */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-8 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-8 shadow-sm transition-colors duration-300">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 transition-colors duration-300">Ubah Password</h2>
           
           {isOAuthUser && (
-            <div className="mb-6 p-4 bg-blue-100 dark:bg-blue-500/10 border-2 border-blue-300 dark:border-blue-500/30 rounded-lg transition-colors duration-300">
+            <div className="mb-6 p-4 bg-blue-100 dark:bg-blue-500/10 border border-blue-300 dark:border-blue-500/30 rounded-lg transition-colors duration-300">
               <p className="text-sm text-blue-700 dark:text-blue-400 font-medium transition-colors duration-300">
                 ℹ️ Anda login dengan Google. Membuat password akan memungkinkan Anda login dengan email & password selain Google OAuth.
               </p>
@@ -516,7 +516,7 @@ export default function AdminSettingsPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:border-red-500 focus:outline-none font-medium transition-colors duration-300"
+                  className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-2xl text-gray-900 dark:text-white focus:border-red-500 focus:outline-none font-medium transition-colors duration-300"
                   placeholder="Minimal 6 karakter"
                 />
                 <button
@@ -539,7 +539,7 @@ export default function AdminSettingsPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:border-red-500 focus:outline-none font-medium transition-colors duration-300"
+                  className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-2xl text-gray-900 dark:text-white focus:border-red-500 focus:outline-none font-medium transition-colors duration-300"
                   placeholder="Ketik ulang password baru"
                 />
                 <button

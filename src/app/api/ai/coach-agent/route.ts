@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 import { createClient } from '@supabase/supabase-js';
 import { analyzeMatchHistory } from '@/lib/matchAnalytics';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -383,7 +381,7 @@ PENGINGAT PENTING:
 - Berikan CONCRETE actionItems, bukan generic advice
 - Jangan tanya lagi, LANGSUNG solusi!`;
 
-    const model = genAI.getGenerativeModel({ 
+    const model = getGenerativeModelWithFallback({ 
       model: 'gemini-2.5-flash-lite',
       generationConfig: {
         temperature: 0.8,

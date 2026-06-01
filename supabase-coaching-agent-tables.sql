@@ -185,42 +185,60 @@ ALTER TABLE public.peer_benchmarks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coaching_agent_logs ENABLE ROW LEVEL SECURITY;
 
 -- Users can only access their own data
+DROP POLICY IF EXISTS "Users can view own training plans" ON public.training_plans;
 CREATE POLICY "Users can view own training plans" ON public.training_plans
   FOR SELECT USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can manage own training plans" ON public.training_plans;
 CREATE POLICY "Users can manage own training plans" ON public.training_plans
   FOR ALL USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can view own assigned drills" ON public.assigned_drills;
 CREATE POLICY "Users can view own assigned drills" ON public.assigned_drills
   FOR SELECT USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can manage own assigned drills" ON public.assigned_drills;
 CREATE POLICY "Users can manage own assigned drills" ON public.assigned_drills
   FOR ALL USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can view own mental assessments" ON public.mental_assessment;
 CREATE POLICY "Users can view own mental assessments" ON public.mental_assessment
   FOR SELECT USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can insert own mental assessments" ON public.mental_assessment;
 CREATE POLICY "Users can insert own mental assessments" ON public.mental_assessment
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can view own peer benchmarks" ON public.peer_benchmarks;
 CREATE POLICY "Users can view own peer benchmarks" ON public.peer_benchmarks
   FOR SELECT USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can insert own peer benchmarks" ON public.peer_benchmarks;
 CREATE POLICY "Users can insert own peer benchmarks" ON public.peer_benchmarks
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can view own coaching logs" ON public.coaching_agent_logs;
 CREATE POLICY "Users can view own coaching logs" ON public.coaching_agent_logs
   FOR SELECT USING (user_id = auth.uid());
 
 -- Service role can manage all (for API operations)
+DROP POLICY IF EXISTS "Service role manages all training plans" ON public.training_plans;
 CREATE POLICY "Service role manages all training plans" ON public.training_plans
   FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role manages all drills" ON public.assigned_drills;
 CREATE POLICY "Service role manages all drills" ON public.assigned_drills
   FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role manages all assessments" ON public.mental_assessment;
 CREATE POLICY "Service role manages all assessments" ON public.mental_assessment
   FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role manages all benchmarks" ON public.peer_benchmarks;
 CREATE POLICY "Service role manages all benchmarks" ON public.peer_benchmarks
   FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role manages all logs" ON public.coaching_agent_logs;
 CREATE POLICY "Service role manages all logs" ON public.coaching_agent_logs
   FOR ALL USING (true) WITH CHECK (true);
 
@@ -261,6 +279,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_training_plan_progress ON public.assigned_drills;
 CREATE TRIGGER trigger_update_training_plan_progress
   AFTER UPDATE ON public.assigned_drills
   FOR EACH ROW
@@ -270,26 +289,21 @@ CREATE TRIGGER trigger_update_training_plan_progress
 CREATE OR REPLACE FUNCTION check_plan_completion()
 RETURNS TRIGGER AS $$
 BEGIN
-  UPDATE public.training_plans
-  SET 
-    status = CASE
-      WHEN progress_percentage >= 100 THEN 'completed'
-      WHEN progress_percentage > 0 THEN 'active'
-      ELSE 'active'
-    END,
-    completed_at = CASE
-      WHEN progress_percentage >= 100 THEN NOW()
-      ELSE NULL
-    END,
-    updated_at = NOW()
-  WHERE id = NEW.training_plan_id
-  AND progress_percentage >= 100;
+  IF NEW.progress_percentage >= 100 THEN
+    NEW.status := 'completed';
+    NEW.completed_at := NOW();
+  ELSE
+    NEW.status := 'active';
+    NEW.completed_at := NULL;
+  END IF;
+  NEW.updated_at := NOW();
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_check_plan_completion ON public.training_plans;
 CREATE TRIGGER trigger_check_plan_completion
-  AFTER UPDATE ON public.training_plans
+  BEFORE UPDATE ON public.training_plans
   FOR EACH ROW
   EXECUTE FUNCTION check_plan_completion();
 

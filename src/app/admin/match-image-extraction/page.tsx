@@ -10,8 +10,8 @@ interface MatchData {
   team1_player2: string;
   team2_player1: string;
   team2_player2: string;
-  court_number: string;
-  shuttlecock_amount: string;
+  jumlah_kok: string;  // Column 3: Kok/Shuttlecock count (replacing lapangan)
+  skor_pertandingan: string;  // Column 4: Match score (e.g., "42-58")
   confidence: number;
 }
 
@@ -174,6 +174,16 @@ export default function MatchImageExtractionPage() {
 
     try {
       const structured = await processWithGemini(selectedImage);
+      
+      // Normalize all matches to ensure required fields have string defaults
+      if (structured.matches && Array.isArray(structured.matches)) {
+        structured.matches = structured.matches.map((match: any) => ({
+          ...match,
+          jumlah_kok: match.jumlah_kok ?? '',
+          skor_pertandingan: match.skor_pertandingan ?? '',
+        }));
+      }
+      
       setExtractedData(structured);
       setCurrentStep('Selesai!');
       
@@ -653,17 +663,17 @@ export default function MatchImageExtractionPage() {
               </div>
               <div className="bg-purple-500/20 rounded px-3 py-2 text-center">
                 <div className="text-purple-200 font-semibold">Kolom 3</div>
-                <div className="text-white">Lapangan #</div>
-                <div className="text-xs text-purple-300">2</div>
+                <div className="text-white">Jumlah Kok</div>
+                <div className="text-xs text-purple-300">2 atau 3 atau 4</div>
               </div>
               <div className="bg-green-500/20 rounded px-3 py-2 text-center">
                 <div className="text-green-200 font-semibold">Kolom 4</div>
-                <div className="text-white">Kok</div>
-                <div className="text-xs text-green-300">4</div>
+                <div className="text-white">Skor Pertandingan</div>
+                <div className="text-xs text-green-300">42-58 atau 21-19</div>
               </div>
             </div>
             <p className="text-xs text-blue-200 mt-2">
-              ℹ️ Setiap baris adalah pertandingan terpisah. Format tim: Pemain1/Pemain2. AI akan mengekstrak SEMUA pertandingan dari gambar.
+              ℹ️ Setiap baris adalah pertandingan terpisah. Format tim: Pemain1/Pemain2. Kolom 3: jumlah kok digunakan. Kolom 4: skor akhir dalam format score1-score2.
             </p>
           </div>
         </div>
@@ -956,26 +966,26 @@ export default function MatchImageExtractionPage() {
                           {renderPlayerInput(index, 'team2_player2', match.team2_player2, 'Pemain 2')}
                         </div>
 
-                        {/* Court & Shuttlecock */}
+                        {/* Jumlah Kok & Skor Pertandingan */}
                         <div className="col-span-2 grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-xs text-purple-200 mb-1">Lapangan #</label>
-                            <input
-                              type="text"
-                              value={match.court_number}
-                              onChange={(e) => handleFieldChange(index, 'court_number', e.target.value)}
-                              placeholder="Lapangan"
-                              className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white placeholder-purple-300"
-                            />
-                          </div>
                           <div>
                             <label className="block text-xs text-purple-200 mb-1">Jumlah Kok</label>
                             <input
                               type="text"
-                              value={match.shuttlecock_amount}
-                              onChange={(e) => handleFieldChange(index, 'shuttlecock_amount', e.target.value)}
-                              placeholder="Jumlah"
+                              value={match.jumlah_kok}
+                              onChange={(e) => handleFieldChange(index, 'jumlah_kok', e.target.value)}
+                              placeholder="2, 3, atau 4"
                               className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white placeholder-purple-300"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-green-200 mb-1">Skor Pertandingan</label>
+                            <input
+                              type="text"
+                              value={match.skor_pertandingan}
+                              onChange={(e) => handleFieldChange(index, 'skor_pertandingan', e.target.value)}
+                              placeholder="e.g., 42-58"
+                              className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white placeholder-green-300"
                             />
                           </div>
                         </div>

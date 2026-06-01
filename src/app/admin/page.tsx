@@ -461,56 +461,76 @@ export default function AdminDashboardPage() {
       label: 'Total Anggota',
       value: loading ? '...' : stats.totalMembers.toLocaleString(),
       icon: Users,
-      color: 'from-blue-500 to-blue-600',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-500/10',
+      borderColor: 'border-blue-100 dark:border-blue-500/25',
     },
     {
       label: 'Admin',
       value: loading ? '...' : stats.totalAdmins.toLocaleString(),
       icon: Shield,
-      color: 'from-red-500 to-red-600',
+      iconColor: 'text-red-600 dark:text-red-400',
+      bgColor: 'bg-red-50 dark:bg-red-500/10',
+      borderColor: 'border-red-100 dark:border-red-500/25',
     },
     {
       label: 'Pengguna Aktif',
       value: loading ? '...' : stats.activeProjects.toLocaleString(),
       icon: Zap,
-      color: 'from-purple-500 to-purple-600',
+      iconColor: 'text-purple-600 dark:text-purple-400',
+      bgColor: 'bg-purple-50 dark:bg-purple-500/10',
+      borderColor: 'border-purple-100 dark:border-purple-500/25',
     },
     {
       label: 'Pembayaran Menunggu',
       value: loading ? '...' : pendingPaymentsCount.toLocaleString(),
       icon: Bell,
-      color: 'from-amber-500 to-orange-600',
+      iconColor: 'text-amber-600 dark:text-amber-400',
+      bgColor: 'bg-amber-50 dark:bg-amber-500/10',
+      borderColor: 'border-amber-100 dark:border-amber-500/25',
       badge: pendingPaymentsCount > 0,
     },
     {
       label: 'Total Pengguna',
       value: loading ? '...' : stats.events.toLocaleString(),
       icon: TrendingUp,
-      color: 'from-green-500 to-emerald-600',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      bgColor: 'bg-emerald-50 dark:bg-emerald-500/10',
+      borderColor: 'border-emerald-100 dark:border-emerald-500/25',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-red-400" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Dashboard Admin
-            </h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 px-4 lg:px-8 py-6 lg:py-8 transition-colors duration-300">
+      
+      {/* Premium Admin Welcome Header Card */}
+      <div className="mb-8 bg-gradient-to-r from-rose-600/10 via-red-600/5 to-rose-600/10 dark:from-rose-500/10 dark:via-red-500/5 dark:to-rose-500/10 border border-rose-100 dark:border-zinc-800/80 rounded-3xl p-6 lg:p-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 shadow-xs relative overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute top-[-20%] left-[-10%] w-48 h-48 bg-rose-500/20 dark:bg-rose-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-48 h-48 bg-red-500/20 dark:bg-red-500/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400 animate-pulse" />
+            ADMIN PANEL
           </div>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight transition-colors duration-300">
+            Selamat datang kembali, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
+          </h1>
+          <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">
+            Kelola keanggotaan, monitor keuangan, dan pantau aktivitas komunitas DLOB dari panel ini.
+          </p>
+        </div>
+        
+        <div className="relative z-10 flex items-center gap-2 self-stretch lg:self-auto justify-end">
           <button
             onClick={toggleTutorial}
-            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
-            title="Tampilkan panduan fitur"
+            className="p-2.5 rounded-xl bg-white dark:bg-zinc-800/80 hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-gray-200 dark:border-zinc-700 text-rose-600 dark:text-rose-400 transition-all duration-300 shadow-xs hover:shadow-sm"
+            title="Tampilkan panduan interaktif"
           >
             <HelpCircle className="w-5 h-5" />
           </button>
         </div>
-        <p className="text-gray-600 dark:text-zinc-400">
-          Selamat datang kembali, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! Kelola komunitas Anda dari sini.
-        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -530,33 +550,35 @@ export default function AdminDashboardPage() {
             
             const card = (
               <div
-                className={`bg-white dark:bg-zinc-900 border rounded-xl p-6 transition-all shadow-sm dark:shadow-none ${customClass} ${
+                className={`bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 shadow-xs hover:shadow-sm hover:-translate-y-0.5 relative overflow-hidden group ${customClass} ${
                   isPendingPayments && hasPendingItems
-                    ? 'border-amber-500/30 hover:border-amber-500/50 shadow-lg shadow-amber-500/10 cursor-pointer'
-                    : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
+                    ? 'border-amber-500/30 hover:border-amber-500/60 shadow-md shadow-amber-500/5 cursor-pointer'
+                    : 'hover:border-rose-400/40 dark:hover:border-zinc-700'
                 }`}
               >
-                <div className={`inline-flex p-3 rounded-xl bg-linear-to-br ${stat.color} mb-4 ${
-                  isPendingPayments && hasPendingItems ? 'animate-pulse' : ''
-                }`}>
-                  <Icon className="w-6 h-6 text-white" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-2.5 rounded-xl ${stat.bgColor} ${stat.borderColor} border ${
+                    isPendingPayments && hasPendingItems ? 'animate-pulse' : ''
+                  }`}>
+                    <Icon className={`w-5 h-5 ${stat.iconColor}`} />
+                  </div>
                   {hasPendingItems && (
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="flex h-2.5 w-2.5 relative">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
                     </span>
                   )}
                 </div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stat.value}</div>
-                <div className="text-sm text-gray-600 dark:text-zinc-400">{stat.label}</div>
+                <div className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1 transition-colors duration-300 tracking-tight">{stat.value}</div>
+                <div className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">{stat.label}</div>
                 {isPendingPayments && hasPendingItems && (
-                  <p className="text-xs text-amber-400 mt-2 font-medium">Klik untuk melihat</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-bold group-hover:underline">Klik untuk verifikasi</p>
                 )}
               </div>
             );
             
             return isPendingPayments && hasPendingItems ? (
-              <Link key={stat.label} href="/admin/pembayaran">
+              <Link key={stat.label} href="/admin/pembayaran" className="block">
                 {card}
               </Link>
             ) : (
@@ -570,59 +592,59 @@ export default function AdminDashboardPage() {
 
       {/* Revenue Growth Chart - Stock Style */}
       <div className="mt-8">
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none revenue-chart">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs transition-colors duration-300 revenue-chart">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-linear-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/20">
-                <DollarSign className="w-6 h-6 text-white" />
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 shadow-xs">
+                <DollarSign className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Revenue Growth</h2>
-                <p className="text-sm text-gray-600 dark:text-zinc-400">Monthly revenue from Jan 2026</p>
+                <h2 className="text-base font-extrabold text-gray-900 dark:text-white tracking-tight transition-colors duration-300">Revenue Growth</h2>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mt-0.5">Pendapatan bulanan terhitung sejak Jan 2026</p>
               </div>
             </div>
           </div>
-
+ 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-linear-to-br from-green-500/10 to-emerald-600/10 border border-green-500/20 rounded-lg p-4">
-              <p className="text-sm text-green-400 mb-1 font-medium">Total Revenue</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">Rp {totalRevenue.toLocaleString('id-ID')}</p>
+            <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-4 transition-colors duration-300">
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 mb-1 font-bold">Total Pendapatan</p>
+              <p className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Rp {totalRevenue.toLocaleString('id-ID')}</p>
             </div>
-            <div className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/5 rounded-lg p-4">
-              <p className="text-sm text-gray-600 dark:text-zinc-400 mb-1">Month-over-Month</p>
+            <div className="bg-gray-50 dark:bg-zinc-800/40 border border-gray-200/60 dark:border-zinc-800/60 rounded-xl p-4 transition-colors duration-300">
+              <p className="text-xs text-gray-500 dark:text-zinc-400 mb-1 font-bold">Perkembangan Bulanan</p>
               <div className="flex items-center gap-2">
-                <p className={`text-3xl font-bold ${revenueChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={`text-2xl font-black tracking-tight ${revenueChange >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
                   {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}%
                 </p>
                 {revenueChange >= 0 ? (
-                  <TrendingUp className="w-6 h-6 text-green-400" />
+                  <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <TrendingDown className="w-6 h-6 text-red-400" />
+                  <TrendingDown className="w-5 h-5 text-red-500" />
                 )}
               </div>
             </div>
-            <div className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/5 rounded-lg p-4">
-              <p className="text-sm text-gray-600 dark:text-zinc-400 mb-1">Data Points</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{revenueData.length} Months</p>
+            <div className="bg-gray-50 dark:bg-zinc-800/40 border border-gray-200/60 dark:border-zinc-800/60 rounded-xl p-4 transition-colors duration-300">
+              <p className="text-xs text-gray-500 dark:text-zinc-400 mb-1 font-bold">Titik Data Pendapatan</p>
+              <p className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{revenueData.length} Bulan</p>
             </div>
           </div>
 
           {/* Stock-Style Chart */}
           {loading ? (
             <div className="h-96 flex items-center justify-center">
-              <div className="text-gray-500 dark:text-zinc-500">Loading chart...</div>
+              <div className="text-gray-500 dark:text-zinc-500 text-sm font-semibold">Loading chart...</div>
             </div>
           ) : revenueData.length === 0 ? (
             <div className="h-96 flex items-center justify-center">
               <div className="text-center">
                 <DollarSign className="w-12 h-12 text-gray-400 dark:text-zinc-600 mx-auto mb-2" />
-                <p className="text-gray-500 dark:text-zinc-500">No revenue data available</p>
-                <p className="text-gray-400 dark:text-zinc-600 text-sm">Data will appear from January 2026 onwards</p>
+                <p className="text-gray-500 dark:text-zinc-500 font-bold">Belum ada data pendapatan</p>
+                <p className="text-gray-400 dark:text-zinc-600 text-xs mt-1">Data akan otomatis terisi saat match diselesaikan</p>
               </div>
             </div>
           ) : (
-            <div className="h-96 bg-gray-50 dark:bg-zinc-950/50 rounded-lg p-4 border border-gray-200 dark:border-white/5">
+            <div className="h-96 bg-gray-50 dark:bg-zinc-950/50 rounded-xl p-4 border border-gray-150 dark:border-zinc-800/60 transition-colors duration-300">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={revenueData}
@@ -631,20 +653,20 @@ export default function AdminDashboardPage() {
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
-                      <stop offset="50%" stopColor="#10b981" stopOpacity={0.2} />
+                      <stop offset="50%" stopColor="#10b981" stopOpacity={0.15} />
                       <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid 
                     strokeDasharray="3 3" 
-                    stroke="#d1d5db" 
-                    className="dark:stroke-zinc-800"
+                    stroke="#e5e7eb" 
+                    className="dark:stroke-zinc-850"
                     vertical={false}
                   />
                   <XAxis 
                     dataKey="label" 
                     stroke="#9ca3af"
-                    className="dark:stroke-zinc-600"
+                    className="dark:stroke-zinc-650"
                     tick={{ fill: '#6b7280', fontSize: 11 }}
                     tickLine={{ stroke: '#d1d5db' }}
                     axisLine={{ stroke: '#d1d5db' }}
@@ -654,7 +676,7 @@ export default function AdminDashboardPage() {
                   />
                   <YAxis 
                     stroke="#9ca3af"
-                    className="dark:stroke-zinc-600"
+                    className="dark:stroke-zinc-650"
                     tick={{ fill: '#6b7280', fontSize: 11 }}
                     tickLine={{ stroke: '#d1d5db' }}
                     axisLine={{ stroke: '#d1d5db' }}
@@ -664,8 +686,8 @@ export default function AdminDashboardPage() {
                     contentStyle={{
                       backgroundColor: 'white',
                       border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                       padding: '12px'
                     }}
                     labelStyle={{ 
@@ -674,7 +696,7 @@ export default function AdminDashboardPage() {
                       marginBottom: '4px'
                     }}
                     formatter={(value: any) => [
-                      <span className="text-green-600 font-bold" key="value">
+                      <span className="text-emerald-600 font-bold" key="value">
                         Rp {value.toLocaleString('id-ID')}
                       </span>, 
                       'Revenue'
@@ -711,19 +733,21 @@ export default function AdminDashboardPage() {
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Activity Feed */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none activity-feed">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs transition-colors duration-300 activity-feed">
           <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-5 h-5 text-purple-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Aktivitas Sistem</h2>
+            <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-500/20">
+              <Activity className="w-4 h-4 shrink-0" />
+            </div>
+            <h2 className="text-base font-extrabold text-gray-900 dark:text-white tracking-tight transition-colors duration-300">Aktivitas Sistem</h2>
           </div>
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => <ActivityItemSkeleton key={i} />)}
             </div>
           ) : activities.length === 0 ? (
-            <p className="text-gray-500 dark:text-zinc-400">Tidak ada aktivitas terbaru.</p>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">Tidak ada aktivitas terbaru.</p>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
               {activities.map((activity) => {
                 const Icon = activity.icon;
                 const timeAgo = getTimeAgo(activity.timestamp);
@@ -731,31 +755,31 @@ export default function AdminDashboardPage() {
                 
                 const content = (
                   <div
-                    className={`flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-zinc-800/50 transition-colors ${
-                      isPaymentPending ? 'hover:bg-amber-100 dark:hover:bg-amber-900/20 cursor-pointer border border-amber-500/20' : 'hover:bg-gray-100 dark:hover:bg-zinc-800'
+                    className={`flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/40 border border-gray-100 dark:border-zinc-800/80 transition-all duration-300 ${
+                      isPaymentPending ? 'hover:bg-amber-50 dark:hover:bg-amber-950/20 cursor-pointer border-amber-200 dark:border-amber-500/20' : 'hover:bg-gray-100 dark:hover:bg-zinc-850'
                     }`}
                   >
-                    <div className={`p-2 rounded-lg bg-gray-100 dark:bg-zinc-900 ${activity.color} ${
+                    <div className={`p-2 rounded-lg bg-white dark:bg-zinc-900 ${activity.color} border border-gray-100 dark:border-zinc-800 ${
                       isPaymentPending ? 'animate-pulse' : ''
                     }`}>
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 dark:text-white">
-                        <span className="font-semibold">{activity.user}</span>
+                      <p className="text-xs text-gray-800 dark:text-zinc-300 font-medium">
+                        <span className="font-bold text-gray-900 dark:text-white">{activity.user}</span>
                         {activity.type === 'registration' && ' bergabung ke sistem'}
                         {activity.type === 'update' && ' memperbarui profil'}
                         {activity.type === 'payment_pending' && (
-                          <span className="text-amber-400"> mengirim bukti pembayaran - Menunggu konfirmasi</span>
+                          <span className="text-amber-600 dark:text-amber-400"> mengirim bukti pembayaran - Menunggu konfirmasi</span>
                         )}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-zinc-500 mt-1">{timeAgo}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-zinc-500 mt-1 font-semibold">{timeAgo}</p>
                     </div>
                   </div>
                 );
                 
                 return isPaymentPending ? (
-                  <Link key={activity.id} href="/admin/pembayaran">
+                  <Link key={activity.id} href="/admin/pembayaran" className="block">
                     {content}
                   </Link>
                 ) : (
@@ -769,17 +793,19 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Performance Chart */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none top-performers">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs transition-colors duration-300 top-performers">
           <div className="flex items-center gap-2 mb-4">
-            <Award className="w-5 h-5 text-yellow-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Performa Terbaik</h2>
+            <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20">
+              <Award className="w-4 h-4 shrink-0" />
+            </div>
+            <h2 className="text-base font-extrabold text-gray-900 dark:text-white tracking-tight transition-colors duration-300">Performa Terbaik</h2>
           </div>
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => <ActivityItemSkeleton key={i} />)}
             </div>
           ) : topPerformers.length === 0 ? (
-            <p className="text-gray-500 dark:text-zinc-400">Belum ada data performa.</p>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">Belum ada data performa.</p>
           ) : (
             <div className="space-y-4">
               {topPerformers.map((member, index) => {
@@ -789,23 +815,23 @@ export default function AdminDashboardPage() {
                   <div key={member.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-500 dark:text-zinc-500 text-sm w-6">#{index + 1}</span>
-                        <span className="text-gray-900 dark:text-white font-medium">{member.name}</span>
+                        <span className="text-gray-400 dark:text-zinc-650 text-xs w-6 font-bold">#{index + 1}</span>
+                        <span className="text-gray-900 dark:text-white font-bold text-xs">{member.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-sm font-bold ${
-                          isWin ? 'text-green-400' : 'text-red-400'
+                        <span className={`text-xs font-black uppercase tracking-wider ${
+                          isWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'
                         }`}>
-                          {member.streak} {isWin ? 'Menang' : 'Kalah'} Beruntun
+                          {member.streak} {isWin ? 'Win' : 'Loss'} Streak
                         </span>
                       </div>
                     </div>
-                    <div className="relative h-2 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="relative h-2 bg-gray-100 dark:bg-zinc-800/80 rounded-full overflow-hidden border border-gray-200/30 dark:border-zinc-850">
                       <div
                         className={`absolute left-0 top-0 h-full rounded-full transition-all ${
                           isWin 
-                            ? 'bg-linear-to-r from-green-500 to-emerald-400' 
-                            : 'bg-linear-to-r from-red-500 to-rose-400'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400' 
+                            : 'bg-gradient-to-r from-red-500 to-rose-400'
                         }`}
                         style={{ width: `${percentage}%` }}
                       />
@@ -818,15 +844,17 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Most Active Players */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none active-players">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs transition-colors duration-300 active-players">
           <div className="flex items-center gap-2 mb-4">
-            <Target className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pemain Paling Aktif</h2>
+            <div className="p-2 rounded-lg bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-100 dark:border-cyan-500/20">
+              <Target className="w-4 h-4 shrink-0" />
+            </div>
+            <h2 className="text-base font-extrabold text-gray-900 dark:text-white tracking-tight transition-colors duration-300">Pemain Paling Aktif</h2>
           </div>
           {loading ? (
-            <p className="text-gray-500 dark:text-zinc-400">Memuat data...</p>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">Memuat data...</p>
           ) : mostActivePlayers.length === 0 ? (
-            <p className="text-gray-500 dark:text-zinc-400">Belum ada data pertandingan.</p>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">Belum ada data pertandingan.</p>
           ) : (
             <div className="space-y-4">
               {mostActivePlayers.map((player, index) => {
@@ -836,18 +864,18 @@ export default function AdminDashboardPage() {
                   <div key={player.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-500 dark:text-zinc-500 text-sm w-6">#{index + 1}</span>
-                        <span className="text-gray-900 dark:text-white font-medium">{player.name}</span>
+                        <span className="text-gray-400 dark:text-zinc-650 text-xs w-6 font-bold">#{index + 1}</span>
+                        <span className="text-gray-900 dark:text-white font-bold text-xs">{player.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-cyan-400">
-                          {player.matches} Pertandingan
+                        <span className="text-xs font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">
+                          {player.matches} Game
                         </span>
                       </div>
                     </div>
-                    <div className="relative h-2 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="relative h-2 bg-gray-100 dark:bg-zinc-800/80 rounded-full overflow-hidden border border-gray-200/30 dark:border-zinc-850">
                       <div
-                        className="absolute left-0 top-0 h-full rounded-full transition-all bg-linear-to-r from-cyan-500 to-blue-400"
+                        className="absolute left-0 top-0 h-full rounded-full transition-all bg-gradient-to-r from-cyan-500 to-blue-400"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>

@@ -25,12 +25,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => clearTimeout(timer);
   }, [user, isAdmin, viewAs, loading, router]);
 
-  // Always show content immediately for fast perceived performance
+  // Always show sidebar immediately, but only render children once auth loading finishes
   return (
     <div className="flex min-h-screen bg-white dark:bg-zinc-950">
       <DashboardSidebar isAdmin={false} />
       <div className="flex-1 min-w-0 bg-white dark:bg-zinc-950 pt-14 lg:pt-0" key={`member-${pathname}`}>
-        {children}
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[80vh]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          children
+        )}
       </div>
       <FloatingAIChat />
     </div>

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 import { createClient } from '@supabase/supabase-js';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +38,7 @@ Tulis ringkasan dengan format 4 paragraf pendek (masing-masing 1–2 kalimat):
 
 Gunakan bahasa profesional dan ringkas. Tidak perlu pengulangan data angka yang sudah ada di dashboard.`;
 
-    const model = genAI.getGenerativeModel({
+    const model = getGenerativeModelWithFallback({
       model: 'gemini-2.5-flash-lite',
       generationConfig: { temperature: 0.6, maxOutputTokens: 600 },
     });

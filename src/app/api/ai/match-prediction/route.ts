@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
     const { partner, opponents, stats, partnerStats, opponentStats, recentForm } = await request.json();
 
-    const model = genAI.getGenerativeModel({ 
+    const model = getGenerativeModelWithFallback({ 
     model: 'gemini-2.5-flash-lite',
     generationConfig: {
       temperature: 0.7,

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Mail, Phone, Camera, Save, Loader2, Edit2, X, Award, Users, Instagram, Lock, Eye, EyeOff, HelpCircle, AlertTriangle } from 'lucide-react';
+import { User, Mail, Phone, Camera, Save, Loader2, Edit2, X, Award, Users, Instagram, Lock, Eye, EyeOff, HelpCircle, AlertTriangle, Shield, CheckCircle, ChevronRight, Star, Zap, Settings } from 'lucide-react';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
@@ -62,6 +62,8 @@ export default function SettingsPage() {
   const [hasGoogleLinked, setHasGoogleLinked] = useState(false);
   const [isLinkingGoogle, setIsLinkingGoogle] = useState(false);
   const [linkedIdentities, setLinkedIdentities] = useState<any[]>([]);
+
+  const [activeTab, setActiveTab] = useState<'profile' | 'account'>('profile');
 
   // Tutorial for member settings
   const tutorialSteps = getTutorialSteps('member-settings');
@@ -625,459 +627,634 @@ export default function SettingsPage() {
     }
   };
 
+  // Calculate profile completion percentage
+  const calculateCompletion = () => {
+    let score = 0;
+    if (user?.user_metadata?.full_name) score += 20;
+    if (user?.user_metadata?.phone || profilePhone) score += 20;
+    if (user?.user_metadata?.playing_level) score += 20;
+    if (user?.user_metadata?.dominant_hand) score += 20;
+    if (user?.user_metadata?.years_playing || user?.user_metadata?.instagram_url) score += 20;
+    return score;
+  };
+  const completionScore = calculateCompletion();
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 px-4 lg:px-8 py-6 lg:py-8 transition-colors duration-300">
       <div>
         <ProfileCompletionWarning />
         
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4">
+        <div className="mb-8 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Pengaturan Profil</h1>
-            <p className="text-gray-600 dark:text-zinc-400 font-medium">Kelola informasi profil dan preferensi akun Anda</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+              <User className="w-8 h-8 text-blue-500" />
+              Pengaturan Profil
+            </h1>
+            <p className="text-gray-600 dark:text-zinc-400 font-medium">Kelola informasi profil, statistik badminton, dan keamanan akun Anda</p>
           </div>
           
           <button
             onClick={toggleTutorial}
-            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+            className="p-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-500 dark:text-blue-400 transition-colors shadow-xs"
             title="Tampilkan panduan fitur"
           >
-            <HelpCircle className="w-5 h-5" />
+            <HelpCircle className="w-5.5 h-5.5" />
           </button>
         </div>
 
         {/* Success/Error Messages */}
         {message && (
-          <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-500/20 border border-green-500/50 text-green-400' : 'bg-red-500/20 border border-red-500/50 text-red-400'}`}>
-            {message.text}
+          <div className={`mb-6 p-4 rounded-xl flex items-center justify-between ${
+            message.type === 'success' 
+              ? 'bg-green-50/90 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 text-green-800 dark:text-green-400' 
+              : 'bg-red-50/90 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-400'
+          }`}>
+            <div className="flex items-center gap-2">
+              {message.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <AlertTriangle className="w-5 h-5 shrink-0" />}
+              <span className="text-sm font-medium">{message.text}</span>
+            </div>
+            <button onClick={() => setMessage(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column */}
-          <div className="space-y-6">
-            {/* Profile Picture Card */}
-            <div className="member-settings-avatar bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Foto Profil</h2>
-              <div className="flex flex-col items-center">
-                <div className="relative group mb-4">
-                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/10 bg-linear-to-br from-blue-500 via-purple-500 to-pink-500">
-                    {avatarUrl ? (
-                      <Image
-                        key={avatarUrl}
-                        src={avatarUrl}
-                        alt="Profile"
-                        width={128}
-                        height={128}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-blue-500 via-purple-500 to-pink-500">
-                        <span className="text-5xl font-bold text-white">
-                          {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                    )}
+        {/* Profile Completion Hero Banner */}
+        <div className="mb-8 bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs relative overflow-hidden transition-all duration-300">
+          <div className="absolute right-0 top-0 w-32 h-32 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl -z-10" />
+          <div className="absolute left-1/3 bottom-0 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl -z-10" />
+          
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            {/* Avatar Section */}
+            <div className="relative group">
+              <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-gray-100 dark:border-zinc-800 shadow-md bg-linear-to-br from-blue-500 via-purple-500 to-pink-500 relative">
+                {avatarUrl ? (
+                  <Image
+                    key={avatarUrl}
+                    src={avatarUrl}
+                    alt="Profile"
+                    width={112}
+                    height={112}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-blue-500 via-purple-500 to-pink-500">
+                    <span className="text-4xl font-bold text-white">
+                      {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                    </span>
                   </div>
-                  <button
-                    onClick={() => !isSettingsBlocked && fileInputRef.current?.click()}
-                    disabled={isUploading || isSettingsBlocked}
-                    className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={isSettingsBlocked ? 'Lengkapi profil terlebih dahulu' : 'Ubah foto profil'}
-                  >
-                    {isUploading ? (
-                      <Loader2 className="w-5 h-5 text-white animate-spin" />
-                    ) : (
-                      <Camera className="w-5 h-5 text-white" />
-                    )}
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
+                )}
+              </div>
+              <button
+                onClick={() => !isSettingsBlocked && fileInputRef.current?.click()}
+                disabled={isUploading || isSettingsBlocked}
+                className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isSettingsBlocked ? 'Lengkapi profil terlebih dahulu' : 'Ubah foto profil'}
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+            </div>
+
+            {/* Info and Progress */}
+            <div className="flex-1 w-full text-center md:text-left space-y-3">
+              <div>
+                <div className="flex flex-col md:flex-row md:items-center gap-2 justify-center md:justify-start">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {user?.user_metadata?.full_name || 'Member DLOB'}
+                  </h2>
+                  <span className={`self-center text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+                    user?.user_metadata?.playing_level === 'professional' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                    user?.user_metadata?.playing_level === 'advanced' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
+                    user?.user_metadata?.playing_level === 'intermediate' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                    'bg-green-500/10 text-green-500 border-green-500/20'
+                  }`}>
+                    {getPlayingLevelLabel(user?.user_metadata?.playing_level || 'beginner')}
+                  </span>
+                </div>
+                <p className="text-gray-500 dark:text-zinc-400 text-sm mt-1">{user?.email}</p>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-gray-600 dark:text-zinc-400">
+                  <span>Kelengkapan Profil</span>
+                  <span>{completionScore}%</span>
+                </div>
+                <div className="w-full bg-gray-100 dark:bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+                  <div 
+                    className="bg-linear-to-r from-blue-500 via-indigo-500 to-purple-500 h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${completionScore}%` }}
                   />
                 </div>
-                <p className="text-sm text-gray-500 dark:text-zinc-400 text-center font-medium">
-                  Klik ikon kamera untuk mengubah foto profil<br />
-                  Maksimal 5MB (JPG, PNG)
-                </p>
+                {completionScore < 100 && (
+                  <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">
+                    💡 Lengkapi profil Anda untuk memaksimalkan rekomendasi partner dan performa AI!
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-gray-200 dark:border-zinc-800 mb-8 overflow-x-auto scrollbar-none gap-2">
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`py-3.5 px-5 font-bold text-sm flex items-center gap-2 border-b-2 transition-all shrink-0 ${
+              activeTab === 'profile'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+            }`}
+          >
+            <User className="w-4.5 h-4.5" />
+            Profil Member
+          </button>
+          <button
+            onClick={() => setActiveTab('account')}
+            className={`py-3.5 px-5 font-bold text-sm flex items-center gap-2 border-b-2 transition-all shrink-0 ${
+              activeTab === 'account'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+            }`}
+          >
+            <Settings className="w-4.5 h-4.5" />
+            Pengaturan Akun & Keamanan
+          </button>
+        </div>
+
+        {/* Tab Contents */}
+        {activeTab === 'profile' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeIn">
+            {/* Left Column */}
+            <div className="space-y-6">
+              {/* Personal Info Card */}
+              <div 
+                className={`bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs transition-all duration-300 relative overflow-hidden group ${
+                  isSettingsBlocked 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:border-blue-500/30 dark:hover:border-blue-500/20 hover:shadow-md'
+                }`}
+              >
+                <div className="absolute left-0 top-0 w-1 h-full bg-blue-500" />
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-500/10 text-blue-500 rounded-xl">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">Informasi Pribadi</h2>
+                      <p className="text-xs text-gray-500 dark:text-zinc-400">Nama lengkap dan nomor kontak Anda</p>
+                    </div>
+                  </div>
+                  {!isSettingsBlocked && (
+                    <button 
+                      onClick={openPersonalModal}
+                      className="p-2 rounded-lg bg-gray-50 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-gray-500 hover:text-blue-500 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-2.5 border-b border-gray-100 dark:border-zinc-800/60">
+                    <span className="text-sm font-semibold text-gray-500 dark:text-zinc-400">Nama Lengkap</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.user_metadata?.full_name || 'Belum diisi'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2.5 border-b border-gray-100 dark:border-zinc-800/60">
+                    <span className="text-sm font-semibold text-gray-500 dark:text-zinc-400 flex items-center gap-1">
+                      Email
+                    </span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.email || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2.5">
+                    <span className="text-sm font-semibold text-gray-500 dark:text-zinc-400">Nomor Telepon</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.user_metadata?.phone || profilePhone || 'Belum diisi'}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Personal Information Card */}
-            <div 
-              className={`member-settings-personal bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 group shadow-sm transition-colors ${
-                isSettingsBlocked 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:border-blue-400 dark:hover:border-blue-500/30 cursor-pointer'
-              }`} 
-              onClick={() => !isSettingsBlocked && openPersonalModal()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Informasi Pribadi</h2>
-                <Edit2 className={`w-5 h-5 transition-colors ${
+            {/* Right Column */}
+            <div className="space-y-6">
+              {/* Badminton Profile Card */}
+              <div 
+                className={`bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs transition-all duration-300 relative overflow-hidden group ${
                   isSettingsBlocked 
-                    ? 'text-gray-300 dark:text-zinc-600' 
-                    : 'text-gray-400 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                }`} />
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:border-green-500/30 dark:hover:border-green-500/20 hover:shadow-md'
+                }`}
+              >
+                <div className="absolute left-0 top-0 w-1 h-full bg-green-500" />
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-50 dark:bg-green-500/10 text-green-500 rounded-xl">
+                      <Zap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">Profil Badminton</h2>
+                      <p className="text-xs text-gray-500 dark:text-zinc-400">Atribut permainan dan level Anda</p>
+                    </div>
+                  </div>
+                  {!isSettingsBlocked && (
+                    <button 
+                      onClick={openBadmintonModal}
+                      className="p-2 rounded-lg bg-gray-50 dark:bg-zinc-800 hover:bg-green-50 dark:hover:bg-green-500/10 text-gray-500 hover:text-green-500 dark:text-zinc-400 dark:hover:text-green-400 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 dark:bg-zinc-800/40 rounded-xl p-4 text-center border border-gray-100 dark:border-zinc-800/50">
+                    <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Level Bermain</p>
+                    <p className="text-base font-bold text-gray-900 dark:text-white">{getPlayingLevelLabel(user?.user_metadata?.playing_level || 'beginner')}</p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-zinc-800/40 rounded-xl p-4 text-center border border-gray-100 dark:border-zinc-800/50">
+                    <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Tangan Dominan</p>
+                    <p className="text-base font-bold text-gray-900 dark:text-white">{getDominantHandLabel(user?.user_metadata?.dominant_hand || 'right')}</p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-zinc-800/40 rounded-xl p-4 text-center border border-gray-100 dark:border-zinc-800/50">
+                    <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Pengalaman</p>
+                    <p className="text-base font-bold text-gray-900 dark:text-white">{user?.user_metadata?.years_playing ? `${user.user_metadata.years_playing} Tahun` : 'Belum diisi'}</p>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Nama Lengkap</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.full_name || 'Belum diisi'}</p>
+
+              {/* Achievements Card */}
+              <div 
+                className={`bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs transition-all duration-300 relative overflow-hidden group ${
+                  isSettingsBlocked 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:border-yellow-500/30 dark:hover:border-yellow-500/20 hover:shadow-md'
+                }`}
+              >
+                <div className="absolute left-0 top-0 w-1 h-full bg-yellow-500" />
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-xl">
+                      <Award className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">Pencapaian Turnamen</h2>
+                      <p className="text-xs text-gray-500 dark:text-zinc-400">Prestasi dan riwayat kejuaraan Anda</p>
+                    </div>
+                  </div>
+                  {!isSettingsBlocked && (
+                    <button 
+                      onClick={openAchievementsModal}
+                      className="p-2 rounded-lg bg-gray-50 dark:bg-zinc-800 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 text-gray-500 hover:text-yellow-600 dark:text-zinc-400 dark:hover:text-yellow-400 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Email</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.email || '-'}</p>
+
+                <div className="space-y-3">
+                  {(() => {
+                    const achievementsData = user?.user_metadata?.achievements;
+                    let achievements = [];
+                    
+                    if (Array.isArray(achievementsData)) {
+                      achievements = achievementsData;
+                    } else if (typeof achievementsData === 'string') {
+                      try {
+                        achievements = JSON.parse(achievementsData);
+                      } catch (e) {
+                        console.error('Failed to parse achievements:', e);
+                      }
+                    }
+                    
+                    return achievements.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {achievements.map((achievement: any, index: number) => (
+                          <div key={index} className="bg-gray-50 dark:bg-zinc-800/40 border border-gray-150 dark:border-zinc-800/50 rounded-xl p-3 flex items-start gap-2.5">
+                            <Star className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{achievement.tournament}</p>
+                              <p className="text-[11px] text-gray-500 dark:text-zinc-400">{achievement.place} • {achievement.year}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 border border-dashed border-gray-200 dark:border-zinc-800 rounded-xl">
+                        <p className="text-sm text-gray-400 dark:text-zinc-500">Belum ada pencapaian turnamen</p>
+                      </div>
+                    );
+                  })()}
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Nomor Telepon</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.phone || profilePhone || 'Belum diisi'}</p>
+              </div>
+
+              {/* Partner Preferences Card */}
+              <div 
+                className={`bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs transition-all duration-300 relative overflow-hidden group ${
+                  isSettingsBlocked 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:border-purple-500/30 dark:hover:border-purple-500/20 hover:shadow-md'
+                }`}
+              >
+                <div className="absolute left-0 top-0 w-1 h-full bg-purple-500" />
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-50 dark:bg-purple-500/10 text-purple-500 rounded-xl">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">Kriteria Partner & Sosmed</h2>
+                      <p className="text-xs text-gray-500 dark:text-zinc-400">Preferensi pasangan main dan link Instagram</p>
+                    </div>
+                  </div>
+                  {!isSettingsBlocked && (
+                    <button 
+                      onClick={openPartnerModal}
+                      className="p-2 rounded-lg bg-gray-50 dark:bg-zinc-800 hover:bg-purple-50 dark:hover:bg-purple-500/10 text-gray-500 hover:text-purple-500 dark:text-zinc-400 dark:hover:text-purple-400 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-gray-50 dark:bg-zinc-800/40 rounded-xl p-4 border border-gray-100 dark:border-zinc-800/50">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wider">Kriteria Partner Yang Dicari</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-zinc-300 italic">
+                      "{user?.user_metadata?.partner_preferences || 'Belum mengisi preferensi'}"
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-500 dark:text-zinc-400 flex items-center gap-2">
+                      <Instagram className="w-4 h-4 text-pink-500" />
+                      Instagram Link
+                    </span>
+                    {user?.user_metadata?.instagram_url ? (
+                      <a 
+                        href={user.user_metadata.instagram_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-sm font-bold text-blue-500 hover:underline truncate max-w-[200px]"
+                      >
+                        {user.user_metadata.instagram_url.split('/').pop() || 'Profil'}
+                      </a>
+                    ) : (
+                      <span className="text-sm text-gray-400 dark:text-zinc-500">Belum diisi</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeIn">
+            {/* Left Column - Authentication Methods */}
+            <div className="space-y-6">
+              {/* Account Linking / Authentication Methods Card */}
+              {!isSettingsBlocked ? (
+                <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs relative overflow-hidden transition-all duration-300">
+                  <div className="absolute left-0 top-0 w-1 h-full bg-slate-500" />
+                  <div className="mb-6 flex items-center gap-3">
+                    <div className="p-2 bg-slate-50 dark:bg-zinc-800 text-slate-500 rounded-xl">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">Metode Login</h2>
+                      <p className="text-xs text-gray-500 dark:text-zinc-400">Hubungkan atau kelola integrasi akun login Anda</p>
+                    </div>
+                  </div>
 
-          {/* Right Column */}
-          <div className="space-y-6">
-            {/* Badminton Profile Card */}
-            <div 
-              className={`member-settings-badminton bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 group shadow-sm transition-colors ${
-                isSettingsBlocked 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:border-green-400 dark:hover:border-green-500/30 cursor-pointer'
-              }`} 
-              onClick={() => !isSettingsBlocked && openBadmintonModal()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Profil Badminton</h2>
-                <Edit2 className={`w-5 h-5 transition-colors ${
-                  isSettingsBlocked 
-                    ? 'text-gray-300 dark:text-zinc-600' 
-                    : 'text-gray-400 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                }`} />
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Level Bermain</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{getPlayingLevelLabel(user?.user_metadata?.playing_level || 'beginner')}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Tangan Dominan</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{getDominantHandLabel(user?.user_metadata?.dominant_hand || 'right')}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Lama Bermain</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.years_playing ? `${user.user_metadata.years_playing} tahun` : 'Belum diisi'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Achievements Card */}
-            <div 
-              className={`member-settings-achievements bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 group shadow-sm transition-colors ${
-                isSettingsBlocked 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:border-yellow-400 dark:hover:border-yellow-500/30 cursor-pointer'
-              }`} 
-              onClick={() => !isSettingsBlocked && openAchievementsModal()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pencapaian Turnamen</h2>
-                <Edit2 className={`w-5 h-5 transition-colors ${
-                  isSettingsBlocked 
-                    ? 'text-gray-300 dark:text-zinc-600' 
-                    : 'text-gray-400 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                }`} />
-              </div>
-              <div className="space-y-3">
-                {(() => {
-                  const achievementsData = user?.user_metadata?.achievements;
-                  let achievements = [];
-                  
-                  if (Array.isArray(achievementsData)) {
-                    achievements = achievementsData;
-                  } else if (typeof achievementsData === 'string') {
-                    try {
-                      achievements = JSON.parse(achievementsData);
-                    } catch (e) {
-                      console.error('Failed to parse achievements:', e);
-                    }
-                  }
-                  
-                  return achievements.length > 0 ? (
-                    achievements.map((achievement: any, index: number) => (
-                      <div key={index} className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-lg p-3">
-                        <div className="flex items-start gap-3">
-                          <Award className="w-5 h-5 text-yellow-500 dark:text-yellow-400 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-gray-900 dark:text-white font-semibold">{achievement.tournament}</p>
-                            <p className="text-sm text-gray-500 dark:text-zinc-400">{achievement.place} • {achievement.year}</p>
-                          </div>
+                  <div className="space-y-4">
+                    {/* Email/Password Method */}
+                    <div className="flex items-center justify-between p-3.5 bg-gray-50/50 dark:bg-zinc-800/30 border border-gray-150 dark:border-zinc-800/60 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
+                          <Mail className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">Email & Password</p>
+                          <p className="text-xs text-gray-500 dark:text-zinc-400">{user?.email}</p>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-400 dark:text-zinc-500 text-center py-4">Belum ada pencapaian</p>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* Partner Preferences Card */}
-            <div 
-              className={`member-settings-partner bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 group shadow-sm transition-colors ${
-                isSettingsBlocked 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:border-purple-400 dark:hover:border-purple-500/30 cursor-pointer'
-              }`} 
-              onClick={() => !isSettingsBlocked && openPartnerModal()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Preferensi Partner</h2>
-                <Edit2 className={`w-5 h-5 transition-colors ${
-                  isSettingsBlocked 
-                    ? 'text-gray-300 dark:text-zinc-600' 
-                    : 'text-gray-400 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                }`} />
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Preferensi</label>
-                  <p className="text-gray-900 dark:text-white font-medium">{user?.user_metadata?.partner_preferences || 'Belum diisi'}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Instagram</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.instagram_url || 'Belum diisi'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Change Password Card */}
-            <div className={`bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300 ${isSettingsBlocked ? 'opacity-50' : ''}`}>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Ubah Password</h2>
-              
-              {isSettingsBlocked && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                  <p className="text-sm text-red-400">
-                    🔒 Lengkapi profil terlebih dahulu untuk mengubah password
-                  </p>
-                </div>
-              )}
-              
-              {isOAuthUser && !isSettingsBlocked && (
-                <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                  <p className="text-sm text-blue-400">
-                    ℹ️ Anda login dengan Google. Membuat password akan memungkinkan Anda login dengan email & password selain Google OAuth.
-                  </p>
-                </div>
-              )}
-              
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-zinc-400 mb-2">
-                    Password Baru
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-zinc-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      disabled={isSettingsBlocked}
-                      className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      placeholder="Minimal 6 karakter"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-zinc-400 mb-2">
-                    Konfirmasi Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-zinc-400" />
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isSettingsBlocked}
-                      className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      placeholder="Ulangi password baru"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isPasswordLoading || !newPassword || !confirmPassword || isSettingsBlocked}
-                  className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isPasswordLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Menyimpan...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Ubah Password
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-
-            {/* Linked Accounts / Authentication Methods Card */}
-            {!isSettingsBlocked ? (
-              <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
-                <h2 className="text-xl font-bold text-white mb-4">Metode Login</h2>
-                <p className="text-sm text-zinc-400 mb-6">
-                  Kelola cara Anda masuk ke akun ini. Anda bisa menggunakan email & password, Google, atau keduanya.
-                </p>
-
-                <div className="space-y-3">
-                  {/* Email/Password Method */}
-                  <div className="flex items-center justify-between p-4 bg-zinc-800/50 border border-white/10 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-500/20 rounded-lg">
-                        <Mail className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">Email & Password</p>
-                        <p className="text-sm text-gray-500 dark:text-zinc-400">{user?.email}</p>
-                      </div>
+                      <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-bold uppercase tracking-wider">
+                        Aktif
+                      </span>
                     </div>
-                    <span className="px-3 py-1 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-300 dark:border-transparent rounded-full text-sm font-bold">
-                      Aktif
-                    </span>
+
+                    {/* Google OAuth Method */}
+                    <div className="flex items-center justify-between p-3.5 bg-gray-50/50 dark:bg-zinc-800/30 border border-gray-150 dark:border-zinc-800/60 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-500/10 rounded-lg text-red-500">
+                          <svg className="w-4 h-4" viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">Google</p>
+                          <p className="text-xs text-gray-500 dark:text-zinc-400">
+                            {hasGoogleLinked ? 'Akun terhubung' : 'Belum terhubung'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {hasGoogleLinked ? (
+                        <button
+                          onClick={handleUnlinkGoogle}
+                          className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                          Putuskan
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleLinkGoogle}
+                          disabled={isLinkingGoogle}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                        >
+                          {isLinkingGoogle ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            'Hubungkan'
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Google OAuth Method */}
-                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-500/20 rounded-lg">
-                        <svg className="w-5 h-5" viewBox="0 0 24 24">
-                          <path fill="#EA4335" d="M5.26620003,9.76452941 C6.19878754,6.93863203 8.85444915,4.90909091 12,4.90909091 C13.6909091,4.90909091 15.2181818,5.50909091 16.4181818,6.49090909 L19.9090909,3 C17.7818182,1.14545455 15.0545455,0 12,0 C7.27006974,0 3.1977497,2.69829785 1.23999023,6.65002441 L5.26620003,9.76452941 Z"/>
-                          <path fill="#34A853" d="M16.0407269,18.0125889 C14.9509167,18.7163016 13.5660892,19.0909091 12,19.0909091 C8.86648613,19.0909091 6.21911939,17.076871 5.27698177,14.2678769 L1.23746264,17.3349879 C3.19279051,21.2936293 7.26500293,24 12,24 C14.9328362,24 17.7353462,22.9573905 19.834192,20.9995801 L16.0407269,18.0125889 Z"/>
-                          <path fill="#4A90E2" d="M19.834192,20.9995801 C22.0291676,18.9520994 23.4545455,15.903663 23.4545455,12 C23.4545455,11.2909091 23.3454545,10.5818182 23.1818182,9.90909091 L12,9.90909091 L12,14.4545455 L18.4363636,14.4545455 C18.1187732,16.013626 17.2662994,17.2212117 16.0407269,18.0125889 L19.834192,20.9995801 Z"/>
-                          <path fill="#FBBC05" d="M5.27698177,14.2678769 C5.03832634,13.556323 4.90909091,12.7937589 4.90909091,12 C4.90909091,11.2182781 5.03443647,10.4668121 5.26620003,9.76452941 L1.23999023,6.65002441 C0.43658717,8.26043162 0,10.0753848 0,12 C0,13.9195484 0.444780743,15.7301709 1.23746264,17.3349879 L5.27698177,14.2678769 Z"/>
-                        </svg>
-                      </div>
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-500/5 border border-blue-200/50 dark:border-blue-500/20 rounded-xl">
+                    <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed font-medium">
+                      💡 Menghubungkan Google memudahkan Anda masuk dengan sekali klik tanpa mengetik password.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs opacity-60">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Metode Login</h2>
+                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                    <div className="flex gap-3">
+                      <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-gray-900 dark:text-white font-semibold">Google</p>
-                        <p className="text-sm text-gray-500 dark:text-zinc-400">
-                          {hasGoogleLinked ? 'Terhubung' : 'Belum terhubung'}
+                        <p className="text-yellow-500 font-bold text-sm mb-1">🔒 Pengaturan Terkunci</p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400/90 leading-relaxed">
+                          Pengelolaan metode login akan terbuka setelah Anda mengganti email sementara dengan email aktif Anda dan memverifikasinya.
                         </p>
                       </div>
                     </div>
-                    
-                    {hasGoogleLinked ? (
-                      <button
-                        onClick={handleUnlinkGoogle}
-                        className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Putuskan
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleLinkGoogle}
-                        disabled={isLinkingGoogle}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        {isLinkingGoogle ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Menghubungkan...
-                          </>
-                        ) : (
-                          'Hubungkan'
-                        )}
-                      </button>
-                    )}
                   </div>
                 </div>
+              )}
+            </div>
 
-                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg">
-                  <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">
-                    💡 Tips: Dengan menghubungkan Google, Anda bisa login menggunakan email & password <strong>atau</strong> tombol "Sign in with Google" di halaman login.
-                  </p>
+            {/* Right Column - Password Settings */}
+            <div className="space-y-6">
+              {/* Change Password Card */}
+              <div className={`bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 shadow-xs relative overflow-hidden transition-all duration-300 ${isSettingsBlocked ? 'opacity-50' : ''}`}>
+                <div className="absolute left-0 top-0 w-1 h-full bg-red-500" />
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Ubah Password</h2>
+                    <p className="text-xs text-gray-500 dark:text-zinc-400">Ganti kata sandi untuk menjaga keamanan akun</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 opacity-50">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Metode Login</h2>
-                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-yellow-400 font-medium mb-2">🔒 Fitur Terkunci</p>
-                      <p className="text-sm text-yellow-300">
-                        Fitur pengelolaan metode login (termasuk menghubungkan akun Google) akan tersedia setelah Anda:
-                      </p>
-                      <ol className="text-sm text-yellow-300 mt-2 ml-4 list-decimal space-y-1">
-                        <li>Memperbarui email ke alamat email sebenarnya</li>
-                        <li>Memverifikasi email tersebut</li>
-                        <li>Mengubah password default</li>
-                      </ol>
-                      <p className="text-sm text-yellow-400 mt-3">
-                        Silakan lengkapi profil Anda terlebih dahulu untuk membuka fitur ini.
-                      </p>
+                
+                {isSettingsBlocked && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                    <p className="text-xs text-red-500 dark:text-red-400 font-medium">
+                      🔒 Lengkapi profil terlebih dahulu untuk mengubah password.
+                    </p>
+                  </div>
+                )}
+                
+                {isOAuthUser && !isSettingsBlocked && (
+                  <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                    <p className="text-xs text-blue-500 dark:text-blue-400/95 leading-relaxed font-medium">
+                      ℹ️ Akun Anda login melalui Google. Membuat password baru memungkinkan Anda masuk menggunakan kombinasi email & password reguler.
+                    </p>
+                  </div>
+                )}
+                
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
+                      Password Baru
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-zinc-400" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        disabled={isSettingsBlocked}
+                        className="w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        placeholder="Minimal 6 karakter"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-white"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
-                </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
+                      Konfirmasi Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-zinc-400" />
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={isSettingsBlocked}
+                        className="w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        placeholder="Ulangi password baru"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-white"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isPasswordLoading || !newPassword || !confirmPassword || isSettingsBlocked}
+                    className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-all shadow-xs hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isPasswordLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Menyimpan...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Ubah Password
+                      </>
+                    )}
+                  </button>
+                </form>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Personal Info Modal */}
       {showPersonalModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 w-full max-w-md shadow-xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 w-full max-w-md shadow-xl transition-all scale-100">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Informasi Pribadi</h3>
-              <button onClick={() => setShowPersonalModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white transition-colors">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Informasi Pribadi</h3>
+                <p className="text-xs text-gray-500 dark:text-zinc-400">Perbarui nama dan kontak Anda</p>
+              </div>
+              <button onClick={() => setShowPersonalModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <form onSubmit={handleSavePersonalInfo} className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Nama Lengkap</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Nama Lengkap</label>
                 <input
                   type="text"
                   value={editFullName}
                   onChange={(e) => setEditFullName(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus:outline-none transition-colors"
                   placeholder="Nama lengkap Anda"
                   required
                 />
               </div>
-              <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Nomor Telepon</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Nomor Telepon</label>
                 <input
                   type="tel"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus:outline-none transition-colors"
                   placeholder="+62 812 3456 7890"
                 />
               </div>
@@ -1085,23 +1262,23 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowPersonalModal(false)}
-                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700/80 text-gray-700 dark:text-zinc-300 rounded-xl font-semibold text-sm transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isPersonalLoading}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-all shadow-xs hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isPersonalLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       Menyimpan...
                     </>
                   ) : (
                     <>
-                      <Save className="w-5 h-5" />
+                      <Save className="w-4 h-4" />
                       Simpan
                     </>
                   )}
@@ -1114,21 +1291,24 @@ export default function SettingsPage() {
 
       {/* Badminton Profile Modal */}
       {showBadmintonModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 w-full max-w-md shadow-xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 w-full max-w-md shadow-xl scale-100 transition-all">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Profil Badminton</h3>
-              <button onClick={() => setShowBadmintonModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white transition-colors">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Profil Badminton</h3>
+                <p className="text-xs text-gray-500 dark:text-zinc-400">Atur statistik permainan Anda</p>
+              </div>
+              <button onClick={() => setShowBadmintonModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <form onSubmit={handleSaveBadmintonProfile} className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Level Bermain</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Level Bermain</label>
                 <select
                   value={editPlayingLevel}
                   onChange={(e) => setEditPlayingLevel(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus:outline-none transition-colors"
                 >
                   <option value="beginner">Pemula</option>
                   <option value="intermediate">Menengah</option>
@@ -1136,24 +1316,24 @@ export default function SettingsPage() {
                   <option value="professional">Profesional</option>
                 </select>
               </div>
-              <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Tangan Dominan</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Tangan Dominan</label>
                 <select
                   value={editDominantHand}
                   onChange={(e) => setEditDominantHand(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus:outline-none transition-colors"
                 >
                   <option value="right">Kanan</option>
                   <option value="left">Kiri</option>
                 </select>
               </div>
-              <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Lama Bermain (Tahun)</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Lama Bermain (Tahun)</label>
                 <input
                   type="number"
                   value={editYearsPlaying}
                   onChange={(e) => setEditYearsPlaying(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus:outline-none transition-colors"
                   placeholder="Contoh: 5"
                   min="0"
                 />
@@ -1162,23 +1342,23 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowBadmintonModal(false)}
-                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700/80 text-gray-700 dark:text-zinc-300 rounded-xl font-semibold text-sm transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isBadmintonLoading}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-all shadow-xs hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isBadmintonLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       Menyimpan...
                     </>
                   ) : (
                     <>
-                      <Save className="w-5 h-5" />
+                      <Save className="w-4 h-4" />
                       Simpan
                     </>
                   )}
@@ -1191,36 +1371,50 @@ export default function SettingsPage() {
 
       {/* Achievements Modal */}
       {showAchievementsModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl scale-100 transition-all">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Pencapaian Turnamen</h3>
-              <button onClick={() => setShowAchievementsModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white transition-colors">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Pencapaian Turnamen</h3>
+                <p className="text-xs text-gray-500 dark:text-zinc-400">Tambahkan atau kelola medali turnamen Anda</p>
+              </div>
+              <button onClick={() => setShowAchievementsModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <form onSubmit={handleSaveAchievements} className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold">Daftar Pencapaian</label>
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100 dark:border-zinc-850">
+                <label className="text-sm text-gray-700 dark:text-zinc-300 font-bold uppercase tracking-wider">Daftar Pencapaian</label>
                 <button
                   type="button"
                   onClick={() => setEditAchievements([...editAchievements, { year: new Date().getFullYear().toString(), tournament: '', place: '' }])}
-                  className="text-sm px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  className="text-xs px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-bold"
                 >
                   + Tambah
                 </button>
               </div>
               <div className="space-y-3">
                 {editAchievements.length === 0 ? (
-                  <p className="text-sm text-gray-400 dark:text-zinc-500 text-center py-4 border border-dashed border-gray-300 dark:border-zinc-700 rounded-lg">
-                    Belum ada pencapaian. Klik "Tambah" untuk menambahkan.
-                  </p>
+                  <div className="text-center py-8 border border-dashed border-gray-200 dark:border-zinc-800 rounded-xl">
+                    <p className="text-sm text-gray-400 dark:text-zinc-500">Belum ada pencapaian. Klik "+ Tambah" di atas.</p>
+                  </div>
                 ) : (
                   editAchievements.map((achievement, index) => (
-                    <div key={index} className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-lg p-4 space-y-3">
+                    <div key={index} className="bg-gray-50 dark:bg-zinc-800/40 border border-gray-200/80 dark:border-zinc-800/50 rounded-xl p-4 space-y-3 relative group">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newAchievements = editAchievements.filter((_, i) => i !== index);
+                          setEditAchievements(newAchievements);
+                        }}
+                        className="absolute top-4 right-4 text-xs text-red-500 hover:text-red-600 transition-colors"
+                      >
+                        Hapus
+                      </button>
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mb-1 block">Tahun</label>
+                        <div className="space-y-1">
+                          <label className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">Tahun</label>
                           <input
                             type="number"
                             value={achievement.year}
@@ -1229,14 +1423,14 @@ export default function SettingsPage() {
                               newAchievements[index].year = e.target.value;
                               setEditAchievements(newAchievements);
                             }}
-                            className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="2024"
+                            className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                            placeholder="2026"
                             min="1900"
                             max={new Date().getFullYear()}
                           />
                         </div>
-                        <div>
-                          <label className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mb-1 block">Nama Turnamen</label>
+                        <div className="space-y-1">
+                          <label className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">Nama Turnamen</label>
                           <input
                             type="text"
                             value={achievement.tournament}
@@ -1245,12 +1439,12 @@ export default function SettingsPage() {
                               newAchievements[index].tournament = e.target.value;
                               setEditAchievements(newAchievements);
                             }}
-                            className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="Turnamen ABC"
+                            className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                            placeholder="Turnamen DLOB Internal"
                           />
                         </div>
-                        <div>
-                          <label className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mb-1 block">Peringkat</label>
+                        <div className="space-y-1">
+                          <label className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">Peringkat</label>
                           <input
                             type="text"
                             value={achievement.place}
@@ -1259,21 +1453,11 @@ export default function SettingsPage() {
                               newAchievements[index].place = e.target.value;
                               setEditAchievements(newAchievements);
                             }}
-                            className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="Juara 1"
+                            className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                            placeholder="Juara 1 / Runner Up"
                           />
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newAchievements = editAchievements.filter((_, i) => i !== index);
-                          setEditAchievements(newAchievements);
-                        }}
-                        className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                      >
-                        Hapus
-                      </button>
                     </div>
                   ))
                 )}
@@ -1282,23 +1466,23 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowAchievementsModal(false)}
-                  className="flex-1 px-4 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700/80 text-gray-700 dark:text-zinc-300 rounded-xl font-semibold text-sm transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isAchievementsLoading}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-all shadow-xs hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isAchievementsLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       Menyimpan...
                     </>
                   ) : (
                     <>
-                      <Save className="w-5 h-5" />
+                      <Save className="w-4 h-4" />
                       Simpan
                     </>
                   )}
@@ -1311,31 +1495,34 @@ export default function SettingsPage() {
 
       {/* Partner Preferences Modal */}
       {showPartnerModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 w-full max-w-md shadow-xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 w-full max-w-md shadow-xl scale-100 transition-all">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Preferensi Partner</h3>
-              <button onClick={() => setShowPartnerModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white transition-colors">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Kriteria Partner</h3>
+                <p className="text-xs text-gray-500 dark:text-zinc-400">Atur kriteria partner & info Instagram Anda</p>
+              </div>
+              <button onClick={() => setShowPartnerModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <form onSubmit={handleSavePartnerPreferences} className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Preferensi Partner</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Kriteria Partner</label>
                 <textarea
                   value={editPartnerPreferences}
                   onChange={(e) => setEditPartnerPreferences(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors min-h-25 resize-none"
-                  placeholder="Contoh: Suka bermain doubles, prefer partner yang agresif"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus:outline-none transition-colors min-h-24 resize-none"
+                  placeholder="Contoh: Suka bermain menyerang, butuh partner yang bisa mengontrol jaring."
                 />
               </div>
-              <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Instagram</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Link Instagram</label>
                 <input
                   type="url"
                   value={editInstagramUrl}
                   onChange={(e) => setEditInstagramUrl(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus:outline-none transition-colors"
                   placeholder="https://instagram.com/username"
                 />
               </div>
@@ -1343,23 +1530,23 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowPartnerModal(false)}
-                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700/80 text-gray-700 dark:text-zinc-300 rounded-xl font-semibold text-sm transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isPartnerLoading}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-all shadow-xs hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isPartnerLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       Menyimpan...
                     </>
                   ) : (
                     <>
-                      <Save className="w-5 h-5" />
+                      <Save className="w-4 h-4" />
                       Simpan
                     </>
                   )}

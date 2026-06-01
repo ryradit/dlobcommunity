@@ -1,9 +1,7 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 import { readFileSync, existsSync } from 'fs';
 import path from 'path';
 import { NextRequest, NextResponse } from 'next/server';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const PROMPT = `You are analyzing a sports/badminton member photo that will be displayed in a small square thumbnail card.
 Find the person's FACE (specifically the eyes/nose area, not the top of the head).
@@ -48,7 +46,7 @@ export async function POST(req: NextRequest) {
     const imageBuffer = readFileSync(filePath);
     const base64 = imageBuffer.toString('base64');
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = getGenerativeModelWithFallback({ model: 'gemini-2.0-flash' });
 
     const result = await model.generateContent([
       PROMPT,

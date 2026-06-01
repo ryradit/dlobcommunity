@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 
 const SYSTEM_PROMPT = `Anda adalah DLOB AI Assistant, asisten virtual resmi untuk komunitas badminton DLOB. Tugas Anda adalah membantu pengguna dengan informasi yang akurat dan ramah.
 
@@ -123,7 +121,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+    const model = getGenerativeModelWithFallback({ model: 'gemini-2.5-flash-lite' });
 
     // Format conversation history for Gemini
     const conversationHistory = messages.map((msg: { role: string; content: string }) => ({

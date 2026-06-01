@@ -115,7 +115,7 @@ export default function HeroSection() {
 
             {/* CTA Buttons */}
             <div className="animate-fade-in delay-400 flex flex-col sm:flex-row gap-4">
-              <Link href="/kontak" className="group inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-semibold text-zinc-950 transition-all hover:scale-[1.02] hover:bg-zinc-200 active:scale-[0.98]">
+              <Link href="/kontak" className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-sm font-semibold text-zinc-950 transition-all hover:scale-[1.02] hover:bg-zinc-200 active:scale-[0.98]">
                 Bergabung Sekarang
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Link>
@@ -127,7 +127,7 @@ export default function HeroSection() {
                     featuresSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }
                 }}
-                className="group inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-8 py-4 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/10 hover:border-white/20"
+                className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-4 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/10 hover:border-white/20"
               >
                 <Play className="w-4 h-4 fill-current" />
                 Pelajari Lebih Lanjut

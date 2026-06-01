@@ -122,6 +122,25 @@ export default function RegisterPage() {
       )}
       
       <div className="w-full max-w-md mx-auto relative z-10">
+        {/* Back to Homepage */}
+        <div className="mb-4 flex">
+          <Link
+            href="/"
+            className="inline-flex items-center text-sm font-medium text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 backdrop-blur-sm"
+          >
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Kembali ke Beranda
+          </Link>
+        </div>
+
         {/* Register Form Section */}
         <div className="w-full space-y-8 bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-white/20">
           <div>

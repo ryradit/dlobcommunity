@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 import { createClient } from '@supabase/supabase-js';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -156,7 +154,7 @@ async function generateInsights(
   allAnswers: any[],
   sentimentDist: { positive: number; neutral: number; negative: number }
 ) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+  const model = getGenerativeModelWithFallback({ model: 'gemini-2.5-flash-lite' });
 
   const messagesText = userMessages.join('\n---\n');
   const answersText = JSON.stringify(allAnswers, null, 2);

@@ -19,7 +19,7 @@ const ActionButton = ({ children }: { children: React.ReactNode }) => (
   <motion.button
     whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
-    className="mt-8 px-8 py-3 rounded-full bg-[#1e4843] text-white font-semibold shadow-lg transition-colors hover:bg-[#162f2c] focus:outline-none focus:ring-2 focus:ring-[#1e4843] focus:ring-opacity-75"
+    className="mt-8 px-8 py-3 rounded-xl bg-[#1e4843] text-white font-semibold shadow-lg transition-colors hover:bg-[#162f2c] focus:outline-none focus:ring-2 focus:ring-[#1e4843] focus:ring-opacity-75"
   >
     {children}
   </motion.button>
@@ -51,13 +51,22 @@ export const AnimatedMarqueeHero: React.FC<AnimatedMarqueeHeroProps> = ({
     },
   };
 
-  // Duplicate images for a seamless loop
-  const duplicatedImages = [...filteredImages, ...filteredImages];
+  // Duplicate images for a seamless loop, ensuring a minimum count to cover the screen
+  const getDuplicatedImages = () => {
+    if (filteredImages.length === 0) return [];
+    let list = [...filteredImages];
+    while (list.length < 20) {
+      list = [...list, ...filteredImages];
+    }
+    return [...list, ...list];
+  };
+
+  const duplicatedImages = getDuplicatedImages();
 
   return (
     <section
       className={cn(
-        "relative w-full min-h-screen md:h-screen overflow-hidden bg-background flex flex-col items-center justify-center text-center px-4 sm:px-6 py-12 sm:py-0 sm:-mt-64",
+        "relative w-full h-[85vh] sm:h-[90vh] md:h-screen overflow-hidden bg-background flex flex-col items-center justify-start text-center px-4 sm:px-6 pt-20 sm:pt-28 md:pt-36",
         className
       )}
     >
@@ -67,7 +76,7 @@ export const AnimatedMarqueeHero: React.FC<AnimatedMarqueeHeroProps> = ({
           initial="hidden"
           animate="show"
           variants={FADE_IN_ANIMATION_VARIANTS}
-          className="mb-4 inline-block rounded-full border border-border bg-card/50 px-4 py-1.5 text-sm font-medium text-muted-foreground backdrop-blur-sm"
+          className="mb-4 inline-block rounded-xl border border-border bg-card/50 px-4 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground backdrop-blur-sm"
         >
           {tagline}
         </motion.div>
@@ -102,36 +111,30 @@ export const AnimatedMarqueeHero: React.FC<AnimatedMarqueeHeroProps> = ({
         </motion.h1>
 
         {/* Description */}
-        <motion.p
-          initial="hidden"
-          animate="show"
-          variants={FADE_IN_ANIMATION_VARIANTS}
-          transition={{ delay: 0.5 }}
-          className="mt-4 sm:mt-6 max-w-xl text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed"
-        >
-          {description}
-        </motion.p>
+        {description && (
+          <motion.p
+            initial="hidden"
+            animate="show"
+            variants={FADE_IN_ANIMATION_VARIANTS}
+            transition={{ delay: 0.5 }}
+            className="mt-4 sm:mt-6 max-w-xl text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed"
+          >
+            {description}
+          </motion.p>
+        )}
 
-        {/* Call to Action Button */}
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={FADE_IN_ANIMATION_VARIANTS}
-          transition={{ delay: 0.6 }}
-        >
-          <ActionButton>{ctaText}</ActionButton>
-        </motion.div>
+        {/* Call to Action Button removed from here to prevent blocking images */}
       </div>
 
       {/* Animated Image Marquee */}
       {filteredImages.length > 0 && (
-        <div className="absolute bottom-0 left-0 w-full h-1/4 sm:h-1/3 md:h-2/5 mask-[linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]">
+        <div className="absolute bottom-14 left-0 w-full h-1/4 sm:h-1/3 md:h-2/5 mask-[linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]">
           <motion.div
             className="flex gap-4"
-            animate={{ x: "-100%" }}
+            animate={{ x: "-50%" }}
             transition={{
               ease: "linear",
-              duration: 40,
+              duration: 35,
               repeat: Infinity,
               repeatType: "loop",
             }}
@@ -158,6 +161,41 @@ export const AnimatedMarqueeHero: React.FC<AnimatedMarqueeHeroProps> = ({
           </motion.div>
         </div>
       )}
+
+      {/* Scroll Down Indicator */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: [0, 8, 0] }}
+        transition={{
+          opacity: { duration: 0.5, delay: 0.8 },
+          y: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+        }}
+        onClick={() => {
+          const element = document.getElementById("gallery-console");
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }}
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 cursor-pointer group text-[#1e4843]/60 hover:text-[#1e4843] transition-colors"
+      >
+        <span className="text-[9px] font-extrabold uppercase tracking-widest text-neutral-400 group-hover:text-[#1e4843] transition-colors">
+          Scroll Down
+        </span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2.5}
+          stroke="currentColor"
+          className="w-4 h-4 text-[#1e4843]"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+          />
+        </svg>
+      </motion.div>
     </section>
   );
 };

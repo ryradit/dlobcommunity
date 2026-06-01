@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 import { createClient } from '@supabase/supabase-js';
 import {
   COACHING_TOOLS,
@@ -22,8 +22,6 @@ import {
   executeMentalAssessment,
   executeMatchPrediction,
 } from '@/lib/coachingAgent';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -67,10 +65,21 @@ export async function POST(request: NextRequest) {
     // Fetch coaching session history for context (last 5 sessions)
     const { data: sessionHistory } = await supabase
       .from('coaching_sessions')
-      .select('query, response, response_type, key_finding, action_items')
+      .select('query, response, insights, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(5);
+
+    // Format history for system prompt context using JSONB insights field
+    const sessionHistoryFormatted = sessionHistory?.map((s: any) => ({
+      query: s.query,
+      response: s.response,
+      response_type: s.insights?.responseType || 'provide_analysis',
+      key_finding: s.insights?.keyFinding || null,
+      action_items: s.insights?.actionItems || [],
+      created_at: s.created_at,
+    })) || [];
+
 
     // Build multi-turn messages for agent reasoning
     const messages: any[] = [];
@@ -98,7 +107,7 @@ INSTRUKSI AGENT:
 - Berikan actionable recommendations dengan timeline jelas
 
 KONTEKS HISTORY (5 session terakhir untuk kontinuitas):
-${sessionHistory && sessionHistory.length > 0 ? JSON.stringify(sessionHistory.slice(0, 3), null, 2) : 'Ini percakapan pertama'}
+${sessionHistoryFormatted.length > 0 ? JSON.stringify(sessionHistoryFormatted.slice(0, 3), null, 2) : 'Ini percakapan pertama'}
 
 PLAYER INFO:
 - Nama: ${memberName}
@@ -115,7 +124,7 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
     // Add user message
     messages.push({
       role: 'user',
-      content: query,
+      parts: [{ text: query }],
     });
 
     console.log('[Coaching Agent] Calling Gemini with tools - start of agentic loop');
@@ -129,16 +138,16 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
     let turnCount = 0;
     const maxTurns = 3; // Prevent infinite loops
 
+    // Call Gemini with tools - instantiated once outside the loop to keep track of successful model across turns
+    const model = getGenerativeModelWithFallback({
+      model: 'gemini-2.0-flash',
+      // Note: In production, use proper tool definitions via optional parameters
+      // For MVP, we use text-based tool detection from response content
+    });
+
     while (turnCount < maxTurns) {
       turnCount++;
       console.log(`[Coaching Agent] Agentic turn ${turnCount}/${maxTurns}`);
-
-      // Call Gemini with tools
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
-        // Note: In production, use proper tool definitions via optional parameters
-        // For MVP, we use text-based tool detection from response content
-      });
 
       const response = await model.generateContent({
         contents: messages,
@@ -164,8 +173,8 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
         
         // Add assistant message
         messages.push({
-          role: 'assistant',
-          content: responseText,
+          role: 'model',
+          parts: [{ text: responseText }],
         });
         break;
       }
@@ -208,15 +217,15 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
 
       // Add assistant response and tool results to messages
       messages.push({
-        role: 'assistant',
-        content: responseText,
+        role: 'model',
+        parts: [{ text: responseText }],
       });
 
       // Add tool results back to context
       if (toolResults.length > 0) {
         messages.push({
           role: 'user',
-          content: `Tool Results:\n${JSON.stringify(toolResults, null, 2)}\n\nNow, synthesize these results into actionable coaching guidance for the player.`,
+          parts: [{ text: `Tool Results:\n${JSON.stringify(toolResults, null, 2)}\n\nNow, synthesize these results into actionable coaching guidance for the player.` }],
         });
       }
     }
@@ -269,6 +278,15 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
 
 function detectToolCalls(responseText: string): boolean {
   // Detect if response mentions using tools/functions
+  const toolNames = [
+    'analyze_tactical_patterns',
+    'generate_training_plan',
+    'track_progress_metrics',
+    'compare_peer_statistics',
+    'assess_mental_factors',
+    'predict_match_outcome',
+  ];
+
   const toolKeywords = [
     'analyzing',
     'generating',
@@ -279,11 +297,13 @@ function detectToolCalls(responseText: string): boolean {
     'reviewed',
     'calculated',
     '```json',
+    'memanggil tool',
+    'menggunakan tool',
   ];
   
-  return toolKeywords.some(keyword => 
-    responseText.toLowerCase().includes(keyword)
-  );
+  const lowerText = responseText.toLowerCase();
+  return toolNames.some(name => lowerText.includes(name.toLowerCase())) ||
+         toolKeywords.some(keyword => lowerText.includes(keyword));
 }
 
 function parseToolCalls(responseText: string): Array<{ name: string; args?: any[] }> {
@@ -315,17 +335,42 @@ function parseToolCalls(responseText: string): Array<{ name: string; args?: any[
 function extractArgsFromContext(text: string, toolName: string): any[] {
   // Simple heuristic argument extraction
   // In production, use proper parsing or Gemini function calling
-  
   const lowerText = text.toLowerCase();
   
   switch (toolName) {
-    case 'generate_training_plan':
-      return [
-        // userId will be added by caller
-        'net_play', // Detected weakness
-        2, // weeks
-        3, // days per week
-      ];
+    case 'generate_training_plan': {
+      let focus = 'net_play';
+      if (lowerText.includes('smash')) focus = 'smash';
+      else if (lowerText.includes('backhand')) focus = 'backhand';
+      else if (lowerText.includes('stamina') || lowerText.includes('daya tahan')) focus = 'stamina';
+      else if (lowerText.includes('defense') || lowerText.includes('bertahan')) focus = 'defense';
+      else if (lowerText.includes('footwork') || lowerText.includes('langkah kaki') || lowerText.includes('kelincahan')) focus = 'footwork';
+      else if (lowerText.includes('net')) focus = 'net_play';
+
+      let weeks = 2;
+      const durationParamMatch = lowerText.match(/duration_weeks\s*:\s*([1-4])/);
+      if (durationParamMatch) {
+        weeks = parseInt(durationParamMatch[1], 10);
+      } else {
+        const weekMatch = lowerText.match(/([1-4])\s*(?:minggu|week)/);
+        if (weekMatch) {
+          weeks = parseInt(weekMatch[1], 10);
+        }
+      }
+
+      let days = 3;
+      const daysParamMatch = lowerText.match(/days_per_week\s*:\s*([1-7])/);
+      if (daysParamMatch) {
+        days = parseInt(daysParamMatch[1], 10);
+      } else {
+        const dayMatch = lowerText.match(/([1-7])\s*(?:hari|day)/);
+        if (dayMatch) {
+          days = parseInt(dayMatch[1], 10);
+        }
+      }
+
+      return [focus, weeks, days];
+    }
     case 'analyze_tactical_patterns':
       return ['all']; // Focus area
     case 'assess_mental_factors':
@@ -399,26 +444,53 @@ function extractStats(text: string, toolResults: any[]): string[] {
 function extractActionItems(text: string): Array<{ title: string; description: string; priority: string }> {
   const items: Array<{ title: string; description: string; priority: string }> = [];
   
-  // Look for numbered lists or bullet points
   const lines = text.split('\n');
-  let currentItem: any = null;
+
+  // Keywords that indicate structural headers or metadata, not actionable items
+  const skipKeywords = [
+    'hari ', 'minggu ', 'latihan di ', 'latihan fisik', 'latihan kardio',
+    'tujuan', 'jadwal latihan', 'fokus utama', 'tingkat progresi', 'target hasil',
+    'memanggil tool', 'duration_weeks', 'focus_areas', 'parameter:'
+  ];
 
   lines.forEach(line => {
-    if (/^[\d\-\*•]/.test(line.trim())) {
-      if (currentItem) items.push(currentItem);
-      currentItem = {
-        title: line.replace(/^[\d\-\*•]\s*/, '').substring(0, 50),
-        description: line.trim(),
-        priority: detectPriority(line),
-      };
+    const trimmed = line.trim();
+    if (/^[\d\-\*•]/.test(trimmed)) {
+      // 1. Skip dividers or very short lines
+      if (trimmed.replace(/[\-\*•\s]/g, '').length < 3) return;
+
+      const lower = trimmed.toLowerCase();
+      
+      // 2. Skip based on keywords
+      const shouldSkip = skipKeywords.some(keyword => lower.includes(keyword));
+      if (shouldSkip) return;
+
+      // Clean leading bullet chars (e.g. *, -, •, or digits like 1.)
+      const cleanedLine = trimmed.replace(/^[\d\-\*•\.]+\s*/, '');
+      // Strip markdown bold markers (**)
+      const cleanTitle = cleanedLine.replace(/\*\*/g, '').trim();
+      const cleanDescription = trimmed.replace(/^[\d\-\*•]+\s*/, '').replace(/\*\*/g, '').trim();
+
+      // 3. Skip header-like list items that end with a colon or are too short
+      if (cleanTitle.endsWith(':') || cleanTitle.length < 5) {
+        return;
+      }
+
+      items.push({
+        title: cleanTitle.substring(0, 70),
+        description: cleanDescription,
+        priority: detectPriority(trimmed),
+      });
     }
   });
 
-  if (currentItem) items.push(currentItem);
-  return items.length > 0 ? items : [
+  // Limit to max 5 items for a clean UI checklist
+  const finalItems = items.slice(0, 5);
+
+  return finalItems.length > 0 ? finalItems : [
     {
-      title: 'Schedule training session',
-      description: 'Begin implementing recommended training plan',
+      title: 'Mulai latihan sesuai jadwal',
+      description: 'Lakukan sesi latihan sesuai dengan program yang direkomendasikan AI Coach.',
       priority: 'high',
     },
   ];
@@ -464,25 +536,28 @@ function detectPriority(line: string): string {
 }
 
 async function saveCoachingSession(data: any) {
+  const savePayload = {
+    user_id: data.user_id,
+    session_id: data.session_id || null,
+    member_name: data.member_name || null,
+    query: data.query,
+    response: data.response,
+    insights: {
+      responseType: data.response_type || 'provide_analysis',
+      keyFinding: data.key_finding,
+      actionItems: data.action_items,
+      expectedResults: data.expected_results,
+      toolsExecuted: data.tool_calls,
+      mode: data.mode,
+      timestamp: new Date().toISOString(),
+    },
+    created_at: new Date().toISOString(),
+  };
+
   const { error, data: result } = await supabase
     .from('coaching_sessions')
-    .insert([{
-      user_id: data.user_id,
-      session_id: data.session_id,
-      member_name: data.member_name,
-      query: data.query,
-      response: data.response,
-      response_type: data.response_type,
-      key_finding: data.key_finding,
-      action_items: data.action_items,
-      expected_results: data.expected_results,
-      insights: {
-        toolsExecuted: data.tool_calls,
-        mode: data.mode,
-        timestamp: new Date().toISOString(),
-      },
-      created_at: new Date().toISOString(),
-    }]);
+    .insert([savePayload])
+    .select();
 
   if (error) {
     console.error('[Coaching Agent] Error saving session:', error);

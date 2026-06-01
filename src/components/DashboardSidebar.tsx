@@ -186,7 +186,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] lg:top-0 lg:h-screen bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-white/10 transition-all duration-300 z-50 lg:sticky lg:translate-x-0 lg:z-auto flex flex-col shrink-0 ${
+        className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] lg:top-0 lg:h-screen bg-white/95 dark:bg-zinc-900/90 backdrop-blur-md border-r border-gray-200 dark:border-white/10 transition-all duration-300 z-50 lg:sticky lg:translate-x-0 lg:z-auto flex flex-col shrink-0 ${
           isCollapsed ? 'w-16' : 'w-72'
         } ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
@@ -289,7 +289,9 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
                   isCollapsed ? 'justify-center' : ''
                 } ${
                   active
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                    ? isAdmin
+                      ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-600/20 font-semibold'
+                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/20 font-semibold'
                     : 'text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >

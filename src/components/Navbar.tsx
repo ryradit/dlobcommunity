@@ -12,6 +12,7 @@ export default function Navbar() {
   const navLinks = [
     { href: '/beranda', label: 'Beranda' },
     { href: '/tentang', label: 'Tentang' },
+    { href: '/hall-of-fame', label: 'Hall of Fame' },
     { href: '/galeri', label: 'Galeri' },
     { href: '/store', label: 'Store' },
     { href: '/artikel', label: 'Artikel' },

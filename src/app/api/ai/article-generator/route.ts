@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 import { GoogleAuth } from 'google-auth-library';
 import { createClient } from '@supabase/supabase-js';
 
@@ -7,8 +7,6 @@ import { createClient } from '@supabase/supabase-js';
 // Vercel Pro: max 300s (5 minutes), Hobby: max 10s
 // Note: Article generation takes 5-8 minutes, may still timeout on 8-minute generations
 export const maxDuration = 300; // 5 minutes
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Initialize Google Auth for Vertex AI REST API
 // Support both local (file) and Vercel (JSON string) environments
@@ -21,9 +19,38 @@ const getAuthConfig = () => {
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
     };
   } else {
-    // Local: Use file path
+    // Local: Try key file first, if missing fallback to GOOGLE_DRIVE variables
+    const fs = require('fs');
+    const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (keyPath && fs.existsSync(keyPath)) {
+      return {
+        keyFilename: keyPath,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+      };
+    }
+
+    if (process.env.GOOGLE_DRIVE_CLIENT_EMAIL && process.env.GOOGLE_DRIVE_PRIVATE_KEY) {
+      console.log('⚠️ GOOGLE_APPLICATION_CREDENTIALS file not found. Falling back to GOOGLE_DRIVE credentials.');
+      const credentials = {
+        type: 'service_account',
+        project_id: process.env.GOOGLE_CLOUD_PROJECT_ID || 'dlobplatform',
+        private_key_id: process.env.GOOGLE_DRIVE_PRIVATE_KEY_ID,
+        private_key: process.env.GOOGLE_DRIVE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        client_email: process.env.GOOGLE_DRIVE_CLIENT_EMAIL,
+        client_id: process.env.GOOGLE_DRIVE_CLIENT_ID,
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token',
+        auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+        client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(process.env.GOOGLE_DRIVE_CLIENT_EMAIL)}`
+      };
+      return {
+        credentials,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+      };
+    }
+
     return {
-      keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      keyFilename: keyPath,
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
     };
   }
@@ -83,116 +110,158 @@ function generateSlug(title: string): string {
     .trim();
 }
 
-/**
- * Generate image using Google Imagen 3 via Vertex AI REST API
- */
 async function generateImage(prompt: string, aspectRatio: string = '16:9'): Promise<Buffer | null> {
   try {
-    // Only show food images for EXPLICIT nutrition/diet topics
-    // Keywords are very specific to avoid showing food in training/stamina articles
     const foodKeywords = ['food photography', 'meal prep', 'healthy meal', 'diet plan', 'breakfast', 'lunch', 'dinner', 'snack', 'nutrition plan', 'eating', 'dish', 'plate', 'recipe'];
     const equipmentKeywords = ['product photography', 'racket product', 'shoe product', 'equipment only', 'gear only'];
+    const eventKeywords = [
+      'idul adha', 'eid al-adha', 'kurban', 'qurban', 'mosque', 'masjid', 'ramadan', 'lebaran', 
+      'eid al-fitr', 'holiday', 'festival', 'celebration', 'hari raya', 'social event', 
+      'charity', 'gathering', 'potluck', 'bbq', 'feeding', 'donation', 'community event',
+      'sheep', 'goat', 'cow', 'kambing', 'domba', 'sapi', 'sharing meat', 'berkurban', 'berqurban'
+    ];
     
-    const isFoodImage = foodKeywords.some(keyword => 
-      prompt.toLowerCase().includes(keyword)
-    );
-    const isEquipmentImage = equipmentKeywords.some(keyword => 
-      prompt.toLowerCase().includes(keyword)
-    );
-    const isNonAthleteImage = isFoodImage || isEquipmentImage;
+    const isFoodImage = foodKeywords.some(keyword => prompt.toLowerCase().includes(keyword));
+    const isEquipmentImage = equipmentKeywords.some(keyword => prompt.toLowerCase().includes(keyword));
+    const isEventImage = eventKeywords.some(keyword => prompt.toLowerCase().includes(keyword));
+    const isNonAthleteImage = isFoodImage || isEquipmentImage || isEventImage;
     
-    // Enhance prompt based on image type
     let enhancedPrompt = prompt;
-    
     if (!isNonAthleteImage) {
-      // For athlete images, ensure badminton context
       const badmintonKeywords = ['badminton', 'shuttlecock', 'racket', 'racquet'];
-      const hasBadmintonKeyword = badmintonKeywords.some(keyword => 
-        prompt.toLowerCase().includes(keyword)
-      );
-      
+      const hasBadmintonKeyword = badmintonKeywords.some(keyword => prompt.toLowerCase().includes(keyword));
       if (!hasBadmintonKeyword) {
-        // Add badminton context if missing
         enhancedPrompt = `Badminton sports photography: ${prompt}, include visible badminton equipment (racket or shuttlecock or court)`;
         console.log(`⚠️ Prompt enhanced to include badminton context`);
       }
     }
-    // For non-athlete images (food, equipment, etc), use prompt as-is
-    
-    console.log(`🎨 Generating image with Imagen 3`);
-    console.log(`📝 Full prompt: ${enhancedPrompt}`);
-    
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
-    const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
-    
-    if (!projectId) {
-      console.error('❌ GOOGLE_CLOUD_PROJECT_ID not set');
-      return null;
-    }
 
-    // Get access token
-    const client = await auth.getClient();
-    const accessToken = await client.getAccessToken();
-    
-    if (!accessToken.token) {
-      console.error('❌ Failed to get access token');
-      return null;
-    }
+    console.log(`🎨 Generating image for prompt: "${enhancedPrompt}"`);
 
-    // Vertex AI Imagen endpoint - Using Imagen 3
-    const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/imagen-3.0-generate-001:predict`;
-
-    const requestBody = {
-      instances: [
-        {
-          prompt: enhancedPrompt,
-        }
-      ],
-      parameters: {
-        sampleCount: 1,
-        aspectRatio: aspectRatio, // '1:1', '9:16', '16:9', '4:3', '3:4'
-        safetySetting: 'block_some',
-        personGeneration: 'allow_adult',
-      }
-    };
-
-    console.log(`📡 Calling Vertex AI Imagen endpoint...`);
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Imagen API error (${response.status}):`, errorText);
-      return null;
-    }
-
-    const result = await response.json();
-    
-    // Extract image from response
-    if (result.predictions && result.predictions.length > 0) {
-      const prediction = result.predictions[0];
+    // 1. Try Vertex AI Service Account (Imagen 3)
+    console.log('📡 Attempting image generation via Vertex AI Service Account (Imagen 3)...');
+    try {
+      const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+      const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
       
-      if (prediction.bytesBase64Encoded) {
-        const buffer = Buffer.from(prediction.bytesBase64Encoded, 'base64');
-        console.log(`✅ Image generated successfully (${buffer.length} bytes)`);
-        return buffer;
+      if (projectId) {
+        const client = await auth.getClient();
+        const accessToken = await client.getAccessToken();
+        
+        if (accessToken.token) {
+          const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/imagen-3.0-generate-001:predict`;
+          const requestBody = {
+            instances: [{ prompt: enhancedPrompt }],
+            parameters: {
+              sampleCount: 1,
+              aspectRatio: aspectRatio,
+              safetySetting: 'block_some',
+              personGeneration: 'allow_adult',
+            }
+          };
+
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken.token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.predictions?.[0]?.bytesBase64Encoded) {
+              const buffer = Buffer.from(result.predictions[0].bytesBase64Encoded, 'base64');
+              console.log(`✅ Image generated via Vertex AI Imagen 3 (${buffer.length} bytes)`);
+              return buffer;
+            }
+          } else {
+            const errorText = await response.text();
+            console.warn(`⚠️ Vertex AI Imagen 3 error (${response.status}):`, errorText);
+          }
+        } else {
+          console.warn('⚠️ Failed to get access token for Vertex AI');
+        }
+      } else {
+        console.warn('⚠️ GOOGLE_CLOUD_PROJECT_ID not set, skipping Imagen 3');
+      }
+    } catch (vertexError: any) {
+      console.warn('⚠️ Vertex AI Service Account Imagen 3 failed/out of service:', vertexError.message || vertexError);
+    }
+
+    // 2. Fallback to Google AI Studio API Key (Imagen 4)
+    const apiKey = process.env.IMAGEN_API_KEY || process.env.GEMINI_API_KEY;
+    if (apiKey) {
+      console.log('📡 Falling back: Attempting image generation via Google AI Studio API key (Imagen 4)...');
+      try {
+        const modelName = 'imagen-4.0-generate-001';
+        const studioEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:predict?key=${apiKey}`;
+        const studioRequestBody = {
+          instances: [{ prompt: enhancedPrompt }],
+          parameters: { sampleCount: 1, aspectRatio: aspectRatio }
+        };
+
+        const response = await fetch(studioEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(studioRequestBody),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.predictions?.[0]?.bytesBase64Encoded) {
+            const buffer = Buffer.from(result.predictions[0].bytesBase64Encoded, 'base64');
+            console.log(`✅ Image generated via Google AI Studio Imagen 4 (${buffer.length} bytes)`);
+            return buffer;
+          }
+        } else {
+          const errText = await response.text();
+          console.warn(`⚠️ Google AI Studio Imagen 4 error (${response.status}):`, errText);
+        }
+      } catch (studioError: any) {
+        console.warn('⚠️ Google AI Studio Imagen 4 request failed:', studioError.message || studioError);
       }
     }
-    
-    console.log('⚠️ No image data in response');
+
+    // 3. Fallback to Pollinations.ai (Flux - completely free!)
+    console.log('📡 Falling back: Attempting image generation via Pollinations.ai (Flux)...');
+    try {
+      let width = 1024;
+      let height = 576;
+      if (aspectRatio === '1:1') {
+        width = 1024;
+        height = 1024;
+      } else if (aspectRatio === '4:3') {
+        width = 1024;
+        height = 768;
+      }
+      
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${width}&height=${height}&nologo=true&model=flux`;
+      const response = await fetch(pollinationsUrl);
+      
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        if (buffer.length > 0) {
+          console.log(`✅ Image generated via Pollinations Flux (${buffer.length} bytes)`);
+          return buffer;
+        }
+      } else {
+        console.warn(`⚠️ Pollinations.ai Flux error (${response.status})`);
+      }
+    } catch (pollinationsError: any) {
+      console.warn('⚠️ Pollinations.ai Flux request failed:', pollinationsError.message || pollinationsError);
+    }
+
+    console.log('❌ All image generation options failed.');
     return null;
   } catch (error) {
-    console.error('❌ Imagen generation error:', error);
-    console.log('⚠️ Falling back to placeholder');
+    console.error('❌ Imagen generation failed:', error);
     return null;
   }
 }
+
 
 /**
  * Upload image to Supabase Storage
@@ -339,7 +408,7 @@ export async function POST(request: NextRequest) {
     await updateQueueProgress(5, 'Memulai pembuatan artikel...');
 
     // Step 1: Generate article structure with Gemini 2.5 Flash Lite
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = getGenerativeModelWithFallback({ model: "gemini-2.5-flash-lite" });
 
     const systemPrompt = `Kamu adalah AI penulis artikel profesional untuk komunitas badminton DLOB.
 
@@ -383,6 +452,10 @@ B. UNTUK GAMBAR NON-ATLET (nutrisi, peralatan, fasilitas, dll):
   * Contoh: "Wide angle shot of professional indoor badminton court with green floor, white net, and stadium seating"
 - JIKA tentang KESEHATAN/MEDIS: Tunjukkan stretching, physiotherapy, injury prevention, medical care
   * Contoh: "Professional photo of athlete stretching leg muscles on yoga mat, fitness studio environment"
+- JIKA tentang EVENT/KOMUNITAS/SOSIAL/HARI RAYA (Idul Adha, Ramadan, Gathering, Rapat, Amal): Tunjukkan suasana perayaan yang relevan, dekorasi hari besar, masjid, hewan kurban (kambing/domba/sapi yang sehat) untuk Idul Adha, atau interaksi sosial anggota komunitas.
+  * Contoh: "A clean professional photo of healthy sacrificial sheep and goats in a clean farm pen, soft natural lighting"
+  * Contoh: "Indonesian family celebrating Eid al-Adha at home, sharing meals together, warm and happy atmosphere, professional photography"
+  * Contoh: "Modern community gathering of athletic people enjoying an outdoor healthy barbecue, smiling faces, bright daylight"
 
 C. ATURAN UMUM:
 - SETIAP gambar harus BERBEDA dan unik - variasikan angle, pose, dan komposisi
@@ -401,6 +474,10 @@ NUTRISI/MAKANAN:
 ✅ "Top-down professional food photography of balanced athlete breakfast with oatmeal, berries, banana, protein shake, and almonds on marble table, natural morning light"
 ✅ "Colorful healthy meal prep containers with grilled chicken, quinoa, broccoli and sweet potato, arranged neatly, clean studio lighting"
 ✅ "Sports nutrition still life with fresh fruits (banana, apple, orange), energy bars, water bottle, and protein powder on wooden surface"
+
+EVENT / HARI RAYA:
+✅ "A clean professional photo of a healthy sheep and goat in a clean farm pen, soft natural lighting, high detail"
+✅ "Indonesian community members smiling and sharing packages of meat during Eid al-Adha event, warm lighting, professional photography"
 
 PERALATAN:
 ✅ "Professional product shot of premium badminton racket with carbon fiber frame and fresh shuttlecocks on white background, studio lighting"

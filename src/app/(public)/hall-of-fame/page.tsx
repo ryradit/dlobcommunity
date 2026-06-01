@@ -24,44 +24,56 @@ async function getActiveMemberCount(): Promise<number> {
 export default async function HallOfFamePage() {
   const activeMemberCount = await getActiveMemberCount();
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neutral-50/50">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 to-purple-50 py-20">
+      <section className="bg-linear-to-b from-neutral-100/60 via-neutral-50/30 to-transparent py-20 border-b border-neutral-200/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex items-center justify-center mb-6">
-            <Trophy className="h-16 w-16 text-yellow-500 mr-4" />
-            <Users className="h-12 w-12 text-blue-600" />
+          <div className="flex justify-center mb-6">
+            <div className="p-3 bg-white rounded-2xl border border-neutral-200/50 shadow-xs">
+              <Trophy className="h-10 w-10 text-[#1e4843]" />
+            </div>
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-neutral-800 mb-6 tracking-tight">
             Hall of Fame
           </h1>
-          <p className="text-xl md:text-2xl text-gray-700 max-w-4xl mx-auto mb-6 leading-relaxed">
-            Mengenal lebih dekat para anggota luar biasa komunitas DLOB yang telah berkontribusi 
-            membangun komunitas badminton terbaik di Indonesia 🏸
+          <p className="text-lg md:text-xl text-neutral-600 max-w-3xl mx-auto mb-6 leading-relaxed">
+            Mengenal lebih dekat para anggota komunitas DLOB yang berdedikasi tinggi, 
+            menjunjung tinggi sportivitas, dan aktif berkolaborasi untuk bertumbuh bersama 🏸
           </p>
-          <div className="flex items-center justify-center space-x-2 text-lg text-gray-600 mb-12">
-            <Star className="h-5 w-5 text-yellow-500" />
+          <div className="flex items-center justify-center space-x-2 text-sm text-neutral-500 font-medium mb-8">
+            <Star className="h-4 w-4 text-[#1e4843] opacity-80" />
             <span>Setiap Sabtu • 20:00-23:00 WIB • GOR Wisma Harapan</span>
-            <Star className="h-5 w-5 text-yellow-500" />
+            <Star className="h-4 w-4 text-[#1e4843] opacity-80" />
+          </div>
+
+          {/* Link to Leaderboard */}
+          <div className="flex justify-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <a
+              href="/leaderboard"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#1e4843] text-white hover:bg-[#162f2c] transition-all duration-300 font-semibold rounded-xl text-sm shadow-md hover:shadow-lg hover:scale-[1.02] cursor-pointer"
+            >
+              <Trophy className="h-4 w-4" />
+              <span>Lihat Klasemen & Leaderboard Pemain</span>
+            </a>
           </div>
           
           {/* Stats Banner */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-100 hover:shadow-xl transition-shadow">
-              <div className="text-3xl font-bold text-blue-600 mb-2">{activeMemberCount}</div>
-              <div className="text-sm text-gray-600 font-medium">Member Aktif</div>
+            <div className="bg-white rounded-2xl p-6 border border-neutral-200/60 hover:border-neutral-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.02)] transition-all duration-300">
+              <div className="text-3xl font-bold text-[#1e4843] mb-1">{activeMemberCount}</div>
+              <div className="text-xs text-neutral-500 font-semibold uppercase tracking-wider">Member Aktif</div>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-green-100 hover:shadow-xl transition-shadow">
-              <div className="text-3xl font-bold text-green-600 mb-2">5+</div>
-              <div className="text-sm text-gray-600 font-medium">Tahun Berdiri</div>
+            <div className="bg-white rounded-2xl p-6 border border-neutral-200/60 hover:border-neutral-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.02)] transition-all duration-300">
+              <div className="text-3xl font-bold text-[#1e4843] mb-1">5+</div>
+              <div className="text-xs text-neutral-500 font-semibold uppercase tracking-wider">Tahun Berdiri</div>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-purple-100 hover:shadow-xl transition-shadow">
-              <div className="text-3xl font-bold text-purple-600 mb-2">500+</div>
-              <div className="text-sm text-gray-600 font-medium">Match Dimainkan</div>
+            <div className="bg-white rounded-2xl p-6 border border-neutral-200/60 hover:border-neutral-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.02)] transition-all duration-300">
+              <div className="text-3xl font-bold text-[#1e4843] mb-1">500+</div>
+              <div className="text-xs text-neutral-500 font-semibold uppercase tracking-wider">Match Dimainkan</div>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-orange-100 hover:shadow-xl transition-shadow">
-              <div className="text-3xl font-bold text-orange-600 mb-2">100%</div>
-              <div className="text-sm text-gray-600 font-medium">Semangat</div>
+            <div className="bg-white rounded-2xl p-6 border border-neutral-200/60 hover:border-neutral-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.02)] transition-all duration-300">
+              <div className="text-3xl font-bold text-[#1e4843] mb-1">100%</div>
+              <div className="text-xs text-neutral-500 font-semibold uppercase tracking-wider">Semangat</div>
             </div>
           </div>
         </div>
@@ -105,7 +117,7 @@ export default async function HallOfFamePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="/pre-order"
-              className="inline-flex items-center justify-center px-8 py-3 bg-white text-black font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-300"
+              className="inline-flex items-center justify-center px-8 py-3 bg-white text-black font-semibold rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300"
             >
               <span>Gabung Komunitas</span>
               <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,7 +126,7 @@ export default async function HallOfFamePage() {
             </a>
             <a
               href="/tentang"
-              className="inline-flex items-center justify-center px-8 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-full border border-white/30 hover:bg-white/20 hover:border-white/50 transition-all duration-300"
+              className="inline-flex items-center justify-center px-8 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/30 hover:bg-white/20 hover:border-white/50 transition-all duration-300"
             >
               Pelajari Lebih Lanjut
             </a>

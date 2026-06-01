@@ -257,10 +257,12 @@ export default function FloatingAIChat() {
   };
 
   const formatMessageWithCopyButton = (content: string) => {
+    // Clean up any remaining markdown bold asterisks
+    const cleanedContent = content.replace(/\*\*/g, '');
     // Matches: +62 812-7073-7272 / +62812-7073-7272 / 0812-7073-7272 / 08127073727
     const PHONE_SPLIT_RE = /(\+62[\s]?\d{3}[-\s]?\d{4}[-\s]?\d{4}|\+62\d{9,11}|0\d{3}-\d{4}-\d{4}|0\d{10,11})/g;
     const IS_PHONE_RE   =  /^(\+62[\s]?\d{3}[-\s]?\d{4}[-\s]?\d{4}|\+62\d{9,11}|0\d{3}-\d{4}-\d{4}|0\d{10,11})$/;
-    const parts = content.split(PHONE_SPLIT_RE);
+    const parts = cleanedContent.split(PHONE_SPLIT_RE);
 
     const toWaNumber = (phone: string): string => {
       const digits = phone.replace(/\D/g, '');

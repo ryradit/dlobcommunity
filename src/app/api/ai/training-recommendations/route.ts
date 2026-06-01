@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { getGenerativeModelWithFallback } from '@/lib/gemini';
 
 // YouTube Data API v3
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
@@ -187,7 +185,7 @@ export async function POST(request: NextRequest) {
     // Generate AI advice
     try {
       console.log('[Training API] Generating AI advice...');
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+      const model = getGenerativeModelWithFallback({ model: 'gemini-2.5-flash-lite' });
       
       const prompt = `${TRAINING_SYSTEM_PROMPT}\n\nPertanyaan user: ${query}`;
       const result = await model.generateContent(prompt);

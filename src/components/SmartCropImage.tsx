@@ -56,7 +56,27 @@ export default function SmartCropImage({ src, alt, name: _name, className = '', 
       const containerH = container.clientHeight;
 
       const imagePath = src.startsWith('/') ? src : new URL(src).pathname;
-      const face = await faceDetection.detectFacePercent(imagePath);
+      let face = await faceDetection.detectFacePercent(imagePath);
+
+      // Smart Heuristic for official member photos when Gemini is offline, rate-limited, or returns incorrect coordinates:
+      if (src.includes('/images/members/')) {
+        const isFallback = (face.faceY === 18 && face.zoom === 1.0);
+        const isUnreasonable = (face.faceY > 40); // Official member photo poses never have faces below 40% height
+        
+        if (isFallback || isUnreasonable) {
+          const aspect = naturalHeight / naturalWidth;
+          if (aspect > 1.2) {
+            // Portrait full-body standing photo: face is very high up (~11%)
+            // We zoom to 1.35 to show the face and chest comfortably.
+            face = { faceX: 50, faceY: 11, zoom: 1.35 };
+          } else {
+            // Landscape/Square half-body / close-up photo: face is slightly lower (~18%)
+            // We use a smaller zoom of 1.15 to keep the head perfectly framed.
+            face = { faceX: 50, faceY: 18, zoom: 1.15 };
+          }
+        }
+      }
+
       const faceZoom = face.zoom ?? 1.3;
 
       // Dynamic target face position:
@@ -83,8 +103,8 @@ export default function SmartCropImage({ src, alt, name: _name, className = '', 
         : 50;
 
       setObjectPosition(`${objX.toFixed(1)}% ${objY.toFixed(1)}%`);
-      // Anchor zoom transform to the face position in the card
-      setTransformOrigin(`${objX.toFixed(1)}% ${(targetFaceY * 100).toFixed(1)}%`);
+      // Anchor zoom transform to the face position in the card (horizontally centered at 50%)
+      setTransformOrigin(`50% ${(targetFaceY * 100).toFixed(1)}%`);
       setZoom(faceZoom);
     } catch (err) {
       console.warn('SmartCropImage: position calc failed, using default', err);

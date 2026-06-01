@@ -194,7 +194,7 @@ export default function Refleksi2025Page() {
           </p>
           <Link 
             href="/galeri" 
-            className="inline-flex items-center gap-2 px-8 py-3 bg-[#1e4843] text-white font-semibold rounded-full hover:bg-[#162f2c] transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-3 bg-[#1e4843] text-white font-semibold rounded-xl hover:bg-[#162f2c] transition-colors"
           >
             Kunjungi Gallery →
           </Link>

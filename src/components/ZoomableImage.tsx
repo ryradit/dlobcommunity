@@ -9,6 +9,7 @@ interface ZoomableImageProps {
   name: string;
   zoomFactor?: number; // default 3.5×
   objectPositionOverride?: string;
+  className?: string;
 }
 
 /**
@@ -24,6 +25,7 @@ export default function ZoomableImage({
   name,
   zoomFactor = 3.5,
   objectPositionOverride,
+  className = '',
 }: ZoomableImageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null); // 0-1 fractions
@@ -78,7 +80,7 @@ export default function ZoomableImage({
         {/* Main image */}
         <div
           ref={containerRef}
-          className={`relative aspect-3/4 overflow-hidden bg-gray-100 ${pos ? 'cursor-crosshair' : 'cursor-zoom-in'}`}
+          className={`relative aspect-3/4 overflow-hidden bg-gray-100 ${pos ? 'cursor-crosshair' : 'cursor-zoom-in'} ${className}`}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           onClick={() => { if (!pos) setLightboxOpen(true); }}
@@ -118,7 +120,7 @@ export default function ZoomableImage({
               style={{
                 width: '100%',
                 height: '100%',
-                backgroundImage: `url(${cssSrc})`,
+                backgroundImage: `url("${cssSrc}")`,
                 backgroundRepeat: 'no-repeat',
                 backgroundSize: `${zoomFactor * 100}%`,
                 backgroundPosition: `${bgX}% ${bgY}%`,

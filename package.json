@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -11,12 +11,15 @@
   "dependencies": {
     "@google-cloud/vertexai": "^1.10.0",
     "@google/generative-ai": "^0.24.1",
+    "@pinecone-database/pinecone": "^3.0.0",
     "@react-pdf/renderer": "^4.3.2",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
+    "@tensorflow/tfjs": "^4.11.0",
     "@types/nodemailer": "^7.0.11",
     "clsx": "^2.1.1",
     "dotenv": "^17.3.1",
+    "face-api.js": "^0.22.2",
     "framer-motion": "^12.29.2",
     "google-auth-library": "^10.5.0",
     "googleapis": "^170.1.0",
@@ -31,7 +34,8 @@
     "recharts": "^3.7.0",
     "resend": "^6.9.2",
     "sharp": "^0.34.5",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

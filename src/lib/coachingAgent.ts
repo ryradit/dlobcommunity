@@ -164,18 +164,28 @@ export async function executeTrainingPlanGeneration(
   try {
     const drillProgression = generateDrillProgression(focusWeakness, durationWeeks, daysPerWeek);
     
+    let indonesianFocus = focusWeakness;
+    if (focusWeakness === 'smash') indonesianFocus = 'smash';
+    else if (focusWeakness === 'backhand') indonesianFocus = 'backhand';
+    else if (focusWeakness === 'stamina') indonesianFocus = 'stamina';
+    else if (focusWeakness === 'defense') indonesianFocus = 'pertahanan';
+    else if (focusWeakness === 'footwork') indonesianFocus = 'langkah kaki (footwork)';
+    else if (focusWeakness === 'net_play') indonesianFocus = 'permainan net';
+
+    const expectedOutcome = `Meningkatkan kemampuan ${indonesianFocus} sebesar 25-35% dalam waktu ${durationWeeks} minggu`;
+
     const trainingPlan = {
       userId,
       weeklySchedule: drillProgression,
       totalDays: durationWeeks * 7,
       focusWeakness,
-      expectedOutcome: `Improve ${focusWeakness} by 25-35% within ${durationWeeks} weeks`,
+      expectedOutcome,
       progressionLevel: calculateProgressionLevel(focusWeakness, durationWeeks),
       createdAt: new Date(),
     };
 
-    // Save to `training_plans` table [will create in schema migration]
-    const { error } = await supabase
+    // Save to `training_plans` table and get the plan ID back using select()
+    const { data: planInsertData, error } = await supabase
       .from('training_plans')
       .insert([{
         user_id: userId,
@@ -186,10 +196,50 @@ export async function executeTrainingPlanGeneration(
         expected_outcome: trainingPlan.expectedOutcome,
         status: 'active',
         created_at: new Date().toISOString(),
-      }]);
+      }])
+      .select();
 
     if (error) {
       console.error('[Coach Agent] Error saving training plan:', error);
+    } else {
+      const insertedPlan = planInsertData?.[0];
+      if (insertedPlan) {
+        const planId = insertedPlan.id;
+        const drillsToInsert: any[] = [];
+
+        // Loop over the weekly schedule to generate individual drill rows
+        trainingPlan.weeklySchedule.forEach((weekObj: any) => {
+          weekObj.days.forEach((dayObj: any) => {
+            dayObj.drills.forEach((drillObj: any) => {
+              drillsToInsert.push({
+                user_id: userId,
+                training_plan_id: planId,
+                drill_name: drillObj.name,
+                drill_type: 'technique',
+                description: `Latihan minggu ke-${weekObj.week}, hari ke-${dayObj.day}`,
+                sets: drillObj.sets || 3,
+                reps_per_set: drillObj.repsPerSet || 15,
+                rest_seconds: drillObj.rest || 60,
+                duration_minutes: dayObj.duration || 30,
+                current_difficulty: calculateProgressionLevel(focusWeakness, weekObj.week),
+                assigned_date: new Date().toISOString(),
+              });
+            });
+          });
+        });
+
+        if (drillsToInsert.length > 0) {
+          const { error: drillsError } = await supabase
+            .from('assigned_drills')
+            .insert(drillsToInsert);
+
+          if (drillsError) {
+            console.error('[Coach Agent] Error saving assigned drills:', drillsError);
+          } else {
+            console.log(`[Coach Agent] Successfully assigned ${drillsToInsert.length} drills to user ${userId}`);
+          }
+        }
+      }
     }
 
     return trainingPlan;

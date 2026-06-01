@@ -16,6 +16,7 @@ interface AuthContextType {
   viewAs: 'admin' | 'member';
   loading: boolean;
   switchView: (view: 'admin' | 'member') => void;
+  getSessionToken: () => string | null;
   signUp: (email: string, password: string, fullName: string) => Promise<{ user: User | null; session: Session | null }>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -48,31 +49,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (profile?.avatar_url) {
-        // Get fresh user data
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        
-        // If avatar in profile differs from user metadata, sync it
-        if (currentUser && currentUser.user_metadata?.avatar_url !== profile.avatar_url) {
-          const { data: { user: updatedUser }, error } = await supabase.auth.updateUser({
-            data: { avatar_url: profile.avatar_url }
-          });
-          
-          if (!error && updatedUser) {
-            setUser(updatedUser);
-          }
-        } else if (currentUser) {
-          // Even if same, ensure user state is updated
-          setUser(currentUser);
-        }
-      } else {
-        // No avatar in profile, but still update user to ensure state is fresh
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (currentUser) {
-          setUser(currentUser);
-        }
+        // Avatar already set in profile, update metadata
+        await supabase.auth.updateUser({
+          data: { avatar_url: profile.avatar_url },
+        });
       }
     } catch (error) {
-      console.error('Error syncing avatar:', error);
+      console.error('[AuthContext] Error syncing avatar from profile:', error);
+    }
+  };
+
+  // Sync Google avatar from metadata to profile table
+  const syncGoogleAvatarToProfile = async (user: User) => {
+    try {
+      console.log('[AuthContext] 🔍 syncGoogleAvatarToProfile called for user:', user.id);
+      console.log('[AuthContext] user_metadata keys:', Object.keys(user.user_metadata || {}));
+      console.log('[AuthContext] user_metadata.picture_url:', user.user_metadata?.picture_url);
+      console.log('[AuthContext] user_metadata.picture:', user.user_metadata?.picture);
+      console.log('[AuthContext] user_metadata.avatar_url:', user.user_metadata?.avatar_url);
+      
+      const googlePictureUrl = user.user_metadata?.picture_url || user.user_metadata?.picture || user.user_metadata?.avatar_url;
+      
+      console.log('[AuthContext] Resolved googlePictureUrl:', googlePictureUrl);
+      
+      if (googlePictureUrl) {
+        // Check if profile already has an avatar
+        const { data: profile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        console.log('[AuthContext] Existing profile.avatar_url:', profile?.avatar_url);
+        
+        if (!fetchError && !profile?.avatar_url) {
+          // Profile exists but no avatar - sync from Google
+          console.log('[AuthContext] ✅ Syncing Google avatar to profile:', googlePictureUrl);
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ avatar_url: googlePictureUrl })
+            .eq('id', user.id);
+
+          if (updateError) {
+            console.error('[AuthContext] ❌ Error syncing Google avatar:', updateError);
+          } else {
+            console.log('[AuthContext] ✅ Google avatar synced successfully!');
+          }
+        } else {
+          console.log('[AuthContext] ⚠️  Profile already has avatar or fetch failed:', fetchError);
+        }
+      } else {
+        console.log('[AuthContext] ⚠️  No Google picture URL found in metadata');
+      }
+    } catch (error) {
+      console.error('[AuthContext] ❌ Error in syncGoogleAvatarToProfile:', error);
     }
   };
 
@@ -208,6 +238,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(currentSession?.user ?? null);
           
           if (currentSession?.user) {
+            // Sync Google avatar to profile if needed (for Google OAuth users)
+            syncGoogleAvatarToProfile(currentSession.user);
+            
             // Background tasks - don't await, let them complete asynchronously
             syncAvatarFromProfile(currentSession.user.id);
             
@@ -249,49 +282,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === 'USER_UPDATED') {
         if (mounted && currentSession?.user) {
           setUser(currentSession.user);
+          // Sync Google avatar if user metadata was updated
+          syncGoogleAvatarToProfile(currentSession.user);
           syncAvatarFromProfile(currentSession.user.id);
         }
       }
     });
 
-    // Listen for window focus to check session (cross-tab sync)
-    const handleWindowFocus = async () => {
-      const { data: { session: focusSession }, error: focusError } = await supabase.auth.getSession();
-      if (focusError?.message?.includes('Refresh Token Not Found') || focusError?.message?.includes('Invalid Refresh Token')) {
-        await supabase.auth.signOut();
-        return;
-      }
-      
-      if (mounted) {
-        const hadUser = !!user;
-        const hasUserNow = !!focusSession?.user;
-        
-        // Session state changed while tab was in background
-        if (hadUser !== hasUserNow) {
-          setSession(focusSession);
-          setUser(focusSession?.user ?? null);
-          
-          if (focusSession?.user) {
-            await syncAvatarFromProfile(focusSession.user.id);
-            const userRole = await fetchUserRole(focusSession.user.id);
-            setRole(userRole);
-          } else {
-            setRole('member');
-            setIsAdmin(false);
-            setIsMember(true);
-            setViewAs('member');
-          }
-        }
-      }
-    };
-
-    window.addEventListener('focus', handleWindowFocus);
-
     return () => {
       mounted = false;
       clearTimeout(fallbackTimer);
       subscription.unsubscribe();
-      window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
@@ -561,8 +562,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Get session access token for API requests
+  const getSessionToken = (): string | null => {
+    return session?.access_token ?? null;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, role, isAdmin, isMember, viewAs, loading, switchView, signUp, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, refreshUser, updatePassword }}>
+    <AuthContext.Provider value={{ user, session, role, isAdmin, isMember, viewAs, loading, switchView, getSessionToken, signUp, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, refreshUser, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

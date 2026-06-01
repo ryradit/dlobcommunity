@@ -601,7 +601,7 @@ export default function AnalitikPage() {
   const hasActiveFilters = dateRange.start || dateRange.end || selectedPartner;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 px-4 lg:px-8 py-6 lg:py-8 transition-colors duration-300">
       <ProfileCompletionWarning />
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -636,7 +636,7 @@ export default function AnalitikPage() {
               title="Bagikan laporan"
             >
               <Share2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Share</span>
+              <span className="hidden sm:inline">Bagikan</span>
             </button>
             
             <button
@@ -645,7 +645,7 @@ export default function AnalitikPage() {
               className="member-analitik-ai-insights flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-medium"
             >
               <Sparkles className="w-5 h-5" />
-              {aiLoading ? 'Menganalisis...' : showAI ? 'Sembunyikan AI' : 'AI Insights'}
+              {aiLoading ? 'Menganalisis...' : showAI ? 'Sembunyikan AI' : 'Wawasan AI'}
             </button>
           </div>
         </div>
@@ -656,11 +656,11 @@ export default function AnalitikPage() {
         <div className="mb-8 space-y-6">
           {/* AI Performance Insights */}
           {aiInsights.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 shadow-xs">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <Brain className="w-6 h-6 text-purple-500 dark:text-purple-400" />
-                  AI Performance Insights
+                  Analisis Performa AI
                 </h2>
                 <button
                   onClick={() => setShowAIHelpModal(true)}
@@ -681,17 +681,17 @@ export default function AnalitikPage() {
                                        Target;
                   
                   const colorClass = insight.type === 'positive'
-                    ? 'bg-green-500/10 border-green-500/20 dark:bg-green-500/10 dark:border-green-500/20'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/5 border-emerald-200 dark:border-emerald-500/20 text-gray-900 dark:text-white'
                     : insight.type === 'negative'
-                    ? 'bg-red-500/10 border-red-500/20 dark:bg-red-500/10 dark:border-red-500/20'
-                    : 'bg-blue-500/10 border-blue-500/20 dark:bg-blue-500/10 dark:border-blue-500/20';
+                    ? 'bg-red-50 dark:bg-red-500/5 border-red-200 dark:border-red-500/20 text-gray-900 dark:text-white'
+                    : 'bg-blue-50 dark:bg-blue-500/5 border-blue-200 dark:border-blue-500/20 text-gray-900 dark:text-white';
 
-                  const iconColor = insight.type === 'positive' ? 'text-green-500 dark:text-green-400' :
-                                   insight.type === 'negative' ? 'text-red-500 dark:text-red-400' :
-                                   'text-blue-500 dark:text-blue-400';
+                  const iconColor = insight.type === 'positive' ? 'text-emerald-600 dark:text-emerald-400' :
+                                   insight.type === 'negative' ? 'text-red-600 dark:text-red-400' :
+                                   'text-blue-600 dark:text-blue-400';
 
                   return (
-                    <div key={idx} className={`${colorClass} border rounded-lg p-4`}>
+                    <div key={idx} className={`${colorClass} border rounded-xl p-4`}>
                       <div className="flex items-start gap-3">
                         <IconComponent className={`w-5 h-5 ${iconColor} mt-1 shrink-0`} />
                         <div>
@@ -708,14 +708,14 @@ export default function AnalitikPage() {
 
           {/* Smart Partner Recommendations */}
           {partnerRecommendations.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 shadow-xs">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <UserCheck className="w-6 h-6 text-blue-500 dark:text-blue-400" />
-                Smart Partner Recommendations
+                Rekomendasi Partner Terbaik
               </h2>
               <div className="space-y-3">
                 {partnerRecommendations.map((rec, idx) => (
-                  <div key={idx} className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-lg p-4">
+                  <div key={idx} className="bg-zinc-50 dark:bg-zinc-800/30 border border-gray-200 dark:border-zinc-800/50 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Crown className={`w-5 h-5 ${idx === 0 ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-400 dark:text-zinc-400'}`} />
@@ -725,8 +725,8 @@ export default function AnalitikPage() {
                           rec.confidence === 'medium' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-transparent' :
                           'bg-gray-100 dark:bg-zinc-500/20 text-gray-600 dark:text-zinc-400 border border-gray-300 dark:border-transparent'
                         }`}>
-                          {rec.confidence === 'high' ? 'Highly Recommended' : 
-                           rec.confidence === 'medium' ? 'Recommended' : 'Consider'}
+                          {rec.confidence === 'high' ? 'Sangat Direkomendasikan' : 
+                           rec.confidence === 'medium' ? 'Direkomendasikan' : 'Pertimbangkan'}
                         </span>
                       </div>
                       <span className="text-lg font-bold text-green-400">{rec.winRate}%</span>
@@ -742,105 +742,125 @@ export default function AnalitikPage() {
 
       {/* Stats Grid */}
       <div className="member-analitik-stats grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
-          <div className="flex items-start justify-between mb-3 sm:mb-4">
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 dark:text-blue-400" />
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 hover:border-indigo-400/40 dark:hover:border-zinc-700 transition-all duration-300 shadow-xs hover:shadow-sm hover:-translate-y-0.5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 border">
+              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-zinc-800" />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1">{stats.totalMatches}</div>
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-zinc-300 font-medium">Total Pertandingan</div>
+          <div className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1 transition-colors duration-300 tracking-tight">{stats.totalMatches}</div>
+          <div className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Pertandingan</div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
-          <div className="flex items-start justify-between mb-3 sm:mb-4">
-            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 dark:text-yellow-400" />
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 hover:border-indigo-400/40 dark:hover:border-zinc-700 transition-all duration-300 shadow-xs hover:shadow-sm hover:-translate-y-0.5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2.5 rounded-xl bg-yellow-50 dark:bg-yellow-500/10 border-yellow-200 dark:border-yellow-500/20 border">
+              <Trophy className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-zinc-800" />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1">{stats.totalWins}</div>
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-zinc-300 font-medium">Total Kemenangan</div>
+          <div className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1 transition-colors duration-300 tracking-tight">{stats.totalWins}</div>
+          <div className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Kemenangan</div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
-          <div className="flex items-start justify-between mb-3 sm:mb-4">
-            <Target className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 dark:text-red-400" />
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 hover:border-indigo-400/40 dark:hover:border-zinc-700 transition-all duration-300 shadow-xs hover:shadow-sm hover:-translate-y-0.5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 border">
+              <Target className="w-5 h-5 text-red-600 dark:text-red-400" />
+            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-zinc-800" />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1">{stats.totalLosses}</div>
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-zinc-300 font-medium">Total Kekalahan</div>
+          <div className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1 transition-colors duration-300 tracking-tight">{stats.totalLosses}</div>
+          <div className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Kekalahan</div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
-          <div className="flex items-start justify-between mb-3 sm:mb-4">
-            <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 dark:text-green-400" />
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 hover:border-indigo-400/40 dark:hover:border-zinc-700 transition-all duration-300 shadow-xs hover:shadow-sm hover:-translate-y-0.5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 border">
+              <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-zinc-800" />
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1">{stats.winRate}%</div>
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-zinc-300 font-medium">Persentase Menang</div>
+          <div className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1 transition-colors duration-300 tracking-tight">{stats.winRate}%</div>
+          <div className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Persentase Menang</div>
         </div>
       </div>
 
       {/* Advanced Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Streak Card */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 shadow-xs hover:shadow-sm hover:border-indigo-400/40 dark:hover:border-zinc-700">
           <div className="flex items-center gap-2 mb-4">
             <Flame className="w-5 h-5 text-orange-500 dark:text-orange-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tren Kemenangan</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Tren Kemenangan</h3>
           </div>
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mb-1">Streak Saat Ini</p>
-              <p className={`text-xl font-bold ${stats.currentStreak.type === 'win' ? 'text-green-400' : 'text-red-400'}`}>
+              <p className="text-xs text-gray-500 dark:text-zinc-400 font-bold mb-1">Streak Saat Ini</p>
+              <p className={`text-xl font-extrabold ${
+                stats.currentStreak.type === 'win'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : stats.currentStreak.type === 'loss'
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-gray-500 dark:text-zinc-400'
+              }`}>
                 {stats.currentStreak.count} {stats.currentStreak.type === 'win' ? 'Menang' : stats.currentStreak.type === 'loss' ? 'Kalah' : '-'}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-200 dark:border-white/10">
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-150 dark:border-zinc-800/80">
               <div>
-                <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mb-1">Menang Berturut-turut</p>
-                <p className="text-lg font-bold text-green-600 dark:text-green-400">{stats.longestWinStreak}</p>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 font-bold mb-1">Menang Berturut</p>
+                <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{stats.longestWinStreak}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mb-1">Kalah Berturut-turut</p>
-                <p className="text-lg font-bold text-red-600 dark:text-red-400">{stats.longestLossStreak}</p>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 font-bold mb-1">Kalah Berturut</p>
+                <p className="text-lg font-extrabold text-red-600 dark:text-red-400">{stats.longestLossStreak}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Score Stats */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 shadow-xs hover:shadow-sm hover:border-indigo-400/40 dark:hover:border-zinc-700">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-purple-500 dark:text-purple-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Statistik Skor</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Statistik Skor</h3>
           </div>
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mb-1">Rata-rata Skor</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.averageScore}</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-400 font-bold mb-1">Rata-rata Skor</p>
+              <p className="text-xl font-extrabold text-gray-900 dark:text-white">{stats.averageScore}</p>
             </div>
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-200 dark:border-white/10">
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-150 dark:border-zinc-800/80">
               <div>
-                <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mb-1">Skor Tertinggi</p>
-                <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">{stats.highestScore}</p>
-                <p className="text-xs text-gray-400 dark:text-zinc-500">poin maksimal</p>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 font-bold mb-1">Skor Tertinggi</p>
+                <p className="text-lg font-extrabold text-yellow-600 dark:text-yellow-400">{stats.highestScore}</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-400">poin maksimal</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mb-1">Kemenangan Terbesar</p>
-                <p className="text-lg font-bold text-green-600 dark:text-green-400">+{stats.biggestWinMargin}</p>
-                <p className="text-xs text-gray-400 dark:text-zinc-500">selisih poin</p>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 font-bold mb-1">Kemenangan Terbesar</p>
+                <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">+{stats.biggestWinMargin}</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-400">selisih poin</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Recent Form */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 shadow-xs hover:shadow-sm hover:border-indigo-400/40 dark:hover:border-zinc-700">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Form</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Form</h3>
           </div>
           <div className="flex gap-2 justify-center">
             {stats.recentForm.length > 0 ? stats.recentForm.map((isWin, idx) => (
               <div
                 key={idx}
-                className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold ${
-                  isWin ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                className={`w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-lg transition-all duration-300 ${
+                  isWin
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
+                    : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20'
                 }`}
               >
                 {isWin ? 'W' : 'L'}
@@ -849,13 +869,13 @@ export default function AnalitikPage() {
               <p className="text-zinc-400 text-sm">Belum ada data</p>
             )}
           </div>
-          <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium text-center mt-3">5 Pertandingan Terakhir</p>
+          <p className="text-xs text-gray-500 dark:text-zinc-400 font-bold text-center mt-3">5 Pertandingan Terakhir</p>
         </div>
       </div>
 
       {/* Monthly Performance Chart */}
       {monthlyData.length > 0 && (
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 mb-8 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 mb-8 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <BarChart3 className="w-5 h-5" />
             Performa Bulanan
@@ -904,7 +924,7 @@ export default function AnalitikPage() {
       <div className="member-analitik-charts grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Score Progression */}
         {scoreProgression.length > 0 && (
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-blue-500 dark:text-blue-400" />
               Perkembangan Score
@@ -966,7 +986,7 @@ export default function AnalitikPage() {
 
         {/* Form Trend */}
         {formTrend.length > 0 && (
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <Flame className="w-5 h-5 text-orange-500 dark:text-orange-400" />
               Tren Performa
@@ -1024,7 +1044,7 @@ export default function AnalitikPage() {
       {/* Partner & Opponent Stats */}
       <div className="member-analitik-partners grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Best Partners - Now with Bar Chart */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <UserCheck className="w-5 h-5 text-blue-500 dark:text-blue-400" />
             Partner Terbaik
@@ -1071,7 +1091,7 @@ export default function AnalitikPage() {
         </div>
 
         {/* Opponent Stats - Now with Bar Chart */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <Users className="w-5 h-5 text-red-500 dark:text-red-400" />
             Lawan Tersering
@@ -1121,24 +1141,24 @@ export default function AnalitikPage() {
       {/* Partner & Opponent Lists (Keep original cards below charts) */}
       <div className="member-analitik-opponents grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Best Partners List */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 shadow-xs hover:shadow-sm hover:border-indigo-400/40 dark:hover:border-zinc-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <UserCheck className="w-5 h-5 text-blue-500 dark:text-blue-400" />
             Detail Partner
           </h3>
           <div className="space-y-3">
             {partnerStats.slice(0, 5).map((partner, idx) => (
-              <div key={partner.name} className="flex items-center justify-between p-3 bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/5 rounded-lg">
+              <div key={partner.name} className="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-gray-200/60 dark:border-zinc-800/50 rounded-xl">
                 <div className="flex items-center gap-3">
                   {idx === 0 && <Crown className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />}
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{partner.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-zinc-400">{partner.matches} matches</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{partner.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">{partner.matches} matches</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-green-600 dark:text-green-400">{partner.winRate}%</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{partner.wins}W</p>
+                  <p className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">{partner.winRate}%</p>
+                  <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">{partner.wins}W</p>
                 </div>
               </div>
             ))}
@@ -1146,21 +1166,21 @@ export default function AnalitikPage() {
         </div>
 
         {/* Opponent Stats List */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 shadow-xs hover:shadow-sm hover:border-indigo-400/40 dark:hover:border-zinc-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Users className="w-5 h-5 text-red-500 dark:text-red-400" />
             Detail Lawan
           </h3>
           <div className="space-y-3">
             {opponentStats.slice(0, 5).map((opponent) => (
-              <div key={opponent.name} className="flex items-center justify-between p-3 bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/5 rounded-lg">
+              <div key={opponent.name} className="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-gray-200/60 dark:border-zinc-800/50 rounded-xl">
                 <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{opponent.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{opponent.matches} matches</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{opponent.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">{opponent.matches} matches</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">{opponent.wins}W - {opponent.losses}L</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{opponent.winRate}%</p>
+                  <p className="text-sm font-extrabold text-gray-900 dark:text-white">{opponent.wins}W - {opponent.losses}L</p>
+                  <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">{opponent.winRate}%</p>
                 </div>
               </div>
             ))}
@@ -1169,7 +1189,7 @@ export default function AnalitikPage() {
       </div>
 
       {/* Filters */}
-      <div className="member-analitik-filter bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 mb-6 shadow-sm transition-colors duration-300">
+      <div className="member-analitik-filter bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 mb-6 shadow-sm transition-colors duration-300">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Filter className="w-5 h-5" />
@@ -1191,7 +1211,7 @@ export default function AnalitikPage() {
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
             <div>
@@ -1200,7 +1220,7 @@ export default function AnalitikPage() {
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
             <div>
@@ -1208,7 +1228,7 @@ export default function AnalitikPage() {
               <select
                 value={selectedPartner}
                 onChange={(e) => setSelectedPartner(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800/80 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
               >
                 <option value="">Semua Partner</option>
                 {partnerStats.map(p => (
@@ -1236,9 +1256,9 @@ export default function AnalitikPage() {
       </div>
 
       {/* Match History */}
-      <div className="member-analitik-match-history bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+      <div className="member-analitik-match-history bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 shadow-xs hover:shadow-sm hover:border-indigo-400/40 dark:hover:border-zinc-700">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Award className="w-5 h-5" />
+          <Award className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
           Riwayat Pertandingan
         </h2>
         
@@ -1255,14 +1275,14 @@ export default function AnalitikPage() {
             {filteredMatches.slice(0, 10).map((match) => (
               <div
                 key={match.id}
-                className="group relative overflow-hidden rounded-xl border-2 border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-zinc-800/50 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all duration-300 hover:shadow-md hover:scale-[1.01]"
+                className="group relative overflow-hidden rounded-2xl border border-gray-200/80 dark:border-zinc-800/85 bg-white dark:bg-zinc-900/60 hover:bg-gray-50/50 dark:hover:bg-zinc-800/30 transition-all duration-300 shadow-xs"
               >
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/5">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/60 dark:border-zinc-800/50">
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">
                       Match #{match.match_number}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-zinc-400 flex items-center gap-1">
+                    <span className="text-xs text-gray-500 dark:text-zinc-400 flex items-center gap-1 font-semibold">
                       <Calendar className="w-3 h-3" />
                       {new Date(match.match_date ?? match.created_at).toLocaleDateString('id-ID', {
                         day: 'numeric',
@@ -1270,15 +1290,15 @@ export default function AnalitikPage() {
                         year: 'numeric'
                       })}
                     </span>
-                    <span className="text-xs text-gray-400 dark:text-zinc-500">vs {match.opponents.join(', ')}</span>
+                    <span className="text-xs text-gray-400 dark:text-zinc-500 font-semibold">vs {match.opponents.join(', ')}</span>
                   </div>
                   {match.isWinner ? (
-                    <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold flex items-center gap-1 border border-green-500/30">
+                    <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-extrabold flex items-center gap-1 border border-emerald-200 dark:border-emerald-500/20">
                       <Trophy className="w-3 h-3" />
                       Menang
                     </span>
                   ) : (
-                    <span className="px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold border border-red-500/30">
+                    <span className="px-3 py-1 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-full text-xs font-extrabold border border-red-200 dark:border-red-500/20">
                       Kalah
                     </span>
                   )}
@@ -1286,49 +1306,53 @@ export default function AnalitikPage() {
 
                 <div className="p-4">
                   <div className="flex items-center justify-between gap-4">
-                    <div className={`flex-1 p-4 rounded-lg transition-all ${
+                    <div className={`flex-1 p-4 rounded-xl transition-all border ${
                       match.myTeam === 'team1' 
                         ? match.winner === 'team1'
-                          ? 'bg-green-500/10 border-2 border-green-500/30 shadow-lg shadow-green-500/20'
-                          : 'bg-red-500/10 border-2 border-red-500/30 shadow-lg shadow-red-500/20'
-                        : 'bg-gray-100 dark:bg-zinc-900/50 border border-gray-200 dark:border-white/5'
+                          ? 'bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-200 dark:border-emerald-500/20 shadow-xs'
+                          : 'bg-red-50/50 dark:bg-red-500/5 border-red-200 dark:border-red-500/20 shadow-xs'
+                        : 'bg-zinc-50/50 dark:bg-zinc-900/30 border-gray-150 dark:border-zinc-800/50'
                     }`}>
                       <div className="flex items-center gap-2 mb-3">
                         <Users className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                        <p className="text-xs font-semibold text-gray-600 dark:text-zinc-400">Tim 1</p>
+                        <p className="text-xs font-bold text-gray-600 dark:text-zinc-400">Tim 1</p>
                       </div>
                       <div className="space-y-1 mb-3">
-                        <p className="text-sm text-gray-900 dark:text-white font-semibold">{match.team1_player1}</p>
-                        <p className="text-sm text-gray-900 dark:text-white font-semibold">{match.team1_player2}</p>
+                        <p className="text-sm text-gray-900 dark:text-white font-bold">{match.team1_player1}</p>
+                        <p className="text-sm text-gray-900 dark:text-white font-bold">{match.team1_player2}</p>
                       </div>
-                      <p className={`text-3xl font-bold ${
-                        match.winner === 'team1' ? 'text-green-400' : 'text-red-400'
+                      <p className={`text-3xl font-extrabold ${
+                        match.winner === 'team1' 
+                          ? 'text-emerald-600 dark:text-emerald-400' 
+                          : 'text-red-600 dark:text-red-400'
                       }`}>
                         {match.team1_score}
                       </p>
                     </div>
 
                     <div className="flex flex-col items-center justify-center px-2">
-                      <p className="text-lg font-bold text-gray-400 dark:text-zinc-500">VS</p>
+                      <p className="text-lg font-extrabold text-gray-400 dark:text-zinc-500">VS</p>
                     </div>
 
-                    <div className={`flex-1 p-4 rounded-lg transition-all ${
+                    <div className={`flex-1 p-4 rounded-xl transition-all border ${
                       match.myTeam === 'team2'
                         ? match.winner === 'team2'
-                          ? 'bg-green-500/10 border-2 border-green-500/30 shadow-lg shadow-green-500/20'
-                          : 'bg-red-500/10 border-2 border-red-500/30 shadow-lg shadow-red-500/20'
-                        : 'bg-gray-100 dark:bg-zinc-900/50 border border-gray-200 dark:border-white/5'
+                          ? 'bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-200 dark:border-emerald-500/20 shadow-xs'
+                          : 'bg-red-50/50 dark:bg-red-500/5 border-red-200 dark:border-red-500/20 shadow-xs'
+                        : 'bg-zinc-50/50 dark:bg-zinc-900/30 border-gray-150 dark:border-zinc-800/50'
                     }`}>
                       <div className="flex items-center gap-2 mb-3">
                         <Users className="w-4 h-4 text-green-500 dark:text-green-400" />
-                        <p className="text-xs font-semibold text-gray-600 dark:text-zinc-400">Tim 2</p>
+                        <p className="text-xs font-bold text-gray-600 dark:text-zinc-400">Tim 2</p>
                       </div>
                       <div className="space-y-1 mb-3">
-                        <p className="text-sm text-gray-900 dark:text-white font-semibold">{match.team2_player1}</p>
-                        <p className="text-sm text-gray-900 dark:text-white font-semibold">{match.team2_player2}</p>
+                        <p className="text-sm text-gray-900 dark:text-white font-bold">{match.team2_player1}</p>
+                        <p className="text-sm text-gray-900 dark:text-white font-bold">{match.team2_player2}</p>
                       </div>
-                      <p className={`text-3xl font-bold ${
-                        match.winner === 'team2' ? 'text-green-400' : 'text-red-400'
+                      <p className={`text-3xl font-extrabold ${
+                        match.winner === 'team2' 
+                          ? 'text-emerald-600 dark:text-emerald-400' 
+                          : 'text-red-600 dark:text-red-400'
                       }`}>
                         {match.team2_score}
                       </p>
@@ -1408,7 +1432,7 @@ export default function AnalitikPage() {
                 </h4>
                 <div className="bg-gray-100 dark:bg-zinc-800/50 rounded-lg p-4 space-y-3">
                   <p className="text-gray-600 dark:text-zinc-300">
-                    <strong className="text-gray-900 dark:text-white">1. Klik tombol "AI Insights"</strong> di bagian atas halaman untuk memulai analisis
+                    <strong className="text-gray-900 dark:text-white">1. Klik tombol "Wawasan AI"</strong> di bagian atas halaman untuk memulai analisis
                   </p>
                   <p className="text-gray-600 dark:text-zinc-300">
                     <strong className="text-gray-900 dark:text-white">2. Tunggu beberapa detik</strong> saat AI menganalisis data Anda

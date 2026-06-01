@@ -62,7 +62,6 @@ export default function DashboardPage() {
   const [memberName, setMemberName] = useState('');
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
-  const [expandRecentMatches, setExpandRecentMatches] = useState(true);
 
   // Tutorial for member dashboard
   const tutorialSteps = getTutorialSteps('member-dashboard');
@@ -91,7 +90,7 @@ export default function DashboardPage() {
         const profileName = (profile?.full_name || '').trim();
         const displayName = (user.user_metadata?.full_name || profileName || profile?.email?.split('@')[0] || '').trim();
         const queryName = profileName || displayName; // what admin stored in match_members
-        setMemberName(displayName);
+        setMemberName(queryName);
 
         console.log('[Dashboard] profileName:', profileName, '| displayName:', displayName, '| queryName:', queryName);
 
@@ -206,65 +205,87 @@ export default function DashboardPage() {
       label: 'Total Pending',
       value: loading ? '...' : `Rp ${stats.totalPending.toLocaleString('id-ID')}`,
       icon: Clock,
-      color: 'from-yellow-500 to-yellow-600',
+      iconColor: 'text-amber-600 dark:text-amber-400',
+      bgColor: 'bg-amber-50 dark:bg-amber-500/10',
+      borderColor: 'border-amber-100 dark:border-amber-500/25',
       subtext: `${stats.pendingCount} pertandingan`,
     },
     {
       label: 'Total Lunas',
       value: loading ? '...' : `Rp ${stats.totalPaid.toLocaleString('id-ID')}`,
       icon: CheckCircle,
-      color: 'from-green-500 to-green-600',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      bgColor: 'bg-emerald-50 dark:bg-emerald-500/10',
+      borderColor: 'border-emerald-100 dark:border-emerald-500/25',
       subtext: `${stats.paidCount} pertandingan`,
     },
     {
       label: 'Membership',
       value: loading ? '...' : (myMembership?.payment_status === 'paid' ? 'Aktif' : 'Tidak Aktif'),
       icon: Award,
-      color: myMembership?.payment_status === 'paid' ? 'from-purple-500 to-purple-600' : 'from-zinc-500 to-zinc-600',
+      iconColor: myMembership?.payment_status === 'paid' ? 'text-purple-600 dark:text-purple-400' : 'text-zinc-500 dark:text-zinc-400',
+      bgColor: myMembership?.payment_status === 'paid' ? 'bg-purple-50 dark:bg-purple-500/10' : 'bg-zinc-50 dark:bg-zinc-500/10',
+      borderColor: myMembership?.payment_status === 'paid' ? 'border-purple-100 dark:border-purple-500/25' : 'border-zinc-200/50 dark:border-zinc-500/20',
       subtext: myMembership ? `Rp ${myMembership.amount.toLocaleString('id-ID')}` : 'Belum ada membership',
     },
     {
       label: 'Total Pertandingan',
       value: loading ? '...' : myMatches.length.toLocaleString(),
       icon: Calendar,
-      color: 'from-blue-500 to-blue-600',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-500/10',
+      borderColor: 'border-blue-100 dark:border-blue-500/25',
       subtext: 'Sepanjang waktu',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 px-4 lg:px-8 py-6 lg:py-8 transition-colors duration-300">
       <ProfileCompletionWarning />
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-300">
+      
+      {/* Premium Welcome Header Card */}
+      <div className="mb-8 bg-gradient-to-r from-blue-600/10 via-indigo-600/5 to-purple-600/10 dark:from-blue-500/10 dark:via-indigo-500/5 dark:to-purple-500/10 border border-indigo-100 dark:border-zinc-800/80 rounded-3xl p-6 lg:p-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 shadow-xs relative overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute top-[-20%] left-[-10%] w-48 h-48 bg-blue-500/20 dark:bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-48 h-48 bg-purple-500/20 dark:bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
+            MEMBER AREA
+          </div>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight transition-colors duration-300">
             {isFirstLogin ? (
               <>Selamat datang di Dashboard Member, {memberName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}!</>
             ) : (
               <>Selamat datang kembali, {memberName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}!</>
             )}
           </h1>
-          <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">Berikut ringkasan pembayaran dan riwayat pertandingan Anda.</p>
+          <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">
+            Berikut ringkasan status pembayaran, keaktifan membership, dan riwayat pertandingan Anda.
+          </p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="relative z-10 flex flex-wrap items-center gap-3 w-full lg:w-auto">
           <WeatherWidget />
-          <button
-            onClick={() => setShowWelcomeModal(true)}
-            className="p-2 rounded-lg bg-purple-100 dark:bg-purple-500/10 hover:bg-purple-200 dark:hover:bg-purple-500/20 border-2 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Lihat panduan fitur dashboard"
-            disabled={showWelcomeModal}
-          >
-            <BookOpen className="w-5 h-5" />
-          </button>
-          <button
-            onClick={toggleTutorial}
-            className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10 hover:bg-blue-200 dark:hover:bg-blue-500/20 border-2 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Tampilkan panduan interaktif"
-            disabled={showWelcomeModal}
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowWelcomeModal(true)}
+              className="p-2.5 rounded-xl bg-white dark:bg-zinc-800/80 hover:bg-purple-50 dark:hover:bg-purple-500/10 border border-gray-200 dark:border-zinc-700 text-purple-600 dark:text-purple-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs hover:shadow-sm"
+              title="Lihat panduan fitur dashboard"
+              disabled={showWelcomeModal}
+            >
+              <BookOpen className="w-5 h-5" />
+            </button>
+            <button
+              onClick={toggleTutorial}
+              className="p-2.5 rounded-xl bg-white dark:bg-zinc-800/80 hover:bg-blue-50 dark:hover:bg-blue-500/10 border border-gray-200 dark:border-zinc-700 text-blue-600 dark:text-blue-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs hover:shadow-sm"
+              title="Tampilkan panduan interaktif"
+              disabled={showWelcomeModal}
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -279,15 +300,19 @@ export default function DashboardPage() {
             return (
               <div
                 key={stat.label}
-                className={`${cssClass} bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 hover:border-gray-400 dark:hover:border-white/20 transition-colors shadow-sm duration-300`}
+                className={`${cssClass} bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-6 hover:border-indigo-400/40 dark:hover:border-zinc-700 transition-all duration-300 shadow-xs hover:shadow-sm hover:-translate-y-0.5`}
               >
-                <div className={`inline-flex p-3 rounded-xl bg-linear-to-br ${stat.color} mb-4`}>
-                  <Icon className="w-6 h-6 text-white" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-2.5 rounded-xl ${stat.bgColor} ${stat.borderColor} border`}>
+                    <Icon className={`w-5 h-5 ${stat.iconColor}`} />
+                  </div>
+                  {/* Subtle indicator dots */}
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-zinc-800" />
                 </div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 transition-colors duration-300">{stat.value}</div>
-                <div className="text-sm text-gray-700 dark:text-zinc-300 font-semibold transition-colors duration-300">{stat.label}</div>
+                <div className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1 transition-colors duration-300 tracking-tight">{stat.value}</div>
+                <div className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">{stat.label}</div>
                 {stat.subtext && (
-                  <div className="text-xs text-gray-600 dark:text-zinc-400 mt-1 font-medium transition-colors duration-300">{stat.subtext}</div>
+                  <div className="text-xs text-gray-500 dark:text-zinc-400 mt-1 font-semibold transition-colors duration-300">{stat.subtext}</div>
                 )}
               </div>
             );
@@ -297,38 +322,48 @@ export default function DashboardPage() {
 
       {/* Membership Status */}
       {myMembership && (
-        <div className="mb-8 bg-linear-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 border-2 border-purple-300 dark:border-purple-500/30 rounded-xl p-6 shadow-sm transition-colors duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Award className="w-8 h-8 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
+        <div className="mb-8 bg-linear-to-br from-purple-600/5 via-fuchsia-600/5 to-purple-600/10 dark:from-purple-950/20 dark:via-fuchsia-950/10 dark:to-purple-900/10 border border-purple-200/60 dark:border-purple-500/20 rounded-3xl p-6 shadow-xs relative overflow-hidden transition-all duration-300 hover:shadow-sm">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 rounded-2xl bg-purple-100 dark:bg-purple-500/15 border border-purple-200 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 shadow-xs">
+                <Award className="w-6 h-6" />
+              </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Status Membership</h3>
-                <p className="text-sm text-purple-700 dark:text-purple-200 font-medium transition-colors duration-300">
-                  {myMembership.weeks_in_month} minggu - Rp {myMembership.amount.toLocaleString('id-ID')}
+                <h3 className="text-lg font-extrabold text-gray-900 dark:text-white transition-colors duration-300">Status Membership</h3>
+                <p className="text-sm text-purple-700 dark:text-purple-300 font-semibold mt-0.5 transition-colors duration-300">
+                  {myMembership.weeks_in_month} minggu • Rp {myMembership.amount.toLocaleString('id-ID')}
                 </p>
               </div>
             </div>
-            <span
-              className={`px-4 py-2 rounded-full text-sm font-bold border-2 transition-colors duration-300 ${
-                myMembership.payment_status === 'paid'
-                  ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-300 dark:border-transparent'
-                  : (myMembership.payment_status as string) === 'cancelled'
-                  ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
-                  : (myMembership.payment_status as string) === 'rejected'
-                  ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
-                  : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-transparent'
-              }`}
-            >
-              {myMembership.payment_status === 'paid' ? 'Lunas' :
-                (myMembership.payment_status as string) === 'cancelled' ? 'Dibatalkan' :
-                (myMembership.payment_status as string) === 'rejected' ? 'Ditolak' :
-                (myMembership as any).payment_proof ? 'Menunggu Verifikasi' : 'Belum Bayar'}
-            </span>
+            
+            <div className="flex items-center gap-3">
+              <span
+                className={`px-4 py-1.5 rounded-full text-xs font-extrabold border transition-colors duration-300 ${
+                  myMembership.payment_status === 'paid'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-500/20'
+                    : (myMembership.payment_status as string) === 'cancelled'
+                    ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200/60 dark:border-red-500/20'
+                    : (myMembership.payment_status as string) === 'rejected'
+                    ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200/60 dark:border-red-500/20'
+                    : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-500/20'
+                }`}
+              >
+                {myMembership.payment_status === 'paid' ? 'Lunas' :
+                  (myMembership.payment_status as string) === 'cancelled' ? 'Dibatalkan' :
+                  (myMembership.payment_status as string) === 'rejected' ? 'Ditolak' :
+                  (myMembership as any).payment_proof ? 'Menunggu Verifikasi' : 'Belum Bayar'}
+              </span>
+            </div>
           </div>
           {myMembership.payment_status === 'paid' && (
-            <p className="text-purple-700 dark:text-purple-200 text-sm mt-3 font-medium transition-colors duration-300">
-              ✨ Anda tidak perlu membayar biaya kehadiran untuk pertandingan bulan ini!
-            </p>
+            <div className="mt-4 pt-4 border-t border-purple-200/50 dark:border-purple-500/10 flex items-center gap-2 text-purple-700 dark:text-purple-300 text-xs font-semibold relative z-10 transition-colors duration-300">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+              </span>
+              <span>Anda bebas biaya kehadiran untuk seluruh pertandingan di bulan ini!</span>
+            </div>
           )}
         </div>
       )}
@@ -340,141 +375,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Recent Matches */}
-      <div className="member-recent-matches bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl shadow-sm transition-colors duration-300">
-        <button
-          onClick={() => setExpandRecentMatches(!expandRecentMatches)}
-          className="w-full px-6 py-4 flex items-center gap-2 hover:opacity-75 transition-opacity"
-        >
-          <CreditCard className="w-6 h-6 text-purple-600 dark:text-purple-400 transition-colors duration-300 shrink-0" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex-1 text-left transition-colors duration-300">
-            Pertandingan Terkini
-          </h2>
-          {expandRecentMatches ? (
-            <ChevronUp className="w-5 h-5 text-gray-400 shrink-0" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />
-          )}
-        </button>
 
-        {expandRecentMatches && (
-          <div className="px-6 pb-6 border-t border-gray-200 dark:border-zinc-700">
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => <MatchCardSkeleton key={i} />)}
-              </div>
-            ) : myMatches.length === 0 ? (
-              <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">Belum ada pertandingan.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
-                {myMatches.slice(0, 5).map((match) => {
-                  const team1Score = match.matches.team1_score;
-                  const team2Score = match.matches.team2_score;
-                  const winner = match.matches.winner;
-                  const hasScore = team1Score !== null && team2Score !== null;
-                  
-                  return (
-                    <div
-                      key={match.id}
-                      className="flex flex-col p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-900 rounded-xl border-2 border-gray-300 dark:border-white/10 hover:border-purple-400 dark:hover:border-purple-500/50 transition-all shadow-sm duration-300 hover:shadow-md"
-                    >
-                      {/* Header: Match Number & Badge */}
-                      <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-300 dark:border-white/10">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-base text-gray-900 dark:text-white transition-colors duration-300">
-                            Match #{match.matches.match_number}
-                          </h3>
-                          {match.has_membership && (
-                            <Award className="w-4 h-4 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Date */}
-                      <p className="text-xs text-gray-600 dark:text-zinc-400 font-semibold mb-3">
-                        {new Date(match.matches.match_date ?? match.matches.created_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </p>
-
-                      {/* Score Section - Prominent */}
-                      <div className="mb-4">
-                        {hasScore ? (
-                          <div className={`flex items-center justify-center py-3 px-3 rounded-lg ${
-                            winner === 'team1'
-                              ? 'bg-green-100 dark:bg-green-500/20'
-                              : 'bg-gray-200 dark:bg-zinc-700'
-                          } transition-colors`}>
-                            <div className="text-center">
-                              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                {team1Score}
-                                <span className="text-sm font-semibold mx-2 text-gray-700 dark:text-gray-300">-</span>
-                                {team2Score}
-                              </p>
-                              <p className={`text-xs font-semibold mt-1 ${
-                                winner === 'team1'
-                                  ? 'text-green-700 dark:text-green-300'
-                                  : 'text-gray-600 dark:text-gray-400'
-                              }`}>
-                                {winner === 'team1' ? '✓ Menang' : 'Kalah'}
-                              </p>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center py-3 px-3 rounded-lg bg-gray-200 dark:bg-zinc-700">
-                            <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Belum ada skor</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Cost Details */}
-                      <div className="space-y-2 mb-4 pb-4 border-b border-gray-300 dark:border-white/10">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-gray-700 dark:text-zinc-400">Shuttlecock:</span>
-                          <span className="font-semibold text-gray-900 dark:text-white">Rp {match.amount_due.toLocaleString('id-ID')}</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-gray-700 dark:text-zinc-400">Kehadiran:</span>
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {match.attendance_fee > 0 
-                              ? `Rp ${match.attendance_fee.toLocaleString('id-ID')}`
-                              : 'Gratis'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Total & Status */}
-                      <div className="space-y-3">
-                        <div className="flex items-end justify-between">
-                          <div className="flex-1">
-                            <p className="text-xs text-gray-600 dark:text-zinc-400 font-semibold mb-1">Total</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">
-                              Rp {match.total_amount.toLocaleString('id-ID')}
-                            </p>
-                          </div>
-                          <span
-                            className={`inline-flex px-2 py-1 rounded-lg text-xs font-bold border transition-colors duration-300 whitespace-nowrap ml-2 ${
-                              match.payment_status === 'paid'
-                                ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-300 dark:border-transparent'
-                                : match.payment_status === 'cancelled'
-                                ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-transparent'
-                                : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-transparent'
-                            }`}
-                          >
-                            {match.payment_status === 'paid' ? 'Lunas' : match.payment_status === 'cancelled' ? 'Dibatalkan' : 'Pending'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Tutorial Overlay - Disabled while welcome modal is open */}
       {!showWelcomeModal && (
