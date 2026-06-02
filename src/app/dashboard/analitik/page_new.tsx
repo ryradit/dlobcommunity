@@ -285,7 +285,22 @@ export default function AnalitikPage() {
           wins: data.wins,
           winRate: Math.round((data.wins / data.matches) * 100),
         }))
-        .sort((a, b) => b.winRate - a.winRate);
+        .sort((a, b) => {
+          // Bandingkan skor perkalian kemenangan dengan win rate (wins * winRate)
+          // Ini memprioritaskan yang paling banyak bermain (matches) DAN sering menang (win rate tinggi)
+          const scoreA = a.wins * a.winRate;
+          const scoreB = b.wins * b.winRate;
+          
+          if (scoreB !== scoreA) {
+            return scoreB - scoreA;
+          }
+          // Jika skor perkalian sama, prioritaskan yang jumlah tandingnya lebih banyak (sering bermain bersama)
+          if (b.matches !== a.matches) {
+            return b.matches - a.matches;
+          }
+          // Jika jumlah tanding juga sama, urutkan berdasarkan win rate
+          return b.winRate - a.winRate;
+        });
 
       setPartnerStats(partners);
 
