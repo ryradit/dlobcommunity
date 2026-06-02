@@ -120,11 +120,10 @@ export async function POST(request: NextRequest) {
     // Check cache
     const { data: cachedInsight, error: cacheError } = await supabase
       .from('ai_insights')
-      .select('response_data, expires_at')
+      .select('response_data')
       .eq('user_id', userId)
       .eq('insight_type', 'performance')
       .eq('stats_hash', statsHash)
-      .gt('expires_at', new Date().toISOString())
       .single();
 
     if (cachedInsight && !cacheError) {
@@ -175,7 +174,10 @@ export async function POST(request: NextRequest) {
     
     const analysisResult = JSON.parse(jsonMatch[0]);
 
-    // Save to cache
+    // Save to cache (using a 100-year expiration date so it never expires)
+    const farFutureDate = new Date();
+    farFutureDate.setFullYear(farFutureDate.getFullYear() + 100);
+
     await supabase
       .from('ai_insights')
       .upsert({
@@ -183,6 +185,7 @@ export async function POST(request: NextRequest) {
         insight_type: 'performance',
         stats_hash: statsHash,
         response_data: analysisResult,
+        expires_at: farFutureDate.toISOString()
       }, {
         onConflict: 'user_id,insight_type,stats_hash'
       });
