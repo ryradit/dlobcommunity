@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
@@ -104,6 +104,8 @@ export default function PembayaranPage() {
   const [myMatches, setMyMatches] = useState<MatchMember[]>([]);
   const [allMatches, setAllMatches] = useState<MatchMember[]>([]);
   const [myMembership, setMyMembership] = useState<Membership | null>(null);
+  const [allMemberships, setAllMemberships] = useState<Membership[]>([]);
+  const [showExpenseDetailsModal, setShowExpenseDetailsModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [memberName, setMemberName] = useState('');
   const [isPaymentExempt, setIsPaymentExempt] = useState(false); // VIP/free access flag
@@ -288,7 +290,7 @@ export default function PembayaranPage() {
         ),
         // Fetch membership
         cachedQuery(
-          `member-payment-membership-${user.id}-${currentMonth}-${currentYear}`,
+          `member-payment-memberships-${user.id}`,
           async () => {
             // Get profile first
             const { data: profile } = await supabase
@@ -302,10 +304,7 @@ export default function PembayaranPage() {
             const result = await supabase
               .from('memberships')
               .select('*')
-              .eq('member_name', name)
-              .eq('month', currentMonth)
-              .eq('year', currentYear)
-              .maybeSingle();
+              .eq('member_name', name);
             return result;
           },
           60000 // 1 minute cache
@@ -381,9 +380,11 @@ export default function PembayaranPage() {
       
       // Process membership
       if (membershipResult.status === 'fulfilled') {
-        const res = membershipResult.value as { data: Membership | null; error: any };
-        if (!res.error) {
-          setMyMembership(res.data);
+        const res = membershipResult.value as { data: Membership[] | null; error: any };
+        if (!res.error && res.data) {
+          setAllMemberships(res.data);
+          const currentMonthMembership = res.data.find(m => m.month === currentMonth && m.year === currentYear) || null;
+          setMyMembership(currentMonthMembership);
         }
       }
     } catch (error) {
@@ -825,6 +826,75 @@ export default function PembayaranPage() {
 
   const unpaidCount = isPaymentExempt ? 0 : myMatches.filter(m => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected').length +
     ((myMembership?.payment_status === 'pending' && !myMembership.payment_proof) || myMembership?.payment_status === 'rejected' ? 1 : 0);
+
+  const monthlyExpenses = useMemo(() => {
+    const expenses: Record<string, {
+      monthName: string;
+      year: number;
+      monthNum: number;
+      matchTotal: number;
+      membershipTotal: number;
+      total: number;
+      matchCount: number;
+    }> = {};
+
+    // Group paid matches by month/year
+    allMatches
+      .filter(m => m.payment_status === 'paid')
+      .forEach(m => {
+        const d = new Date(m.matches.match_date || m.matches.created_at);
+        const year = d.getFullYear();
+        const monthNum = d.getMonth() + 1;
+        const key = `${year}-${monthNum}`;
+
+        if (!expenses[key]) {
+          const monthName = d.toLocaleDateString('id-ID', { month: 'long' });
+          expenses[key] = {
+            monthName,
+            year,
+            monthNum,
+            matchTotal: 0,
+            membershipTotal: 0,
+            total: 0,
+            matchCount: 0,
+          };
+        }
+        expenses[key].matchTotal += m.total_amount;
+        expenses[key].matchCount += 1;
+      });
+
+    // Group paid memberships by month/year
+    allMemberships
+      .filter(m => m.payment_status === 'paid')
+      .forEach(m => {
+        const key = `${m.year}-${m.month}`;
+        if (!expenses[key]) {
+          const tempDate = new Date(m.year, m.month - 1, 1);
+          const monthName = tempDate.toLocaleDateString('id-ID', { month: 'long' });
+          expenses[key] = {
+            monthName,
+            year: m.year,
+            monthNum: m.month,
+            matchTotal: 0,
+            membershipTotal: 0,
+            total: 0,
+            matchCount: 0,
+          };
+        }
+        expenses[key].membershipTotal += m.amount;
+      });
+
+    // Calculate total for each month
+    Object.values(expenses).forEach(exp => {
+      exp.total = exp.matchTotal + exp.membershipTotal;
+    });
+
+    // Sort by year and month descending
+    return Object.values(expenses).sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.monthNum - a.monthNum;
+    });
+  }, [allMatches, allMemberships]);
 
   function getPaymentStatus(paymentStatus: string, paymentProof: string | null) {
     if (paymentStatus === 'paid') {
@@ -1274,7 +1344,10 @@ export default function PembayaranPage() {
           </div>
 
           {/* Total Paid */}
-          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
+          <div 
+            onClick={() => setShowExpenseDetailsModal(true)}
+            className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-all duration-300 cursor-pointer hover:border-emerald-400 hover:shadow-md group"
+          >
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Terbayar</p>
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 transition-colors duration-300" />
@@ -1282,7 +1355,12 @@ export default function PembayaranPage() {
             <p className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
               Rp {totalPaid.toLocaleString('id-ID')}
             </p>
-            <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1 font-semibold transition-colors duration-300">lunas</p>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs text-gray-605 dark:text-zinc-400 font-semibold">lunas</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1">
+                Lihat Detail &rarr;
+              </span>
+            </div>
           </div>
 
           {/* Total Matches */}
@@ -2642,6 +2720,95 @@ export default function PembayaranPage() {
                 Mengerti
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Pengeluaran Bulanan Modal */}
+      {showExpenseDetailsModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 dark:border-zinc-800">
+              <div>
+                <h3 className="text-xl font-extrabold text-gray-950 dark:text-white flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-500" /> Rincian Terbayar per Bulan
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1">
+                  Daftar pengeluaran pertandingan dan membership bulanan yang telah lunas
+                </p>
+              </div>
+              <button
+                onClick={() => setShowExpenseDetailsModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-900"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {monthlyExpenses.length === 0 ? (
+              <div className="py-12 text-center">
+                <Clock className="w-12 h-12 text-gray-300 dark:text-zinc-700 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-gray-700 dark:text-zinc-300">Belum ada pengeluaran terbayar</p>
+                <p className="text-xs text-gray-400 mt-1">Status lunas akan muncul setelah pembayaran dikonfirmasi admin</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+                {monthlyExpenses.map((exp) => (
+                  <div 
+                    key={`${exp.year}-${exp.monthNum}`}
+                    className="p-4 border border-gray-100 dark:border-zinc-850 rounded-xl bg-gray-50/50 dark:bg-zinc-900/50 flex flex-col gap-3"
+                  >
+                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800/80 pb-2">
+                      <span className="font-extrabold text-sm text-gray-900 dark:text-white">
+                        {exp.monthName} {exp.year}
+                      </span>
+                      <span className="font-black text-sm text-emerald-600 dark:text-emerald-400">
+                        Rp {exp.total.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs">
+                      {exp.matchTotal > 0 && (
+                        <div className="flex items-center justify-between text-gray-600 dark:text-zinc-400">
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <Users className="w-3.5 h-3.5 text-blue-500" />
+                            Pertandingan ({exp.matchCount} Sesi)
+                          </span>
+                          <span className="font-semibold text-gray-900 dark:text-zinc-200">
+                            Rp {exp.matchTotal.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      )}
+                      {exp.membershipTotal > 0 && (
+                        <div className="flex items-center justify-between text-gray-600 dark:text-zinc-400">
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <Award className="w-3.5 h-3.5 text-purple-500" />
+                            Membership Bulanan
+                          </span>
+                          <span className="font-semibold text-gray-900 dark:text-zinc-200">
+                            Rp {exp.membershipTotal.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 dark:text-zinc-400">Total Keseluruhan:</span>
+              <span className="text-base font-black text-gray-950 dark:text-white">
+                Rp {totalPaid.toLocaleString('id-ID')}
+              </span>
+            </div>
+
+            <button
+              onClick={() => setShowExpenseDetailsModal(false)}
+              className="mt-6 w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all font-bold text-sm shadow-sm"
+            >
+              Tutup
+            </button>
           </div>
         </div>
       )}
