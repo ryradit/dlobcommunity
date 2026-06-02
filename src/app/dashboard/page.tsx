@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock, HelpCircle, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { CreditCard, Award, TrendingUp, Calendar, CheckCircle, Clock, HelpCircle, BookOpen, ChevronDown, ChevronUp, Zap, ArrowRight } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
@@ -365,6 +365,91 @@ export default function DashboardPage() {
               <span>Anda bebas biaya kehadiran untuk seluruh pertandingan di bulan ini!</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Quick Actions Section */}
+      {!loading && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-5 w-1 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white tracking-tight">
+              Aksi Cepat Member
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card 1: Bayar Tagihan */}
+            <Link 
+              href="/dashboard/pembayaran"
+              className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-5 hover:border-emerald-400/40 dark:hover:border-emerald-500/30 transition-all duration-300 shadow-xs hover:shadow-md hover:-translate-y-0.5 group flex flex-col justify-between"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-450 transition-colors text-sm">
+                      Bayar Tagihan
+                    </h3>
+                    {stats.totalPending > 0 && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400 animate-pulse">
+                        Ada Tagihan
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-650 dark:text-zinc-400 font-medium leading-relaxed">
+                    Bayar tagihan pertandingan bulanan, sewa lapangan, shuttlecock, & iuran membership Anda.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-3 border-t border-gray-100 dark:border-zinc-800/80 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-gray-500 dark:text-zinc-500">
+                  {stats.totalPending > 0 ? (
+                    <span className="text-red-650 dark:text-red-400 font-extrabold">
+                      Rp {stats.totalPending.toLocaleString('id-ID')} pending
+                    </span>
+                  ) : (
+                    'Semua tagihan lunas'
+                  )}
+                </span>
+                <span className="text-xs text-emerald-600 dark:text-emerald-450 font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                  Akses <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </Link>
+
+            {/* Card 2: Asisten Coach AI */}
+            <Link 
+              href="/dashboard/training"
+              className="bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800/80 rounded-2xl p-5 hover:border-indigo-400/40 dark:hover:border-indigo-500/30 transition-all duration-300 shadow-xs hover:shadow-md hover:-translate-y-0.5 group flex flex-col justify-between"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 shrink-0">
+                  <Zap className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-extrabold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-450 transition-colors text-sm">
+                    Asisten Coach AI
+                  </h3>
+                  <p className="text-xs text-gray-650 dark:text-zinc-400 font-medium leading-relaxed">
+                    Konsultasikan target pukulan (Smash, Backhand) Anda dan rancang program latihan mandiri.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-3 border-t border-gray-100 dark:border-zinc-800/80 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-gray-500 dark:text-zinc-500">
+                  Tanya taktik & teknik
+                </span>
+                <span className="text-xs text-indigo-600 dark:text-indigo-450 font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                  Konsultasi <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </Link>
+          </div>
         </div>
       )}
 
