@@ -15,6 +15,7 @@ interface TutorialOverlayProps {
   isActive: boolean;
   onClose: () => void;
   tutorialKey: string; // Unique key for localStorage tracking
+  onStepChange?: (stepIndex: number) => void;
 }
 
 export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
@@ -22,13 +23,23 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   isActive,
   onClose,
   tutorialKey,
+  onStepChange,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [elementRect, setElementRect] = useState<DOMRect | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
+    if (isActive && onStepChange) {
+      onStepChange(currentStep);
+    }
+  }, [currentStep, isActive, onStepChange]);
+
+  useEffect(() => {
     if (!isActive || steps.length === 0) return;
+
+    let retryCount = 0;
+    const maxRetries = 6;
 
     const updateElementPosition = () => {
       const selector = steps[currentStep]?.element;
@@ -45,6 +56,9 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
           setElementRect(rect);
           calculateTooltipPosition(rect, steps[currentStep].position);
         }, 300);
+      } else if (retryCount < maxRetries) {
+        retryCount++;
+        setTimeout(updateElementPosition, 150);
       }
     };
 

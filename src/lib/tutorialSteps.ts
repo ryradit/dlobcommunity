@@ -359,34 +359,82 @@ export const MEMBER_SETTINGS_TUTORIAL: TutorialStep[] = [
  */
 export const MEMBER_TRAINING_TUTORIAL: TutorialStep[] = [
   {
+    element: '.training-tab-dashboard',
+    title: '📋 Dashboard Latihan',
+    description: 'Di sini Anda dapat memantau rencana program latihan aktif, mencatat log drill harian, serta melihat analisis taktis dan kesiapan mental.',
+    position: 'bottom',
+  },
+  {
+    element: '.training-plan-card',
+    title: '🎯 Rencana Latihan Aktif',
+    description: 'Lihat fokus program latihan mingguan, durasi program, target hari latihan per minggu, serta progres kemajuan latihan Anda.',
+    position: 'bottom',
+  },
+  {
+    element: '.training-drills-card',
+    title: '🏸 Daftar Drill Latihan',
+    description: 'Catat setiap sesi latihan mandiri Anda. Klik pada drill yang ingin diselesaikan, masukkan jumlah set/reps, dan simpan riwayat latihan Anda.',
+    position: 'top',
+  },
+  {
+    element: '.training-mental-card',
+    title: '🧠 Kesiapan Mental & Psikologis',
+    description: 'Ukur kesiapan mental bertanding Anda, termasuk tingkat percaya diri, respon tekanan, konsistensi, dan rekomendasi dari AI Coach.',
+    position: 'top',
+  },
+  {
+    element: '.training-quick-actions',
+    title: '⚡ Aksi Cepat Coach AI',
+    description: 'Gunakan tombol pintas ini untuk meminta AI menganalisis kelemahan taktis, membuat rencana latihan baru, atau menilai mental bertanding Anda secara instan.',
+    position: 'left',
+  },
+  {
+    element: '.training-tab-chat',
+    title: '💬 Asisten Coach AI',
+    description: 'Konsultasikan segala kendala badminton Anda secara interaktif dengan Dlob AI Coach Agent yang beroperasi secara otonom.',
+    position: 'bottom',
+  },
+  {
+    element: '.training-chat-container',
+    title: '🤖 Obrolan dengan AI Coach',
+    description: 'Lihat riwayat percakapan Anda dengan AI Coach. Dlob AI Coach dapat menganalisis data profil Anda dan merekomendasikan program latihan secara real-time.',
+    position: 'top',
+  },
+  {
+    element: '.training-chat-input',
+    title: '✍️ Tanyakan pada AI Coach',
+    description: 'Ketik pertanyaan spesifik atau minta saran latihan di sini. Tekan Enter atau klik tombol kirim untuk memulai percakapan.',
+    position: 'top',
+  },
+  {
+    element: '.training-tab-videos',
+    title: '🎥 Perpustakaan Video',
+    description: 'Akses galeri video tutorial badminton terlengkap yang dikurasi oleh AI dan YouTube.',
+    position: 'bottom',
+  },
+  {
     element: '.training-search-bar',
-    title: '🔍 Tanya Pelatih AI',
-    description: 'Ketik pertanyaan tentang teknik badminton Anda. Contoh: "Bagaimana cara meningkatkan smash?" AI akan memberikan saran personalisasi!',
+    title: '🔍 Cari Video Latihan',
+    description: 'Jelajahi video latihan dengan mengetikkan teknik pukulan yang ingin dipelajari. Hasil pencarian akan merekomendasikan video terpopuler.',
     position: 'bottom',
   },
   {
     element: '.training-popular-topics',
-    title: '⚡ Topik Populer',
-    description: 'Klik shortcut topik untuk langsung mendapatkan rekomendasi latihan. Hemat waktu dengan topik yang sering dicari!',
+    title: '⚡ Topik Video Populer',
+    description: 'Klik shortcut kategori populer seperti Smash, Footwork, Netting, Backhand, Servis, atau Dropshot untuk pencarian instan.',
     position: 'bottom',
   },
   {
     element: '.training-tips',
-    title: '💡 Tips Bertanya',
-    description: 'Panduan untuk mendapatkan saran terbaik dari AI. Jelaskan masalah spesifik dan level skill Anda untuk hasil optimal.',
+    title: '💡 Tips Video Latihan',
+    description: 'Pelajari tips praktis ini agar latihan teknik pukulan dan pergerakan kaki (footwork) Anda lebih terarah, efektif, dan aman.',
     position: 'left',
   },
   {
     element: '.training-history',
-    title: '📚 Riwayat Latihan',
-    description: 'Akses kembali sesi latihan sebelumnya. Klik untuk melihat saran dan video lagi. Hover untuk menghapus riwayat.',
+    title: '📚 Riwayat Pencarian Video',
+    description: 'Akses kembali topik pencarian video sebelumnya secara cepat tanpa perlu mengetik ulang.',
     position: 'left',
-  },
-  {
-    element: '.training-main-content',
-    title: '🤖 Area Hasil',
-    description: 'Setelah bertanya, area ini akan menampilkan saran pelatih AI dan video tutorial YouTube yang relevan dalam bahasa Indonesia!',
-    position: 'top',
   },
 ];
 

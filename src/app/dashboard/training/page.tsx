@@ -30,9 +30,14 @@ import {
   Check,
   X,
   ExternalLink,
-  ChevronLeft
+  ChevronLeft,
+  HelpCircle
 } from 'lucide-react';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
+import TutorialOverlay from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
+import { getTutorialSteps } from '@/lib/tutorialSteps';
+import { analyzeMatchHistory, MatchAnalyticsResult } from '@/lib/matchAnalytics';
 
 // ============================================================================
 // TYPES
@@ -240,6 +245,8 @@ export default function TrainingCenterPage() {
   const [trainingPlan, setTrainingPlan] = useState<TrainingPlan | null>(null);
   const [assignedDrills, setAssignedDrills] = useState<AssignedDrill[]>([]);
   const [mentalAssessment, setMentalAssessment] = useState<MentalAssessment | null>(null);
+  const [matchAnalytics, setMatchAnalytics] = useState<MatchAnalyticsResult | null>(null);
+  const [latestMatch, setLatestMatch] = useState<any | null>(null);
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -260,6 +267,23 @@ export default function TrainingCenterPage() {
   const [videoAdvice, setVideoAdvice] = useState('');
   const [videosList, setVideosList] = useState<YouTubeVideo[]>([]);
   const [searchSuccess, setSearchSuccess] = useState(false);
+
+  // Tutorial Hook Setup
+  const tutorialSteps = getTutorialSteps('member-training');
+  const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('member-training', tutorialSteps);
+
+
+
+  // Video Library Search History State
+  const [recentQueries, setRecentQueries] = useState<string[]>([
+    'Cara meningkatkan smash badminton',
+    'Drill footwork badminton kelincahan',
+    'Teknik netting tipis menyilang'
+  ]);
+
+  const handleDeleteQuery = (queryToDelete: string) => {
+    setRecentQueries(prev => prev.filter(q => q !== queryToDelete));
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -322,6 +346,108 @@ export default function TrainingCenterPage() {
 
         if (assessmentData && assessmentData.length > 0) {
           setMentalAssessment(assessmentData[0]);
+        }
+
+        // Fetch match analytics using real match history
+        try {
+          const nameToUse = profileData?.display_name || profileData?.full_name || undefined;
+          const analytics = await analyzeMatchHistory(nameToUse, userId);
+          if (analytics) {
+            setMatchAnalytics(analytics);
+          }
+        } catch (err) {
+          console.error('Error fetching match analytics:', err);
+        }
+
+        // Fetch latest match for the user and compute direct tactical analysis
+        try {
+          const { data: allMatchesData } = await supabase
+            .from('matches')
+            .select('*')
+            .not('winner', 'is', null)
+            .order('match_date', { ascending: false });
+
+          if (allMatchesData && allMatchesData.length > 0 && profileData) {
+            const possibleNames = [
+              profileData.display_name,
+              profileData.full_name,
+            ].map(n => n?.trim().toLowerCase()).filter(Boolean);
+
+            const userMatch = allMatchesData.find((match: any) => {
+              const p1 = match.team1_player1?.trim().toLowerCase();
+              const p2 = match.team1_player2?.trim().toLowerCase();
+              const p3 = match.team2_player1?.trim().toLowerCase();
+              const p4 = match.team2_player2?.trim().toLowerCase();
+              return possibleNames.includes(p1) || possibleNames.includes(p2) || possibleNames.includes(p3) || possibleNames.includes(p4);
+            });
+
+            if (userMatch) {
+              const isTeam1 = [userMatch.team1_player1, userMatch.team1_player2]
+                .map(n => n?.trim().toLowerCase())
+                .some(n => possibleNames.includes(n));
+              
+              const userTeam = isTeam1 ? 'team1' : 'team2';
+              const isWinner = userMatch.winner === userTeam;
+              
+              const userScore = isTeam1 ? userMatch.team1_score : userMatch.team2_score;
+              const opponentScore = isTeam1 ? userMatch.team2_score : userMatch.team1_score;
+              
+              // Get partner name
+              let partner = '';
+              if (isTeam1) {
+                const p1Lower = userMatch.team1_player1?.trim().toLowerCase();
+                const isP1User = possibleNames.includes(p1Lower);
+                partner = isP1User ? userMatch.team1_player2 : userMatch.team1_player1;
+              } else {
+                const p1Lower = userMatch.team2_player1?.trim().toLowerCase();
+                const isP1User = possibleNames.includes(p1Lower);
+                partner = isP1User ? userMatch.team2_player2 : userMatch.team2_player1;
+              }
+
+              // Generate tactical analysis
+              let analysisText = "";
+              let attackEfficiency = 75;
+              let defenseSolidity = 70;
+
+              const scoreDiff = Math.abs(userScore - opponentScore);
+
+              if (isWinner) {
+                if (scoreDiff <= 3) {
+                  analysisText = `Kemenangan tipis (${userScore}-${opponentScore}) bersama ${partner || 'partner'}. Transisi pertahanan ke serangan di poin kritis berjalan sangat baik, namun kurangi unforced error di awal game.`;
+                  attackEfficiency = 78;
+                  defenseSolidity = 72;
+                } else {
+                  analysisText = `Kemenangan meyakinkan (${userScore}-${opponentScore}) bersama ${partner || 'partner'}. Dominasi serangan cepat dan rotasi lapangan yang rapi sukses menekan pertahanan lawan sejak awal.`;
+                  attackEfficiency = 85;
+                  defenseSolidity = 78;
+                }
+              } else {
+                if (scoreDiff <= 3) {
+                  analysisText = `Kekalahan tipis (${userScore}-${opponentScore}) bersama ${partner || 'partner'}. Permainan seimbang, namun koordinasi pertahanan di poin-poin akhir perlu ditingkatkan untuk mengantisipasi smash menyilang.`;
+                  attackEfficiency = 70;
+                  defenseSolidity = 65;
+                } else {
+                  analysisText = `Kekalahan telak (${userScore}-${opponentScore}) bersama ${partner || 'partner'}. Perlu evaluasi mendalam pada akurasi pengembalian bola dan kecepatan kembali ke posisi siap (ready position) setelah menyerang.`;
+                  attackEfficiency = 60;
+                  defenseSolidity = 55;
+                }
+              }
+
+              setLatestMatch({
+                id: userMatch.id,
+                date: userMatch.match_date || userMatch.created_at,
+                isWinner,
+                userScore,
+                opponentScore,
+                partner,
+                analysisText,
+                attackEfficiency,
+                defenseSolidity
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching latest match:', err);
         }
 
         // Initialize session ID
@@ -399,6 +525,12 @@ export default function TrainingCenterPage() {
     setIsSearchingVideos(true);
     setVideoSearchQuery(queryText);
     setSearchSuccess(false);
+
+    // Save search to history
+    setRecentQueries(prev => {
+      const filtered = prev.filter(q => q !== queryText);
+      return [queryText, ...filtered].slice(0, 5);
+    });
 
     try {
       const response = await fetch('/api/ai/training-recommendations', {
@@ -617,13 +749,21 @@ export default function TrainingCenterPage() {
               </p>
             </div>
           </div>
+          <button
+            onClick={toggleTutorial}
+            className="px-4 py-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-600 dark:text-blue-400 transition-all shadow-xs flex items-center justify-center gap-2 font-extrabold text-xs"
+            title="Tampilkan panduan fitur"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span>Panduan Fitur</span>
+          </button>
         </div>
 
         {/* Tab Navigation */}
         <div className="flex border-b border-gray-200 dark:border-zinc-800 mb-8 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-semibold text-sm transition-all whitespace-nowrap ${
+            className={`training-tab-dashboard flex items-center gap-2 px-6 py-3 border-b-2 font-semibold text-sm transition-all whitespace-nowrap ${
               activeTab === 'dashboard'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200'
@@ -634,7 +774,7 @@ export default function TrainingCenterPage() {
           </button>
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-semibold text-sm transition-all whitespace-nowrap ${
+            className={`training-tab-chat flex items-center gap-2 px-6 py-3 border-b-2 font-semibold text-sm transition-all whitespace-nowrap ${
               activeTab === 'chat'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200'
@@ -650,7 +790,7 @@ export default function TrainingCenterPage() {
           </button>
           <button
             onClick={() => setActiveTab('videos')}
-            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-semibold text-sm transition-all whitespace-nowrap ${
+            className={`training-tab-videos flex items-center gap-2 px-6 py-3 border-b-2 font-semibold text-sm transition-all whitespace-nowrap ${
               activeTab === 'videos'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200'
@@ -676,7 +816,7 @@ export default function TrainingCenterPage() {
                 <div className="lg:col-span-2 space-y-6">
                   {/* Hero Training Plan Card */}
                   {trainingPlan ? (
-                    <div className="relative rounded-2xl p-6 md:p-8 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white shadow-xl overflow-hidden">
+                    <div className="training-plan-card relative rounded-2xl p-6 md:p-8 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white shadow-xl overflow-hidden">
                       <div className="absolute right-0 bottom-0 translate-x-12 translate-y-12 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
                       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="space-y-3 flex-1">
@@ -735,7 +875,7 @@ export default function TrainingCenterPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-2xl p-8 border border-dashed border-gray-300 dark:border-zinc-800 text-center bg-white dark:bg-zinc-900/40">
+                    <div className="training-plan-card rounded-2xl p-8 border border-dashed border-gray-300 dark:border-zinc-800 text-center bg-white dark:bg-zinc-900/40">
                       <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Sparkles className="w-8 h-8" />
                       </div>
@@ -753,7 +893,7 @@ export default function TrainingCenterPage() {
                   )}
 
                   {/* Assigned Drills Checklist Section */}
-                  <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                  <div className="training-drills-card bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <h3 className="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
@@ -840,11 +980,23 @@ export default function TrainingCenterPage() {
                         <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-zinc-800/40 border border-gray-100 dark:border-zinc-800/50">
                           <div className="flex items-center justify-between text-xs mb-2">
                             <span className="text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Match Terakhir</span>
-                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold rounded-sm">WIN</span>
+                            {latestMatch ? (
+                              <span className={`px-2 py-0.5 ${latestMatch.isWinner ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'} font-extrabold rounded-sm`}>
+                                {latestMatch.isWinner ? 'WIN' : 'LOSE'}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold rounded-sm">DEMO WIN</span>
+                            )}
                           </div>
-                          <p className="font-extrabold text-gray-900 dark:text-white text-base">Game 1: 21-17, Game 2: 21-19</p>
+                          <p className="font-extrabold text-gray-900 dark:text-white text-base">
+                            {latestMatch ? (
+                              `Skor: ${latestMatch.userScore} - ${latestMatch.opponentScore}`
+                            ) : (
+                              "Game 1: 21-17, Game 2: 21-19"
+                            )}
+                          </p>
                           <p className="text-xs text-gray-600 dark:text-zinc-400 italic mt-2">
-                            &ldquo;Transisi dari posisi defense ke menyerang meningkat pesat. Netting menyilang Anda menyumbang 4 poin bersih.&rdquo;
+                            &ldquo;{latestMatch ? latestMatch.analysisText : "Transisi dari posisi defense ke menyerang meningkat pesat. Netting menyilang Anda menyumbang 4 poin bersih."}&rdquo;
                           </p>
                         </div>
 
@@ -852,19 +1004,19 @@ export default function TrainingCenterPage() {
                           <div>
                             <div className="flex justify-between text-xs font-semibold mb-1">
                               <span className="text-gray-600 dark:text-zinc-400">Efisiensi Serangan</span>
-                              <span className="text-blue-600 dark:text-blue-400">82%</span>
+                              <span className="text-blue-600 dark:text-blue-400">{latestMatch ? latestMatch.attackEfficiency : 82}%</span>
                             </div>
                             <div className="h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500 rounded-full" style={{ width: '82%' }}></div>
+                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${latestMatch ? latestMatch.attackEfficiency : 82}%` }}></div>
                             </div>
                           </div>
                           <div>
                             <div className="flex justify-between text-xs font-semibold mb-1">
                               <span className="text-gray-600 dark:text-zinc-400">Kekokohan Pertahanan</span>
-                              <span className="text-emerald-600 dark:text-emerald-400">65%</span>
+                              <span className="text-emerald-600 dark:text-emerald-400">{latestMatch ? latestMatch.defenseSolidity : 65}%</span>
                             </div>
                             <div className="h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '65%' }}></div>
+                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${latestMatch ? latestMatch.defenseSolidity : 65}%` }}></div>
                             </div>
                           </div>
                         </div>
@@ -872,7 +1024,7 @@ export default function TrainingCenterPage() {
                     </div>
 
                     {/* Psychological / Mental Resilience Card */}
-                    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                    <div className="training-mental-card bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
                       <h3 className="text-md font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                         <Brain className="w-4 h-4 text-purple-500" /> Kesiapan Mental & Psikologis
                       </h3>
@@ -923,7 +1075,7 @@ export default function TrainingCenterPage() {
                 {/* Right Column - Quick Action cards */}
                 <div className="space-y-6">
                   {/* Quick AI Coaching Actions */}
-                  <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                  <div className="training-quick-actions bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
                     <h3 className="text-md font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-blue-500" /> Aksi Cepat Coach AI
                     </h3>
@@ -1006,7 +1158,7 @@ export default function TrainingCenterPage() {
 
             {/* 2. CHAT COACH TAB */}
             {activeTab === 'chat' && (
-              <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-md overflow-hidden flex flex-col h-[650px]">
+              <div className="training-chat-container bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-md overflow-hidden flex flex-col h-[650px]">
                 {/* Chat Header */}
                 <div className="p-4 border-b border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900/50 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -1042,7 +1194,7 @@ export default function TrainingCenterPage() {
                 </div>
 
                 {/* Message Log Screen */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gray-50/50 dark:bg-zinc-950/20">
+                <div className="training-chat-box flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gray-50/50 dark:bg-zinc-950/20">
                   {messages.map((msg) => {
                     const isCoach = msg.role === 'coach';
                     return (
@@ -1127,7 +1279,7 @@ export default function TrainingCenterPage() {
                 </div>
 
                 {/* Chat Input Bar */}
-                <div className="p-4 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                <div className="training-chat-input p-4 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -1178,7 +1330,7 @@ export default function TrainingCenterPage() {
                     Ketik teknik spesifik yang ingin Anda latih. AI Coach akan memberikan saran singkat lalu menyajikan daftar video YouTube teratas.
                   </p>
 
-                  <div className="relative mb-6">
+                  <div className="training-search-bar relative mb-6">
                     <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
@@ -1198,7 +1350,7 @@ export default function TrainingCenterPage() {
                   </div>
 
                   {/* Popular Topics Tags Grid */}
-                  <div>
+                  <div className="training-popular-topics">
                     <p className="text-xs font-bold text-gray-500 dark:text-zinc-400 mb-3">Topik Populer:</p>
                     <div className="flex flex-wrap gap-2.5">
                       {trainingTopics.map((topic) => (
@@ -1215,99 +1367,147 @@ export default function TrainingCenterPage() {
                   </div>
                 </div>
 
-                {/* SEARCHING STATE */}
-                {isSearchingVideos && (
-                  <div className="flex flex-col items-center justify-center py-16">
-                    <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mb-3" />
-                    <p className="text-sm text-gray-500 dark:text-zinc-400 font-semibold">Menganalisis teknik & mencari video panduan terbaik...</p>
-                  </div>
-                )}
+                <div className="training-main-content w-full">
+                  {/* SEARCHING STATE */}
+                  {isSearchingVideos && (
+                    <div className="flex flex-col items-center justify-center py-16">
+                      <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mb-3" />
+                      <p className="text-sm text-gray-500 dark:text-zinc-400 font-semibold">Menganalisis teknik & mencari video panduan terbaik...</p>
+                    </div>
+                  )}
 
-                {/* RESULTS */}
-                {!isSearchingVideos && searchSuccess && (
-                  <div className="space-y-6">
-                    {/* AI Coach Advice Box */}
-                    {videoAdvice && (
-                      <div className="bg-blue-500/5 dark:bg-blue-500/10 border-l-4 border-blue-500 rounded-r-xl p-5 md:p-6">
-                        <h4 className="font-extrabold text-sm text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                          💡 Saran Singkat AI Coach:
-                        </h4>
-                        <p className="text-sm text-gray-800 dark:text-zinc-200 leading-relaxed font-medium">
-                          {videoAdvice}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Video Cards Grid */}
-                    <div>
-                      <h4 className="font-extrabold text-sm text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        🎥 Video Tutorial Terkait ({videosList.length})
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {videosList.map((video) => (
-                          <a
-                            key={video.id}
-                            href={video.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col"
-                          >
-                            {/* Video Thumbnail */}
-                            <div className="relative aspect-video w-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
-                              <img
-                                src={video.thumbnail}
-                                alt={video.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                              <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
-                                  <Play className="w-5 h-5 fill-white text-white ml-0.5" />
-                                </div>
-                              </div>
-                              <span className="absolute bottom-2 right-2 bg-black/75 text-white text-[10px] font-bold px-2 py-0.5 rounded">
-                                {video.duration}
-                              </span>
-                            </div>
-
-                            {/* Video Metadata */}
-                            <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
-                              <div>
-                                <h5 className="font-bold text-xs text-gray-900 dark:text-white line-clamp-2 leading-relaxed group-hover:text-blue-500 transition-colors" dangerouslySetInnerHTML={{ __html: video.title }}>
-                                </h5>
-                                <p className="text-[10px] text-gray-500 dark:text-zinc-400 mt-1.5 font-medium">
-                                  Saluran: {video.channelTitle}
-                                </p>
-                              </div>
-                              <div className="pt-2.5 border-t border-gray-100 dark:border-zinc-850 flex items-center justify-between text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                                <span>Tonton di YouTube</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </div>
-                            </div>
-                          </a>
-                        ))}
-                      </div>
-
-                      {videosList.length === 0 && (
-                        <div className="text-center py-12 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-850 rounded-xl">
-                          <p className="text-sm text-gray-500">Tidak ada video yang ditemukan. Cari topik lainnya.</p>
+                  {/* RESULTS */}
+                  {!isSearchingVideos && searchSuccess && (
+                    <div className="space-y-6">
+                      {/* AI Coach Advice Box */}
+                      {videoAdvice && (
+                        <div className="bg-blue-500/5 dark:bg-blue-500/10 border-l-4 border-blue-500 rounded-r-xl p-5 md:p-6">
+                          <h4 className="font-extrabold text-sm text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            💡 Saran Singkat AI Coach:
+                          </h4>
+                          <p className="text-sm text-gray-800 dark:text-zinc-200 leading-relaxed font-medium">
+                            {videoAdvice}
+                          </p>
                         </div>
                       )}
-                    </div>
-                  </div>
-                )}
 
-                {/* DEFAULT VIDEO INTRO SCREEN (Before searching) */}
-                {!isSearchingVideos && !searchSuccess && (
-                  <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-8 text-center">
-                    <div className="w-16 h-16 bg-orange-100 dark:bg-orange-950/20 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Play className="w-8 h-8 fill-orange-500" />
+                      {/* Video Cards Grid */}
+                      <div>
+                        <h4 className="font-extrabold text-sm text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                          🎥 Video Tutorial Terkait ({videosList.length})
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {videosList.map((video) => (
+                            <a
+                              key={video.id}
+                              href={video.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col"
+                            >
+                              {/* Video Thumbnail */}
+                              <div className="relative aspect-video w-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
+                                <img
+                                  src={video.thumbnail}
+                                  alt={video.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+                                    <Play className="w-5 h-5 fill-white text-white ml-0.5" />
+                                  </div>
+                                </div>
+                                <span className="absolute bottom-2 right-2 bg-black/75 text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                                  {video.duration}
+                                </span>
+                              </div>
+
+                              {/* Video Metadata */}
+                              <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
+                                <div>
+                                  <h5 className="font-bold text-xs text-gray-900 dark:text-white line-clamp-2 leading-relaxed group-hover:text-blue-500 transition-colors" dangerouslySetInnerHTML={{ __html: video.title }}>
+                                  </h5>
+                                  <p className="text-[10px] text-gray-500 dark:text-zinc-400 mt-1.5 font-medium">
+                                    Saluran: {video.channelTitle}
+                                  </p>
+                                </div>
+                                <div className="pt-2.5 border-t border-gray-100 dark:border-zinc-850 flex items-center justify-between text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                  <span>Tonton di YouTube</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </div>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+
+                        {videosList.length === 0 && (
+                          <div className="text-center py-12 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-850 rounded-xl">
+                            <p className="text-sm text-gray-500">Tidak ada video yang ditemukan. Cari topik lainnya.</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Perpustakaan Video Badminton</h3>
-                    <p className="text-sm text-gray-600 dark:text-zinc-400 max-w-md mx-auto mb-4">
-                      Silakan ketik teknik yang ingin dicari di kolom pencarian di atas, atau klik salah satu Topik Populer untuk memulainya.
-                    </p>
-                  </div>
-                )}
+                  )}
+
+                  {/* DEFAULT VIDEO INTRO SCREEN (Before searching) */}
+                  {!isSearchingVideos && !searchSuccess && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Left Column: Intro */}
+                      <div className="md:col-span-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-8 text-center flex flex-col justify-center items-center shadow-xs">
+                        <div className="w-16 h-16 bg-orange-100 dark:bg-orange-950/20 text-orange-500 rounded-full flex items-center justify-center mb-4">
+                          <Play className="w-8 h-8 fill-orange-500 text-orange-500" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Perpustakaan Video Badminton</h3>
+                        <p className="text-sm text-gray-600 dark:text-zinc-400 max-w-md mx-auto mb-4 leading-relaxed">
+                          Silakan ketik teknik yang ingin dicari di kolom pencarian di atas, atau klik salah satu Topik Populer untuk memulainya.
+                        </p>
+                      </div>
+
+                      {/* Right Column: Tips & History */}
+                      <div className="space-y-6">
+                        {/* Tips Section */}
+                        <div className="training-tips bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                          <h4 className="font-extrabold text-sm text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                            💡 Tips Bertanya
+                          </h4>
+                          <p className="text-xs text-gray-600 dark:text-zinc-400 leading-relaxed font-semibold">
+                            Jelaskan masalah spesifik Anda secara detail (misal: "smash sering nyangkut net") dan sertakan level bermain Anda (pemula/menengah) untuk mendapatkan saran latihan yang paling optimal dari AI Coach.
+                          </p>
+                        </div>
+
+                        {/* History Section */}
+                        <div className="training-history bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                          <h4 className="font-extrabold text-sm text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                            📚 Riwayat Latihan
+                          </h4>
+                          {/* List of recent queries */}
+                          <div className="space-y-2">
+                            {recentQueries.map((q, idx) => (
+                              <div key={idx} className="group/item flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-zinc-800/40 hover:bg-blue-50 dark:hover:bg-zinc-800 border border-gray-100 dark:border-zinc-800 transition-all">
+                                <button
+                                  onClick={() => handleVideoSearch(q)}
+                                  className="text-xs text-left font-semibold text-gray-700 dark:text-zinc-300 truncate flex-1 focus:outline-none"
+                                >
+                                  {q}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteQuery(q)}
+                                  className="opacity-0 group-hover/item:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded transition-opacity"
+                                  title="Hapus riwayat"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                            {recentQueries.length === 0 && (
+                              <p className="text-xs text-gray-500 text-center py-4">Belum ada riwayat pencarian.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </>
@@ -1426,6 +1626,33 @@ export default function TrainingCenterPage() {
           </div>
         </div>
       )}
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorialSteps}
+        isActive={isTutorialActive}
+        onClose={closeTutorial}
+        tutorialKey="member-training"
+        onStepChange={(stepIndex) => {
+          const step = tutorialSteps[stepIndex];
+          if (!step) return;
+          
+          if (step.element.includes('dashboard') || 
+              step.element.includes('plan-card') || 
+              step.element.includes('drills-card') || 
+              step.element.includes('mental-card') || 
+              step.element.includes('quick-actions')) {
+            setActiveTab('dashboard');
+          } else if (step.element.includes('chat')) {
+            setActiveTab('chat');
+          } else if (step.element.includes('videos') || 
+                     step.element.includes('search-bar') || 
+                     step.element.includes('popular-topics') || 
+                     step.element.includes('tips') || 
+                     step.element.includes('history')) {
+            setActiveTab('videos');
+          }
+        }}
+      />
     </div>
   );
 }
