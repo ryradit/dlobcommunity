@@ -297,6 +297,14 @@ export default function TrainingCenterPage() {
   const [isAbandonModalOpen, setIsAbandonModalOpen] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
 
+  // Independent Mental Assessment State
+  const [isMentalModalOpen, setIsMentalModalOpen] = useState(false);
+  const [isSubmittingMental, setIsSubmittingMental] = useState(false);
+  const [mentalConfidence, setMentalConfidence] = useState(70);
+  const [mentalSymptoms, setMentalSymptoms] = useState<string[]>([]);
+  const [mentalDecision, setMentalDecision] = useState('');
+  const [mentalWinning, setMentalWinning] = useState('');
+
   // Drill Logging Modal State
   const [selectedDrill, setSelectedDrill] = useState<AssignedDrill | null>(null);
   const [logSets, setLogSets] = useState(3);
@@ -759,6 +767,49 @@ export default function TrainingCenterPage() {
     }
   };
 
+  const handleMentalAssessmentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId) return;
+    setIsSubmittingMental(true);
+    try {
+      const response = await fetch('/api/ai/mental-assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          confidenceLevel: mentalConfidence,
+          pressureSymptoms: mentalSymptoms,
+          decisionStyle: mentalDecision,
+          winningMentalityStyle: mentalWinning,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal mengirim asesmen mental');
+      }
+
+      const data = await response.json();
+      if (data.success && data.assessment) {
+        setMentalAssessment(data.assessment);
+        setIsMentalModalOpen(false);
+        
+        // Add a success coach message
+        const coachMessage: CoachMessage = {
+          id: Date.now().toString(),
+          role: 'coach',
+          content: `Asesmen psikologi tanding Anda telah berhasil dianalisis secara independen! Anda bisa melihat metrik kesiapan mental Anda diperbarui di dashboard training.`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, coachMessage]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Terjadi kesalahan saat memproses asesmen mental. Silakan coba lagi.');
+    } finally {
+      setIsSubmittingMental(false);
+    }
+  };
+
   const trainingTopics = [
     { id: 'smash', icon: '💥', label: 'Smash Power', query: 'Cara melatih pukulan smash tajam dan bertenaga' },
     { id: 'backhand', icon: '🎾', label: 'Backhand Clear', query: 'Latihan teknik backhand badminton untuk pemula' },
@@ -1111,8 +1162,19 @@ export default function TrainingCenterPage() {
 
                     {/* Psychological / Mental Resilience Card */}
                     <div className="training-mental-card bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
-                      <h3 className="text-md font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        <Brain className="w-4 h-4 text-purple-500" /> Kesiapan Mental & Psikologis
+                      <h3 className="text-md font-extrabold text-gray-900 dark:text-white mb-4 flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2">
+                          <Brain className="w-4 h-4 text-purple-500" /> Kesiapan Mental & Psikologis
+                        </span>
+                        {mentalAssessment && (
+                          <button 
+                            onClick={() => setIsMentalModalOpen(true)}
+                            title="Ulangi Asesmen"
+                            className="text-xs text-purple-650 dark:text-purple-400 hover:text-purple-700 font-bold transition-colors"
+                          >
+                            Ulangi Asesmen
+                          </button>
+                        )}
                       </h3>
 
                       {mentalAssessment ? (
@@ -1185,7 +1247,7 @@ export default function TrainingCenterPage() {
                         <div className="text-center py-6 bg-gray-50 dark:bg-zinc-800/20 rounded-xl border border-dashed border-gray-200 dark:border-zinc-800 flex flex-col justify-center items-center">
                           <p className="text-xs text-gray-500 dark:text-zinc-400 max-w-[200px] mb-3">Belum ada asesmen psikologi tanding.</p>
                           <button
-                            onClick={() => triggerQuickAction('Tolong berikan asesmen mental tanding saya dan tips mengatasi tekanan saat match poin.')}
+                            onClick={() => setIsMentalModalOpen(true)}
                             className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-[11px] font-bold transition-all shadow-xs"
                           >
                             Mulai Asesmen AI
@@ -1762,6 +1824,168 @@ export default function TrainingCenterPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Independent Mental Assessment Modal */}
+      {isMentalModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <form onSubmit={handleMentalAssessmentSubmit}>
+              <div className="p-6 max-h-[75vh] overflow-y-auto space-y-5">
+                <div className="flex items-center gap-3 text-purple-650 mb-2">
+                  <Brain className="w-8 h-8 shrink-0 text-purple-500" />
+                  <div>
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white">Asesmen Psikologi Tanding Mandiri</h3>
+                    <p className="text-xs text-gray-500 dark:text-zinc-400">Analisis kesiapan mental dan ketahanan tekanan tanding Anda.</p>
+                  </div>
+                </div>
+
+                {/* Q1: Confidence Level */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-zinc-400">
+                    1. Tingkat Kepercayaan Diri ({mentalConfidence}/100)
+                  </label>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    step="5"
+                    value={mentalConfidence}
+                    onChange={(e) => setMentalConfidence(parseInt(e.target.value))}
+                    className="w-full h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  />
+                  <div className="text-[11px] font-semibold text-purple-600 dark:text-purple-400">
+                    {mentalConfidence < 40 && 'Sangat Cemas / Kurang Yakin'}
+                    {mentalConfidence >= 40 && mentalConfidence < 70 && 'Cukup Percaya Diri (Fluktuatif)'}
+                    {mentalConfidence >= 70 && mentalConfidence < 90 && 'Percaya Diri Tinggi & Stabil'}
+                    {mentalConfidence >= 90 && 'Sangat Optimis / Mentalitas Juara'}
+                  </div>
+                </div>
+
+                {/* Q2: Pressure Symptoms (Checkboxes) */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-zinc-400">
+                    2. Reaksi Fisik/Mental saat Skor Ketat (Pilih yang sesuai)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'sweaty', label: 'Tangan berkeringat / tegang' },
+                      { id: 'blank', label: 'Pikiran kosong (blank)' },
+                      { id: 'rushed', label: 'Terburu-buru ingin mematikan bola' },
+                      { id: 'cautious', label: 'Terlalu ragu-ragu / takut salah' },
+                      { id: 'heart', label: 'Jantung berdebar cepat' },
+                      { id: 'calm', label: 'Tetap tenang & fokus' },
+                    ].map((item) => {
+                      const isChecked = mentalSymptoms.includes(item.label);
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            if (isChecked) {
+                              setMentalSymptoms(mentalSymptoms.filter((s) => s !== item.label));
+                            } else {
+                              setMentalSymptoms([...mentalSymptoms, item.label]);
+                            }
+                          }}
+                          className={`p-2.5 rounded-xl border text-left text-xs font-medium transition-all ${
+                            isChecked
+                              ? 'border-purple-500 bg-purple-500/5 text-purple-700 dark:text-purple-300'
+                              : 'border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Q3: Focus and Decision Making (Radio Group) */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-zinc-400">
+                    3. Pengambilan Keputusan Di Bawah Tekanan
+                  </label>
+                  <div className="space-y-2">
+                    {[
+                      'Cenderung bermain sangat aman (pasif/bertahan)',
+                      'Sering melakukan kesalahan sendiri yang tidak perlu (unforced error)',
+                      'Tetap tenang dan membuat pilihan pukulan taktis yang cerdas',
+                    ].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setMentalDecision(option)}
+                        className={`w-full p-2.5 rounded-xl border text-left text-xs font-medium transition-all ${
+                          mentalDecision === option
+                            ? 'border-purple-500 bg-purple-500/5 text-purple-700 dark:text-purple-300'
+                            : 'border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Q4: Winning Mentality (Radio Group) */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-zinc-400">
+                    4. Fokus Pikiran Saat Menjelang Match Point
+                  </label>
+                  <div className="space-y-2">
+                    {[
+                      'Fokus memenangkan rally demi rally demi meraih poin',
+                      'Khawatir berlebih akan kekalahan atau kehilangan momentum',
+                      'Terbawa emosi atau sulit melupakan kesalahan/error sebelumnya',
+                    ].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setMentalWinning(option)}
+                        className={`w-full p-2.5 rounded-xl border text-left text-xs font-medium transition-all ${
+                          mentalWinning === option
+                            ? 'border-purple-500 bg-purple-500/5 text-purple-700 dark:text-purple-300'
+                            : 'border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 border-t border-gray-100 dark:border-zinc-850 bg-gray-50 dark:bg-zinc-900/50 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsMentalModalOpen(false)}
+                  disabled={isSubmittingMental}
+                  className="flex-1 px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-750 text-gray-700 dark:text-zinc-200 font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingMental || !mentalDecision || !mentalWinning}
+                  className="flex-1 px-4 py-2.5 bg-purple-650 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {isSubmittingMental ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menganalisis...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Kirim Asesmen</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
