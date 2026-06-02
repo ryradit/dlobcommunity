@@ -141,8 +141,11 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
     // Call Gemini with tools - instantiated once outside the loop to keep track of successful model across turns
     const model = getGenerativeModelWithFallback({
       model: 'gemini-2.0-flash',
-      // Note: In production, use proper tool definitions via optional parameters
-      // For MVP, we use text-based tool detection from response content
+      systemInstruction: systemPrompt,
+      generationConfig: {
+        maxOutputTokens: 2000,
+        temperature: 0.9, // Slightly higher for varied recommendations
+      },
     });
 
     while (turnCount < maxTurns) {
@@ -151,11 +154,6 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
 
       const response = await model.generateContent({
         contents: messages,
-        systemInstruction: systemPrompt,
-        generationConfig: {
-          maxOutputTokens: 2000,
-          temperature: 0.9, // Slightly higher for varied recommendations
-        },
       });
 
       console.log('[Coaching Agent] Gemini response received');

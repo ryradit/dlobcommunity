@@ -1252,7 +1252,7 @@ export default function TrainingCenterPage() {
                         Dlob AI Coach Agent
                         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                       </h3>
-                      <p className="text-[10px] text-gray-500 dark:text-zinc-400">Model: Gemini 2.5 Flash Lite (Fallback: 2.5 Flash, 2.0 Flash, 1.5 Flash)</p>
+                      <p className="text-[10px] text-gray-500 dark:text-zinc-400">Aktif & Siap Membantu</p>
                     </div>
                   </div>
                   <button
