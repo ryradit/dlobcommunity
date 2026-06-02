@@ -304,12 +304,12 @@ export default function TrainingCenterPage() {
         // Fetch Member Profile
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('display_name, full_name')
-          .eq('user_id', userId)
+          .select('full_name')
+          .eq('id', userId)
           .single();
 
         if (profileData) {
-          setMemberName(profileData.display_name || profileData.full_name || 'Member');
+          setMemberName(profileData.full_name || 'Member');
         }
 
         // Fetch active training plan
@@ -350,7 +350,7 @@ export default function TrainingCenterPage() {
 
         // Fetch match analytics using real match history
         try {
-          const nameToUse = profileData?.display_name || profileData?.full_name || undefined;
+          const nameToUse = profileData?.full_name || undefined;
           const analytics = await analyzeMatchHistory(nameToUse, userId);
           if (analytics) {
             setMatchAnalytics(analytics);
@@ -369,7 +369,6 @@ export default function TrainingCenterPage() {
 
           if (allMatchesData && allMatchesData.length > 0 && profileData) {
             const possibleNames = [
-              profileData.display_name,
               profileData.full_name,
             ].map(n => n?.trim().toLowerCase()).filter(Boolean);
 
@@ -497,7 +496,7 @@ export default function TrainingCenterPage() {
             {
               id: 'welcome',
               role: 'coach',
-              content: `Halo ${profileData?.display_name || profileData?.full_name || 'Pemain'}! Saya adalah Dlob AI Coach Anda. Saya siap membantu merancang rencana latihan fisik, menganalisis taktik bertanding, serta menguji kesiapan mental Anda. Silakan pilih menu aksi cepat di dashboard latihan atau ajukan pertanyaan langsung kepada saya di sini.`,
+              content: `Halo ${profileData?.full_name || 'Pemain'}! Saya adalah Dlob AI Coach Anda. Saya siap membantu merancang rencana latihan fisik, menganalisis taktik bertanding, serta menguji kesiapan mental Anda. Silakan pilih menu aksi cepat di dashboard latihan atau ajukan pertanyaan langsung kepada saya di sini.`,
               timestamp: new Date()
             }
           ]);
