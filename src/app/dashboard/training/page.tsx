@@ -367,23 +367,27 @@ export default function TrainingCenterPage() {
             .not('winner', 'is', null)
             .order('match_date', { ascending: false });
 
-          if (allMatchesData && allMatchesData.length > 0 && profileData) {
-            const possibleNames = [
-              profileData.full_name,
-            ].map(n => n?.trim().toLowerCase()).filter(Boolean);
+          if (allMatchesData && allMatchesData.length > 0 && profileData?.full_name) {
+            const userNameLower = profileData.full_name.trim().toLowerCase();
+            const userWords = userNameLower.split(/\s+/).filter((w: string) => w.length > 2);
+
+            const matchesPlayerName = (dbPlayerName: string) => {
+              if (!dbPlayerName) return false;
+              const dbNameLower = dbPlayerName.trim().toLowerCase();
+              if (dbNameLower === userNameLower) return true;
+              const dbWords = dbNameLower.split(/\s+/).filter((w: string) => w.length > 2);
+              return userWords.some((uw: string) => dbWords.includes(uw));
+            };
 
             const userMatch = allMatchesData.find((match: any) => {
-              const p1 = match.team1_player1?.trim().toLowerCase();
-              const p2 = match.team1_player2?.trim().toLowerCase();
-              const p3 = match.team2_player1?.trim().toLowerCase();
-              const p4 = match.team2_player2?.trim().toLowerCase();
-              return possibleNames.includes(p1) || possibleNames.includes(p2) || possibleNames.includes(p3) || possibleNames.includes(p4);
+              return matchesPlayerName(match.team1_player1) ||
+                     matchesPlayerName(match.team1_player2) ||
+                     matchesPlayerName(match.team2_player1) ||
+                     matchesPlayerName(match.team2_player2);
             });
 
             if (userMatch) {
-              const isTeam1 = [userMatch.team1_player1, userMatch.team1_player2]
-                .map(n => n?.trim().toLowerCase())
-                .some(n => possibleNames.includes(n));
+              const isTeam1 = matchesPlayerName(userMatch.team1_player1) || matchesPlayerName(userMatch.team1_player2);
               
               const userTeam = isTeam1 ? 'team1' : 'team2';
               const isWinner = userMatch.winner === userTeam;
@@ -394,12 +398,10 @@ export default function TrainingCenterPage() {
               // Get partner name
               let partner = '';
               if (isTeam1) {
-                const p1Lower = userMatch.team1_player1?.trim().toLowerCase();
-                const isP1User = possibleNames.includes(p1Lower);
+                const isP1User = matchesPlayerName(userMatch.team1_player1);
                 partner = isP1User ? userMatch.team1_player2 : userMatch.team1_player1;
               } else {
-                const p1Lower = userMatch.team2_player1?.trim().toLowerCase();
-                const isP1User = possibleNames.includes(p1Lower);
+                const isP1User = matchesPlayerName(userMatch.team2_player1);
                 partner = isP1User ? userMatch.team2_player2 : userMatch.team2_player1;
               }
 
