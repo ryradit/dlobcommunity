@@ -54,6 +54,8 @@ interface MentalAssessment {
   overall_psychological_score: number;
   findings: any;
   recommendations: string[];
+  mental_strengths?: string[];
+  improvement_areas?: string[];
   assessed_date: string;
 }
 

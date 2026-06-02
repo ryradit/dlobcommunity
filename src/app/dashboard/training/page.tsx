@@ -81,6 +81,8 @@ interface MentalAssessment {
   overall_psychological_score: number;
   findings: any;
   recommendations: string[];
+  mental_strengths?: string[];
+  improvement_areas?: string[];
   assessed_date: string;
 }
 
@@ -1134,12 +1136,50 @@ export default function TrainingCenterPage() {
                             </div>
                           </div>
 
-                          <div className="p-3 bg-purple-500/5 border border-purple-200 dark:border-purple-900/30 rounded-xl">
-                            <p className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1">Rekomendasi AI Coach:</p>
-                            <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-medium line-clamp-2">
-                              {mentalAssessment.recommendations?.[0] || 'Lakukan visualisasi pukulan sukses sebelum service.'}
-                            </p>
-                          </div>
+                          {/* Findings Description */}
+                          {mentalAssessment.findings && (
+                            <div className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed bg-gray-50 dark:bg-zinc-800/20 p-3 rounded-xl border border-gray-100 dark:border-zinc-800">
+                              {typeof mentalAssessment.findings === 'object' 
+                                ? (mentalAssessment.findings.description || mentalAssessment.findings.assessment || 'Asesmen mental Anda stabil.')
+                                : mentalAssessment.findings}
+                            </div>
+                          )}
+
+                          {/* Strengths List */}
+                          {Array.isArray(mentalAssessment.mental_strengths) && mentalAssessment.mental_strengths.length > 0 && (
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase font-extrabold text-emerald-600 dark:text-emerald-450 tracking-wider">Kelebihan Mental:</span>
+                              <ul className="list-disc list-inside text-xs text-gray-600 dark:text-zinc-300 space-y-1 pl-1">
+                                {mentalAssessment.mental_strengths.map((str: string, index: number) => (
+                                  <li key={index} className="leading-relaxed">{str}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Improvements List */}
+                          {Array.isArray(mentalAssessment.improvement_areas) && mentalAssessment.improvement_areas.length > 0 && (
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase font-extrabold text-amber-600 dark:text-amber-450 tracking-wider">Area Peningkatan:</span>
+                              <ul className="list-disc list-inside text-xs text-gray-600 dark:text-zinc-300 space-y-1 pl-1">
+                                {mentalAssessment.improvement_areas.map((imp: string, index: number) => (
+                                  <li key={index} className="leading-relaxed">{imp}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Recommendations List */}
+                          {Array.isArray(mentalAssessment.recommendations) && mentalAssessment.recommendations.length > 0 && (
+                            <div className="p-3 bg-purple-500/5 border border-purple-200/40 dark:border-purple-900/30 rounded-xl space-y-1.5 animate-pulse-once">
+                              <span className="text-[10px] uppercase font-extrabold text-purple-600 dark:text-purple-400 tracking-wider block">Rekomendasi Latihan Mental:</span>
+                              <ul className="list-decimal list-inside text-xs text-gray-650 dark:text-zinc-300 space-y-1 pl-1 font-medium">
+                                {mentalAssessment.recommendations.map((rec: string, index: number) => (
+                                  <li key={index} className="leading-relaxed">{rec}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="text-center py-6 bg-gray-50 dark:bg-zinc-800/20 rounded-xl border border-dashed border-gray-200 dark:border-zinc-800 flex flex-col justify-center items-center">
