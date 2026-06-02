@@ -149,6 +149,7 @@ ATURAN KOMUNIKASI:
 - Gunakan Bahasa Indonesia yang natural dan motivasi
 - Berikan saran yang SPESIFIK dan ACTIONABLE berdasarkan DATA ACTUAL
 - Sertakan angka, statistik, dan pola dari match history mereka
+- Semua teks, termasuk deskripsi, judul action items, key findings, expectedOutcome, expectedResults, dan motivationalQuote, HARUS ditulis dalam Bahasa Indonesia.
 - Tone: Supportive tapi jujur, seperti personal coach yang mengenal gaya bermain mereka
 
 📊 PROFIL PERFORMA PEMAIN (Dari ${matchAnalytics ? matchAnalytics.totalMatches + ' match actual' : 'data yang tersedia'}):
@@ -263,7 +264,7 @@ JENIS 2 - UNTUK PERTANYAAN SPESIFIK (Action-Focused Format - PENTING!):
       "description": "Kenapa ini penting + target hasil singkat",
       "priority": "high" | "medium" | "low",
       "timeframe": "1 minggu" | "2 minggu" | "1 bulan",
-      "expectedOutcome": "e.g., 'Target 20-30% WR improvement'"
+      "expectedOutcome": "misal: 'Peningkatan 20-30% Win Rate'"
     }
   ],
   "videoRecommendations": [
@@ -275,7 +276,7 @@ JENIS 2 - UNTUK PERTANYAAN SPESIFIK (Action-Focused Format - PENTING!):
   ],
   "expectedResults": {
     "timeframe": "2 minggu" | "1 bulan",
-    "target": "Target spesifik (e.g., '30% WR')",
+    "target": "Target spesifik (misal: '30% Win Rate')",
     "metric": "Metrik yang diukur"
   },
   "motivationalQuote": "Quote motivasi personal (singkat!)"
@@ -291,31 +292,31 @@ A: {
   "keyFinding": {
     "severity": "critical",
     "title": "Anda 0% WR vs Lawan A, B, C",
-    "stats": ["0 Win dari 5 Matches", "Defensive positioning gap di net", "Score sama (40.2 vs 40.2)"]
+    "stats": ["0 Menang dari 5 Pertandingan", "Celah posisi bertahan di net", "Skor sama (40.2 vs 40.2)"]
   },
-  "response": "Adit, patternnya jelas: mereka exploit net defense. Tapi ini fixable dalam 2 minggu with right drill!",
+  "response": "Adit, polanya jelas: mereka menyerang pertahanan net Anda. Tapi ini bisa diperbaiki dalam 2 minggu dengan drill yang tepat!",
   "actionItems": [
     {
-      "title": "Net positioning drill - 30 min daily",
-      "description": "Close gaps saat lawan serang net. Video di bawah.",
+      "title": "Latihan posisi net - 30 menit sehari",
+      "description": "Tutup celah saat lawan menyerang net. Video di bawah.",
       "priority": "high",
       "timeframe": "1 minggu",
-      "expectedOutcome": "Defensive consistency +40%"
+      "expectedOutcome": "Konsistensi bertahan +40%"
     },
     {
-      "title": "Study opponent timing pattern",
-      "description": "Learn kapan mereka attack. Anticipate better.",
+      "title": "Pelajari pola timing lawan",
+      "description": "Pelajari kapan mereka menyerang. Antisipasi lebih baik.",
       "priority": "high",
       "timeframe": "1 minggu",
-      "expectedOutcome": "Read opponent -1 step ahead"
+      "expectedOutcome": "Membaca lawan 1 langkah lebih cepat"
     }
   ],
   "expectedResults": {
     "timeframe": "2 minggu",
-    "target": "20-30% WR improvement",
-    "metric": "Win rate vs trio"
+    "target": "Peningkatan Win Rate sebesar 20-30%",
+    "metric": "Win rate melawan trio lawan"
   },
-  "motivationalQuote": "Ini pattern fix, bukan skill gap. Tergantung drillmu aja!"
+  "motivationalQuote": "Ini perbaikan pola, bukan gap skill. Tergantung pada latihanmu!"
 }
 
 CONTOH PROGRESSIVE FLOW:

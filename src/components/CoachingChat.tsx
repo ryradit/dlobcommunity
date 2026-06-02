@@ -11,6 +11,32 @@ const supabaseClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+const translateExpectedOutcome = (text: string): string => {
+  if (!text) return '';
+  let translated = text;
+  
+  // Replace "Improve [focus] by [X-Y]% within [Z] weeks"
+  translated = translated.replace(/Improve (\w+[\s\w]*?) by (\d+-\d+|\d+)% within (\d+) weeks/gi, (match, focus, range, weeks) => {
+    let focusIndo = focus.toLowerCase().trim();
+    if (focusIndo === 'smash') focusIndo = 'smash';
+    else if (focusIndo === 'defense') focusIndo = 'pertahanan';
+    else if (focusIndo === 'backhand') focusIndo = 'backhand';
+    else if (focusIndo === 'stamina') focusIndo = 'stamina';
+    else if (focusIndo === 'footwork') focusIndo = 'footwork';
+    else if (focusIndo === 'netting' || focusIndo === 'net' || focusIndo === 'net play') focusIndo = 'permainan net (netting)';
+    return `Meningkatkan ${focusIndo} sebesar ${range}% dalam waktu ${weeks} minggu`;
+  });
+
+  // Simple direct translation fallbacks
+  translated = translated.replace(/Improve/gi, 'Meningkatkan');
+  translated = translated.replace(/by/gi, 'sebesar');
+  translated = translated.replace(/within/gi, 'dalam waktu');
+  translated = translated.replace(/weeks/gi, 'minggu');
+  translated = translated.replace(/week/gi, 'minggu');
+  
+  return translated;
+};
+
 interface Message {
   id: string;
   role: 'user' | 'coach';
@@ -710,7 +736,7 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
                         </p>
                         {item.expectedOutcome && (
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            ✓ Expected: {item.expectedOutcome}
+                            ✓ Hasil Diharapkan: {translateExpectedOutcome(item.expectedOutcome)}
                           </p>
                         )}
                       </div>
@@ -868,19 +894,19 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
                     {expectedResults.timeframe && (
                       <p className="flex items-center gap-2">
                         <span className="text-gray-500 dark:text-gray-400">⏱️</span>
-                        <span><strong>Waktu:</strong> {expectedResults.timeframe}</span>
+                        <span><strong>Waktu:</strong> {translateExpectedOutcome(expectedResults.timeframe)}</span>
                       </p>
                     )}
                     {expectedResults.target && (
                       <p className="flex items-center gap-2">
                         <span className="text-gray-500 dark:text-gray-400">🎯</span>
-                        <span><strong>Target:</strong> {expectedResults.target}</span>
+                        <span><strong>Target:</strong> {translateExpectedOutcome(expectedResults.target)}</span>
                       </p>
                     )}
                     {expectedResults.metric && (
                       <p className="flex items-center gap-2">
                         <span className="text-gray-500 dark:text-gray-400">📊</span>
-                        <span><strong>Metrik:</strong> {expectedResults.metric}</span>
+                        <span><strong>Metrik:</strong> {translateExpectedOutcome(expectedResults.metric)}</span>
                       </p>
                     )}
                   </div>
@@ -909,7 +935,7 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
                   {item.expectedOutcome && (
                     <p className="text-xs text-green-700 dark:text-green-300 italic flex items-center gap-1">
                       <span>✓</span>
-                      <span><strong>Hasil Diharapkan:</strong> {item.expectedOutcome}</span>
+                      <span><strong>Hasil Diharapkan:</strong> {translateExpectedOutcome(item.expectedOutcome)}</span>
                     </p>
                   )}
                 </div>

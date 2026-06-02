@@ -232,6 +232,44 @@ const translateDifficulty = (difficulty: string): string => {
   return mapping[key] || difficulty;
 };
 
+const translateExpectedOutcome = (text: string): string => {
+  if (!text) return '';
+  let translated = text;
+  
+  // Replace "Improve [focus] by [X-Y]% within [Z] weeks"
+  translated = translated.replace(/Improve (\w+[\s\w]*?) by (\d+-\d+|\d+)% within (\d+) weeks/gi, (match, focus, range, weeks) => {
+    let focusIndo = focus.toLowerCase().trim();
+    if (focusIndo === 'smash') focusIndo = 'smash';
+    else if (focusIndo === 'defense') focusIndo = 'pertahanan';
+    else if (focusIndo === 'backhand') focusIndo = 'backhand';
+    else if (focusIndo === 'stamina') focusIndo = 'stamina';
+    else if (focusIndo === 'footwork') focusIndo = 'footwork';
+    else if (focusIndo === 'netting' || focusIndo === 'net' || focusIndo === 'net play') focusIndo = 'permainan net (netting)';
+    return `Meningkatkan ${focusIndo} sebesar ${range}% dalam waktu ${weeks} minggu`;
+  });
+
+  // Simple direct translation fallbacks
+  translated = translated.replace(/Improve/gi, 'Meningkatkan');
+  translated = translated.replace(/by/gi, 'sebesar');
+  translated = translated.replace(/within/gi, 'dalam waktu');
+  translated = translated.replace(/weeks/gi, 'minggu');
+  translated = translated.replace(/week/gi, 'minggu');
+  
+  return translated;
+};
+
+const translateFocus = (focus: string): string => {
+  if (!focus) return '';
+  const focusLower = focus.toLowerCase().replace(/_/g, ' ').trim();
+  if (focusLower === 'smash') return 'Smash';
+  if (focusLower === 'defense') return 'Pertahanan (Defense)';
+  if (focusLower === 'backhand') return 'Backhand';
+  if (focusLower === 'stamina') return 'Stamina / Fisik';
+  if (focusLower === 'footwork') return 'Langkah Kaki (Footwork)';
+  if (focusLower === 'net play' || focusLower === 'netting') return 'Permainan Net (Netting)';
+  return focus;
+};
+
 export default function TrainingCenterPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -771,10 +809,10 @@ export default function TrainingCenterPage() {
                             Rencana Latihan Aktif
                           </span>
                           <h2 className="text-3xl font-black tracking-tight mt-1 capitalize">
-                            Fokus: {trainingPlan.focus_weakness.replace(/_/g, ' ')}
+                            Fokus: {translateFocus(trainingPlan.focus_weakness)}
                           </h2>
                           <p className="text-blue-100 text-base max-w-lg leading-relaxed font-medium">
-                            Outcome: {trainingPlan.expected_outcome || 'Meningkatkan refleks dan akurasi pukulan secara signifikan.'}
+                            Target Pencapaian: {translateExpectedOutcome(trainingPlan.expected_outcome) || 'Meningkatkan refleks dan akurasi pukulan secara signifikan.'}
                           </p>
                           <div className="flex flex-wrap gap-4 text-xs font-bold text-blue-100 pt-2">
                             <span className="flex items-center gap-1.5 bg-black/10 px-3 py-1.5 rounded-lg">
