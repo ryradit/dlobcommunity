@@ -39,7 +39,7 @@ let globalLastSuccessfulModel: string | null = null;
  */
 export function getGenerativeModelWithFallback(options: GenerativeModelOptions) {
   const preferredModel = options.model;
-  
+
   // Create unique list of models starting with the preferred one,
   // then the rest of the fallback models.
   const modelsToTry = [
@@ -104,7 +104,7 @@ export function getGenerativeModelWithFallback(options: GenerativeModelOptions) 
               });
               const chatSession = modelInstance.startChat(chatOptions);
               const result = await chatSession.sendMessage(content);
-              
+
               // If successful, save this session and model name for subsequent calls!
               activeChatSession = chatSession;
               activeModelName = modelName;
