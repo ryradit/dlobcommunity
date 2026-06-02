@@ -260,6 +260,17 @@ const translateExpectedOutcome = (text: string): string => {
   return translated;
 };
 
+const renderTrend = (current: number, previous?: number) => {
+  if (previous === undefined || previous === null) return null;
+  const diff = current - previous;
+  if (diff > 0) {
+    return <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 ml-1.5 bg-emerald-500/10 px-1 py-0.5 rounded leading-none">+{diff}</span>;
+  } else if (diff < 0) {
+    return <span className="text-[10px] font-extrabold text-red-650 dark:text-red-405 ml-1.5 bg-red-500/10 px-1 py-0.5 rounded leading-none">{diff}</span>;
+  }
+  return <span className="text-[10px] font-extrabold text-gray-400 ml-1.5 bg-gray-500/10 px-1 py-0.5 rounded leading-none">±0</span>;
+};
+
 const translateFocus = (focus: string): string => {
   if (!focus) return '';
   const focusLower = focus.toLowerCase().replace(/_/g, ' ').trim();
@@ -285,6 +296,7 @@ export default function TrainingCenterPage() {
   const [trainingPlan, setTrainingPlan] = useState<TrainingPlan | null>(null);
   const [assignedDrills, setAssignedDrills] = useState<AssignedDrill[]>([]);
   const [mentalAssessment, setMentalAssessment] = useState<MentalAssessment | null>(null);
+  const [previousMentalAssessment, setPreviousMentalAssessment] = useState<MentalAssessment | null>(null);
   const [matchAnalytics, setMatchAnalytics] = useState<MatchAnalyticsResult | null>(null);
   const [latestMatch, setLatestMatch] = useState<any | null>(null);
   const [isTacticalLoading, setIsTacticalLoading] = useState(true);
@@ -394,16 +406,21 @@ export default function TrainingCenterPage() {
           setAssignedDrills([]);
         }
 
-        // Fetch latest mental assessment
+        // Fetch latest mental assessments (up to 2 for progress comparison)
         const { data: assessmentData } = await supabase
           .from('mental_assessment')
           .select('*')
           .eq('user_id', userId)
           .order('assessed_date', { ascending: false })
-          .limit(1);
+          .limit(2);
 
         if (assessmentData && assessmentData.length > 0) {
           setMentalAssessment(assessmentData[0]);
+          if (assessmentData.length > 1) {
+            setPreviousMentalAssessment(assessmentData[1]);
+          } else {
+            setPreviousMentalAssessment(null);
+          }
         }
 
         // Fetch match analytics using real match history
@@ -612,10 +629,15 @@ export default function TrainingCenterPage() {
         .select('*')
         .eq('user_id', userId)
         .order('assessed_date', { ascending: false })
-        .limit(1);
+        .limit(2);
 
       if (latestMentalData && latestMentalData.length > 0) {
         setMentalAssessment(latestMentalData[0]);
+        if (latestMentalData.length > 1) {
+          setPreviousMentalAssessment(latestMentalData[1]);
+        } else {
+          setPreviousMentalAssessment(null);
+        }
       }
 
       // Refetch plan & drills if agent modified them
@@ -790,7 +812,24 @@ export default function TrainingCenterPage() {
 
       const data = await response.json();
       if (data.success && data.assessment) {
-        setMentalAssessment(data.assessment);
+        // Refetch both assessments to get previous comparison object
+        const { data: latestMentalData } = await supabase
+          .from('mental_assessment')
+          .select('*')
+          .eq('user_id', userId)
+          .order('assessed_date', { ascending: false })
+          .limit(2);
+
+        if (latestMentalData && latestMentalData.length > 0) {
+          setMentalAssessment(latestMentalData[0]);
+          if (latestMentalData.length > 1) {
+            setPreviousMentalAssessment(latestMentalData[1]);
+          } else {
+            setPreviousMentalAssessment(null);
+          }
+        } else {
+          setMentalAssessment(data.assessment);
+        }
         setIsMentalModalOpen(false);
         
         // Add a success coach message
@@ -1179,22 +1218,60 @@ export default function TrainingCenterPage() {
 
                       {mentalAssessment ? (
                         <div className="space-y-4">
+                          {/* Outdated assessment notice (if older than 30 days / 1 month) */}
+                          {(() => {
+                            const isOutdated = new Date().getTime() - new Date(mentalAssessment.assessed_date).getTime() > 30 * 24 * 60 * 60 * 1000;
+                            if (!isOutdated) return null;
+                            return (
+                              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5">
+                                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5 animate-bounce" />
+                                <div className="space-y-1 text-left">
+                                  <p className="text-[11px] font-extrabold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                                    Pembaruan Bulanan Diperlukan
+                                  </p>
+                                  <p className="text-[10px] text-gray-650 dark:text-zinc-300 leading-relaxed font-medium">
+                                    Sudah lebih dari 1 bulan sejak asesmen mental terakhir Anda. Mari perbarui untuk menganalisis perkembangan psikologi tanding Anda saat ini!
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsMentalModalOpen(true)}
+                                    className="mt-1.5 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[9px] font-extrabold transition-all"
+                                  >
+                                    Ambil Asesmen Sekarang
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
                           <div className="grid grid-cols-2 gap-3.5">
                             <div className="bg-gray-50 dark:bg-zinc-800/40 p-2.5 rounded-lg text-center border border-gray-100 dark:border-zinc-800">
                               <span className="text-[10px] uppercase font-bold text-gray-400">Tingkat Percaya Diri</span>
-                              <p className="text-lg font-black text-blue-500 mt-1">{mentalAssessment.confidence_level}/100</p>
+                              <p className="text-lg font-black text-blue-500 mt-1 flex items-center justify-center">
+                                {mentalAssessment.confidence_level}/100
+                                {renderTrend(mentalAssessment.confidence_level, previousMentalAssessment?.confidence_level)}
+                              </p>
                             </div>
                             <div className="bg-gray-50 dark:bg-zinc-800/40 p-2.5 rounded-lg text-center border border-gray-100 dark:border-zinc-800">
                               <span className="text-[10px] uppercase font-bold text-gray-400">Respon Tekanan</span>
-                              <p className="text-lg font-black text-purple-500 mt-1">{mentalAssessment.pressure_response_score}/100</p>
+                              <p className="text-lg font-black text-purple-500 mt-1 flex items-center justify-center">
+                                {mentalAssessment.pressure_response_score}/100
+                                {renderTrend(mentalAssessment.pressure_response_score, previousMentalAssessment?.pressure_response_score)}
+                              </p>
                             </div>
                             <div className="bg-gray-50 dark:bg-zinc-800/40 p-2.5 rounded-lg text-center border border-gray-100 dark:border-zinc-800">
                               <span className="text-[10px] uppercase font-bold text-gray-400">Konsistensi Mental</span>
-                              <p className="text-lg font-black text-emerald-500 mt-1">{mentalAssessment.consistency_score}/100</p>
+                              <p className="text-lg font-black text-emerald-500 mt-1 flex items-center justify-center">
+                                {mentalAssessment.consistency_score}/100
+                                {renderTrend(mentalAssessment.consistency_score, previousMentalAssessment?.consistency_score)}
+                              </p>
                             </div>
                             <div className="bg-gray-50 dark:bg-zinc-800/40 p-2.5 rounded-lg text-center border border-gray-100 dark:border-zinc-800">
                               <span className="text-[10px] uppercase font-bold text-gray-400">Mental Juara</span>
-                              <p className="text-lg font-black text-amber-500 mt-1">{mentalAssessment.winning_mentality_score}/100</p>
+                              <p className="text-lg font-black text-amber-500 mt-1 flex items-center justify-center">
+                                {mentalAssessment.winning_mentality_score}/100
+                                {renderTrend(mentalAssessment.winning_mentality_score, previousMentalAssessment?.winning_mentality_score)}
+                              </p>
                             </div>
                           </div>
 
