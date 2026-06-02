@@ -58,6 +58,46 @@ interface Membership {
   created_at: string;
 }
 
+const getMatchDetails = (match: any, currentMemberName: string) => {
+  if (!match.matches) return null;
+  const { team1_player1, team1_player2, team2_player1, team2_player2 } = match.matches;
+  
+  let partner = null;
+  let opponents: string[] = [];
+  
+  const isTeam1 = team1_player1 === currentMemberName || team1_player2 === currentMemberName;
+  const isTeam2 = team2_player1 === currentMemberName || team2_player2 === currentMemberName;
+  
+  if (isTeam1) {
+    partner = team1_player1 === currentMemberName ? team1_player2 : team1_player1;
+    if (team2_player1) opponents.push(team2_player1);
+    if (team2_player2) opponents.push(team2_player2);
+  } else if (isTeam2) {
+    partner = team2_player1 === currentMemberName ? team2_player2 : team2_player1;
+    if (team1_player1) opponents.push(team1_player1);
+    if (team1_player2) opponents.push(team1_player2);
+  } else {
+    // Fallback if name is not exactly equal (e.g. partial match or different casing)
+    const mName = currentMemberName.toLowerCase();
+    const t1p1 = (team1_player1 || '').toLowerCase();
+    const t1p2 = (team1_player2 || '').toLowerCase();
+    const t2p1 = (team2_player1 || '').toLowerCase();
+    const t2p2 = (team2_player2 || '').toLowerCase();
+    
+    if (t1p1.includes(mName) || t1p2.includes(mName)) {
+      partner = t1p1.includes(mName) ? team1_player2 : team1_player1;
+      if (team2_player1) opponents.push(team2_player1);
+      if (team2_player2) opponents.push(team2_player2);
+    } else if (t2p1.includes(mName) || t2p2.includes(mName)) {
+      partner = t2p1.includes(mName) ? team2_player2 : team2_player1;
+      if (team1_player1) opponents.push(team1_player1);
+      if (team1_player2) opponents.push(team1_player2);
+    }
+  }
+  
+  return { partner, opponents };
+};
+
 export default function PembayaranPage() {
   const { user, loading: authLoading } = useAuth();
   const pathname = usePathname();
@@ -1530,9 +1570,30 @@ export default function PembayaranPage() {
                               <span className="font-bold text-gray-900 dark:text-white transition-colors duration-300 block">
                                 Match #{matchMonthlyNums[match.match_id] ?? match.matches.match_number}
                               </span>
-                              <span className="text-xs text-gray-500 dark:text-zinc-500 font-medium">
+                              <span className="text-xs text-gray-505 dark:text-zinc-500 font-medium block">
                                 {new Date(match.matches.match_date || match.matches.created_at).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}
                               </span>
+                              {/* Match Details Overlay */}
+                              {(() => {
+                                const details = getMatchDetails(match, memberName);
+                                if (!details) return null;
+                                return (
+                                  <div className="text-[10px] text-gray-500 dark:text-zinc-400 mt-1 max-w-[220px] truncate leading-normal">
+                                    {details.partner && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="font-semibold text-gray-400 dark:text-zinc-500">Partner:</span>
+                                        <span className="truncate font-medium">{details.partner}</span>
+                                      </div>
+                                    )}
+                                    {details.opponents.length > 0 && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="font-semibold text-gray-400 dark:text-zinc-500">Lawan:</span>
+                                        <span className="truncate font-medium">{details.opponents.join(' & ')}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </td>
