@@ -1172,72 +1172,6 @@ export default function TrainingCenterPage() {
                     </div>
                   </div>
 
-                  {/* Past Training Plans History Section */}
-                  {pastTrainingPlans.length > 0 && (
-                    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-md font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                          <History className="w-4 h-4 text-gray-500" /> Riwayat Program Latihan
-                        </h3>
-                        <span className="text-[11px] font-bold text-gray-400 dark:text-zinc-550">
-                          {pastTrainingPlans.length} Program Sebelumnya
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-3.5 max-h-[320px] overflow-y-auto pr-1">
-                        {pastTrainingPlans.map((plan) => {
-                          const dateObj = new Date(plan.created_at);
-                          const formattedDate = dateObj.toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          });
-
-                          return (
-                            <div 
-                              key={plan.id} 
-                              className="p-3.5 bg-gray-50 dark:bg-zinc-800/20 border border-gray-150 dark:border-zinc-850 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-left"
-                            >
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs font-bold text-gray-900 dark:text-white capitalize">
-                                    Fokus: {translateFocus(plan.focus_weakness)}
-                                  </span>
-                                  {translatePlanStatus(plan.status)}
-                                </div>
-                                <p className="text-[11px] text-gray-500 dark:text-zinc-450 font-medium">
-                                  Target: {translateExpectedOutcome(plan.expected_outcome) || 'Meningkatkan akurasi dan performa tanding.'}
-                                </p>
-                                <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-zinc-550 font-semibold">
-                                  <span>{plan.duration_weeks} Minggu</span>
-                                  <span>•</span>
-                                  <span>{plan.days_per_week} Hari/Minggu</span>
-                                  <span>•</span>
-                                  <span>Mulai: {formattedDate}</span>
-                                </div>
-                              </div>
-
-                              <div className="shrink-0 flex items-center gap-3 self-end md:self-center">
-                                <div className="text-right">
-                                  <span className="text-[10px] uppercase font-bold text-gray-400 block">Progres</span>
-                                  <span className="text-xs font-black text-gray-700 dark:text-zinc-300">{plan.progress_percentage?.toFixed(0) || 0}%</span>
-                                </div>
-                                <div className="w-12 h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full rounded-full ${
-                                      plan.status === 'completed' ? 'bg-emerald-500' : 'bg-gray-400'
-                                    }`}
-                                    style={{ width: `${plan.progress_percentage || 0}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Recent Match & Psychological Analysis */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Performance Analytics Card */}
@@ -1339,19 +1273,19 @@ export default function TrainingCenterPage() {
 
                       {mentalAssessment ? (
                         <div className="space-y-4">
-                          {/* Outdated assessment notice (if older than 30 days / 1 month) */}
+                          {/* Outdated assessment notice (if older than 7 days / 1 week) */}
                           {(() => {
-                            const isOutdated = new Date().getTime() - new Date(mentalAssessment.assessed_date).getTime() > 30 * 24 * 60 * 60 * 1000;
+                            const isOutdated = new Date().getTime() - new Date(mentalAssessment.assessed_date).getTime() > 7 * 24 * 60 * 60 * 1000;
                             if (!isOutdated) return null;
                             return (
                               <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5">
                                 <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5 animate-bounce" />
                                 <div className="space-y-1 text-left">
                                   <p className="text-[11px] font-extrabold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-                                    Pembaruan Bulanan Diperlukan
+                                    Pembaruan Mingguan Diperlukan
                                   </p>
-                                  <p className="text-[10px] text-gray-650 dark:text-zinc-300 leading-relaxed font-medium">
-                                    Sudah lebih dari 1 bulan sejak asesmen mental terakhir Anda. Mari perbarui untuk menganalisis perkembangan psikologi tanding Anda saat ini!
+                                  <p className="text-[10px] text-gray-655 dark:text-zinc-300 leading-relaxed font-medium">
+                                    Sudah lebih dari 1 minggu sejak asesmen mental terakhir Anda. Mari perbarui untuk menganalisis perkembangan psikologi tanding Anda saat ini!
                                   </p>
                                   <button
                                     type="button"
@@ -1521,6 +1455,70 @@ export default function TrainingCenterPage() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Past Training Plans History Section */}
+                  {pastTrainingPlans.length > 0 && (
+                    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-md font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                          <History className="w-4 h-4 text-gray-500" /> Riwayat Program Latihan
+                        </h3>
+                        <span className="text-[11px] font-bold text-gray-400 dark:text-zinc-550">
+                          {pastTrainingPlans.length} Program
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-3.5 max-h-[320px] overflow-y-auto pr-1">
+                        {pastTrainingPlans.map((plan) => {
+                          const dateObj = new Date(plan.created_at);
+                          const formattedDate = dateObj.toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          });
+
+                          return (
+                            <div 
+                              key={plan.id} 
+                              className="p-3.5 bg-gray-50 dark:bg-zinc-800/20 border border-gray-150 dark:border-zinc-850 rounded-xl flex flex-col justify-between gap-3 text-left"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-gray-900 dark:text-white capitalize">
+                                    Fokus: {translateFocus(plan.focus_weakness)}
+                                  </span>
+                                  {translatePlanStatus(plan.status)}
+                                </div>
+                                <p className="text-[11px] text-gray-500 dark:text-zinc-450 font-medium">
+                                  Target: {translateExpectedOutcome(plan.expected_outcome) || 'Meningkatkan akurasi dan performa tanding.'}
+                                </p>
+                                <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-zinc-550 font-semibold">
+                                  <span>{plan.duration_weeks} Minggu</span>
+                                  <span>•</span>
+                                  <span>Mulai: {formattedDate}</span>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 flex items-center gap-3 justify-between border-t border-gray-100 dark:border-zinc-800 pt-2 mt-1">
+                                <div className="text-left">
+                                  <span className="text-[10px] uppercase font-bold text-gray-400 block">Progres</span>
+                                  <span className="text-xs font-black text-gray-700 dark:text-zinc-300">{plan.progress_percentage?.toFixed(0) || 0}%</span>
+                                </div>
+                                <div className="w-24 h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full ${
+                                      plan.status === 'completed' ? 'bg-emerald-500' : 'bg-gray-400'
+                                    }`}
+                                    style={{ width: `${plan.progress_percentage || 0}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Quick video tutorials search banner */}
                   <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
