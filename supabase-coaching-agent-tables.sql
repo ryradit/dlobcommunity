@@ -292,6 +292,11 @@ BEGIN
   IF NEW.progress_percentage >= 100 THEN
     NEW.status := 'completed';
     NEW.completed_at := NOW();
+  ELSIF NEW.status IN ('stopped', 'stop', 'abandoned', 'paused') THEN
+    -- Keep the stopped/stop/abandoned/paused status as is
+    IF NEW.status IN ('stopped', 'stop', 'abandoned') AND NEW.completed_at IS NULL THEN
+      NEW.completed_at := NOW();
+    END IF;
   ELSE
     NEW.status := 'active';
     NEW.completed_at := NULL;

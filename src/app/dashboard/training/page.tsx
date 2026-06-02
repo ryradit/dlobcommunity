@@ -288,7 +288,7 @@ const translatePlanStatus = (status: string) => {
   if (status === 'completed') {
     return <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-950 text-[10px] font-bold rounded-md">Selesai</span>;
   }
-  if (status === 'stopped' || status === 'abandoned') {
+  if (status === 'stopped' || status === 'stop' || status === 'abandoned') {
     return <span className="px-2 py-0.5 bg-gray-500/10 text-gray-500 dark:text-zinc-400 border border-gray-200 dark:border-zinc-800 text-[10px] font-bold rounded-md">Dihentikan</span>;
   }
   return <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-200 dark:border-blue-950 text-[10px] font-bold rounded-md capitalize">{status}</span>;
