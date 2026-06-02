@@ -840,6 +840,12 @@ export default function TrainingCenterPage() {
       return;
     }
     
+    // Store original plans for potential rollback
+    const originalPlans = [...pastTrainingPlans];
+    
+    // Optimistically update the UI state immediately
+    setPastTrainingPlans((prev) => prev.filter((p) => p.id !== planId));
+    
     try {
       const { error } = await supabase
         .from('training_plans')
@@ -847,12 +853,11 @@ export default function TrainingCenterPage() {
         .eq('id', planId);
 
       if (error) throw error;
-
-      // Update local state
-      setPastTrainingPlans((prev) => prev.filter((p) => p.id !== planId));
     } catch (err: any) {
       console.error('Error deleting past training plan:', err);
       alert('Gagal menghapus riwayat program latihan. Silakan coba lagi.');
+      // Rollback to original state if Supabase delete failed
+      setPastTrainingPlans(originalPlans);
     }
   };
 
@@ -1514,7 +1519,12 @@ export default function TrainingCenterPage() {
                                     {translatePlanStatus(plan.status)}
                                   </div>
                                   <button
-                                    onClick={() => handleDeletePastPlan(plan.id)}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleDeletePastPlan(plan.id);
+                                    }}
                                     className="p-1 hover:bg-red-500/10 rounded-md text-gray-400 hover:text-red-500 transition-colors shrink-0"
                                     title="Hapus Permanen"
                                   >
