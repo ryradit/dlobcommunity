@@ -32,7 +32,8 @@ import {
   ExternalLink,
   ChevronLeft,
   HelpCircle,
-  History
+  History,
+  Trash2
 } from 'lucide-react';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -833,6 +834,28 @@ export default function TrainingCenterPage() {
     }
   };
 
+  // Delete a past training plan permanently
+  const handleDeletePastPlan = async (planId: string) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus permanen riwayat program latihan ini? Tindakan ini tidak dapat dibatalkan.')) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('training_plans')
+        .delete()
+        .eq('id', planId);
+
+      if (error) throw error;
+
+      // Update local state
+      setPastTrainingPlans((prev) => prev.filter((p) => p.id !== planId));
+    } catch (err: any) {
+      console.error('Error deleting past training plan:', err);
+      alert('Gagal menghapus riwayat program latihan. Silakan coba lagi.');
+    }
+  };
+
   const handleMentalAssessmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId) return;
@@ -1483,11 +1506,20 @@ export default function TrainingCenterPage() {
                               className="p-3.5 bg-gray-50 dark:bg-zinc-800/20 border border-gray-150 dark:border-zinc-850 rounded-xl flex flex-col justify-between gap-3 text-left"
                             >
                               <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs font-bold text-gray-900 dark:text-white capitalize">
-                                    Fokus: {translateFocus(plan.focus_weakness)}
-                                  </span>
-                                  {translatePlanStatus(plan.status)}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-bold text-gray-900 dark:text-white capitalize">
+                                      Fokus: {translateFocus(plan.focus_weakness)}
+                                    </span>
+                                    {translatePlanStatus(plan.status)}
+                                  </div>
+                                  <button
+                                    onClick={() => handleDeletePastPlan(plan.id)}
+                                    className="p-1 hover:bg-red-500/10 rounded-md text-gray-400 hover:text-red-500 transition-colors shrink-0"
+                                    title="Hapus Permanen"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
                                 <p className="text-[11px] text-gray-500 dark:text-zinc-450 font-medium">
                                   Target: {translateExpectedOutcome(plan.expected_outcome) || 'Meningkatkan akurasi dan performa tanding.'}
