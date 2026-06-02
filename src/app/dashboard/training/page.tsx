@@ -292,6 +292,8 @@ export default function TrainingCenterPage() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [memberName, setMemberName] = useState('Pemain');
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isAbandonModalOpen, setIsAbandonModalOpen] = useState(false);
+  const [isAbandoning, setIsAbandoning] = useState(false);
 
   // Drill Logging Modal State
   const [selectedDrill, setSelectedDrill] = useState<AssignedDrill | null>(null);
@@ -360,19 +362,26 @@ export default function TrainingCenterPage() {
           .order('created_at', { ascending: false })
           .limit(1);
 
+        let activePlan = null;
         if (planData && planData.length > 0) {
-          setTrainingPlan(planData[0]);
+          activePlan = planData[0];
+          setTrainingPlan(activePlan);
         }
 
         // Fetch assigned drills
-        const { data: drillsData } = await supabase
-          .from('assigned_drills')
-          .select('*')
-          .eq('user_id', userId)
-          .order('assigned_date', { ascending: false });
+        if (activePlan) {
+          const { data: drillsData } = await supabase
+            .from('assigned_drills')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('training_plan_id', activePlan.id)
+            .order('assigned_date', { ascending: false });
 
-        if (drillsData) {
-          setAssignedDrills(drillsData);
+          if (drillsData) {
+            setAssignedDrills(drillsData);
+          }
+        } else {
+          setAssignedDrills([]);
         }
 
         // Fetch latest mental assessment
@@ -595,18 +604,27 @@ export default function TrainingCenterPage() {
           .order('created_at', { ascending: false })
           .limit(1);
 
+        let activePlan = null;
         if (planData && planData.length > 0) {
-          setTrainingPlan(planData[0]);
+          activePlan = planData[0];
+          setTrainingPlan(activePlan);
+        } else {
+          setTrainingPlan(null);
         }
 
-        const { data: drillsData } = await supabase
-          .from('assigned_drills')
-          .select('*')
-          .eq('user_id', userId)
-          .order('assigned_date', { ascending: false });
+        if (activePlan) {
+          const { data: drillsData } = await supabase
+            .from('assigned_drills')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('training_plan_id', activePlan.id)
+            .order('assigned_date', { ascending: false });
 
-        if (drillsData) {
-          setAssignedDrills(drillsData);
+          if (drillsData) {
+            setAssignedDrills(drillsData);
+          }
+        } else {
+          setAssignedDrills([]);
         }
       }
     } catch (error) {
@@ -688,6 +706,39 @@ export default function TrainingCenterPage() {
       alert('Gagal mencatat latihan. Coba lagi.');
     } finally {
       setIsSubmittingDrill(false);
+    }
+  };
+
+  // Abandon/archive the current active training plan
+  const handleAbandonTrainingPlan = async () => {
+    if (!trainingPlan || !userId) return;
+    setIsAbandoning(true);
+    try {
+      const { error: planError } = await supabase
+        .from('training_plans')
+        .update({ status: 'abandoned' })
+        .eq('id', trainingPlan.id);
+
+      if (planError) throw planError;
+
+      // Clear drills state and plan state
+      setTrainingPlan(null);
+      setAssignedDrills([]);
+      setIsAbandonModalOpen(false);
+
+      // Add a friendly coaching message explaining they can start a new plan
+      const coachMessage: CoachMessage = {
+        id: Date.now().toString(),
+        role: 'coach',
+        content: `Rencana latihan fokus "${translateFocus(trainingPlan.focus_weakness)}" Anda telah diarsipkan. Anda sekarang bisa meminta saya kapan saja untuk membuat program latihan baru!`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, coachMessage]);
+    } catch (err: any) {
+      console.error('Error abandoning training plan:', err);
+      alert('Gagal menghentikan rencana latihan. Silakan coba lagi.');
+    } finally {
+      setIsAbandoning(false);
     }
   };
 
@@ -856,6 +907,12 @@ export default function TrainingCenterPage() {
                             <span className="absolute text-xl font-extrabold">{trainingPlan.progress_percentage.toFixed(0)}%</span>
                           </div>
                           <span className="text-xs font-bold text-blue-200 mt-3 uppercase tracking-wider">Progres Program</span>
+                          <button
+                            onClick={() => setIsAbandonModalOpen(true)}
+                            className="mt-3.5 px-3 py-1.5 bg-red-650/30 hover:bg-red-600/50 text-red-100 border border-red-500/20 hover:border-red-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                          >
+                            <X className="w-3 h-3" /> Ganti / Hentikan Program
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1638,6 +1695,62 @@ export default function TrainingCenterPage() {
           </div>
         </div>
       )}
+
+      {/* Abandon/Change Training Plan Confirmation Modal */}
+      {isAbandonModalOpen && trainingPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-3 text-red-500 mb-4">
+                <AlertCircle className="w-8 h-8 shrink-0" />
+                <h3 className="text-lg font-black text-gray-900 dark:text-white">Ganti / Hentikan Program</h3>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-zinc-400 mb-4 leading-relaxed">
+                Apakah Anda yakin ingin menghentikan rencana latihan aktif saat ini: <strong className="text-gray-900 dark:text-white capitalize">Fokus {translateFocus(trainingPlan.focus_weakness)}</strong>?
+              </p>
+              <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-xl mb-4 text-xs text-red-700 dark:text-red-455 flex items-start gap-2 leading-relaxed">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Konsekuensi Penting:</strong> Tindakan ini tidak dapat dibatalkan (cannot be undone). Seluruh progres program saat ini akan diarsipkan dan tidak dapat dilanjutkan kembali.
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-zinc-400 leading-relaxed">
+                Setelah dihentikan, Anda dapat meminta Asisten Coach AI untuk merancang rencana latihan baru.
+              </p>
+            </div>
+            
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-zinc-850 bg-gray-50 dark:bg-zinc-900/50 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsAbandonModalOpen(false)}
+                disabled={isAbandoning}
+                className="flex-1 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-750 text-gray-700 dark:text-zinc-200 font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleAbandonTrainingPlan}
+                disabled={isAbandoning}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isAbandoning ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Memproses...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Ya, Hentikan</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tutorial Overlay */}
       <TutorialOverlay
         steps={tutorialSteps}
