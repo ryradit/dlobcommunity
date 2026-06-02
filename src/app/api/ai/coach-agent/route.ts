@@ -577,9 +577,12 @@ Pastikan data ini ada dan terisi lengkap!]`;
     // Save coaching session to database with complete structured data
     if (userId) {
       try {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const isValidUuid = typeof sessionId === 'string' && uuidRegex.test(sessionId);
+
         const savePayload = {
           user_id: userId,
-          session_id: sessionId || null,
+          session_id: isValidUuid ? sessionId : null,
           member_name: memberName || null,
           query: query,
           response: coachingResponse.response,

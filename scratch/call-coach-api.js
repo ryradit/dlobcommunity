@@ -1,12 +1,12 @@
 // Node 18+ has built-in fetch
 
 async function run() {
-  const url = 'http://localhost:3000/api/ai/coach-agent';
+  const url = 'http://localhost:3000/api/ai/coaching-agent';
   const payload = {
     query: 'Tolong berikan asesmen mental tanding saya dan tips mengatasi tekanan saat match poin.',
     userId: '339cf229-d333-45a9-85cc-7987451f82b7',
     memberName: 'Edin',
-    sessionId: 'test-session-123'
+    sessionId: '339cf229-d333-45a9-85cc-7987451f82b7'
   };
 
   console.log('Sending request to local API...');

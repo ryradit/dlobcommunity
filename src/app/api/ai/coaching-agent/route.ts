@@ -261,10 +261,13 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
       expectedResults: structuredData.expectedResults,
       sessionId: saveResult.id,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Coaching Agent] Error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { 
+        error: error?.message || String(error) || 'Internal server error',
+        stack: error?.stack
+      },
       { status: 500 }
     );
   }
@@ -534,9 +537,12 @@ function detectPriority(line: string): string {
 }
 
 async function saveCoachingSession(data: any) {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const isValidUuid = typeof data.session_id === 'string' && uuidRegex.test(data.session_id);
+
   const savePayload = {
     user_id: data.user_id,
-    session_id: data.session_id || null,
+    session_id: isValidUuid ? data.session_id : null,
     member_name: data.member_name || null,
     query: data.query,
     response: data.response,
