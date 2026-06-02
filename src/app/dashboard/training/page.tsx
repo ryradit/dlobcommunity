@@ -716,7 +716,7 @@ export default function TrainingCenterPage() {
     try {
       const { error: planError } = await supabase
         .from('training_plans')
-        .update({ status: 'abandoned' })
+        .delete()
         .eq('id', trainingPlan.id);
 
       if (planError) throw planError;
@@ -730,7 +730,7 @@ export default function TrainingCenterPage() {
       const coachMessage: CoachMessage = {
         id: Date.now().toString(),
         role: 'coach',
-        content: `Rencana latihan fokus "${translateFocus(trainingPlan.focus_weakness)}" Anda telah diarsipkan. Anda sekarang bisa meminta saya kapan saja untuk membuat program latihan baru!`,
+        content: `Rencana latihan fokus "${translateFocus(trainingPlan.focus_weakness)}" Anda telah dihentikan dan dihapus. Anda sekarang bisa meminta saya kapan saja untuk membuat program latihan baru!`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, coachMessage]);
