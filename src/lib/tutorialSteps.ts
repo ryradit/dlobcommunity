@@ -379,13 +379,19 @@ export const MEMBER_TRAINING_TUTORIAL: TutorialStep[] = [
   {
     element: '.training-mental-card',
     title: '🧠 Kesiapan Mental & Psikologis',
-    description: 'Ukur kesiapan mental bertanding Anda, termasuk tingkat percaya diri, respon tekanan, konsistensi, dan rekomendasi dari AI Coach.',
+    description: 'Ukur kesiapan mental bertanding Anda secara mingguan (7 hari sekali). Dapatkan analisis tren psikologis dan saran dari AI Coach.',
     position: 'top',
   },
   {
     element: '.training-quick-actions',
     title: '⚡ Aksi Cepat Coach AI',
     description: 'Gunakan tombol pintas ini untuk meminta AI menganalisis kelemahan taktis, membuat rencana latihan baru, atau menilai mental bertanding Anda secara instan.',
+    position: 'left',
+  },
+  {
+    element: '.training-history-card',
+    title: '📚 Riwayat Program Latihan',
+    description: 'Pantau daftar program latihan sebelumnya yang telah selesai atau dihentikan. Anda juga dapat menghapus permanen riwayat program latihan secara instan.',
     position: 'left',
   },
   {
@@ -432,7 +438,7 @@ export const MEMBER_TRAINING_TUTORIAL: TutorialStep[] = [
   },
   {
     element: '.training-history',
-    title: '📚 Riwayat Pencarian Video',
+    title: '🎥 Riwayat Pencarian Video',
     description: 'Akses kembali topik pencarian video sebelumnya secara cepat tanpa perlu mengetik ulang.',
     position: 'left',
   },

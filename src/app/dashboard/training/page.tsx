@@ -1486,7 +1486,7 @@ export default function TrainingCenterPage() {
 
                   {/* Past Training Plans History Section */}
                   {pastTrainingPlans.length > 0 && (
-                    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                    <div className="training-history-card bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-md font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
                           <History className="w-4 h-4 text-gray-500" /> Riwayat Program Latihan
