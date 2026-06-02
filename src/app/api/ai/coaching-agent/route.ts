@@ -106,12 +106,18 @@ TOOLS TERSEDIA (Gunakan sesuai kebutuhan):
 5. assess_mental_factors - Evaluasi faktor psikologis (confidence, pressure response, winning mentality)
 6. predict_match_outcome - Prediksi hasil pertandingan vs opponent tertentu + game plan
 
+ATURAN EKSEKUSI TOOL (SANGAT PENTING):
+Jika dan hanya jika Anda secara aktif memutuskan untuk menjalankan/memanggil salah satu tool di atas untuk memproses atau menyimpan data ke database, Anda wajib menuliskan tag eksekusi berikut dalam respons Anda:
+\`[CALL_TOOL: nama_tool]\`
+Contoh: jika ingin membuat rencana latihan, tulis \`[CALL_TOOL: generate_training_plan]\`.
+Jika Anda hanya menjelaskan tentang tool, menawarkan pembuatan rencana latihan, atau membahas riwayat latihan tanpa berniat mengeksekusinya saat ini, JANGAN menuliskan tag \`[CALL_TOOL: ...]\`.
+
 INSTRUKSI AGENT:
-- Dalam AUTONOMOUS MODE: Proaktif gunakan 2-3 tools untuk memberikan value maksimal
+- Dalam AUTONOMOUS MODE: Proaktif gunakan 2-3 tools untuk memberikan value maksimal jika relevan dengan pertanyaan atau kebutuhan user.
 - Jangan hanya menjawab bertanya - ambil inisiatif analisis & action
-- Jika member belum punya training plan (Rencana Latihan Aktif bernilai "TIDAK ADA") ATAU secara eksplisit meminta program baru: buat rencana latihan otomatis menggunakan tool generate_training_plan. Jika member SUDAH memiliki program latihan aktif, JANGAN panggil generate_training_plan secara otomatis kecuali diminta.
-- Jika ada weakness teridentifikasi dan belum ada program latihan aktif: gunakan analyze_tactical_patterns + generate_training_plan
-- Simpan hasil yang signifikan (track_progress_metrics) ke database
+- JANGAN PERNAH membuat rencana latihan baru secara otomatis jika user tidak memintanya secara eksplisit. Hanya panggil tool generate_training_plan jika user secara eksplisit meminta untuk dibuatkan rencana latihan/training plan baru atau meminta program latihan terstruktur. Jika member SUDAH memiliki program latihan aktif, JANGAN panggil generate_training_plan.
+- Jika ada weakness teridentifikasi dan belum ada program latihan aktif, Anda dapat menawarkan rencana latihan, tetapi jangan memanggil generate_training_plan kecuali disetujui/diminta user.
+- Simpan hasil yang signifikan (track_progress_metrics) ke database jika relevan.
 - Berikan actionable recommendations dengan timeline jelas
 
 KONTEKS HISTORY (5 session terakhir untuk kontinuitas):
@@ -287,39 +293,12 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
 // ============================================================================
 
 function detectToolCalls(responseText: string): boolean {
-  // Detect if response mentions using tools/functions
-  const toolNames = [
-    'analyze_tactical_patterns',
-    'generate_training_plan',
-    'track_progress_metrics',
-    'compare_peer_statistics',
-    'assess_mental_factors',
-    'predict_match_outcome',
-  ];
-
-  const toolKeywords = [
-    'analyzing',
-    'generating',
-    'comparing',
-    'predicting',
-    'assessing',
-    'checked your',
-    'reviewed',
-    'calculated',
-    '```json',
-    'memanggil tool',
-    'menggunakan tool',
-  ];
-  
-  const lowerText = responseText.toLowerCase();
-  return toolNames.some(name => lowerText.includes(name.toLowerCase())) ||
-         toolKeywords.some(keyword => lowerText.includes(keyword));
+  return responseText.toLowerCase().includes('[call_tool:');
 }
 
 function parseToolCalls(responseText: string): Array<{ name: string; args?: any[] }> {
   const toolCalls: Array<{ name: string; args?: any[] }> = [];
   
-  // Look for tool invocation patterns in response
   const toolNames = [
     'analyze_tactical_patterns',
     'generate_training_plan',
@@ -329,15 +308,19 @@ function parseToolCalls(responseText: string): Array<{ name: string; args?: any[
     'predict_match_outcome',
   ];
 
-  toolNames.forEach(toolName => {
-    if (responseText.toLowerCase().includes(toolName)) {
-      // Try to extract parameters from context
+  // Regex to extract tags like [CALL_TOOL: tool_name]
+  const regex = /\[CALL_TOOL:\s*([a-zA-Z_0-9]+)\]/gi;
+  let match;
+  while ((match = regex.exec(responseText)) !== null) {
+    const toolName = match[1].trim().toLowerCase();
+    const matchedTool = toolNames.find(name => name.toLowerCase() === toolName);
+    if (matchedTool) {
       toolCalls.push({
-        name: toolName,
-        args: extractArgsFromContext(responseText, toolName),
+        name: matchedTool,
+        args: extractArgsFromContext(responseText, matchedTool),
       });
     }
-  });
+  }
 
   return toolCalls;
 }
