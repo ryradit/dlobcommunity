@@ -31,7 +31,8 @@ import {
   X,
   ExternalLink,
   ChevronLeft,
-  HelpCircle
+  HelpCircle,
+  History
 } from 'lucide-react';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -283,6 +284,16 @@ const translateFocus = (focus: string): string => {
   return focus;
 };
 
+const translatePlanStatus = (status: string) => {
+  if (status === 'completed') {
+    return <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-950 text-[10px] font-bold rounded-md">Selesai</span>;
+  }
+  if (status === 'stopped' || status === 'abandoned') {
+    return <span className="px-2 py-0.5 bg-gray-500/10 text-gray-500 dark:text-zinc-400 border border-gray-200 dark:border-zinc-800 text-[10px] font-bold rounded-md">Dihentikan</span>;
+  }
+  return <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-200 dark:border-blue-950 text-[10px] font-bold rounded-md capitalize">{status}</span>;
+};
+
 export default function TrainingCenterPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -294,6 +305,7 @@ export default function TrainingCenterPage() {
 
   // Dashboard & Coach State
   const [trainingPlan, setTrainingPlan] = useState<TrainingPlan | null>(null);
+  const [pastTrainingPlans, setPastTrainingPlans] = useState<TrainingPlan[]>([]);
   const [assignedDrills, setAssignedDrills] = useState<AssignedDrill[]>([]);
   const [mentalAssessment, setMentalAssessment] = useState<MentalAssessment | null>(null);
   const [previousMentalAssessment, setPreviousMentalAssessment] = useState<MentalAssessment | null>(null);
@@ -404,6 +416,20 @@ export default function TrainingCenterPage() {
           }
         } else {
           setAssignedDrills([]);
+        }
+
+        // Fetch past training plans (history)
+        const { data: pastPlansData } = await supabase
+          .from('training_plans')
+          .select('*')
+          .eq('user_id', userId)
+          .neq('status', 'active')
+          .order('created_at', { ascending: false });
+
+        if (pastPlansData) {
+          setPastTrainingPlans(pastPlansData);
+        } else {
+          setPastTrainingPlans([]);
         }
 
         // Fetch latest mental assessments (up to 2 for progress comparison)
@@ -768,11 +794,23 @@ export default function TrainingCenterPage() {
     try {
       const { error: planError } = await supabase
         .from('training_plans')
-        .delete()
+        .update({ status: 'stopped' })
         .eq('user_id', userId)
         .eq('status', 'active');
 
       if (planError) throw planError;
+
+      // Fetch updated past plans
+      const { data: pastPlansData } = await supabase
+        .from('training_plans')
+        .select('*')
+        .eq('user_id', userId)
+        .neq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (pastPlansData) {
+        setPastTrainingPlans(pastPlansData);
+      }
 
       // Clear drills state and plan state
       setTrainingPlan(null);
@@ -783,7 +821,7 @@ export default function TrainingCenterPage() {
       const coachMessage: CoachMessage = {
         id: Date.now().toString(),
         role: 'coach',
-        content: `Rencana latihan fokus "${translateFocus(trainingPlan.focus_weakness)}" Anda telah dihentikan dan dihapus. Anda sekarang bisa meminta saya kapan saja untuk membuat program latihan baru!`,
+        content: `Rencana latihan fokus "${translateFocus(trainingPlan.focus_weakness)}" Anda telah dihentikan dan diarsipkan ke dalam riwayat. Anda sekarang bisa meminta saya kapan saja untuk merancang rencana latihan baru!`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, coachMessage]);
@@ -1133,6 +1171,72 @@ export default function TrainingCenterPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Past Training Plans History Section */}
+                  {pastTrainingPlans.length > 0 && (
+                    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xs">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-md font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                          <History className="w-4 h-4 text-gray-500" /> Riwayat Program Latihan
+                        </h3>
+                        <span className="text-[11px] font-bold text-gray-400 dark:text-zinc-550">
+                          {pastTrainingPlans.length} Program Sebelumnya
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-3.5 max-h-[320px] overflow-y-auto pr-1">
+                        {pastTrainingPlans.map((plan) => {
+                          const dateObj = new Date(plan.created_at);
+                          const formattedDate = dateObj.toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          });
+
+                          return (
+                            <div 
+                              key={plan.id} 
+                              className="p-3.5 bg-gray-50 dark:bg-zinc-800/20 border border-gray-150 dark:border-zinc-850 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-left"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-gray-900 dark:text-white capitalize">
+                                    Fokus: {translateFocus(plan.focus_weakness)}
+                                  </span>
+                                  {translatePlanStatus(plan.status)}
+                                </div>
+                                <p className="text-[11px] text-gray-500 dark:text-zinc-450 font-medium">
+                                  Target: {translateExpectedOutcome(plan.expected_outcome) || 'Meningkatkan akurasi dan performa tanding.'}
+                                </p>
+                                <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-zinc-550 font-semibold">
+                                  <span>{plan.duration_weeks} Minggu</span>
+                                  <span>•</span>
+                                  <span>{plan.days_per_week} Hari/Minggu</span>
+                                  <span>•</span>
+                                  <span>Mulai: {formattedDate}</span>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 flex items-center gap-3 self-end md:self-center">
+                                <div className="text-right">
+                                  <span className="text-[10px] uppercase font-bold text-gray-400 block">Progres</span>
+                                  <span className="text-xs font-black text-gray-700 dark:text-zinc-300">{plan.progress_percentage?.toFixed(0) || 0}%</span>
+                                </div>
+                                <div className="w-12 h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full ${
+                                      plan.status === 'completed' ? 'bg-emerald-500' : 'bg-gray-400'
+                                    }`}
+                                    style={{ width: `${plan.progress_percentage || 0}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Recent Match & Psychological Analysis */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
