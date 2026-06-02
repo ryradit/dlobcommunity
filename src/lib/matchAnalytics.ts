@@ -101,22 +101,20 @@ export async function analyzeMatchHistory(memberName?: string, userId?: string):
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('display_name, full_name, username')
+          .select('full_name')
           .eq('id', userId)
           .single();
 
         if (profile) {
-          // Collect possible names (display, full, username, first name from full)
-          if (profile.display_name) possibleNames.push(profile.display_name);
+          // Collect possible names (full, first name from full)
           if (profile.full_name) {
             possibleNames.push(profile.full_name);
             // Also try first name from full_name
             const firstName = profile.full_name.split(' ')[0];
             if (firstName) possibleNames.push(firstName);
           }
-          if (profile.username) possibleNames.push(profile.username);
           
-          actualMemberName = profile.display_name || profile.full_name || profile.username;
+          actualMemberName = profile.full_name;
           console.log('[matchAnalytics] Looked up profile, possible names:', possibleNames);
         }
       } catch (error) {
