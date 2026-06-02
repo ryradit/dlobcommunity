@@ -81,6 +81,14 @@ export async function POST(request: NextRequest) {
     })) || [];
 
 
+    // Fetch active training plan to prevent duplicate auto-generation when user has stopped or doesn't want one
+    const { data: activePlan } = await supabase
+      .from('training_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+
     // Build multi-turn messages for agent reasoning
     const messages: any[] = [];
 
@@ -101,8 +109,8 @@ TOOLS TERSEDIA (Gunakan sesuai kebutuhan):
 INSTRUKSI AGENT:
 - Dalam AUTONOMOUS MODE: Proaktif gunakan 2-3 tools untuk memberikan value maksimal
 - Jangan hanya menjawab bertanya - ambil inisiatif analisis & action
-- Jika member belum punya training plan: buat satu otomatis
-- Jika ada weakness teridentifikasi: gunakan analyze_tactical_patterns + generate_training_plan
+- Jika member belum punya training plan (Rencana Latihan Aktif bernilai "TIDAK ADA") ATAU secara eksplisit meminta program baru: buat rencana latihan otomatis menggunakan tool generate_training_plan. Jika member SUDAH memiliki program latihan aktif, JANGAN panggil generate_training_plan secara otomatis kecuali diminta.
+- Jika ada weakness teridentifikasi dan belum ada program latihan aktif: gunakan analyze_tactical_patterns + generate_training_plan
 - Simpan hasil yang signifikan (track_progress_metrics) ke database
 - Berikan actionable recommendations dengan timeline jelas
 
@@ -113,6 +121,7 @@ PLAYER INFO:
 - Nama: ${memberName}
 - User ID: ${userId}
 - Mode: ${agentMode}
+- Rencana Latihan Aktif: ${activePlan ? `Fokus: ${activePlan.focus_weakness}, Durasi: ${activePlan.duration_weeks} minggu, Hasil Diharapkan: ${activePlan.expected_outcome}` : 'TIDAK ADA (User saat ini tidak memiliki rencana latihan aktif atau telah menghentikannya. JANGAN generate training plan baru secara otomatis kecuali user meminta bantuan untuk membuat/merancang rencana latihan baru secara langsung)'}
 
 Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tools untuk:
 1. Menganalisis situasi secara mendalam
