@@ -1060,10 +1060,15 @@ export default function AnalitikPage() {
       <div className="member-analitik-partners grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Best Partners - Now with Bar Chart */}
         <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm transition-colors duration-300">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-            Partner Terbaik
-          </h3>
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+              Partner Terbaik
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1 font-medium leading-normal">
+              * Diurutkan berdasarkan kombinasi frekuensi bermain (jumlah pertandingan) dan rasio kemenangan tertinggi bersama Anda.
+            </p>
+          </div>
           {partnerStats.length > 0 && (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={partnerStats.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
