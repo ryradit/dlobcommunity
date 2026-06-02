@@ -575,6 +575,12 @@ export default function TrainingCenterPage() {
     }
   };
 
+  const handleWatchTutorial = (drill: AssignedDrill) => {
+    setActiveTab('videos');
+    const query = `Tutorial ${drill.drill_name}`;
+    handleVideoSearch(query);
+  };
+
   // Send message to Coach Agent
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || chatInput;
@@ -1095,6 +1101,17 @@ export default function TrainingCenterPage() {
                                   </span>
                                 )}
                               </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleWatchTutorial(drill);
+                                }}
+                                className="flex items-center gap-1.5 text-[10px] text-red-500 hover:text-red-650 hover:underline font-bold mt-3 cursor-pointer transition-colors"
+                              >
+                                <Video className="w-3.5 h-3.5" />
+                                <span>Tonton Tutorial</span>
+                              </button>
                             </div>
 
                             <div className="absolute right-3 top-3">
@@ -1869,6 +1886,22 @@ export default function TrainingCenterPage() {
                 <p className="text-[10px] text-gray-400 dark:text-zinc-500 text-center mt-2">
                   1 = Banyak error/sulit, 5 = Sempurna/konsisten
                 </p>
+              </div>
+
+              {/* YouTube Tutorial Link */}
+              <div className="pt-4 border-t border-gray-150 dark:border-zinc-800 flex flex-col gap-2">
+                <label className="block text-xs font-bold text-gray-500 dark:text-zinc-400">Panduan & Tutorial Video</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDrill(null);
+                    handleWatchTutorial(selectedDrill);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 border border-red-200/50 dark:border-red-900/30 text-red-650 dark:text-red-400 rounded-xl text-xs font-extrabold transition-all"
+                >
+                  <Video className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>Cari Video Tutorial di YouTube</span>
+                </button>
               </div>
             </div>
 
