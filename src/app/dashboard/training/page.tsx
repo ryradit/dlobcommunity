@@ -578,7 +578,9 @@ export default function TrainingCenterPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get coaching response');
+        const errorText = await response.text();
+        console.error('[Coaching API Error]:', errorText);
+        throw new Error(`Failed to get coaching response: ${errorText}`);
       }
 
       const data = await response.json();
