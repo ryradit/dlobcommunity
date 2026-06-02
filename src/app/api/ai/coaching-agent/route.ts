@@ -193,7 +193,7 @@ Sekarang, tangani pertanyaan member dengan tool-calling yang tepat. Gunakan tool
       }
 
       // Parse and execute tools from response
-      const toolsToExecute = parseToolCalls(responseText);
+      const toolsToExecute = parseToolCalls(responseText, query);
       console.log(`[Coaching Agent] Detected ${toolsToExecute.length} tool calls in response`);
 
       for (const toolCall of toolsToExecute) {
@@ -296,7 +296,7 @@ function detectToolCalls(responseText: string): boolean {
   return responseText.toLowerCase().includes('[call_tool:');
 }
 
-function parseToolCalls(responseText: string): Array<{ name: string; args?: any[] }> {
+function parseToolCalls(responseText: string, query?: string): Array<{ name: string; args?: any[] }> {
   const toolCalls: Array<{ name: string; args?: any[] }> = [];
   
   const toolNames = [
@@ -308,16 +308,17 @@ function parseToolCalls(responseText: string): Array<{ name: string; args?: any[
     'predict_match_outcome',
   ];
 
-  // Regex to extract tags like [CALL_TOOL: tool_name]
-  const regex = /\[CALL_TOOL:\s*([a-zA-Z_0-9]+)\]/gi;
+  // Regex to extract tags like [CALL_TOOL: tool_name] or [CALL_TOOL: tool_name(args)]
+  const regex = /\[CALL_TOOL:\s*([a-zA-Z_0-9]+)(?:\(([^)]+)\))?\]/gi;
   let match;
   while ((match = regex.exec(responseText)) !== null) {
     const toolName = match[1].trim().toLowerCase();
     const matchedTool = toolNames.find(name => name.toLowerCase() === toolName);
+    const tagArgs = match[2] ? match[2].trim() : '';
     if (matchedTool) {
       toolCalls.push({
         name: matchedTool,
-        args: extractArgsFromContext(responseText, matchedTool),
+        args: extractArgsFromContext(responseText, matchedTool, query, tagArgs),
       });
     }
   }
@@ -325,38 +326,58 @@ function parseToolCalls(responseText: string): Array<{ name: string; args?: any[
   return toolCalls;
 }
 
-function extractArgsFromContext(text: string, toolName: string): any[] {
-  // Simple heuristic argument extraction
-  // In production, use proper parsing or Gemini function calling
+function extractArgsFromContext(text: string, toolName: string, query?: string, tagArgs?: string): any[] {
   const lowerText = text.toLowerCase();
+  const lowerQuery = query ? query.toLowerCase() : '';
+  const lowerTagArgs = tagArgs ? tagArgs.toLowerCase() : '';
   
   switch (toolName) {
     case 'generate_training_plan': {
       let focus = 'net_play';
-      if (lowerText.includes('smash')) focus = 'smash';
+      
+      // 1. Check tag arguments first (e.g. CALL_TOOL: generate_training_plan(backhand))
+      if (lowerTagArgs.includes('backhand')) focus = 'backhand';
+      else if (lowerTagArgs.includes('smash')) focus = 'smash';
+      else if (lowerTagArgs.includes('stamina') || lowerTagArgs.includes('daya tahan')) focus = 'stamina';
+      else if (lowerTagArgs.includes('defense') || lowerTagArgs.includes('bertahan')) focus = 'defense';
+      else if (lowerTagArgs.includes('footwork') || lowerTagArgs.includes('langkah kaki') || lowerTagArgs.includes('kelincahan')) focus = 'footwork';
+      else if (lowerTagArgs.includes('net')) focus = 'net_play';
+      
+      // 2. Prioritize user query second to make sure we build what user actually requested
+      else if (lowerQuery.includes('backhand')) focus = 'backhand';
+      else if (lowerQuery.includes('smash')) focus = 'smash';
+      else if (lowerQuery.includes('stamina') || lowerQuery.includes('daya tahan') || lowerQuery.includes('fisik')) focus = 'stamina';
+      else if (lowerQuery.includes('defense') || lowerQuery.includes('bertahan')) focus = 'defense';
+      else if (lowerQuery.includes('footwork') || lowerQuery.includes('langkah kaki') || lowerQuery.includes('kelincahan')) focus = 'footwork';
+      else if (lowerQuery.includes('net')) focus = 'net_play';
+      
+      // 3. Fallback to parsing LLM's response text (preferring backhand over smash if both are present to resolve conflict)
       else if (lowerText.includes('backhand')) focus = 'backhand';
+      else if (lowerText.includes('smash')) focus = 'smash';
       else if (lowerText.includes('stamina') || lowerText.includes('daya tahan')) focus = 'stamina';
       else if (lowerText.includes('defense') || lowerText.includes('bertahan')) focus = 'defense';
       else if (lowerText.includes('footwork') || lowerText.includes('langkah kaki') || lowerText.includes('kelincahan')) focus = 'footwork';
       else if (lowerText.includes('net')) focus = 'net_play';
 
+      // Duration parsing (weeks)
       let weeks = 2;
-      const durationParamMatch = lowerText.match(/duration_weeks\s*:\s*([1-4])/);
+      const durationParamMatch = (lowerTagArgs + ' ' + lowerText).match(/duration_weeks\s*:\s*([1-4])/);
       if (durationParamMatch) {
         weeks = parseInt(durationParamMatch[1], 10);
       } else {
-        const weekMatch = lowerText.match(/([1-4])\s*(?:minggu|week)/);
+        const weekMatch = (lowerTagArgs + ' ' + lowerQuery + ' ' + lowerText).match(/([1-4])\s*(?:minggu|week)/);
         if (weekMatch) {
           weeks = parseInt(weekMatch[1], 10);
         }
       }
 
+      // Days per week parsing
       let days = 3;
-      const daysParamMatch = lowerText.match(/days_per_week\s*:\s*([1-7])/);
+      const daysParamMatch = (lowerTagArgs + ' ' + lowerText).match(/days_per_week\s*:\s*([1-7])/);
       if (daysParamMatch) {
         days = parseInt(daysParamMatch[1], 10);
       } else {
-        const dayMatch = lowerText.match(/([1-7])\s*(?:hari|day)/);
+        const dayMatch = (lowerTagArgs + ' ' + lowerQuery + ' ' + lowerText).match(/([1-7])\s*(?:hari|day)/);
         if (dayMatch) {
           days = parseInt(dayMatch[1], 10);
         }
