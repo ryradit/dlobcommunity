@@ -247,6 +247,7 @@ export default function TrainingCenterPage() {
   const [mentalAssessment, setMentalAssessment] = useState<MentalAssessment | null>(null);
   const [matchAnalytics, setMatchAnalytics] = useState<MatchAnalyticsResult | null>(null);
   const [latestMatch, setLatestMatch] = useState<any | null>(null);
+  const [isTacticalLoading, setIsTacticalLoading] = useState(true);
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -359,96 +360,40 @@ export default function TrainingCenterPage() {
           console.error('Error fetching match analytics:', err);
         }
 
-        // Fetch latest match for the user and compute direct tactical analysis
+        // Fetch latest match for the user and compute direct tactical analysis using Gemini
         try {
-          const { data: allMatchesData } = await supabase
-            .from('matches')
-            .select('*')
-            .not('winner', 'is', null)
-            .order('match_date', { ascending: false });
+          setIsTacticalLoading(true);
+          const response = await fetch('/api/ai/tactical-analysis', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId }),
+          });
 
-          if (allMatchesData && allMatchesData.length > 0 && profileData?.full_name) {
-            const userNameLower = profileData.full_name.trim().toLowerCase();
-            const userWords = userNameLower.split(/\s+/).filter((w: string) => w.length > 2);
-
-            const matchesPlayerName = (dbPlayerName: string) => {
-              if (!dbPlayerName) return false;
-              const dbNameLower = dbPlayerName.trim().toLowerCase();
-              if (dbNameLower === userNameLower) return true;
-              const dbWords = dbNameLower.split(/\s+/).filter((w: string) => w.length > 2);
-              return userWords.some((uw: string) => dbWords.includes(uw));
-            };
-
-            const userMatch = allMatchesData.find((match: any) => {
-              return matchesPlayerName(match.team1_player1) ||
-                     matchesPlayerName(match.team1_player2) ||
-                     matchesPlayerName(match.team2_player1) ||
-                     matchesPlayerName(match.team2_player2);
-            });
-
-            if (userMatch) {
-              const isTeam1 = matchesPlayerName(userMatch.team1_player1) || matchesPlayerName(userMatch.team1_player2);
-              
-              const userTeam = isTeam1 ? 'team1' : 'team2';
-              const isWinner = userMatch.winner === userTeam;
-              
-              const userScore = isTeam1 ? userMatch.team1_score : userMatch.team2_score;
-              const opponentScore = isTeam1 ? userMatch.team2_score : userMatch.team1_score;
-              
-              // Get partner name
-              let partner = '';
-              if (isTeam1) {
-                const isP1User = matchesPlayerName(userMatch.team1_player1);
-                partner = isP1User ? userMatch.team1_player2 : userMatch.team1_player1;
-              } else {
-                const isP1User = matchesPlayerName(userMatch.team2_player1);
-                partner = isP1User ? userMatch.team2_player2 : userMatch.team2_player1;
-              }
-
-              // Generate tactical analysis
-              let analysisText = "";
-              let attackEfficiency = 75;
-              let defenseSolidity = 70;
-
-              const scoreDiff = Math.abs(userScore - opponentScore);
-
-              if (isWinner) {
-                if (scoreDiff <= 3) {
-                  analysisText = `Kemenangan tipis (${userScore}-${opponentScore}) bersama ${partner || 'partner'}. Transisi pertahanan ke serangan di poin kritis berjalan sangat baik, namun kurangi unforced error di awal game.`;
-                  attackEfficiency = 78;
-                  defenseSolidity = 72;
-                } else {
-                  analysisText = `Kemenangan meyakinkan (${userScore}-${opponentScore}) bersama ${partner || 'partner'}. Dominasi serangan cepat dan rotasi lapangan yang rapi sukses menekan pertahanan lawan sejak awal.`;
-                  attackEfficiency = 85;
-                  defenseSolidity = 78;
-                }
-              } else {
-                if (scoreDiff <= 3) {
-                  analysisText = `Kekalahan tipis (${userScore}-${opponentScore}) bersama ${partner || 'partner'}. Permainan seimbang, namun koordinasi pertahanan di poin-poin akhir perlu ditingkatkan untuk mengantisipasi smash menyilang.`;
-                  attackEfficiency = 70;
-                  defenseSolidity = 65;
-                } else {
-                  analysisText = `Kekalahan telak (${userScore}-${opponentScore}) bersama ${partner || 'partner'}. Perlu evaluasi mendalam pada akurasi pengembalian bola dan kecepatan kembali ke posisi siap (ready position) setelah menyerang.`;
-                  attackEfficiency = 60;
-                  defenseSolidity = 55;
-                }
-              }
-
+          if (response.ok) {
+            const data = await response.json();
+            if (data.found && data.analysis) {
               setLatestMatch({
-                id: userMatch.id,
-                date: userMatch.match_date || userMatch.created_at,
-                isWinner,
-                userScore,
-                opponentScore,
-                partner,
-                analysisText,
-                attackEfficiency,
-                defenseSolidity
+                isWinner: data.matchDetails.isWinner,
+                userScore: data.matchDetails.userScore,
+                opponentScore: data.matchDetails.opponentScore,
+                partner: data.matchDetails.partner,
+                analysisText: data.analysis.analysis,
+                attackEfficiency: data.analysis.attackEfficiency,
+                defenseSolidity: data.analysis.defenseSolidity,
               });
+            } else {
+              setLatestMatch(null);
             }
+          } else {
+            setLatestMatch(null);
           }
         } catch (err) {
-          console.error('Error fetching latest match:', err);
+          console.error('Error fetching latest match tactical analysis:', err);
+          setLatestMatch(null);
+        } finally {
+          setIsTacticalLoading(false);
         }
 
         // Initialize session ID
@@ -977,51 +922,74 @@ export default function TrainingCenterPage() {
                         <TrendingUp className="w-4 h-4 text-emerald-500" /> Analisis Taktis Terkini
                       </h3>
                       
-                      <div className="space-y-4">
-                        <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-zinc-800/40 border border-gray-100 dark:border-zinc-800/50">
-                          <div className="flex items-center justify-between text-xs mb-2">
-                            <span className="text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Match Terakhir</span>
-                            {latestMatch ? (
+                      {isTacticalLoading ? (
+                        <div className="space-y-4 animate-pulse">
+                          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-zinc-800/40 border border-gray-100 dark:border-zinc-800/50">
+                            <div className="h-3 w-16 bg-gray-200 dark:bg-zinc-700 rounded-sm mb-2"></div>
+                            <div className="h-5 w-24 bg-gray-200 dark:bg-zinc-700 rounded-md mb-2"></div>
+                            <div className="h-3 w-full bg-gray-200 dark:bg-zinc-700 rounded-sm mb-1"></div>
+                            <div className="h-3 w-4/5 bg-gray-200 dark:bg-zinc-700 rounded-sm"></div>
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <div className="h-3 w-28 bg-gray-200 dark:bg-zinc-700 rounded-sm mb-1.5"></div>
+                              <div className="h-1.5 w-full bg-gray-100 dark:bg-zinc-800 rounded-full"></div>
+                            </div>
+                            <div>
+                              <div className="h-3 w-32 bg-gray-200 dark:bg-zinc-700 rounded-sm mb-1.5"></div>
+                              <div className="h-1.5 w-full bg-gray-100 dark:bg-zinc-800 rounded-full"></div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : latestMatch ? (
+                        <div className="space-y-4">
+                          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-zinc-800/40 border border-gray-100 dark:border-zinc-800/50">
+                            <div className="flex items-center justify-between text-xs mb-2">
+                              <span className="text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Match Terakhir</span>
                               <span className={`px-2 py-0.5 ${latestMatch.isWinner ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'} font-extrabold rounded-sm`}>
                                 {latestMatch.isWinner ? 'WIN' : 'LOSE'}
                               </span>
-                            ) : (
-                              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold rounded-sm">DEMO WIN</span>
-                            )}
+                            </div>
+                            <p className="font-extrabold text-gray-900 dark:text-white text-base">
+                              Skor: {latestMatch.userScore} - {latestMatch.opponentScore}
+                            </p>
+                            <p className="text-xs text-gray-600 dark:text-zinc-400 italic mt-2">
+                              &ldquo;{latestMatch.analysisText}&rdquo;
+                            </p>
                           </div>
-                          <p className="font-extrabold text-gray-900 dark:text-white text-base">
-                            {latestMatch ? (
-                              `Skor: ${latestMatch.userScore} - ${latestMatch.opponentScore}`
-                            ) : (
-                              "Game 1: 21-17, Game 2: 21-19"
-                            )}
-                          </p>
-                          <p className="text-xs text-gray-600 dark:text-zinc-400 italic mt-2">
-                            &ldquo;{latestMatch ? latestMatch.analysisText : "Transisi dari posisi defense ke menyerang meningkat pesat. Netting menyilang Anda menyumbang 4 poin bersih."}&rdquo;
-                          </p>
-                        </div>
 
-                        <div className="space-y-2">
-                          <div>
-                            <div className="flex justify-between text-xs font-semibold mb-1">
-                              <span className="text-gray-600 dark:text-zinc-400">Efisiensi Serangan</span>
-                              <span className="text-blue-600 dark:text-blue-400">{latestMatch ? latestMatch.attackEfficiency : 82}%</span>
+                          <div className="space-y-2">
+                            <div>
+                              <div className="flex justify-between text-xs font-semibold mb-1">
+                                <span className="text-gray-600 dark:text-zinc-400">Efisiensi Serangan</span>
+                                <span className="text-blue-600 dark:text-blue-400">{latestMatch.attackEfficiency}%</span>
+                              </div>
+                              <div className="h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${latestMatch.attackEfficiency}%` }}></div>
+                              </div>
                             </div>
-                            <div className="h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${latestMatch ? latestMatch.attackEfficiency : 82}%` }}></div>
-                            </div>
-                          </div>
-                          <div>
-                            <div className="flex justify-between text-xs font-semibold mb-1">
-                              <span className="text-gray-600 dark:text-zinc-400">Kekokohan Pertahanan</span>
-                              <span className="text-emerald-600 dark:text-emerald-400">{latestMatch ? latestMatch.defenseSolidity : 65}%</span>
-                            </div>
-                            <div className="h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${latestMatch ? latestMatch.defenseSolidity : 65}%` }}></div>
+                            <div>
+                              <div className="flex justify-between text-xs font-semibold mb-1">
+                                <span className="text-gray-600 dark:text-zinc-400">Kekokohan Pertahanan</span>
+                                <span className="text-emerald-600 dark:text-emerald-400">{latestMatch.defenseSolidity}%</span>
+                              </div>
+                              <div className="h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${latestMatch.defenseSolidity}%` }}></div>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/40 border border-gray-100 dark:border-zinc-800/50 text-center py-6">
+                          <div className="text-gray-400 dark:text-zinc-500 mb-2">
+                            <TrendingUp className="w-8 h-8 mx-auto opacity-45" />
+                          </div>
+                          <p className="text-sm font-semibold text-gray-700 dark:text-zinc-300">Belum Ada Riwayat Pertandingan</p>
+                          <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1 max-w-[240px] mx-auto">
+                            Catat hasil pertandingan Anda di menu Analitik untuk menerima analisis taktis otomatis dari Coach AI.
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Psychological / Mental Resilience Card */}
