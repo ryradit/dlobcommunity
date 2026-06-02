@@ -379,6 +379,7 @@ export default function TrainingCenterPage() {
                 userScore: data.matchDetails.userScore,
                 opponentScore: data.matchDetails.opponentScore,
                 partner: data.matchDetails.partner,
+                opponents: data.matchDetails.opponents,
                 analysisText: data.analysis.analysis,
                 attackEfficiency: data.analysis.attackEfficiency,
                 defenseSolidity: data.analysis.defenseSolidity,
@@ -952,6 +953,10 @@ export default function TrainingCenterPage() {
                             </div>
                             <p className="font-extrabold text-gray-900 dark:text-white text-base">
                               Skor: {latestMatch.userScore} - {latestMatch.opponentScore}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1 font-semibold">
+                              Lawan: {latestMatch.opponents && latestMatch.opponents.length > 0 ? latestMatch.opponents.join(' & ') : '-'}
+                              {latestMatch.partner ? ` (Partner: ${latestMatch.partner})` : ' (Single)'}
                             </p>
                             <p className="text-xs text-gray-600 dark:text-zinc-400 italic mt-2">
                               &ldquo;{latestMatch.analysisText}&rdquo;
