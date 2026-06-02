@@ -1256,8 +1256,23 @@ export default function TrainingCenterPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (confirm('Bersihkan riwayat percakapan sesi ini?')) {
+                        try {
+                          const { error } = await supabase
+                            .from('coaching_sessions')
+                            .delete()
+                            .eq('user_id', userId);
+                          
+                          if (error) {
+                            console.error('Error clearing session history:', error);
+                          } else {
+                            console.log('Session history cleared successfully!');
+                          }
+                        } catch (err) {
+                          console.error('Exception clearing session history:', err);
+                        }
+
                         setMessages([
                           {
                             id: 'welcome-reset',
