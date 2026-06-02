@@ -594,6 +594,18 @@ export default function TrainingCenterPage() {
 
       setMessages((prev) => [...prev, coachMessage]);
 
+      // Always refetch latest mental assessment to update the dashboard UI in real-time
+      const { data: latestMentalData } = await supabase
+        .from('mental_assessment')
+        .select('*')
+        .eq('user_id', userId)
+        .order('assessed_date', { ascending: false })
+        .limit(1);
+
+      if (latestMentalData && latestMentalData.length > 0) {
+        setMentalAssessment(latestMentalData[0]);
+      }
+
       // Refetch plan & drills if agent modified them
       if (data.toolsExecuted?.includes('generate_training_plan') || data.toolsExecuted?.includes('track_progress_metrics')) {
         const { data: planData } = await supabase
@@ -717,7 +729,8 @@ export default function TrainingCenterPage() {
       const { error: planError } = await supabase
         .from('training_plans')
         .delete()
-        .eq('id', trainingPlan.id);
+        .eq('user_id', userId)
+        .eq('status', 'active');
 
       if (planError) throw planError;
 

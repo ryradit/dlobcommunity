@@ -222,6 +222,11 @@ JIKA PERTANYAAN TENTANG IMPROVEMENT/KELEMAHAN/APA YANG PERLU DITINGKATKAN (TANPA
 - Setiap option adalah kelemahan yang terdeteksi dari match data mereka
 - User akan memilih satu dengan format "analisis weakness: [weakness name]", kemudian Anda analyze secara mendalam
 
+JIKA PERTANYAAN TENTANG MENTAL/PSIKOLOGIS/TEKANAN/PERCAYA DIRI/JUARA/ASESMEN MENTAL (misal: "Tolong berikan asesmen mental tanding...", "Bagaimana melatih kesiapan mental tanding?"):
+- Anda wajib menghasilkan objek "mentalAssessment" di dalam JSON respons (sebagai field tambahan di tingkat teratas respons).
+- Objek "mentalAssessment" harus berisi field-field numerik (skala 1-100) dan rekomendasi spesifik yang disesuaikan dengan profil match history mereka (misalnya, jika win rate mereka rendah, kepercayaan diri mungkin perlu ditingkatkan; jika mereka sering kalah tipis, respon tekanan mereka perlu ditingkatkan).
+- Semua rekomendasi, temuan, dan deskripsi di dalam "mentalAssessment" harus ditulis dalam Bahasa Indonesia yang profesional dan memotivasi.
+
 JIKA PERTANYAAN SPESIFIK LAINNYA (tentang opponent tertentu, metrik tertentu, goal tertentu, atau greeting):
 - Langsung analisis dan berikan solusi
 - Reference SPESIFIK pola/statistik dari data mereka
@@ -279,7 +284,23 @@ JENIS 2 - UNTUK PERTANYAAN SPESIFIK (Action-Focused Format - PENTING!):
     "target": "Target spesifik (misal: '30% Win Rate')",
     "metric": "Metrik yang diukur"
   },
-  "motivationalQuote": "Quote motivasi personal (singkat!)"
+  "motivationalQuote": "Quote motivasi personal (singkat!)",
+  "mentalAssessment": {
+    "confidenceLevel": number, // Tingkat percaya diri 1-100
+    "pressureResponseScore": number, // Respon tekanan 1-100
+    "consistencyScore": number, // Konsistensi mental 1-100
+    "winningMentalityScore": number, // Mental juara 1-100
+    "overallPsychologicalScore": number, // Nilai rata-rata psikologis 1-100
+    "findings": {
+      "assessment": "Hasil temuan utama tentang kondisi psikologis tanding user (1-2 kalimat)",
+      "recommendation": "Rekomendasi utama",
+      "score": number, // Skor keseluruhan
+      "description": "Deskripsi terperinci kekuatan dan kelemahan mental user"
+    },
+    "mentalStrengths": ["Kekuatan mental 1", "Kekuatan mental 2"],
+    "improvementAreas": ["Area perbaikan mental 1", "Area perbaikan mental 2"],
+    "recommendations": ["Saran taktis mental 1", "Saran taktis mental 2"]
+  }
 }
 
 
@@ -512,6 +533,38 @@ PENGINGAT PENTING:
       }
     } else {
       console.warn('[Coach Agent] ⚠️ No userId provided - coaching session NOT saved to database');
+    }
+
+    // If mental assessment generated, save it to public.mental_assessment
+    if (coachingResponse.mentalAssessment && userId) {
+      try {
+        const ma = coachingResponse.mentalAssessment;
+        const { error: maError } = await supabase
+          .from('mental_assessment')
+          .insert({
+            user_id: userId,
+            assessment_type: 'general_psychological',
+            confidence_level: ma.confidenceLevel,
+            pressure_response_score: ma.pressureResponseScore,
+            consistency_score: ma.consistencyScore,
+            winning_mentality_score: ma.winningMentalityScore,
+            overall_psychological_score: ma.overallPsychologicalScore,
+            findings: ma.findings,
+            mental_strengths: ma.mentalStrengths,
+            improvement_areas: ma.improvementAreas,
+            recommendations: ma.recommendations,
+            recent_matches_analyzed: finalStats?.totalMatches || 0,
+            performance_notes: coachingResponse.response || '',
+          });
+
+        if (maError) {
+          console.error('[Coach Agent] Error saving mental assessment:', maError);
+        } else {
+          console.log('[Coach Agent] ✅ Mental assessment saved successfully!');
+        }
+      } catch (maEx) {
+        console.error('[Coach Agent] Exception saving mental assessment:', maEx);
+      }
     }
 
     // If weakness identified, save it
