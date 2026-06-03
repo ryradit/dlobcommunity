@@ -33,8 +33,9 @@ interface ActivityItem {
 interface PerformanceMember {
   id: string;
   name: string;
-  streak: number;
-  type: 'win' | 'loss';
+  winRate: number;
+  wins: number;
+  totalMatches: number;
 }
 
 interface RevenueData {
@@ -319,23 +320,44 @@ export default function AdminDashboardPage() {
             }
           });
 
-          // Convert to array and sort
-          const performers: PerformanceMember[] = Object.values(playerStreaks).map((player, index) => ({
-            id: `${player.type}-${index}`,
-            name: player.name,
-            streak: player.currentStreak,
-            type: player.type,
-          }));
-
-          // Sort: wins first (highest to lowest), then losses (highest to lowest)
-          performers.sort((a, b) => {
-            if (a.type === b.type) {
-              return b.streak - a.streak;
-            }
-            return a.type === 'win' ? -1 : 1;
+          // Calculate win rate, wins, and matches for each player
+          const performers: PerformanceMember[] = [];
+          Object.keys(playerMatches).forEach((playerName) => {
+            const matches = playerMatches[playerName];
+            const wins = matches.filter(m => m.isWinner).length;
+            const totalMatches = matches.length;
+            const winRate = totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0;
+            
+            performers.push({
+              id: `perf-${playerName}`,
+              name: playerName,
+              winRate,
+              wins,
+              totalMatches
+            });
           });
 
-          setTopPerformers(performers.slice(0, 5));
+          // Filter: only players with at least 3 matches
+          const qualifiedPerformers = performers.filter(p => p.totalMatches >= 3);
+
+          // Sort by Win Rate (descending), then Total Matches (descending) as tiebreaker
+          qualifiedPerformers.sort((a, b) => {
+            if (b.winRate !== a.winRate) {
+              return b.winRate - a.winRate;
+            }
+            return b.totalMatches - a.totalMatches;
+          });
+
+          // Fallback if we have fewer than 5 qualified
+          let finalPerformers = qualifiedPerformers.slice(0, 5);
+          if (finalPerformers.length < 5) {
+            const nonQualified = performers
+              .filter(p => p.totalMatches < 3)
+              .sort((a, b) => b.winRate - a.winRate || b.totalMatches - a.totalMatches);
+            finalPerformers = [...finalPerformers, ...nonQualified].slice(0, 5);
+          }
+
+          setTopPerformers(finalPerformers);
 
           // Calculate most active players (most matches played)
           const playerMatchCount: { [key: string]: number } = {};
@@ -809,8 +831,7 @@ export default function AdminDashboardPage() {
           ) : (
             <div className="space-y-4">
               {topPerformers.map((member, index) => {
-                const isWin = member.type === 'win';
-                const percentage = (member.streak / 10) * 100;
+                const percentage = member.winRate;
                 return (
                   <div key={member.id} className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -818,21 +839,10 @@ export default function AdminDashboardPage() {
                         <span className="text-gray-400 dark:text-zinc-650 text-xs w-6 font-bold">#{index + 1}</span>
                         <span className="text-gray-900 dark:text-white font-bold text-xs">{member.name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-black uppercase tracking-wider ${
-                          isWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'
-                        }`}>
-                          {member.streak} {isWin ? 'Win' : 'Loss'} Streak
-                        </span>
-                      </div>
                     </div>
                     <div className="relative h-2 bg-gray-100 dark:bg-zinc-800/80 rounded-full overflow-hidden border border-gray-200/30 dark:border-zinc-850">
                       <div
-                        className={`absolute left-0 top-0 h-full rounded-full transition-all ${
-                          isWin 
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400' 
-                            : 'bg-gradient-to-r from-red-500 to-rose-400'
-                        }`}
+                        className="absolute left-0 top-0 h-full rounded-full transition-all bg-gradient-to-r from-emerald-500 to-teal-400"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>

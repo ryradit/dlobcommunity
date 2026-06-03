@@ -92,6 +92,8 @@ export default function AdminPembayaranPage() {
     member3: '',
     member4: '',
     match_date: '',
+    team1_score: 0,
+    team2_score: 0,
   });
   const [matchDateMembershipMap, setMatchDateMembershipMap] = useState<Record<string, Membership>>({});
   const [paymentExemptMembers, setPaymentExemptMembers] = useState<Set<string>>(new Set());
@@ -1755,6 +1757,15 @@ export default function AdminPembayaranPage() {
           status: 'active',
           created_by: user?.id,
           match_date: new Date(newMatch.match_date).toISOString(),
+          team1_player1: newMatch.member1,
+          team1_player2: newMatch.member2,
+          team2_player1: newMatch.member3,
+          team2_player2: newMatch.member4,
+          team1_score: newMatch.team1_score,
+          team2_score: newMatch.team2_score,
+          winner: newMatch.team1_score > newMatch.team2_score 
+            ? 'team1' 
+            : (newMatch.team2_score > newMatch.team1_score ? 'team2' : null),
         })
         .select()
         .single();
@@ -1826,6 +1837,8 @@ export default function AdminPembayaranPage() {
         member3: '',
         member4: '',
         match_date: '',
+        team1_score: 0,
+        team2_score: 0,
       });
       setCreateMatchMembershipPayers(new Set());
       loadData();
@@ -4448,170 +4461,365 @@ export default function AdminPembayaranPage() {
                 </p>
               </div>
 
-              <div className="border-t border-gray-200 dark:border-white/10 pt-4 transition-colors duration-300">
-                <label className="block text-sm font-medium text-gray-600 dark:text-zinc-400 mb-2 transition-colors duration-300">
-                  4 Anggota
+              <div className="border-t border-gray-200 dark:border-white/10 pt-4 transition-colors duration-300 space-y-4">
+                <label className="block text-sm font-semibold text-gray-800 dark:text-zinc-200 transition-colors duration-300">
+                  Formasi & Hasil Pertandingan
                 </label>
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((num) => {
-                    const memberKey = `member${num}` as keyof typeof newMatch;
-                    const memberName = newMatch[memberKey] as string;
-                    
-                    // Check if member is payment exempt (VIP)
-                    const isPaymentExempt = memberName ? paymentExemptMembers.has(memberName.toLowerCase()) : false;
-                    
-                    // Check membership for the match date's month, not the selected month
-                    const memberMembership = memberName ? matchDateMembershipMap[memberName.toLowerCase().trim()] : null;
-                    const hasMembershipStatus = isPaymentExempt || !!memberMembership; // Exempt or has PAID membership
-                    
-                    const willPayMembership = memberName ? createMatchMembershipPayers.has(memberName) : false;
-                    const membershipFeeForMatch = (() => {
-                      if (!newMatch.match_date) return 40000;
-                      const d = new Date(newMatch.match_date);
-                      const year = d.getFullYear(), month = d.getMonth();
-                      const lastDay = new Date(year, month + 1, 0).getDate();
-                      let sats = 0;
-                      for (let day = 1; day <= lastDay; day++) { if (new Date(year, month, day).getDay() === 6) sats++; }
-                      return sats >= 5 ? 45000 : 40000;
-                    })();
-                    const costBreakdown = {
-                      shuttlecock: isPaymentExempt ? 0 : (newMatch.shuttlecock_count * 12000) / 4,
-                      attendance: (isPaymentExempt || memberMembership || willPayMembership) ? 0 : 18000,
-                    };
-                    const total = costBreakdown.shuttlecock + costBreakdown.attendance + (willPayMembership ? membershipFeeForMatch : 0);
 
-                    return (
-                      <div key={num}>
-                        <select
-                          value={memberName === '__new__' ? '__new__' : memberName}
-                          onChange={(e) => {
-                            if (e.target.value === '__new__') {
-                              setNewMatch({ ...newMatch, [memberKey]: '__new__' });
-                              setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' }));
-                            } else {
-                              setNewMatch({ ...newMatch, [memberKey]: e.target.value });
-                              setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' }));
-                            }
-                          }}
-                          className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors duration-300"
-                        >
-                          <option value="">Pilih Anggota {num}</option>
-                          {allMembers.map((member) => (
-                            <option key={member.id} value={member.name}>
-                              {member.name}
-                            </option>
-                          ))}
-                          <option value="__new__">+ Buat Anggota Baru...</option>
-                        </select>
-                        {memberName === '__new__' && (
-                          <div className="flex gap-2 mt-2">
-                            <input
-                              type="text"
-                              placeholder="Ketik nama anggota baru"
-                              value={newMemberInputs[memberKey] || ''}
-                              onChange={(e) => setNewMemberInputs(prev => ({ ...prev, [memberKey]: e.target.value }))}
-                              onKeyDown={(e) => { if (e.key === 'Enter') createTempMemberInline(memberKey); }}
-                              className="flex-1 px-3 py-1.5 bg-white dark:bg-zinc-800 border border-blue-400 dark:border-blue-400/50 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
-                              autoFocus
-                            />
-                            <button
-                              type="button"
-                              onClick={() => createTempMemberInline(memberKey)}
-                              disabled={creatingMember[memberKey] || !newMemberInputs[memberKey]?.trim()}
-                              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
-                            >
-                              {creatingMember[memberKey] ? '...' : 'Buat'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setNewMatch({ ...newMatch, [memberKey]: '' }); setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' })); }}
-                              className="px-3 py-1.5 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg text-sm transition-colors"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        )}
-                        {memberName && (
-                          <div className="mt-1 text-xs space-y-1">
-                            {isPaymentExempt ? (
-                              <>
-                                <p className="text-pink-400 flex items-center gap-1">
-                                  <Award className="w-3 h-3" />
-                                  VIP - Gratis (Bebas Biaya)
-                                </p>
-                                <p className="text-white font-semibold">
-                                  Total: Rp 0
-                                </p>
-                              </>
-                            ) : (
-                              <>
-                                <p className="text-gray-600 dark:text-zinc-400 transition-colors duration-300">
-                                  Shuttlecock: Rp {costBreakdown.shuttlecock.toLocaleString('id-ID')}
-                                </p>
-                                {!memberMembership && !isPaymentExempt && !willPayMembership ? (
-                                  <>
-                                    <p className="text-yellow-400">
-                                      + Kehadiran: Rp {(18000).toLocaleString('id-ID')} (Belum Member {new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' })})
-                                    </p>
-                                    <label className="flex items-center gap-2 mt-1 cursor-pointer group">
-                                      <input
-                                        type="checkbox"
-                                        checked={false}
-                                        onChange={() => {
-                                          setCreateMatchMembershipPayers(prev => {
-                                            const next = new Set(prev);
-                                            next.add(memberName);
-                                            return next;
-                                          });
-                                        }}
-                                        className="w-3.5 h-3.5 rounded accent-amber-400"
-                                      />
-                                      <span className="text-xs text-amber-300 group-hover:text-amber-200">
-                                        Bayar membership sekarang (+Rp {membershipFeeForMatch.toLocaleString('id-ID')})
-                                      </span>
-                                    </label>
-                                    <p className="text-white dark:text-white font-semibold transition-colors duration-300">
-                                      Total: Rp {total.toLocaleString('id-ID')}
-                                    </p>
-                                  </>
-                                ) : willPayMembership ? (
-                                  <>
-                                    <p className="text-amber-300 flex items-center gap-1">
-                                      <Award className="w-3 h-3" />
-                                      Membership dibayar (+Rp {membershipFeeForMatch.toLocaleString('id-ID')})
-                                    </p>
-                                    <label className="flex items-center gap-2 mt-1 cursor-pointer group">
-                                      <input
-                                        type="checkbox"
-                                        checked={true}
-                                        onChange={() => {
-                                          setCreateMatchMembershipPayers(prev => {
-                                            const next = new Set(prev);
-                                            next.delete(memberName);
-                                            return next;
-                                          });
-                                        }}
-                                        className="w-3.5 h-3.5 rounded accent-amber-400"
-                                      />
-                                      <span className="text-xs text-amber-300 group-hover:text-amber-200">Batal membership</span>
-                                    </label>
-                                    <p className="text-white dark:text-white font-semibold transition-colors duration-300">
-                                      Total: Rp {total.toLocaleString('id-ID')} (termasuk membership)
-                                    </p>
-                                  </>
-                                ) : (
-                                  <p className="text-purple-400 flex items-center gap-1">
-                                    <Award className="w-3 h-3" />
-                                    Member {new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' })} - Total: Rp {total.toLocaleString('id-ID')}
+                {/* Team 1 Section */}
+                <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-blue-100 dark:border-blue-900/30 pb-2">
+                    <h4 className="font-bold text-blue-600 dark:text-blue-400 text-sm">Tim 1 (Anggota 1 & 2)</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600 dark:text-zinc-400 font-medium">Skor:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newMatch.team1_score}
+                        onChange={(e) => setNewMatch({ ...newMatch, team1_score: Math.max(0, parseInt(e.target.value) || 0) })}
+                        className="w-16 px-2 py-1 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 rounded text-center text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {[1, 2].map((num) => {
+                      const memberKey = `member${num}` as keyof typeof newMatch;
+                      const memberName = newMatch[memberKey] as string;
+                      
+                      // Check if member is payment exempt (VIP)
+                      const isPaymentExempt = memberName ? paymentExemptMembers.has(memberName.toLowerCase()) : false;
+                      
+                      // Check membership for the match date's month, not the selected month
+                      const memberMembership = memberName ? matchDateMembershipMap[memberName.toLowerCase().trim()] : null;
+                      const hasMembershipStatus = isPaymentExempt || !!memberMembership; // Exempt or has PAID membership
+                      
+                      const willPayMembership = memberName ? createMatchMembershipPayers.has(memberName) : false;
+                      const membershipFeeForMatch = (() => {
+                        if (!newMatch.match_date) return 40000;
+                        const d = new Date(newMatch.match_date);
+                        const year = d.getFullYear(), month = d.getMonth();
+                        const lastDay = new Date(year, month + 1, 0).getDate();
+                        let sats = 0;
+                        for (let day = 1; day <= lastDay; day++) { if (new Date(year, month, day).getDay() === 6) sats++; }
+                        return sats >= 5 ? 45000 : 40000;
+                      })();
+                      const costBreakdown = {
+                        shuttlecock: isPaymentExempt ? 0 : (newMatch.shuttlecock_count * 12000) / 4,
+                        attendance: (isPaymentExempt || memberMembership || willPayMembership) ? 0 : 18000,
+                      };
+                      const total = costBreakdown.shuttlecock + costBreakdown.attendance + (willPayMembership ? membershipFeeForMatch : 0);
+
+                      return (
+                        <div key={num} className="space-y-1">
+                          <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400">Pemain {num === 1 ? 'Pertama' : 'Kedua'}</label>
+                          <select
+                            value={memberName === '__new__' ? '__new__' : memberName}
+                            onChange={(e) => {
+                              if (e.target.value === '__new__') {
+                                setNewMatch({ ...newMatch, [memberKey]: '__new__' });
+                                setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' }));
+                              } else {
+                                setNewMatch({ ...newMatch, [memberKey]: e.target.value });
+                                setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' }));
+                              }
+                            }}
+                            className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                          >
+                            <option value="">Pilih Anggota {num}</option>
+                            {allMembers.map((member) => (
+                              <option key={member.id} value={member.name}>
+                                {member.name}
+                              </option>
+                            ))}
+                            <option value="__new__">+ Buat Anggota Baru...</option>
+                          </select>
+                          {memberName === '__new__' && (
+                            <div className="flex gap-2 mt-2">
+                              <input
+                                type="text"
+                                placeholder="Ketik nama anggota baru"
+                                value={newMemberInputs[memberKey] || ''}
+                                onChange={(e) => setNewMemberInputs(prev => ({ ...prev, [memberKey]: e.target.value }))}
+                                onKeyDown={(e) => { if (e.key === 'Enter') createTempMemberInline(memberKey); }}
+                                className="flex-1 px-3 py-1.5 bg-white dark:bg-zinc-800 border border-blue-400 dark:border-blue-400/50 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none"
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={() => createTempMemberInline(memberKey)}
+                                disabled={creatingMember[memberKey] || !newMemberInputs[memberKey]?.trim()}
+                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+                              >
+                                {creatingMember[memberKey] ? '...' : 'Buat'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setNewMatch({ ...newMatch, [memberKey]: '' }); setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' })); }}
+                                className="px-3 py-1.5 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg text-sm"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+                          {memberName && memberName !== '__new__' && (
+                            <div className="mt-1 text-xs space-y-1 bg-white/40 dark:bg-zinc-800/40 p-2 rounded-lg border border-gray-200/50 dark:border-zinc-800/50">
+                              {isPaymentExempt ? (
+                                <>
+                                  <p className="text-pink-500 dark:text-pink-400 flex items-center gap-1 font-medium">
+                                    <Award className="w-3.5 h-3.5" />
+                                    VIP - Gratis (Bebas Biaya)
                                   </p>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                                  <p className="text-gray-900 dark:text-white font-bold">Total: Rp 0</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-gray-600 dark:text-zinc-400">
+                                    Shuttlecock: Rp {costBreakdown.shuttlecock.toLocaleString('id-ID')}
+                                  </p>
+                                  {!memberMembership && !isPaymentExempt && !willPayMembership ? (
+                                    <>
+                                      <p className="text-yellow-600 dark:text-yellow-400 font-medium">
+                                        + Kehadiran: Rp {(18000).toLocaleString('id-ID')} (Belum Member {newMatch.match_date ? new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' }) : ''})
+                                      </p>
+                                      <label className="flex items-center gap-2 mt-1 cursor-pointer group">
+                                        <input
+                                          type="checkbox"
+                                          checked={false}
+                                          onChange={() => {
+                                            setCreateMatchMembershipPayers(prev => {
+                                              const next = new Set(prev);
+                                              next.add(memberName);
+                                              return next;
+                                            });
+                                          }}
+                                          className="w-3.5 h-3.5 rounded accent-amber-400"
+                                        />
+                                        <span className="text-xs text-amber-600 dark:text-amber-300 group-hover:text-amber-500 dark:group-hover:text-amber-200 transition-colors">
+                                          Bayar membership sekarang (+Rp {membershipFeeForMatch.toLocaleString('id-ID')})
+                                        </span>
+                                      </label>
+                                      <p className="text-gray-900 dark:text-white font-bold">
+                                        Total: Rp {total.toLocaleString('id-ID')}
+                                      </p>
+                                    </>
+                                  ) : willPayMembership ? (
+                                    <>
+                                      <p className="text-amber-600 dark:text-amber-300 flex items-center gap-1 font-medium">
+                                        <Award className="w-3.5 h-3.5" />
+                                        Membership dibayar (+Rp {membershipFeeForMatch.toLocaleString('id-ID')})
+                                      </p>
+                                      <label className="flex items-center gap-2 mt-1 cursor-pointer group">
+                                        <input
+                                          type="checkbox"
+                                          checked={true}
+                                          onChange={() => {
+                                            setCreateMatchMembershipPayers(prev => {
+                                              const next = new Set(prev);
+                                              next.delete(memberName);
+                                              return next;
+                                            });
+                                          }}
+                                          className="w-3.5 h-3.5 rounded accent-amber-400"
+                                        />
+                                        <span className="text-xs text-amber-600 dark:text-amber-300 group-hover:text-amber-500 dark:group-hover:text-amber-200 transition-colors">Batal membership</span>
+                                      </label>
+                                      <p className="text-gray-900 dark:text-white font-bold">
+                                        Total: Rp {total.toLocaleString('id-ID')} <span className="text-xs font-normal text-gray-500 dark:text-zinc-400">(termasuk membership)</span>
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <p className="text-purple-600 dark:text-purple-400 flex items-center gap-1 font-bold">
+                                      <Award className="w-3.5 h-3.5" />
+                                      Member {newMatch.match_date ? new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' }) : ''} - Total: Rp {total.toLocaleString('id-ID')}
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Team 2 Section */}
+                <div className="bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-red-100 dark:border-red-900/30 pb-2">
+                    <h4 className="font-bold text-red-600 dark:text-red-400 text-sm">Tim 2 (Anggota 3 & 4)</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600 dark:text-zinc-400 font-medium">Skor:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newMatch.team2_score}
+                        onChange={(e) => setNewMatch({ ...newMatch, team2_score: Math.max(0, parseInt(e.target.value) || 0) })}
+                        className="w-16 px-2 py-1 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 rounded text-center text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:border-red-500"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {[3, 4].map((num) => {
+                      const memberKey = `member${num}` as keyof typeof newMatch;
+                      const memberName = newMatch[memberKey] as string;
+                      
+                      // Check if member is payment exempt (VIP)
+                      const isPaymentExempt = memberName ? paymentExemptMembers.has(memberName.toLowerCase()) : false;
+                      
+                      // Check membership for the match date's month, not the selected month
+                      const memberMembership = memberName ? matchDateMembershipMap[memberName.toLowerCase().trim()] : null;
+                      const hasMembershipStatus = isPaymentExempt || !!memberMembership; // Exempt or has PAID membership
+                      
+                      const willPayMembership = memberName ? createMatchMembershipPayers.has(memberName) : false;
+                      const membershipFeeForMatch = (() => {
+                        if (!newMatch.match_date) return 40000;
+                        const d = new Date(newMatch.match_date);
+                        const year = d.getFullYear(), month = d.getMonth();
+                        const lastDay = new Date(year, month + 1, 0).getDate();
+                        let sats = 0;
+                        for (let day = 1; day <= lastDay; day++) { if (new Date(year, month, day).getDay() === 6) sats++; }
+                        return sats >= 5 ? 45000 : 40000;
+                      })();
+                      const costBreakdown = {
+                        shuttlecock: isPaymentExempt ? 0 : (newMatch.shuttlecock_count * 12000) / 4,
+                        attendance: (isPaymentExempt || memberMembership || willPayMembership) ? 0 : 18000,
+                      };
+                      const total = costBreakdown.shuttlecock + costBreakdown.attendance + (willPayMembership ? membershipFeeForMatch : 0);
+
+                      return (
+                        <div key={num} className="space-y-1">
+                          <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400">Pemain {num === 3 ? 'Pertama' : 'Kedua'}</label>
+                          <select
+                            value={memberName === '__new__' ? '__new__' : memberName}
+                            onChange={(e) => {
+                              if (e.target.value === '__new__') {
+                                setNewMatch({ ...newMatch, [memberKey]: '__new__' });
+                                setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' }));
+                              } else {
+                                setNewMatch({ ...newMatch, [memberKey]: e.target.value });
+                                setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' }));
+                              }
+                            }}
+                            className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-red-500 transition-colors"
+                          >
+                            <option value="">Pilih Anggota {num}</option>
+                            {allMembers.map((member) => (
+                              <option key={member.id} value={member.name}>
+                                {member.name}
+                              </option>
+                            ))}
+                            <option value="__new__">+ Buat Anggota Baru...</option>
+                          </select>
+                          {memberName === '__new__' && (
+                            <div className="flex gap-2 mt-2">
+                              <input
+                                type="text"
+                                placeholder="Ketik nama anggota baru"
+                                value={newMemberInputs[memberKey] || ''}
+                                onChange={(e) => setNewMemberInputs(prev => ({ ...prev, [memberKey]: e.target.value }))}
+                                onKeyDown={(e) => { if (e.key === 'Enter') createTempMemberInline(memberKey); }}
+                                className="flex-1 px-3 py-1.5 bg-white dark:bg-zinc-800 border border-blue-400 dark:border-blue-400/50 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none"
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={() => createTempMemberInline(memberKey)}
+                                disabled={creatingMember[memberKey] || !newMemberInputs[memberKey]?.trim()}
+                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+                              >
+                                {creatingMember[memberKey] ? '...' : 'Buat'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setNewMatch({ ...newMatch, [memberKey]: '' }); setNewMemberInputs(prev => ({ ...prev, [memberKey]: '' })); }}
+                                className="px-3 py-1.5 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg text-sm"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+                          {memberName && memberName !== '__new__' && (
+                            <div className="mt-1 text-xs space-y-1 bg-white/40 dark:bg-zinc-800/40 p-2 rounded-lg border border-gray-200/50 dark:border-zinc-800/50">
+                              {isPaymentExempt ? (
+                                <>
+                                  <p className="text-pink-500 dark:text-pink-400 flex items-center gap-1 font-medium">
+                                    <Award className="w-3.5 h-3.5" />
+                                    VIP - Gratis (Bebas Biaya)
+                                  </p>
+                                  <p className="text-gray-900 dark:text-white font-bold">Total: Rp 0</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-gray-600 dark:text-zinc-400">
+                                    Shuttlecock: Rp {costBreakdown.shuttlecock.toLocaleString('id-ID')}
+                                  </p>
+                                  {!memberMembership && !isPaymentExempt && !willPayMembership ? (
+                                    <>
+                                      <p className="text-yellow-600 dark:text-yellow-400 font-medium">
+                                        + Kehadiran: Rp {(18000).toLocaleString('id-ID')} (Belum Member {newMatch.match_date ? new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' }) : ''})
+                                      </p>
+                                      <label className="flex items-center gap-2 mt-1 cursor-pointer group">
+                                        <input
+                                          type="checkbox"
+                                          checked={false}
+                                          onChange={() => {
+                                            setCreateMatchMembershipPayers(prev => {
+                                              const next = new Set(prev);
+                                              next.add(memberName);
+                                              return next;
+                                            });
+                                          }}
+                                          className="w-3.5 h-3.5 rounded accent-amber-400"
+                                        />
+                                        <span className="text-xs text-amber-600 dark:text-amber-300 group-hover:text-amber-500 dark:group-hover:text-amber-200 transition-colors">
+                                          Bayar membership sekarang (+Rp {membershipFeeForMatch.toLocaleString('id-ID')})
+                                        </span>
+                                      </label>
+                                      <p className="text-gray-900 dark:text-white font-bold">
+                                        Total: Rp {total.toLocaleString('id-ID')}
+                                      </p>
+                                    </>
+                                  ) : willPayMembership ? (
+                                    <>
+                                      <p className="text-amber-600 dark:text-amber-300 flex items-center gap-1 font-medium">
+                                        <Award className="w-3.5 h-3.5" />
+                                        Membership dibayar (+Rp {membershipFeeForMatch.toLocaleString('id-ID')})
+                                      </p>
+                                      <label className="flex items-center gap-2 mt-1 cursor-pointer group">
+                                        <input
+                                          type="checkbox"
+                                          checked={true}
+                                          onChange={() => {
+                                            setCreateMatchMembershipPayers(prev => {
+                                              const next = new Set(prev);
+                                              next.delete(memberName);
+                                              return next;
+                                            });
+                                          }}
+                                          className="w-3.5 h-3.5 rounded accent-amber-400"
+                                        />
+                                        <span className="text-xs text-amber-600 dark:text-amber-300 group-hover:text-amber-500 dark:group-hover:text-amber-200 transition-colors">Batal membership</span>
+                                      </label>
+                                      <p className="text-gray-900 dark:text-white font-bold">
+                                        Total: Rp {total.toLocaleString('id-ID')} <span className="text-xs font-normal text-gray-500 dark:text-zinc-400">(termasuk membership)</span>
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <p className="text-purple-600 dark:text-purple-400 flex items-center gap-1 font-bold">
+                                      <Award className="w-3.5 h-3.5" />
+                                      Member {newMatch.match_date ? new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' }) : ''} - Total: Rp {total.toLocaleString('id-ID')}
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 

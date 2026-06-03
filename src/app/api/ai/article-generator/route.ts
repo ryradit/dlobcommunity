@@ -677,7 +677,7 @@ Buat artikel lengkap sekarang dalam format JSON yang sempurna!`;
         excerpt: articleData.excerpt,
         read_time_minutes: articleData.read_time_minutes,
         author_id: userId,
-        author_name: 'Admin DLOB', // TODO: Get from user profile
+        author_name: 'Admin Dlob',
         original_prompt: prompt,
         generation_model: 'gemini-2.5-flash-lite',
         seo_title: articleData.seo_title,

@@ -107,7 +107,7 @@ export default function AdminArtikelPage() {
         body: JSON.stringify({ 
           prompt: prompt.trim(),
           userId: user?.id,
-          userName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Admin'
+          userName: 'Admin Dlob'
         }),
       });
 

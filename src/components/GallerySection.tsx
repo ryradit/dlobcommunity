@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Camera } from 'lucide-react';
 
 export default function GallerySection() {
   const router = useRouter();
@@ -63,12 +63,6 @@ export default function GallerySection() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap');
-    
-        * {
-          font-family: 'Poppins', sans-serif;
-        }
-
         .perspective-container {
           perspective: 1200px;
         }
@@ -88,7 +82,7 @@ export default function GallerySection() {
           height: 100%;
           backface-visibility: hidden;
           -webkit-backface-visibility: hidden;
-          border-radius: 0.5rem;
+          border-radius: 1.5rem;
           overflow: hidden;
         }
 
@@ -97,63 +91,69 @@ export default function GallerySection() {
         }
       `}</style>
 
-      <section id="gallery" className="w-full flex flex-col items-center justify-start py-12">
-        <div className="max-w-3xl text-center px-4">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900">Koleksi Foto Terbaik</h1>
-          <p className="text-base md:text-lg text-gray-600 mt-3">
-            Saksikan momen-momen terbaik dari pertandingan dan latihan badminton kami. 
-            Setiap foto menceritakan kisah dedikasi dan semangat tim DLOB.
+      <section id="gallery" className="w-full flex flex-col items-center justify-start py-24 bg-slate-50 relative overflow-hidden">
+        {/* Background Decorative Emojis/Patterns */}
+        <div className="absolute top-20 left-10 text-9xl opacity-5 select-none pointer-events-none">📷</div>
+        <div className="absolute bottom-20 right-10 text-9xl opacity-5 select-none pointer-events-none">✨</div>
+
+        <div className="max-w-3xl text-center px-4 mb-16 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-xs font-extrabold border border-teal-100 tracking-wider uppercase">
+            <Camera className="w-3.5 h-3.5" /> GALERI AKTIVITAS
+          </div>
+          <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-none">
+            Koleksi Foto Terbaik
+          </h2>
+          <p className="text-base text-gray-500 font-medium max-w-xl mx-auto leading-relaxed">
+            Saksikan momen-momen terbaik dari pertandingan dan latihan badminton kami. Setiap foto menceritakan kisah dedikasi dan semangat tim DLOB.
           </p>
         </div>
 
-        {/* Gallery */}
-        <div className="flex items-center gap-2 h-[400px] w-full max-w-5xl mt-10 px-4">
+        {/* Gallery - Expandable cards */}
+        <div className="flex flex-col md:flex-row items-center gap-4 min-h-[420px] w-full max-w-5xl px-4">
           {featuredImages.map((_, idx) => (
             <div
               key={idx}
               onClick={() => handleImageClick(idx)}
-              className={`relative group flex-grow transition-all w-56 h-[400px] duration-500 hover:w-full perspective-container ${
-                secretIndexes.includes(idx) ? 'cursor-pointer' : ''
-              }`}
+              className={`relative group flex-grow transition-all duration-500 hover:scale-[1.02] md:hover:flex-[2] w-full md:w-24 h-[420px] perspective-container cursor-pointer`}
             >
               <div
-                className="flip-card-inner"
+                className="flip-card-inner shadow-lg hover:shadow-2xl rounded-3xl"
                 style={{
                   transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                  transitionDelay: `${idx * 150}ms`,
+                  transitionDelay: `${idx * 100}ms`,
                 }}
               >
                 {/* Front Face (Featured Images) */}
-                <div className="flip-card-face">
+                <div className="flip-card-face border border-gray-200/50">
                   <img
-                    className="h-full w-full object-cover object-center"
+                    className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
                     src={featuredImages[idx]}
                     alt={`featured-${idx}`}
                   />
                   {secretIndexes.includes(idx) && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-purple-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6 z-10">
-                      <div className="flex items-center gap-2 text-white">
-                        <Sparkles className="w-5 h-5 animate-pulse" />
-                        <span className="text-sm font-semibold">Something special...</span>
-                        <Sparkles className="w-5 h-5 animate-pulse" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-teal-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-8 z-10">
+                      <div className="flex items-center gap-2 text-white bg-teal-800/80 backdrop-blur-md px-4 py-2 rounded-full border border-teal-500/30 shadow-lg">
+                        <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
+                        <span className="text-xs font-extrabold uppercase tracking-wider">Something special...</span>
+                        <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
                       </div>
                     </div>
                   )}
                 </div>
 
                 {/* Back Face (Portrait Images) */}
-                <div className="flip-card-face flip-card-back">
+                <div className="flip-card-face flip-card-back border border-gray-200/50">
                   <img
-                    className="h-full w-full object-cover object-center"
+                    className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
                     src={portraitImages[idx]}
                     alt={`portrait-${idx}`}
                   />
                   {secretIndexes.includes(idx) && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-purple-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6 z-10">
-                      <div className="flex items-center gap-2 text-white">
-                        <Sparkles className="w-5 h-5 animate-pulse" />
-                        <span className="text-sm font-semibold">Something special...</span>
-                        <Sparkles className="w-5 h-5 animate-pulse" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-teal-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-8 z-10">
+                      <div className="flex items-center gap-2 text-white bg-teal-800/80 backdrop-blur-md px-4 py-2 rounded-full border border-teal-500/30 shadow-lg">
+                        <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
+                        <span className="text-xs font-extrabold uppercase tracking-wider">Something special...</span>
+                        <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
                       </div>
                     </div>
                   )}

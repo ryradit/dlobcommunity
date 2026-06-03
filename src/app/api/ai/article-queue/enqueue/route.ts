@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       .from('article_generation_queue')
       .insert({
         admin_id: userId,
-        admin_name: userName || 'Admin',
+        admin_name: 'Admin Dlob',
         prompt: prompt,
         status: 'pending',
         position: position,

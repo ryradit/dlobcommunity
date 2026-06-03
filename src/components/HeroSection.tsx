@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   ArrowRight, 
   Play, 
@@ -37,6 +38,8 @@ const StatItem = ({ value, label }: { value: string; label: string }) => (
 
 // --- MAIN COMPONENT ---
 export default function HeroSection() {
+  const { user } = useAuth();
+
   return (
     <div className="relative w-full bg-zinc-950 text-white overflow-hidden font-sans">
       {/* 
@@ -198,45 +201,45 @@ export default function HeroSection() {
               <h3 className="mb-6 text-xs font-semibold text-zinc-200 uppercase tracking-wide">Fitur Unggulan Platform</h3>
               
               <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
+                <Link href={user ? "/dashboard/coaching" : "/login"} className="flex items-start gap-2 group hover:bg-white/10 p-2 rounded-lg transition-all duration-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm group-hover:scale-105 transition-transform duration-300">
                     🤖
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">AI Coaching</p>
+                    <p className="text-xs font-semibold text-white group-hover:text-[#ffcd75] transition-colors">AI Coaching</p>
                     <p className="text-[10px] text-zinc-300 font-medium">Wawasan mendalam</p>
                   </div>
-                </div>
+                </Link>
                 
-                <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
+                <Link href="/leaderboard" className="flex items-start gap-2 group hover:bg-white/10 p-2 rounded-lg transition-all duration-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm group-hover:scale-105 transition-transform duration-300">
                     🏆
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Ranking System</p>
+                    <p className="text-xs font-semibold text-white group-hover:text-[#ffcd75] transition-colors">Ranking System</p>
                     <p className="text-[10px] text-zinc-300 font-medium">Leaderboard realtime</p>
                   </div>
-                </div>
+                </Link>
                 
-                <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
+                <Link href={user ? "/dashboard/pembayaran" : "/login"} className="flex items-start gap-2 group hover:bg-white/10 p-2 rounded-lg transition-all duration-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm group-hover:scale-105 transition-transform duration-300">
                     💳
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Manajemen Pembayaran</p>
+                    <p className="text-xs font-semibold text-white group-hover:text-[#ffcd75] transition-colors">Manajemen Pembayaran</p>
                     <p className="text-[10px] text-zinc-300 font-medium">Sistem terintegrasi</p>
                   </div>
-                </div>
+                </Link>
 
-                <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
+                <Link href={user ? "/dashboard/analitik" : "/login"} className="flex items-start gap-2 group hover:bg-white/10 p-2 rounded-lg transition-all duration-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm group-hover:scale-105 transition-transform duration-300">
                     📊
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Analitik AI</p>
+                    <p className="text-xs font-semibold text-white group-hover:text-[#ffcd75] transition-colors">Analitik AI</p>
                     <p className="text-[10px] text-zinc-300 font-medium">Wawasan mendalam</p>
                   </div>
-                </div>
+                </Link>
               </div>
             </div>
 
