@@ -379,16 +379,28 @@ export default function AdminMembersPage() {
           .eq('month', currentMonth)
           .eq('year', currentYear)
           .eq('payment_status', 'paid'),
-        // Fetch last sign in dates from API
+        // Fetch last sign in dates from API (with session retry on mount)
         (async () => {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) return null;
+          let { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            // Wait for session to be restored from localstorage
+            await new Promise(resolve => setTimeout(resolve, 800));
+            const retry = await supabase.auth.getSession();
+            session = retry.data.session;
+          }
+          if (!session?.access_token) {
+            console.warn('Session access token not found for last sign in query');
+            return null;
+          }
           const res = await fetch('/api/admin/last-signin', {
             headers: {
               'Authorization': `Bearer ${session.access_token}`
             }
           });
-          if (!res.ok) return null;
+          if (!res.ok) {
+            console.error('Failed to fetch last sign in API:', res.status, res.statusText);
+            return null;
+          }
           return res.json();
         })()
       ]);
@@ -416,18 +428,23 @@ export default function AdminMembersPage() {
 
       if (lastSignInResult.status === 'fulfilled' && lastSignInResult.value) {
         lastSignInMap = lastSignInResult.value.lastSignInMap || {};
+        console.log('Last sign-in map loaded successfully:', Object.keys(lastSignInMap).length, 'keys');
+      } else {
+        console.error('Last sign-in query failed or returned null:', lastSignInResult);
       }
       
       // Merge membership status and last sign in with profiles
       if (profilesData.length > 0) {
         const mergedData = profilesData.map(profile => {
           const hasMembership = membershipNames.has((profile.full_name || '').toLowerCase().trim());
+          const lastSignIn = lastSignInMap[profile.id];
           return {
             ...profile,
             has_membership: hasMembership,
-            last_sign_in_at: lastSignInMap[profile.id] || null
+            last_sign_in_at: lastSignIn || null
           };
         });
+        console.log('Merged data sample:', mergedData.slice(0, 3).map(m => ({ name: m.full_name, last_sign_in: m.last_sign_in_at })));
         setMembers(mergedData);
       }
     } catch (error) {
