@@ -114,7 +114,7 @@ export default function GallerySection() {
             <div
               key={idx}
               onClick={() => handleImageClick(idx)}
-              className={`relative group flex-grow transition-all duration-500 hover:scale-[1.02] md:hover:flex-[2] w-full md:w-24 h-[420px] perspective-container cursor-pointer`}
+              className={`relative group flex-1 transition-all duration-500 md:hover:flex-[3.5] w-full md:w-auto h-[420px] perspective-container cursor-pointer`}
             >
               <div
                 className="flip-card-inner shadow-lg hover:shadow-2xl rounded-3xl"
