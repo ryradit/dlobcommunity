@@ -209,6 +209,13 @@ export default function AdminMembersPage() {
     matches: {
       match_number: number;
       match_date: string | null;
+      team1_player1?: string | null;
+      team1_player2?: string | null;
+      team2_player1?: string | null;
+      team2_player2?: string | null;
+      team1_score?: number | null;
+      team2_score?: number | null;
+      winner?: string | null;
     } | null;
   }
   const [detailMatches, setDetailMatches] = useState<DetailMatchItem[]>([]);
@@ -230,7 +237,14 @@ export default function AdminMembersPage() {
             created_at,
             matches (
               match_number,
-              match_date
+              match_date,
+              team1_player1,
+              team1_player2,
+              team2_player1,
+              team2_player2,
+              team1_score,
+              team2_score,
+              winner
             )
           `)
           .eq('user_id', memberId)
@@ -246,7 +260,14 @@ export default function AdminMembersPage() {
             created_at,
             matches (
               match_number,
-              match_date
+              match_date,
+              team1_player1,
+              team1_player2,
+              team2_player1,
+              team2_player2,
+              team1_score,
+              team2_score,
+              winner
             )
           `)
           .eq('member_name', memberName)
@@ -2011,28 +2032,110 @@ export default function AdminMembersPage() {
                       
                       const matchNumber = m.matches?.match_number || 'N/A';
 
+                      // Determine partner and opponents
+                      const name = selectedMember.full_name || '';
+                      const mData = m.matches;
+                      
+                      let partner = '';
+                      let opponents: string[] = [];
+                      let isTeam1 = false;
+                      let isTeam2 = false;
+
+                      if (mData) {
+                        const p1_1 = (mData.team1_player1 || '').trim().toLowerCase();
+                        const p1_2 = (mData.team1_player2 || '').trim().toLowerCase();
+                        const p2_1 = (mData.team2_player1 || '').trim().toLowerCase();
+                        const p2_2 = (mData.team2_player2 || '').trim().toLowerCase();
+                        const myNameLower = name.trim().toLowerCase();
+
+                        if (p1_1 === myNameLower || p1_2 === myNameLower) {
+                          isTeam1 = true;
+                          partner = p1_1 === myNameLower ? mData.team1_player2 || '' : mData.team1_player1 || '';
+                          if (mData.team2_player1) opponents.push(mData.team2_player1);
+                          if (mData.team2_player2) opponents.push(mData.team2_player2);
+                        } else if (p2_1 === myNameLower || p2_2 === myNameLower) {
+                          isTeam2 = true;
+                          partner = p2_1 === myNameLower ? mData.team2_player2 || '' : mData.team2_player1 || '';
+                          if (mData.team1_player1) opponents.push(mData.team1_player1);
+                          if (mData.team1_player2) opponents.push(mData.team1_player2);
+                        }
+                      }
+
+                      // Determine Match Outcome (Win/Loss/Draw)
+                      let outcomeBadge = null;
+                      if (mData && mData.winner) {
+                        const winTeam = mData.winner;
+                        const isWin = (isTeam1 && winTeam === 'team1') || (isTeam2 && winTeam === 'team2');
+                        outcomeBadge = (
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-black ${
+                            isWin 
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                              : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                          }`}>
+                            {isWin ? 'MENANG' : 'KALAH'}
+                          </span>
+                        );
+                      }
+
+                      const scoreText = mData && mData.team1_score !== null && mData.team2_score !== null
+                        ? `${mData.team1_score} - ${mData.team2_score}`
+                        : null;
+
                       return (
-                        <div key={m.id} className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300 flex justify-between items-center gap-2">
-                          <div>
-                            <div className="text-sm font-bold text-gray-900 dark:text-white transition-colors">
-                              Mabar #{matchNumber}
+                        <div key={m.id} className="bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-4 transition-colors duration-300 space-y-3">
+                          {/* Top row: Match title, date, score & win/loss */}
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                  Mabar #{matchNumber}
+                                </span>
+                                {outcomeBadge}
+                              </div>
+                              <span className="text-[10px] text-gray-505 dark:text-zinc-500">
+                                {matchDateStr}
+                              </span>
                             </div>
-                            <div className="text-[11px] text-gray-500 dark:text-zinc-500 transition-colors">
-                              {matchDateStr}
+                            
+                            <div className="text-right">
+                              <div className="text-sm font-bold text-gray-900 dark:text-white">
+                                Rp {(m.total_amount ?? m.amount_due).toLocaleString('id-ID')}
+                              </div>
+                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                                m.payment_status === 'paid'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                  : 'bg-amber-500/10 text-amber-405 border border-amber-500/20'
+                              }`}>
+                                {m.payment_status === 'paid' ? 'Lunas' : 'Belum Lunas'}
+                              </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-sm font-bold text-gray-900 dark:text-white transition-colors">
-                              Rp {(m.total_amount ?? m.amount_due).toLocaleString('id-ID')}
+
+                          {/* Match Players (Partner & Opponents) */}
+                          {mData && (
+                            <div className="pt-2 border-t border-gray-250/20 dark:border-white/5 grid grid-cols-2 gap-4 text-xs text-gray-600 dark:text-zinc-400">
+                              <div>
+                                <span className="block text-[10px] uppercase font-bold tracking-wider text-gray-500 dark:text-zinc-500 mb-0.5">Partner:</span>
+                                <span className="font-semibold text-gray-900 dark:text-white truncate block">
+                                  {partner ? partner : 'Singles'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block text-[10px] uppercase font-bold tracking-wider text-gray-500 dark:text-zinc-500 mb-0.5">Lawan:</span>
+                                <span className="font-semibold text-gray-900 dark:text-white truncate block text-ellipsis">
+                                  {opponents.length > 0 ? opponents.join(' & ') : '-'}
+                                </span>
+                              </div>
                             </div>
-                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              m.payment_status === 'paid'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : 'bg-amber-500/10 text-amber-405 border border-amber-500/20'
-                            }`}>
-                              {m.payment_status === 'paid' ? 'Lunas' : 'Belum Lunas'}
-                            </span>
-                          </div>
+                          )}
+
+                          {/* Score row if available */}
+                          {scoreText && (
+                            <div className="text-[11px] font-medium text-gray-600 dark:text-zinc-400 flex items-center gap-1 pt-1 border-t border-dashed border-gray-250/10 dark:border-white/5">
+                              <span>Skor:</span>
+                              <span className="font-bold text-gray-900 dark:text-white">{scoreText}</span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
