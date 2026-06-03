@@ -119,6 +119,65 @@ export default function AdminMembersPage() {
       setTimeout(() => setFixTempResult(null), 5000);
     }
   };
+  
+  // Member deletion sneak peek states
+  const [deleteSneakPeek, setDeleteSneakPeek] = useState<{
+    loading: boolean;
+    matchCount: number;
+    pendingMatchCount: number;
+    membershipCount: number;
+  } | null>(null);
+
+  // Fetch sneak peek details before delete
+  async function fetchDeleteSneakPeek(memberId: string, memberName: string) {
+    setDeleteSneakPeek({
+      loading: true,
+      matchCount: 0,
+      pendingMatchCount: 0,
+      membershipCount: 0,
+    });
+    try {
+      const [matchesRes, pendingMatchesRes, membershipsRes] = await Promise.all([
+        supabase
+          .from('match_members')
+          .select('id', { count: 'exact', head: true })
+          .or(`user_id.eq.${memberId},member_name.eq.${memberName}`),
+        supabase
+          .from('match_members')
+          .select('id', { count: 'exact', head: true })
+          .eq('payment_status', 'pending')
+          .or(`user_id.eq.${memberId},member_name.eq.${memberName}`),
+        supabase
+          .from('memberships')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', memberId),
+      ]);
+
+      setDeleteSneakPeek({
+        loading: false,
+        matchCount: matchesRes.count || 0,
+        pendingMatchCount: pendingMatchesRes.count || 0,
+        membershipCount: membershipsRes.count || 0,
+      });
+    } catch (err) {
+      console.error('Error fetching delete sneak peek:', err);
+      setDeleteSneakPeek({
+        loading: false,
+        matchCount: 0,
+        pendingMatchCount: 0,
+        membershipCount: 0,
+      });
+    }
+  }
+
+  // Trigger sneak peek loading when modal opens
+  useEffect(() => {
+    if (showDeleteModal && selectedMember) {
+      fetchDeleteSneakPeek(selectedMember.id, selectedMember.full_name || '');
+    } else {
+      setDeleteSneakPeek(null);
+    }
+  }, [showDeleteModal, selectedMember]);
 
   useEffect(() => {
     fetchMembers();
@@ -1234,7 +1293,7 @@ export default function AdminMembersPage() {
               </div>
             </div>
 
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-4">
               <p className="text-sm text-red-400 mb-2">
                 Anda akan menghapus anggota:
               </p>
@@ -1242,6 +1301,52 @@ export default function AdminMembersPage() {
                 <User className="w-4 h-4" />
                 {selectedMember.full_name || selectedMember.email}
               </div>
+            </div>
+
+            {/* Data Sneak Peek */}
+            <div className="mb-6 bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-4 transition-colors duration-300">
+              <h4 className="text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wider mb-2">
+                Ringkasan Data Anggota:
+              </h4>
+              {deleteSneakPeek ? (
+                deleteSneakPeek.loading ? (
+                  <div className="flex items-center justify-center py-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full mr-2"></div>
+                    <span className="text-xs text-gray-500 dark:text-zinc-400">Memeriksa data...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 text-xs text-gray-650 dark:text-zinc-400">
+                    <div className="flex justify-between">
+                      <span>Total Pertandingan Diikuti:</span>
+                      <span className="font-bold text-gray-900 dark:text-white">{deleteSneakPeek.matchCount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Pertandingan Belum Lunas:</span>
+                      <span className={`font-bold ${deleteSneakPeek.pendingMatchCount > 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                        {deleteSneakPeek.pendingMatchCount}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Riwayat Bayar Membership:</span>
+                      <span className="font-bold text-gray-900 dark:text-white">{deleteSneakPeek.membershipCount} bulan</span>
+                    </div>
+                    
+                    {/* Warning if data exists */}
+                    {(deleteSneakPeek.matchCount > 0 || deleteSneakPeek.membershipCount > 0) && (
+                      <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-2 bg-amber-500/10 p-2 rounded border border-amber-500/20 font-semibold leading-relaxed">
+                        ⚠️ Akun ini memiliki data pertandingan/pembayaran aktif. Menghapusnya akan menghapus seluruh data riwayat mabar terkait secara permanen!
+                      </div>
+                    )}
+                    {deleteSneakPeek.matchCount === 0 && deleteSneakPeek.membershipCount === 0 && (
+                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-2 bg-emerald-500/10 p-2 rounded border border-green-500/20 font-semibold">
+                        ✓ Akun ini bersih (tidak memiliki data mabar/pembayaran). Aman untuk dihapus.
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : (
+                <div className="text-xs text-gray-500 dark:text-zinc-400">Gagal mengambil ringkasan data.</div>
+              )}
             </div>
 
             <div className="flex gap-3">
