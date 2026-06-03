@@ -16,8 +16,8 @@ export default function FeaturesSection() {
       desc: "Setiap kemenangan dicatat langsung untuk menyusun peringkat performa anggota secara akurat."
     },
     {
-      title: "Keuangan Kas Transparan",
-      desc: "Pantau saldo kas, pembayaran mabar bulanan, dan pengeluaran komunitas secara terbuka di dashboard."
+      title: "Tracking Your Payment",
+      desc: "Pantau riwayat pembayaran, iuran bulanan, dan status transaksi mabar Anda secara transparan dan real-time."
     }
   ];
 
