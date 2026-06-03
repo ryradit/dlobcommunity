@@ -137,26 +137,46 @@ export default function AdminMembersPage() {
       membershipCount: 0,
     });
     try {
-      const [matchesRes, pendingMatchesRes, membershipsRes] = await Promise.all([
+      const [matchesResUserId, matchesResName, pendingMatchesUserId, pendingMatchesName, membershipsRes] = await Promise.all([
         supabase
           .from('match_members')
-          .select('id', { count: 'exact', head: true })
-          .or(`user_id.eq.${memberId},member_name.eq.${memberName}`),
+          .select('id')
+          .eq('user_id', memberId),
         supabase
           .from('match_members')
-          .select('id', { count: 'exact', head: true })
-          .eq('payment_status', 'pending')
-          .or(`user_id.eq.${memberId},member_name.eq.${memberName}`),
+          .select('id')
+          .eq('member_name', memberName),
+        supabase
+          .from('match_members')
+          .select('id')
+          .eq('user_id', memberId)
+          .eq('payment_status', 'pending'),
+        supabase
+          .from('match_members')
+          .select('id')
+          .eq('member_name', memberName)
+          .eq('payment_status', 'pending'),
         supabase
           .from('memberships')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', memberId),
       ]);
 
+      // Deduplicate match IDs
+      const allMatchIds = new Set([
+        ...(matchesResUserId.data || []).map(m => m.id),
+        ...(matchesResName.data || []).map(m => m.id)
+      ]);
+
+      const allPendingIds = new Set([
+        ...(pendingMatchesUserId.data || []).map(m => m.id),
+        ...(pendingMatchesName.data || []).map(m => m.id)
+      ]);
+
       setDeleteSneakPeek({
         loading: false,
-        matchCount: matchesRes.count || 0,
-        pendingMatchCount: pendingMatchesRes.count || 0,
+        matchCount: allMatchIds.size,
+        pendingMatchCount: allPendingIds.size,
         membershipCount: membershipsRes.count || 0,
       });
     } catch (err) {
@@ -178,6 +198,92 @@ export default function AdminMembersPage() {
       setDeleteSneakPeek(null);
     }
   }, [showDeleteModal, selectedMember]);
+
+  // Matches sneak peek inside details modal
+  interface DetailMatchItem {
+    id: string;
+    amount_due: number;
+    payment_status: string;
+    total_amount?: number;
+    created_at?: string;
+    matches: {
+      match_number: number;
+      match_date: string | null;
+    } | null;
+  }
+  const [detailMatches, setDetailMatches] = useState<DetailMatchItem[]>([]);
+  const [loadingDetailMatches, setLoadingDetailMatches] = useState(false);
+
+  // Fetch latest 2 matches of a member for details preview
+  async function fetchDetailMatches(memberId: string, memberName: string) {
+    setLoadingDetailMatches(true);
+    setDetailMatches([]);
+    try {
+      const [resUserId, resName] = await Promise.all([
+        supabase
+          .from('match_members')
+          .select(`
+            id,
+            amount_due,
+            payment_status,
+            total_amount,
+            created_at,
+            matches (
+              match_number,
+              match_date
+            )
+          `)
+          .eq('user_id', memberId)
+          .order('created_at', { ascending: false })
+          .limit(2),
+        supabase
+          .from('match_members')
+          .select(`
+            id,
+            amount_due,
+            payment_status,
+            total_amount,
+            created_at,
+            matches (
+              match_number,
+              match_date
+            )
+          `)
+          .eq('member_name', memberName)
+          .order('created_at', { ascending: false })
+          .limit(2)
+      ]);
+
+      const combined = [
+        ...((resUserId.data || []) as unknown as DetailMatchItem[]),
+        ...((resName.data || []) as unknown as DetailMatchItem[])
+      ];
+
+      // Deduplicate by id
+      const uniqueMatches: DetailMatchItem[] = [];
+      const seenIds = new Set<string>();
+      for (const item of combined) {
+        if (!seenIds.has(item.id)) {
+          seenIds.add(item.id);
+          uniqueMatches.push(item);
+        }
+      }
+
+      // Sort by created_at descending
+      uniqueMatches.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      setDetailMatches(uniqueMatches.slice(0, 2));
+    } catch (err) {
+      console.error('Error fetching detail matches:', err);
+      setDetailMatches([]);
+    } finally {
+      setLoadingDetailMatches(false);
+    }
+  }
 
   useEffect(() => {
     fetchMembers();
@@ -997,12 +1103,13 @@ export default function AdminMembersPage() {
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-1.5 sm:gap-2">
-                        {/* Detail View Button */}
+                         {/* Detail View Button */}
                         <button
                           onClick={() => {
                             setSelectedMember(member);
                             setShowDetailModal(true);
                             fetchExemptionHistory(member.id);
+                            fetchDetailMatches(member.id, member.full_name || '');
                           }}
                           className="p-1 sm:p-1.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors border border-purple-500/30"
                           title="Lihat Detail"
@@ -1874,6 +1981,64 @@ export default function AdminMembersPage() {
                   )}
                 </>
               )}
+
+              {/* Latest Matches Sneak Peek */}
+              <div className="pt-4 border-t border-gray-200 dark:border-white/10 transition-colors duration-300">
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 transition-colors duration-300">
+                  <Calendar className="w-5 h-5 text-indigo-500 dark:text-indigo-400 animate-pulse" />
+                  Pratinjau 2 Pertandingan Terakhir
+                </h4>
+                
+                {loadingDetailMatches ? (
+                  <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 flex items-center justify-center transition-colors duration-300">
+                    <div className="animate-spin w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full mr-2"></div>
+                    <span className="text-xs text-gray-500 dark:text-zinc-400 animate-pulse">Memuat pertandingan...</span>
+                  </div>
+                ) : detailMatches.length === 0 ? (
+                  <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 text-center transition-colors duration-300">
+                    <p className="text-xs text-gray-550 dark:text-zinc-405 transition-colors duration-300">Belum ada riwayat pertandingan mabar.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {detailMatches.map((m) => {
+                      const matchDateStr = m.matches?.match_date 
+                        ? new Date(m.matches.match_date).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })
+                        : 'Tanggal tidak tersedia';
+                      
+                      const matchNumber = m.matches?.match_number || 'N/A';
+
+                      return (
+                        <div key={m.id} className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300 flex justify-between items-center gap-2">
+                          <div>
+                            <div className="text-sm font-bold text-gray-900 dark:text-white transition-colors">
+                              Mabar #{matchNumber}
+                            </div>
+                            <div className="text-[11px] text-gray-500 dark:text-zinc-500 transition-colors">
+                              {matchDateStr}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold text-gray-900 dark:text-white transition-colors">
+                              Rp {(m.total_amount ?? m.amount_due).toLocaleString('id-ID')}
+                            </div>
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              m.payment_status === 'paid'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-405 border border-amber-500/20'
+                            }`}>
+                              {m.payment_status === 'paid' ? 'Lunas' : 'Belum Lunas'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Close Button */}
