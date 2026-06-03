@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
-import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle, Ban, X, FlaskConical, Info, MoreVertical, ArrowRight } from 'lucide-react';
+import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle, Ban, X, FlaskConical, Info, MoreVertical, ArrowRight, LogIn } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -29,6 +29,7 @@ interface Member {
   has_membership?: boolean;
   is_payment_exempt?: boolean;
   is_test_account?: boolean;
+  last_sign_in_at?: string | null;
 }
 
 export default function AdminMembersPage() {
@@ -357,8 +358,8 @@ export default function AdminMembersPage() {
       queryCache.invalidate(`admin-active-memberships-${previousMonth}-${previousYear}`);
       queryCache.invalidate(`admin-active-memberships-${currentMonth}-${currentYear}`);
       
-      // Fetch profiles and memberships in parallel (skip slow auth.admin call)
-      const [profilesResult, membershipsResult] = await Promise.allSettled([
+      // Fetch profiles, memberships, and last sign in dates in parallel
+      const [profilesResult, membershipsResult, lastSignInResult] = await Promise.allSettled([
         // Fetch profiles with caching
         cachedQuery(
           'admin-profiles-list',
@@ -378,11 +379,24 @@ export default function AdminMembersPage() {
           .eq('month', currentMonth)
           .eq('year', currentYear)
           .eq('payment_status', 'paid'),
+        // Fetch last sign in dates from API
+        (async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) return null;
+          const res = await fetch('/api/admin/last-signin', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          });
+          if (!res.ok) return null;
+          return res.json();
+        })()
       ]);
       
       // Process results
       let profilesData: any[] = [];
       let membershipNames = new Set<string>();
+      let lastSignInMap: Record<string, string | null> = {};
       
       if (profilesResult.status === 'fulfilled') {
         const res = profilesResult.value as { data: any[] | null; error: any };
@@ -399,17 +413,19 @@ export default function AdminMembersPage() {
           );
         }
       }
+
+      if (lastSignInResult.status === 'fulfilled' && lastSignInResult.value) {
+        lastSignInMap = lastSignInResult.value.lastSignInMap || {};
+      }
       
-      // Merge membership status with profiles
-      // IMPORTANT: has_membership is based on CURRENT MONTH only
-      // When a new month starts, members without paid membership for the new month
-      // will NOT have the membership badge, even if they had it last month
+      // Merge membership status and last sign in with profiles
       if (profilesData.length > 0) {
         const mergedData = profilesData.map(profile => {
           const hasMembership = membershipNames.has((profile.full_name || '').toLowerCase().trim());
           return {
             ...profile,
-            has_membership: hasMembership, // Only true if member has PAID membership for current month
+            has_membership: hasMembership,
+            last_sign_in_at: lastSignInMap[profile.id] || null
           };
         });
         setMembers(mergedData);
@@ -1057,6 +1073,14 @@ export default function AdminMembersPage() {
                           {member.phone && (
                             <div className="text-xs text-gray-500 dark:text-zinc-500 truncate transition-colors duration-300">{member.phone}</div>
                           )}
+                          <div className="text-[10px] text-gray-400 dark:text-zinc-500 mt-0.5 truncate transition-colors duration-300">
+                            Login: {member.last_sign_in_at ? new Date(member.last_sign_in_at).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 'Belum pernah'}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -1753,6 +1777,32 @@ export default function AdminMembersPage() {
                         month: 'long',
                         year: 'numeric'
                       })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Login Terakhir */}
+              <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0">
+                    <LogIn className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 dark:text-zinc-500 mb-0.5 transition-colors duration-300">Login Terakhir</p>
+                    <p className="text-sm text-gray-900 dark:text-white font-medium transition-colors duration-300">
+                      {selectedMember.last_sign_in_at ? (
+                        new Date(selectedMember.last_sign_in_at).toLocaleDateString('id-ID', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) + ' WIB'
+                      ) : (
+                        'Belum pernah login'
+                      )}
                     </p>
                   </div>
                 </div>
