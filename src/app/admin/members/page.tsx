@@ -42,6 +42,18 @@ export default function AdminMembersPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [currentMonthYear, setCurrentMonthYear] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+
+  // Fetch current user email on mount
+  useEffect(() => {
+    async function fetchUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserEmail(user.email || null);
+      }
+    }
+    fetchUser();
+  }, []);
 
   // Payment exemption states
   const [showExemptionModal, setShowExemptionModal] = useState(false);
@@ -489,12 +501,20 @@ export default function AdminMembersPage() {
   async function handleDeleteMember() {
     if (!selectedMember) return;
     
+    // Prevent deletion of admin accounts unless current user is Adit (ryradit@gmail.com)
+    if (selectedMember.role === 'admin' && currentUserEmail !== 'ryradit@gmail.com') {
+      alert('Anda tidak memiliki wewenang untuk menghapus akun Admin. Hanya Adit (ryradit@gmail.com) yang dapat melakukan tindakan ini.');
+      return;
+    }
+
     setActionLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/members/delete', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`,
         },
         body: JSON.stringify({ memberId: selectedMember.id }),
       });
@@ -1477,6 +1497,12 @@ export default function AdminMembersPage() {
               )}
             </div>
 
+            {selectedMember.role === 'admin' && currentUserEmail !== 'ryradit@gmail.com' && (
+              <div className="mb-4 text-xs text-red-600 dark:text-red-400 bg-red-500/10 p-3 rounded-lg border border-red-500/20 font-semibold leading-relaxed">
+                ⚠️ Anda tidak dapat menghapus akun Admin. Hanya Adit (ryradit@gmail.com) yang memiliki hak wewenang untuk menghapus akun Administrator.
+              </div>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={() => {
@@ -1489,7 +1515,7 @@ export default function AdminMembersPage() {
               </button>
               <button
                 onClick={handleDeleteMember}
-                disabled={actionLoading}
+                disabled={actionLoading || (selectedMember.role === 'admin' && currentUserEmail !== 'ryradit@gmail.com')}
                 className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Menghapus...' : 'Hapus'}

@@ -29,6 +29,36 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Check target member's role
+    const { data: targetProfile, error: targetError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', memberId)
+      .single();
+
+    if (targetError) {
+      console.error('Error checking target profile role:', targetError);
+    }
+
+    if (targetProfile && targetProfile.role === 'admin') {
+      const authHeader = request.headers.get('authorization') || '';
+      const token = authHeader.replace('Bearer ', '');
+      if (!token) {
+        return NextResponse.json(
+          { error: 'Otorisasi diperlukan untuk menghapus akun Admin' },
+          { status: 401 }
+        );
+      }
+
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      if (authError || !user || user.email !== 'ryradit@gmail.com') {
+        return NextResponse.json(
+          { error: 'Akses ditolak: Hanya Adit (ryradit@gmail.com) yang dapat menghapus akun Admin' },
+          { status: 403 }
+        );
+      }
+    }
+
     // First, delete related data from other tables
     // Delete memberships
     const { error: membershipError } = await supabaseAdmin
