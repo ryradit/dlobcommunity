@@ -29,6 +29,37 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Verify requester first (must be an admin)
+    const authHeader = request.headers.get('authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Otorisasi diperlukan' },
+        { status: 401 }
+      );
+    }
+
+    const { data: { user }, error: requesterAuthError } = await supabaseAdmin.auth.getUser(token);
+    if (requesterAuthError || !user) {
+      return NextResponse.json(
+        { error: 'Sesi tidak valid' },
+        { status: 401 }
+      );
+    }
+
+    const { data: requesterProfile, error: requesterError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (requesterError || !requesterProfile || requesterProfile.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Hanya administrator yang dapat menghapus akun' },
+        { status: 403 }
+      );
+    }
+
     // Check target member's role
     const { data: targetProfile, error: targetError } = await supabaseAdmin
       .from('profiles')
@@ -41,17 +72,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (targetProfile && targetProfile.role === 'admin') {
-      const authHeader = request.headers.get('authorization') || '';
-      const token = authHeader.replace('Bearer ', '');
-      if (!token) {
-        return NextResponse.json(
-          { error: 'Otorisasi diperlukan untuk menghapus akun Admin' },
-          { status: 401 }
-        );
-      }
-
-      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-      if (authError || !user || user.email !== 'ryradit@gmail.com') {
+      if (user.email !== 'ryradit@gmail.com') {
         return NextResponse.json(
           { error: 'Akses ditolak: Hanya Adit (ryradit@gmail.com) yang dapat menghapus akun Admin' },
           { status: 403 }
