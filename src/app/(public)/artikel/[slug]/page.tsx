@@ -227,6 +227,19 @@ export default function ArtikelDetailPage() {
 
       {/* Article Body */}
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* AI Disclaimer Alert */}
+        <div className="flex gap-4 p-5 rounded-2xl bg-amber-50/50 border border-amber-200/50 text-amber-900 mb-10">
+          <div className="flex-shrink-0">
+            <Sparkles className="w-5 h-5 text-amber-600 animate-pulse" />
+          </div>
+          <div>
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-800">Catatan Konten AI</h4>
+            <p className="text-xs text-amber-700/90 font-medium mt-1 leading-relaxed">
+              Artikel ini beserta beberapa gambar di dalamnya dihasilkan oleh Kecerdasan Buatan (AI). Harap maklum jika terdapat konten atau gambar yang kurang relevan karena keterbatasan sistem AI.
+            </p>
+          </div>
+        </div>
+
         {/* Intro */}
         <div className="prose prose-lg max-w-none mb-12">
           <div 
