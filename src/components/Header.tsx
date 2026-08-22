@@ -40,7 +40,7 @@ export default function Header() {
   const dashboardLink = isAdmin ? '/admin' : '/dashboard';
 
   const navLinks = [
-    { href: '/beranda', label: 'Beranda' },
+    { href: '/', label: 'Beranda' },
     { href: '/tentang', label: 'Tentang' },
     { href: '/galeri', label: 'Galeri' },
     { href: '/store', label: 'Store' },
@@ -53,7 +53,7 @@ export default function Header() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex justify-between items-center">
           {/* Logo */}
-          <Link href="/beranda" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
               D
             </div>

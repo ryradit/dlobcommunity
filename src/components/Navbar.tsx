@@ -10,7 +10,7 @@ export default function Navbar() {
   const { user, loading } = useAuth();
 
   const navLinks = [
-    { href: '/beranda', label: 'Beranda' },
+    { href: '/', label: 'Beranda' },
     { href: '/tentang', label: 'Tentang' },
     { href: '/galeri', label: 'Galeri' },
     { href: '/store', label: 'Store' },
@@ -23,7 +23,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/beranda" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2">
             <Image
               src="/dlob.png"
               alt="DLOB Community Logo"

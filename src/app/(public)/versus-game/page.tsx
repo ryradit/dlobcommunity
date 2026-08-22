@@ -433,7 +433,7 @@ Provide your prediction in this exact JSON format:
 
       {/* Close Button */}
       <button
-        onClick={() => router.push('/beranda#gallery')}
+        onClick={() => router.push('/#gallery')}
         className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 p-2 sm:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full transition-all duration-300 group"
       >
         <X className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
@@ -649,7 +649,7 @@ Provide your prediction in this exact JSON format:
                   Pertandingan Baru
                 </button>
                 <button
-                  onClick={() => router.push('/beranda#gallery')}
+                  onClick={() => router.push('/#gallery')}
                   className="w-full py-3 sm:py-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold text-base sm:text-lg rounded-2xl transition-all duration-300 transform hover:scale-105 border border-white/30"
                 >
                   Kembali ke Galeri
