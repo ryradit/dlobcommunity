@@ -90,6 +90,42 @@ const circuitNoirColorVariants: ColorVariant[] = [
   },
 ];
 
+// --- New Batch Pre-Order Jersey ---
+const newBatchColorVariants: ColorVariant[] = [
+  {
+    id: 'nb-blue',
+    name: 'Blue',
+    color: 'Blue',
+    images: [
+      '/images/new jersey promotion/biru-photo1.jpeg',
+      '/images/new jersey promotion/biru-photo2.jpeg',
+    ],
+    bgColor: '#0b244c',
+  },
+  {
+    id: 'nb-yellow',
+    name: 'Yellow',
+    color: 'Yellow',
+    images: [
+      '/images/new jersey promotion/kuning-photo1.jpeg',
+      '/images/new jersey promotion/kuning-photo2.jpeg',
+    ],
+    bgColor: '#FFC000',
+  },
+  {
+    id: 'nb-red',
+    name: 'Red',
+    color: 'Red',
+    images: [
+      '/images/new jersey promotion/merah-photo1.jpeg',
+      '/images/new jersey promotion/merah-photo2.jpeg',
+      '/images/new jersey promotion/merah-photo3.jpeg',
+      '/images/new jersey promotion/merah-photo4.jpeg',
+    ],
+    bgColor: '#ff0000',
+  },
+];
+
 const sizePrices: SizePrice[] = [
   { size: 'XS',  pendekPrice: 110000, panjangPrice: 120000 },
   { size: 'S',   pendekPrice: 110000, panjangPrice: 120000 },
@@ -174,6 +210,34 @@ const products: Product[] = [
       SUPABASE_VIDEOS.videomodel4,
       SUPABASE_VIDEOS.videomodel6,
       SUPABASE_VIDEOS.videopromotionnoirblossom,
+    ],
+  },
+];
+
+// New Batch products shown in a separate section
+const newBatchProducts: Product[] = [
+  {
+    id: 'nb-jersey',
+    name: 'Jersey DLOB New Batch',
+    tagline: 'Fresh Colors, Same Quality',
+    description: 'Batch terbaru jersey resmi DLOB! Hadir dalam 3 pilihan warna cerah — Biru, Kuning, dan Merah. Material Milano Standard premium, nyaman dipakai dan tahan lama. Jangan lewatkan kesempatan pre-order batch eksklusif ini!',
+    badge: 'NEW BATCH',
+    badgeStyle: 'bg-white text-black',
+    coverImage: null,
+    coverBg: '#111111',
+    colorVariants: newBatchColorVariants,
+    material: 'Milano Standard',
+    care: 'Cuci dengan air dingin',
+    origin: 'Indonesia',
+    preOrder: true,
+    estimatedDelivery: 'TBA',
+    comingSoon: false,
+    introductionVideos: [
+      '/images/new jersey promotion/biru-video1.mp4',
+      '/images/new jersey promotion/biru-video2.mp4',
+      '/images/new jersey promotion/kuning-video1.mp4',
+      '/images/new jersey promotion/merah-video1.mp4',
+      '/images/new jersey promotion/merah-video2.mp4',
     ],
   },
 ];
@@ -308,8 +372,8 @@ function CatalogCard({
     // Only auto-rotate if multiple items available
     if (mediaItems.length <= 1) return;
     
-    // Longer duration for videos to load + play
-    const duration = currentIsVideo ? 20000 : 10000; // 20s for videos, 10s for images
+    // 10s for all media (videos and images)
+    const duration = 10000;
     
     const interval = setInterval(() => {
       // fade out
@@ -463,7 +527,7 @@ export default function StorePage() {
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
   const router = useRouter();
 
-  const selectedProduct  = products.find((p) => p.id === selectedProductId) ?? null;
+  const selectedProduct  = [...products, ...newBatchProducts].find((p) => p.id === selectedProductId) ?? null;
   const selectedVariant  = selectedProduct
     ? selectedProduct.colorVariants.find((v) => v.id === selectedColor) ?? selectedProduct.colorVariants[0]
     : null;
@@ -482,6 +546,7 @@ export default function StorePage() {
     setSelectedSize('');
     setSelectedSleeve('pendek');
     setSelectedImageIndex(0);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const backToCatalog = () => setSelectedProductId(null);
@@ -669,6 +734,51 @@ export default function StorePage() {
               ))}
             </div>
           </div>
+
+          {/* New Batch Pre-Order Section */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+            {/* Section header */}
+            <div className="flex items-center gap-4 mb-8">
+              <div className="flex-1 h-px bg-gray-200" />
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest bg-black text-white">
+                  New Batch Pre-Order
+                </span>
+              </div>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Announcement banner */}
+            <div className="mb-8 overflow-hidden border border-gray-900">
+              <div className="bg-black p-6 text-white">
+                <p className="text-xs uppercase tracking-[0.3em] font-medium text-white/60 mb-2">Batch Terbaru · Limited Edition</p>
+                <h3 className="text-2xl font-light tracking-tight mb-3">Jersey DLOB New Batch <span className="font-bold italic">Sudah Dibuka</span></h3>
+                <p className="text-sm text-white/70 max-w-lg leading-relaxed">Hadir dalam 3 warna eksklusif: <span className="text-white font-semibold">Biru</span>, <span className="text-white font-semibold">Kuning</span>, dan <span className="text-white font-semibold">Merah</span>. Material Milano Standard premium. Pre-order sekarang sebelum kehabisan.</p>
+              </div>
+              {/* Color swatch strip */}
+              <div className="bg-white px-6 py-4 flex items-center gap-4 border-t border-gray-100">
+                <span className="text-xs uppercase tracking-widest text-gray-500 font-medium">Pilihan Warna:</span>
+                <div className="flex gap-4">
+                  {[
+                    { name: 'Blue', bg: '#1a56db' },
+                    { name: 'Yellow', bg: '#f59e0b' },
+                    { name: 'Red', bg: '#dc2626' },
+                  ].map((c) => (
+                    <div key={c.name} className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 rounded-full border border-gray-300 shadow-sm" style={{ backgroundColor: c.bg }} />
+                      <span className="text-sm text-gray-700">{c.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {newBatchProducts.map((product) => (
+                <CatalogCard key={product.id} product={product} onOpen={openProduct} formatPrice={formatPrice} />
+              ))}
+            </div>
+          </div>
         </>
       )}
 
@@ -847,7 +957,16 @@ export default function StorePage() {
                   {selectedProduct.comingSoon ? (
                     <button disabled className="w-full py-4 font-medium text-sm uppercase tracking-wide bg-gray-200 text-gray-400 cursor-not-allowed">SEGERA HADIR</button>
                   ) : (
-                    <button onClick={() => router.push('/pre-order')} className="w-full py-4 font-medium text-sm uppercase tracking-wide transition-colors bg-black text-white hover:bg-gray-800">
+                    <button
+                      onClick={() =>
+                        router.push(
+                          selectedProduct.id === 'nb-jersey'
+                            ? '/store/new-batch-pre-order'
+                            : '/pre-order'
+                        )
+                      }
+                      className="w-full py-4 font-medium text-sm uppercase tracking-wide transition-colors bg-black text-white hover:bg-gray-800"
+                    >
                       PRE-ORDER SEKARANG
                     </button>
                   )}
