@@ -16,6 +16,12 @@ const SUPABASE_VIDEOS = {
   videomodel6: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel6.mp4',
   videomodel7: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel7.mp4',
   videopromotionnoirblossom: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videopromotionnoirblossom.mp4',
+  // New Batch Promotion Videos
+  nb_biru1: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/new-batch/biru-video1.mp4',
+  nb_biru2: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/new-batch/biru-video2.mp4',
+  nb_kuning1: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/new-batch/kuning-video1.mp4',
+  nb_merah1: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/new-batch/merah-video1.mp4',
+  nb_merah2: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/new-batch/merah-video2.mp4',
 };
 
 interface ColorVariant {
@@ -233,11 +239,11 @@ const newBatchProducts: Product[] = [
     estimatedDelivery: 'TBA',
     comingSoon: false,
     introductionVideos: [
-      '/images/new jersey promotion/biru-video1.mp4',
-      '/images/new jersey promotion/biru-video2.mp4',
-      '/images/new jersey promotion/kuning-video1.mp4',
-      '/images/new jersey promotion/merah-video1.mp4',
-      '/images/new jersey promotion/merah-video2.mp4',
+      SUPABASE_VIDEOS.nb_biru1,
+      SUPABASE_VIDEOS.nb_biru2,
+      SUPABASE_VIDEOS.nb_kuning1,
+      SUPABASE_VIDEOS.nb_merah1,
+      SUPABASE_VIDEOS.nb_merah2,
     ],
   },
 ];

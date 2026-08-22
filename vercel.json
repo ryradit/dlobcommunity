@@ -2,7 +2,8 @@
   "buildCommand": "next build",
   "outputDirectory": ".next",
   "env": {
-    "VERCEL_ANALYZE_BUILD_OUTPUT": "0"
+    "VERCEL_ANALYZE_BUILD_OUTPUT": "0",
+    "VERCEL_SUPPORT_LARGE_FUNCTIONS": "1"
   },
   "cleanUrls": true,
   "trailingSlash": false,
