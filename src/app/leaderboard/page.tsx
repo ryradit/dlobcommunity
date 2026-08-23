@@ -579,6 +579,15 @@ export default function LeaderboardPage() {
   }
 
   const sortedPartnerships = [...partnerships].sort((a, b) => {
+    const aQualified = a.totalMatches >= MIN_PARTNER_MATCHES_PODIUM;
+    const bQualified = b.totalMatches >= MIN_PARTNER_MATCHES_PODIUM;
+
+    // Qualified partnerships always rank above unqualified ones when sorting descending
+    if (partnershipDir === 'desc' && partnershipSort !== 'totalMatches') {
+      if (aQualified && !bQualified) return -1;
+      if (!aQualified && bQualified) return 1;
+    }
+
     const mul = partnershipDir === 'desc' ? -1 : 1;
     if (partnershipSort === 'winRate') {
       if (a.winRate !== b.winRate) return mul * (a.winRate - b.winRate);
@@ -592,6 +601,15 @@ export default function LeaderboardPage() {
   });
 
   const sortedRecap = [...stats].sort((a, b) => {
+    const aQualified = a.totalMatches >= MIN_MATCHES_PODIUM;
+    const bQualified = b.totalMatches >= MIN_MATCHES_PODIUM;
+
+    // Qualified players always rank above unqualified ones when sorting descending
+    if (recapDir === 'desc' && recapSort !== 'totalMatches') {
+      if (aQualified && !bQualified) return -1;
+      if (!aQualified && bQualified) return 1;
+    }
+
     const mul = recapDir === 'desc' ? -1 : 1;
     // Special handling for bestPlayerScore column
     if (recapSort === 'bestPlayerScore') {
@@ -1380,8 +1398,12 @@ export default function LeaderboardPage() {
                           i < 3 ? 'font-semibold' : ''
                         }`}
                       >
-                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm">
-                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-medium">
+                          {s.totalMatches >= MIN_MATCHES_PODIUM ? (
+                            i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1
+                          ) : (
+                            <span className="text-gray-300 dark:text-zinc-600 font-normal">-</span>
+                          )}
                         </td>
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-white text-xs sm:text-sm">
                           <div className="flex items-center gap-1 sm:gap-2">
@@ -1503,8 +1525,12 @@ export default function LeaderboardPage() {
                   ) : (
                     sortedPartnerships.map((p, i) => (
                       <tr key={`${p.player1}|${p.player2}`} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
-                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm">
-                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-medium">
+                          {p.totalMatches >= MIN_PARTNER_MATCHES_PODIUM ? (
+                            i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1
+                          ) : (
+                            <span className="text-gray-300 dark:text-zinc-600 font-normal">-</span>
+                          )}
                         </td>
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-white text-xs sm:text-sm">
                           <div className="flex items-center gap-1 sm:gap-2">
@@ -1517,6 +1543,14 @@ export default function LeaderboardPage() {
                               </div>
                             </div>
                             <span className="font-medium truncate">{p.player1} & {p.player2}</span>
+                            {p.totalMatches < MIN_PARTNER_MATCHES_PODIUM && (
+                              <span
+                                className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap ml-1"
+                                title={`${p.totalMatches}/${MIN_PARTNER_MATCHES_PODIUM} pertandingan bersama untuk kualifikasi`}
+                              >
+                                &lt;5 main
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-green-600 dark:text-green-400 font-semibold text-xs sm:text-sm">{p.wins}</td>
