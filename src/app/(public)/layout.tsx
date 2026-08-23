@@ -18,9 +18,7 @@ export default function PublicLayout({
     <AuthProvider>
       <div className="min-h-screen bg-white">
         <Navbar />
-        <div className={isHome ? '' : 'pt-24 sm:pt-28'}>
-          {children}
-        </div>
+        {children}
         <Footer />
         <FloatingAIChat />
       </div>
