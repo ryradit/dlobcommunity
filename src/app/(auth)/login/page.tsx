@@ -270,7 +270,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50 transition-colors"
+              className="w-full py-3.5 px-4 bg-[#3e6461] hover:bg-[#2d4a47] text-white font-semibold rounded-full disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
             >
               {loading ? 'Masuk...' : 'Masuk'}
             </button>
@@ -288,7 +288,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300/20 rounded-lg bg-white/10 text-white hover:bg-white/20 disabled:opacity-50 transition-colors"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300/20 rounded-full bg-white/10 text-white hover:bg-white/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 transition-all font-medium"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

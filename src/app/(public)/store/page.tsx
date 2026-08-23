@@ -612,13 +612,13 @@ export default function StorePage() {
               <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-sm text-gray-900 leading-relaxed">
                   <span className="font-semibold">?? Catatan Penting:</span><br />
-                  � Ukuran dalam centimeter (cm)<br />
-                  � Toleransi pengukuran �2cm<br />
-                  � Untuk fit yang lebih longgar, pilih 1 size lebih besar
+                   Ukuran dalam centimeter (cm)<br />
+                   Toleransi pengukuran 2cm<br />
+                   Untuk fit yang lebih longgar, pilih 1 size lebih besar
                 </p>
               </div>
-              <div className="mt-6 flex justify-end">
-                <button onClick={() => setShowSizeGuideModal(false)} className="px-6 py-3 bg-black text-white hover:bg-gray-800 transition-colors rounded-lg font-medium">Tutup</button>
+              <div className="mt-8 text-center">
+                <button onClick={() => setShowSizeGuideModal(false)} className="px-8 py-3 bg-black text-white hover:bg-gray-800 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-full font-semibold text-sm shadow-md">Tutup</button>
               </div>
             </div>
           </div>
@@ -690,7 +690,7 @@ export default function StorePage() {
                   onClick={() => {
                     document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="px-8 py-3.5 bg-white text-black text-sm font-semibold uppercase tracking-widest hover:bg-gray-100 transition-colors"
+                  className="px-8 py-3.5 bg-white text-black text-sm font-semibold uppercase tracking-widest hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-full shadow-md"
                 >
                   Lihat Koleksi
                 </button>
@@ -698,7 +698,7 @@ export default function StorePage() {
                   onClick={() => {
                     document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="px-8 py-3.5 border border-white/60 text-white text-sm font-semibold uppercase tracking-widest hover:border-white hover:bg-white/10 transition-colors"
+                  className="px-8 py-3.5 border-2 border-white/60 text-white text-sm font-semibold uppercase tracking-widest hover:border-white hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-full"
                 >
                   Pre-Order Sekarang
                 </button>
@@ -815,7 +815,7 @@ export default function StorePage() {
           </div>
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-            <button onClick={backToCatalog} className="flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors font-medium group">
+            <button onClick={backToCatalog} className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-black transition-all font-semibold group px-4 py-2 rounded-full border border-gray-200 hover:border-black hover:scale-[1.02] active:scale-[0.98]">
               <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
               Kembali ke Katalog
             </button>
@@ -893,7 +893,7 @@ export default function StorePage() {
                   <div className="mb-8">
                     <span className="text-2xl font-bold text-blue-600">{formatPrice(currentPrice)}</span>
                     {selectedProduct.preOrder && (
-                      <p className="text-sm text-green-600 font-medium mt-2">?? Pre-Order � Estimasi pengiriman {selectedProduct.estimatedDelivery}</p>
+                      <p className="text-sm text-green-600 font-medium mt-2">?? Pre-Order  Estimasi pengiriman {selectedProduct.estimatedDelivery}</p>
                     )}
                   </div>
                 )}
@@ -931,7 +931,7 @@ export default function StorePage() {
                           <button
                             key={sleeve}
                             onClick={() => setSelectedSleeve(sleeve)}
-                            className={`px-6 py-3 text-sm font-medium border transition-all ${selectedSleeve === sleeve ? 'border-black bg-black text-white' : 'border-gray-300 text-gray-700 hover:border-black'}`}
+                            className={`px-6 py-3 text-sm font-semibold border transition-all rounded-full hover:scale-[1.02] active:scale-[0.98] ${selectedSleeve === sleeve ? 'border-black bg-black text-white' : 'border-gray-300 text-gray-700 hover:border-black'}`}
                           >
                             {sleeve === 'pendek' ? 'Lengan Pendek' : 'Lengan Panjang (+Rp 10.000)'}
                           </button>
@@ -946,7 +946,7 @@ export default function StorePage() {
                           <button
                             key={size}
                             onClick={() => setSelectedSize(size)}
-                            className={`py-3 text-sm font-medium border transition-all ${selectedSize === size ? 'border-black bg-black text-white' : 'border-gray-300 text-gray-700 hover:border-black hover:text-black'}`}
+                            className={`py-3 text-sm font-semibold border transition-all rounded-full hover:scale-[1.02] active:scale-[0.98] ${selectedSize === size ? 'border-black bg-black text-white' : 'border-gray-300 text-gray-700 hover:border-black hover:text-black'}`}
                           >
                             {size}
                           </button>
@@ -965,7 +965,7 @@ export default function StorePage() {
 
                 <div className="space-y-4">
                   {selectedProduct.comingSoon ? (
-                    <button disabled className="w-full py-4 font-medium text-sm uppercase tracking-wide bg-gray-200 text-gray-400 cursor-not-allowed">SEGERA HADIR</button>
+                    <button disabled className="w-full py-4 font-medium text-sm uppercase tracking-wide bg-gray-200 text-gray-400 cursor-not-allowed rounded-full">SEGERA HADIR</button>
                   ) : (
                     <button
                       onClick={() =>
@@ -975,7 +975,7 @@ export default function StorePage() {
                             : '/pre-order'
                         )
                       }
-                      className="w-full py-4 font-medium text-sm uppercase tracking-wide transition-colors bg-black text-white hover:bg-gray-800"
+                      className="w-full py-4 font-semibold text-sm uppercase tracking-widest transition-all bg-black text-white hover:bg-gray-800 hover:scale-[1.02] active:scale-[0.98] rounded-full shadow-md"
                     >
                       PRE-ORDER SEKARANG
                     </button>

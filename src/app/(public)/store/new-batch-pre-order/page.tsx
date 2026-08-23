@@ -459,7 +459,7 @@ export default function NewBatchPreOrderPage() {
                 href={`https://wa.me/6281387643604?text=${encodeURIComponent(`Halo kak Ryan, saya ${nama} ingin konfirmasi pre-order Jersey DLOB New Batch.\n\nTotal transfer: ${formatRp(grandTotal)}\nNo. rekening: BCA 1082386054\n\n[lampirkan bukti transfer]`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between w-full bg-green-500 hover:bg-green-600 text-white rounded-xl px-5 py-3 transition-colors"
+                className="flex items-center justify-between w-full bg-green-500 hover:bg-green-600 hover:scale-[1.02] active:scale-[0.98] text-white rounded-full px-6 py-3.5 transition-all shadow-md"
               >
                 <div className="flex items-center gap-3">
                   <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white shrink-0">
@@ -477,10 +477,10 @@ export default function NewBatchPreOrderPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <button onClick={() => router.push('/store')} className="w-full py-4 bg-black text-white font-semibold text-sm uppercase tracking-widest hover:bg-gray-800 transition-colors">
+            <button onClick={() => router.push('/store')} className="w-full py-4 bg-black text-white font-semibold text-sm uppercase tracking-widest rounded-full hover:bg-gray-800 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md">
               Kembali ke Store
             </button>
-            <button onClick={() => router.push('/')} className="w-full py-4 border border-gray-300 text-gray-700 font-semibold text-sm uppercase tracking-widest hover:border-black hover:text-black transition-colors">
+            <button onClick={() => router.push('/')} className="w-full py-4 border border-gray-300 text-gray-700 font-semibold text-sm uppercase tracking-widest rounded-full hover:border-black hover:text-black hover:scale-[1.02] active:scale-[0.98] transition-all">
               Ke Beranda
             </button>
           </div>
@@ -573,7 +573,7 @@ export default function NewBatchPreOrderPage() {
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="w-full py-4 bg-black text-white font-bold text-sm uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                className="w-full py-4 bg-black text-white font-bold text-sm uppercase tracking-widest rounded-full hover:bg-gray-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md"
               >
                 {isSubmitting ? (
                   <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Menyimpan...</>
@@ -583,7 +583,7 @@ export default function NewBatchPreOrderPage() {
               </button>
               <button
                 onClick={() => setShowConfirm(false)}
-                className="w-full py-3 border-2 border-gray-200 text-gray-700 font-semibold text-sm rounded-xl hover:border-black hover:text-black transition-colors"
+                className="w-full py-3.5 border-2 border-gray-200 text-gray-700 font-semibold text-sm rounded-full hover:border-black hover:text-black hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 ← Kembali &amp; Edit
               </button>
@@ -595,7 +595,7 @@ export default function NewBatchPreOrderPage() {
       {/* Size Guide Modal */}
       {showSizeGuide && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-gray-900">📏 Panduan Ukuran</h3>
@@ -622,7 +622,7 @@ export default function NewBatchPreOrderPage() {
                 </tbody>
               </table>
               <p className="text-xs text-gray-500 mt-4">Toleransi ±2cm. Lengan panjang +Rp 10.000.</p>
-              <button onClick={() => setShowSizeGuide(false)} className="mt-6 w-full py-3 bg-black text-white font-semibold text-sm rounded-lg">
+              <button onClick={() => setShowSizeGuide(false)} className="mt-6 w-full py-3.5 bg-black text-white font-semibold text-sm rounded-full hover:bg-gray-800 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md">
                 Tutup
               </button>
             </div>
@@ -733,7 +733,7 @@ export default function NewBatchPreOrderPage() {
             <button
               type="button"
               onClick={addItem}
-              className="mt-5 w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center gap-2 text-gray-500 hover:border-black hover:text-black transition-all font-medium text-sm"
+              className="mt-5 w-full py-4 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center gap-2 text-gray-500 hover:border-black hover:text-black transition-all font-medium text-sm"
             >
               <Plus className="w-4 h-4" />
               Tambah Jersey Lagi
@@ -786,7 +786,7 @@ export default function NewBatchPreOrderPage() {
               type="button"
               onClick={() => isFormValid && setShowConfirm(true)}
               disabled={!isFormValid || isSubmitting}
-              className={`w-full py-4 font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 rounded-xl ${
+              className={`w-full py-4 font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 rounded-full ${
                 isFormValid && !isSubmitting
                   ? 'bg-black text-white hover:bg-gray-800'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'

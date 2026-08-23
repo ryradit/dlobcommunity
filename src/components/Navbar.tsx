@@ -191,16 +191,16 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex space-x-1">
+          <div className="hidden md:flex space-x-1.5 bg-white/5 border border-white/10 rounded-full px-2 py-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs lg:text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'text-white bg-white/10 font-semibold'
+                      ? 'text-white bg-white/15 font-semibold shadow-xs'
                       : 'text-zinc-300 hover:text-white hover:bg-white/10'
                   }`}
                 >
@@ -211,13 +211,13 @@ export default function Navbar() {
           </div>
 
           {/* Auth Buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2.5">
             {loading ? (
-              <div className="w-20 h-9 bg-white/5 rounded-lg animate-pulse"></div>
+              <div className="w-20 h-8 bg-white/10 rounded-full animate-pulse"></div>
             ) : user ? (
               <Link
                 href="/dashboard"
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-white/10 hover:bg-white/20 transition-colors"
+                className="px-4 py-2 rounded-full text-xs font-semibold text-white bg-[#3e6461] hover:bg-[#2d4a47] border border-teal-500/30 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 Dashboard
               </Link>
@@ -225,13 +225,13 @@ export default function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="px-4 py-2 rounded-lg text-sm font-semibold text-zinc-300 hover:text-white transition-colors"
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-zinc-300 hover:text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Masuk
                 </Link>
                 <Link
                   href="/register"
-                  className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-white/20 hover:bg-white/30 transition-colors"
+                  className="px-5 py-2 rounded-full text-xs font-semibold text-white bg-white/20 hover:bg-white/30 border border-white/20 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Daftar
                 </Link>
@@ -242,7 +242,7 @@ export default function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-zinc-300 hover:text-white hover:bg-white/10 focus:outline-none"
+            className="md:hidden inline-flex items-center justify-center p-2 rounded-full text-zinc-300 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
             aria-label="Toggle Navigation Menu"
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -256,7 +256,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="block px-3 py-2 rounded-md text-base font-medium text-zinc-300 hover:text-white hover:bg-white/10"
+                className="block px-4 py-2.5 rounded-full text-base font-medium text-zinc-300 hover:text-white hover:bg-white/10"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {link.label}
@@ -267,7 +267,7 @@ export default function Navbar() {
                 <Link
                   href="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-white bg-white/10 text-center"
+                  className="block px-4 py-2.5 rounded-full text-base font-medium text-white bg-[#3e6461] hover:bg-[#2d4a47] text-center"
                 >
                   Dashboard
                 </Link>
@@ -276,14 +276,14 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-zinc-300 hover:text-white"
+                    className="block px-4 py-2.5 rounded-full text-base font-medium text-zinc-300 hover:text-white text-center bg-white/5"
                   >
                     Masuk
                   </Link>
                   <Link
                     href="/register"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-white bg-white/20 text-center"
+                    className="block px-4 py-2.5 rounded-full text-base font-medium text-white bg-white/20 text-center"
                   >
                     Daftar
                   </Link>

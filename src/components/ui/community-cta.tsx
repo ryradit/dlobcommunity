@@ -80,7 +80,7 @@ export const CommunityCTA = ({ className = '' }: CommunityCTAProps) => {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 max-w-md mx-auto lg:mx-0">
               <Link
                 href="/register"
-                className="group relative px-8 py-4 bg-white text-teal-900 font-semibold rounded-lg transition-all duration-300 hover:bg-teal-50 hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center gap-3"
+                className="group relative px-8 py-4 bg-white text-[#2d4a47] font-semibold rounded-full transition-all duration-300 hover:bg-teal-50 hover:scale-[1.02] active:scale-[0.98] shadow-xl hover:shadow-2xl flex items-center justify-center gap-3"
               >
                 <span>Daftar Sekarang</span>
                 <motion.div
@@ -99,7 +99,7 @@ export const CommunityCTA = ({ className = '' }: CommunityCTAProps) => {
 
               <Link
                 href="/tentang"
-                className="px-8 py-4 bg-transparent border-2 border-white/30 text-white font-semibold rounded-lg transition-all duration-300 hover:bg-white/10 hover:border-white/50 backdrop-blur-sm flex items-center justify-center"
+                className="px-8 py-4 bg-transparent border-2 border-white/30 text-white font-semibold rounded-full transition-all duration-300 hover:bg-white/10 hover:border-white/50 backdrop-blur-sm hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center"
               >
                 Pelajari Lebih Lanjut
               </Link>

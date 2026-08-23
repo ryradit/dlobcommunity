@@ -236,7 +236,7 @@ export default function KontakPage() {
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-[#3e6461] to-[#1e4843] text-white font-bold py-3.5 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-[#3e6461] to-[#1e4843] text-white font-bold py-3.5 rounded-full hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                   >
                     <Send className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     {isSubmitting ? 'Mengirim...' : 'Kirim Pesan'}

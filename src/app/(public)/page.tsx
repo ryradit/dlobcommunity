@@ -41,7 +41,7 @@ export default function Home() {
           </div>
           <Link
             href="/survey"
-            className="shrink-0 bg-white text-[#3e6461] font-bold px-7 py-3 rounded-2xl hover:bg-white/90 transition-colors text-sm"
+            className="shrink-0 bg-white text-[#3e6461] font-bold px-7 py-3 rounded-full hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98] transition-all text-sm shadow-md"
           >
             Isi Survey Sekarang →
           </Link>
@@ -58,35 +58,27 @@ export default function Home() {
             {/* Center line */}
             <line x1="300" y1="50" x2="300" y2="350" stroke="white" strokeWidth="2"/>
             {/* Net line */}
-            <line x1="100" y1="200" x2="500" y2="200" stroke="white" strokeWidth="3"/>
-            
-            {/* Second court */}
-            <rect x="700" y="50" width="400" height="300" fill="none" stroke="white" strokeWidth="2"/>
-            <line x1="900" y1="50" x2="900" y2="350" stroke="white" strokeWidth="2"/>
-            <line x1="700" y1="200" x2="1100" y2="200" stroke="white" strokeWidth="3"/>
+            <line x1="100" y1="200" x2="500" y2="200" stroke="white" strokeWidth="2"/>
+            {/* Service lines */}
+            <line x1="100" y1="120" x2="500" y2="120" stroke="white" strokeWidth="1" strokeDasharray="5,5"/>
+            <line x1="100" y1="280" x2="500" y2="280" stroke="white" strokeWidth="1" strokeDasharray="5,5"/>
           </svg>
         </div>
 
-        {/* Badminton equipment icons scattered */}
-        <div className="absolute top-10 right-20 text-4xl opacity-20 rotate-45">🏸</div>
-        <div className="absolute bottom-10 left-10 text-5xl opacity-20 -rotate-45">🏸</div>
-        <div className="absolute top-20 left-1/4 text-3xl opacity-15">🎯</div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Komunitas Kami dalam Angka</h2>
+            <p className="text-white/80 text-lg max-w-2xl mx-auto">
+              Perkembangan dan aktivitas member DLOB yang terus bertumbuh
+            </p>
+          </div>
 
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {stats.map((stat, index) => (
-              <div 
-                key={index}
-                className={`relative text-center p-6 rounded-xl transition-transform hover:scale-105 ${
-                  stat.number ? 'bg-white/10 backdrop-blur-sm border border-white/20' : ''
-                }`}
-              >
-                {/* Badminton racket decoration */}
-                {stat.number && index < 3 && (
-                  <div className="absolute -top-2 -right-2 text-3xl opacity-40">🏸</div>
+              <div key={index} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/20 hover:bg-white/20 transition-all">
+                {stat.number && (
+                  <p className="text-4xl md:text-5xl font-extrabold text-white mb-2">{stat.number}</p>
                 )}
-                
-                {stat.number && <div className="text-4xl md:text-5xl font-bold mb-2">{stat.number}</div>}
                 <p className="text-white/80 text-sm md:text-base font-medium">{stat.label}</p>
               </div>
             ))}
@@ -133,7 +125,7 @@ export default function Home() {
                 <p className="text-gray-600 text-sm mb-6 flex-grow">Bergabunglah dengan komunitas kami untuk mendapat update, diskusi, dan informasi terbaru</p>
                 <a
                   href="https://chat.whatsapp.com/your-group-link"
-                  className="inline-block px-6 py-2 bg-[#1e4843] text-white rounded-lg font-semibold hover:bg-[#162f2c] transition-colors text-center"
+                  className="inline-block px-6 py-2.5 bg-[#1e4843] text-white rounded-full font-semibold hover:bg-[#162f2c] hover:scale-[1.02] active:scale-[0.98] transition-all text-center"
                 >
                   Bergabung Sekarang
                 </a>

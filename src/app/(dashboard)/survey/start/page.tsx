@@ -365,7 +365,7 @@ export default function SurveyStartPage() {
                 <button
                   type="button"
                   onClick={() => { setCurrentAnswer('Anonim'); setIsAnonymous(true); }}
-                  className={`text-sm px-4 py-2 rounded-xl border transition-all ${
+                  className={`text-sm px-4 py-2 rounded-full border transition-all ${
                     isAnonymous
                       ? 'bg-[#3e6461] text-white border-[#3e6461]'
                       : 'text-gray-400 border-gray-200 hover:border-[#3e6461]/40 hover:text-[#3e6461]'
@@ -379,16 +379,16 @@ export default function SurveyStartPage() {
 
           {/* Single choice */}
           {current.type === 'single' && current.options && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               {current.options.map(opt => {
                 const selected = currentAnswer === opt.value;
                 return (
                   <button
                     key={opt.value}
                     onClick={() => handleSingleSelect(opt.value)}
-                    className={`w-full text-left px-4 py-3.5 rounded-2xl border text-sm font-medium transition-all ${
+                    className={`w-full text-left px-5 py-3.5 rounded-full border text-sm font-medium transition-all hover:scale-[1.01] active:scale-[0.99] ${
                       selected
-                        ? 'bg-[#3e6461] text-white border-[#3e6461]'
+                        ? 'bg-[#3e6461] text-white border-[#3e6461] shadow-sm'
                         : 'bg-white text-gray-700 border-gray-200 hover:border-[#3e6461]/40 hover:bg-[#3e6461]/5'
                     }`}
                   >
@@ -401,22 +401,22 @@ export default function SurveyStartPage() {
 
           {/* Multiple choice */}
           {current.type === 'multiple' && current.options && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               {current.options.map(opt => {
                 const selected = (currentAnswer as string[]).includes(opt.value);
                 return (
                   <button
                     key={opt.value}
                     onClick={() => toggleMulti(opt.value)}
-                    className={`w-full text-left px-4 py-3.5 rounded-2xl border text-sm font-medium transition-all ${
+                    className={`w-full text-left px-5 py-3.5 rounded-full border text-sm font-medium transition-all hover:scale-[1.01] active:scale-[0.99] ${
                       selected
-                        ? 'bg-[#3e6461] text-white border-[#3e6461]'
+                        ? 'bg-[#3e6461] text-white border-[#3e6461] shadow-sm'
                         : 'bg-white text-gray-700 border-gray-200 hover:border-[#3e6461]/40 hover:bg-[#3e6461]/5'
                     }`}
                   >
                     <span className="flex items-center gap-3">
                       <span
-                        className={`w-4 h-4 rounded shrink-0 border flex items-center justify-center transition-all ${
+                        className={`w-4 h-4 rounded-full shrink-0 border flex items-center justify-center transition-all ${
                           selected ? 'bg-white/30 border-white' : 'border-gray-300'
                         }`}
                       >
@@ -446,7 +446,7 @@ export default function SurveyStartPage() {
           <button
             onClick={handleNext}
             disabled={!canProceed() || isSubmitting || isLoadingNext}
-            className="w-full bg-[#3e6461] text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-[#2d4a47] transition-colors"
+            className="w-full bg-[#3e6461] text-white py-4 rounded-full font-semibold flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-[#2d4a47] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
           >
             {isSubmitting ? (
               <Loader2 className="w-5 h-5 animate-spin" />

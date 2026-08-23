@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ClipboardList, Clock, Shield, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ClipboardList, Clock, Shield, ChevronRight, ChevronLeft, ArrowLeft, ArrowRight } from 'lucide-react';
 
 export default function SurveyWelcomePage() {
   const router = useRouter();
@@ -17,25 +17,27 @@ export default function SurveyWelcomePage() {
               window.scrollTo({ top: 0, behavior: 'instant' });
             }
           }}
-          className="flex items-center gap-1.5 text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors text-sm mb-4 cursor-pointer font-medium"
+          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-white px-3.5 py-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors mb-6"
         >
-          <ChevronLeft className="w-4 h-4" />
-          Kembali ke Beranda
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Kembali
         </button>
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-gray-100 dark:border-zinc-800 overflow-hidden">
 
-          {/* Header banner */}
-          <div className="bg-gradient-to-br from-[#3e6461] to-[#2d4a47] px-8 py-10 text-white text-center">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <ClipboardList className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold mb-2">Survey DLOB Community</h1>
-            <p className="text-white/80 text-sm leading-relaxed">
-              Bantu kami membangun komunitas badminton yang lebih baik untuk semua member.
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 p-6 sm:p-8 shadow-sm space-y-6">
+          {/* Header */}
+          <div>
+            <span className="text-xs font-semibold text-[#3e6461] uppercase tracking-wider bg-[#3e6461]/10 px-3 py-1 rounded-full">
+              Survey DLOB 2026
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-3">
+              Bantu kami membuat DLOB lebih seru untukmu
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-zinc-400 mt-2">
+              Survey ini menggunakan AI adaptif — pertanyaan akan menyesuaikan dengan apa yang kamu ceritakan.
             </p>
           </div>
 
-          <div className="px-8 py-8 space-y-6">
+          <div className="space-y-6">
 
             {/* Info items */}
             <div className="space-y-3">
@@ -87,10 +89,10 @@ export default function SurveyWelcomePage() {
             {/* CTA */}
             <button
               onClick={() => router.push('/survey/start')}
-              className="w-full bg-[#3e6461] hover:bg-[#2d4a47] active:scale-[0.98] text-white font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
+              className="w-full bg-[#3e6461] hover:bg-[#2d4a47] hover:scale-[1.02] active:scale-[0.98] text-white font-semibold py-4 rounded-full flex items-center justify-center gap-2 transition-all shadow-md"
             >
-              Mulai Survey
-              <ChevronRight className="w-5 h-5" />
+              Mulai Survey Sekarang
+              <ArrowRight className="w-4 h-4" />
             </button>
 
             <p className="text-center text-xs text-gray-400 dark:text-zinc-500">

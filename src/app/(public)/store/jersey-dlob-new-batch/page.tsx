@@ -340,12 +340,12 @@ export default function JerseyDlobNewBatchPage() {
             {/* Choose Sleeve */}
             <div className="mb-8">
               <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">Pilih Lengan</h3>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 {(['pendek', 'panjang'] as const).map((sleeve) => (
                   <button
                     key={sleeve}
                     onClick={() => setSelectedSleeve(sleeve)}
-                    className={`px-6 py-3 text-sm font-semibold border-2 rounded-xl transition-all ${
+                    className={`px-6 py-3 text-sm font-semibold border-2 rounded-full transition-all hover:scale-[1.02] active:scale-[0.98] ${
                       selectedSleeve === sleeve
                         ? 'border-black bg-black text-white shadow-sm'
                         : 'border-gray-200 text-gray-700 hover:border-black'
@@ -368,12 +368,12 @@ export default function JerseyDlobNewBatchPage() {
                   📏 Lihat Panduan Ukuran
                 </button>
               </div>
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                 {['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'].map((size) => (
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
-                    className={`py-3 text-sm font-bold border-2 rounded-xl transition-all ${
+                    className={`py-3 text-sm font-bold border-2 rounded-full transition-all hover:scale-[1.02] active:scale-[0.98] ${
                       selectedSize === size
                         ? 'border-black bg-black text-white shadow-sm'
                         : 'border-gray-200 text-gray-700 hover:border-black'
@@ -394,7 +394,7 @@ export default function JerseyDlobNewBatchPage() {
             <div className="space-y-4">
               <button
                 onClick={() => router.push('/store/new-batch-pre-order')}
-                className="w-full py-4.5 font-bold text-sm uppercase tracking-widest transition-all bg-black text-white hover:bg-gray-800 rounded-xl flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="w-full py-4.5 font-bold text-sm uppercase tracking-widest transition-all bg-black text-white hover:bg-gray-800 rounded-full flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
               >
                 <span>PRE-ORDER SEKARANG</span>
                 <ChevronRight className="w-4 h-4" />
