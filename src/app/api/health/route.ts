@@ -230,15 +230,105 @@ export async function GET(req: NextRequest) {
     message: fonnteToken ? 'Fonnte Gateway Terhubung' : 'FONNTE_TOKEN belum dikonfigurasi',
   };
 
-  // ── 5. Google Drive Storage Sync ───────────────────────────────────
-  const hasDrive = !!process.env.GOOGLE_DRIVE_CLIENT_EMAIL;
-  services.gdrive = {
-    name: 'Google Drive Storage (Media Sync)',
-    category: 'Storage & Media',
-    status: hasDrive ? 'operational' : 'not_configured',
-    uptimePercent: '99.99%',
-    message: hasDrive ? 'Service Account Terhubung' : 'Google Drive belum dikonfigurasi',
-  };
+  // ── 5. Google Drive Storage & Quota Check ──────────────────────────
+  const gdriveStart = Date.now();
+  const gdriveApiKey =
+    process.env.NEXT_PUBLIC_GOOGLE_CLOUD_API_KEY ||
+    process.env.GOOGLE_API_KEY;
+  const folderId = process.env.NEXT_PUBLIC_GDRIVE_TRAINING_FOLDER_ID;
+
+  if (!gdriveApiKey) {
+    services.gdrive = {
+      name: 'Google Drive Storage (Media Sync)',
+      category: 'Storage & Media',
+      status: 'not_configured',
+      uptimePercent: '99.99%',
+      message: 'NEXT_PUBLIC_GOOGLE_CLOUD_API_KEY belum dikonfigurasi',
+    };
+  } else {
+    try {
+      const gdriveUrl = folderId
+        ? `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false&pageSize=1&fields=files(id)&key=${gdriveApiKey}`
+        : `https://www.googleapis.com/drive/v3/files?pageSize=1&fields=files(id)&key=${gdriveApiKey}`;
+
+      const res = await withTimeout(
+        fetch(gdriveUrl, { cache: 'no-store' }),
+        5000,
+        'Google Drive API timeout (>5s)'
+      );
+
+      const latencyMs = Date.now() - gdriveStart;
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        const errorReason = errorBody?.error?.errors?.[0]?.reason || '';
+        const errorMessage = errorBody?.error?.message || `HTTP ${res.status}`;
+
+        if (
+          res.status === 403 &&
+          (errorReason.includes('quota') ||
+            errorReason.includes('rateLimit') ||
+            errorMessage.toLowerCase().includes('quota') ||
+            errorMessage.toLowerCase().includes('limit exceeded') ||
+            errorMessage.toLowerCase().includes('user rate limit'))
+        ) {
+          services.gdrive = {
+            name: 'Google Drive Storage (Media Sync)',
+            category: 'Storage & Media',
+            status: 'degraded',
+            latencyMs,
+            uptimePercent: '98.50%',
+            message: 'Batas kuota Google Drive terlampaui (Storage/Rate Limit Exceeded - 403)',
+            details: { reason: errorReason, error: errorMessage },
+          };
+        } else if (res.status === 401 || (res.status === 403 && errorReason.includes('keyInvalid'))) {
+          services.gdrive = {
+            name: 'Google Drive Storage (Media Sync)',
+            category: 'Storage & Media',
+            status: 'down',
+            latencyMs,
+            uptimePercent: '96.00%',
+            message: 'Google Cloud API Key tidak valid atau izin Drive dinonaktifkan',
+            details: { error: errorMessage },
+          };
+        } else {
+          services.gdrive = {
+            name: 'Google Drive Storage (Media Sync)',
+            category: 'Storage & Media',
+            status: 'down',
+            latencyMs,
+            uptimePercent: '97.00%',
+            message: `Google Drive Error (${res.status}): ${errorMessage}`,
+            details: { error: errorMessage },
+          };
+        }
+      } else {
+        services.gdrive = {
+          name: 'Google Drive Storage (Media Sync)',
+          category: 'Storage & Media',
+          status: latencyMs > 3000 ? 'degraded' : 'operational',
+          latencyMs,
+          uptimePercent: '99.99%',
+          message: 'Google Drive API & Media Sync beroperasi normal',
+        };
+      }
+    } catch (err: any) {
+      const latencyMs = Date.now() - gdriveStart;
+      const errMsg = err?.message || String(err);
+
+      services.gdrive = {
+        name: 'Google Drive Storage (Media Sync)',
+        category: 'Storage & Media',
+        status: errMsg.includes('timeout') ? 'degraded' : 'down',
+        latencyMs,
+        uptimePercent: '97.50%',
+        message: errMsg.includes('timeout')
+          ? 'Respons Google Drive lambat (>5s)'
+          : `Gagal menghubungi Google Drive: ${errMsg.slice(0, 100)}`,
+        details: { error: errMsg },
+      };
+    }
+  }
 
   // ── 6. Supabase Outage Auto-Recording & Incident History ──────────
   let pastIncidents: SystemIncident[] = [];
