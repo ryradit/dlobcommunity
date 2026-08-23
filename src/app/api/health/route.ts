@@ -129,12 +129,20 @@ export async function GET(req: NextRequest) {
         errMsg.toLowerCase().includes('rate limit') ||
         errMsg.toLowerCase().includes('too many requests');
 
-      if (isQuotaExceeded) {
+      const isBrokenKey =
+        errMsg.includes('API_KEY_INVALID') ||
+        errMsg.includes('401') ||
+        (errMsg.includes('403') && !isQuotaExceeded) ||
+        errMsg.toLowerCase().includes('api key not valid') ||
+        errMsg.toLowerCase().includes('api key expired') ||
+        errMsg.toLowerCase().includes('permission_denied');
+
+      if (isBrokenKey) {
+        status = 'down';
+        message = 'Kunci API Gemini rusak / tidak valid (API_KEY_INVALID) — segera ganti dengan API Key baru di Google AI Studio';
+      } else if (isQuotaExceeded) {
         status = 'degraded';
         message = 'Batas kuota harian/menit Gemini tercapai (RESOURCE_EXHAUSTED 429) — fallback otomatis aktif';
-      } else if (errMsg.includes('401') || errMsg.includes('403') || errMsg.toLowerCase().includes('api key')) {
-        status = 'down';
-        message = 'API Key Gemini tidak valid atau kadaluarsa';
       } else if (errMsg.includes('timeout')) {
         status = 'degraded';
         message = 'Respons lambat (>6s) — fallback otomatis aktif';
@@ -148,9 +156,9 @@ export async function GET(req: NextRequest) {
         category: 'AI Services',
         status,
         latencyMs,
-        uptimePercent: isQuotaExceeded ? '98.50%' : '96.00%',
+        uptimePercent: isQuotaExceeded ? '98.50%' : isBrokenKey ? '95.00%' : '96.00%',
         message,
-        details: { error: errMsg.slice(0, 150), isQuotaExceeded },
+        details: { error: errMsg.slice(0, 150), isQuotaExceeded, isBrokenKey },
       };
     }
   }
@@ -355,19 +363,36 @@ export async function GET(req: NextRequest) {
         );
 
         if (!hasOpenIncident) {
-          const isQuota =
-            srv.details?.isQuotaExceeded ||
-            srv.message?.toLowerCase().includes('kuota') ||
-            srv.message?.toLowerCase().includes('quota');
+          const isBrokenKey =
+            srv.details?.isBrokenKey ||
+            srv.message?.toLowerCase().includes('kunci api') ||
+            srv.message?.toLowerCase().includes('tidak valid') ||
+            srv.message?.toLowerCase().includes('api_key_invalid');
 
-          const incidentTitle = isQuota
+          const isQuota =
+            !isBrokenKey &&
+            (srv.details?.isQuotaExceeded ||
+              srv.message?.toLowerCase().includes('kuota') ||
+              srv.message?.toLowerCase().includes('quota'));
+
+          const incidentTitle = isBrokenKey
+            ? `Kunci API Rusak / Perlu Diganti: ${srv.name}`
+            : isQuota
             ? `Batas Kuota Tercapai: ${srv.name}`
             : `Gangguan Layanan ${srv.name}`;
+
+          const incidentImpact = isBrokenKey
+            ? 'critical'
+            : srv.status === 'down'
+            ? 'major'
+            : isQuota
+            ? 'minor'
+            : 'moderate';
 
           await supabase.from('system_incidents').insert({
             title: incidentTitle,
             service_name: key,
-            impact: srv.status === 'down' ? 'major' : isQuota ? 'minor' : 'moderate',
+            impact: incidentImpact,
             status: 'investigating',
             description:
               srv.message ||
