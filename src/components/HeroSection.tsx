@@ -76,8 +76,8 @@ export default function HeroSection() {
         }}
       />
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 pt-6 pb-12 sm:px-6 md:pt-8 md:pb-20 lg:px-8">
-        <div className="flex flex-col space-y-10 pt-8">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 pt-24 sm:pt-28 md:pt-32 pb-12 sm:px-6 md:pb-20 lg:px-8">
+        <div className="flex flex-col space-y-10">
           
           {/* Top Hero Text Content */}
           <div className="max-w-4xl space-y-8">

@@ -31,7 +31,7 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full pt-3 sm:pt-4 px-3 sm:px-6 pointer-events-none transition-all duration-300">
+    <header className="fixed top-0 inset-x-0 z-50 w-full pt-3.5 sm:pt-5 px-3 sm:px-6 pointer-events-none transition-all duration-300">
       <nav className="max-w-6xl mx-auto pointer-events-auto">
         <div
           className={`relative transition-all duration-300 rounded-2xl sm:rounded-full ${
