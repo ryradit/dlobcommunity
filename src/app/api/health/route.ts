@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,6 +26,39 @@ function withTimeout<T>(promise: Promise<T>, ms: number, timeoutErrorMsg: string
 export async function GET(req: NextRequest) {
   const timestamp = new Date().toISOString();
   const services: Record<string, ServiceHealth> = {};
+
+  // ── 0. Check if visitor is authenticated Admin ─────────────────────
+  let isAdmin = false;
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return req.cookies.get(name)?.value;
+          },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.role === 'admin' || user.user_metadata?.role === 'admin') {
+        isAdmin = true;
+      }
+    }
+  } catch {
+    isAdmin = false;
+  }
 
   // ── 1. Google Gemini AI Check ──────────────────────────────────────
   const geminiStart = Date.now();
@@ -574,7 +608,11 @@ export async function GET(req: NextRequest) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
           Refresh
         </a>
-        <a href="/admin" class="btn-pill btn-pill-primary">Admin Console →</a>
+        ${
+          isAdmin
+            ? `<a href="/admin" class="btn-pill btn-pill-primary">Admin Console →</a>`
+            : `<a href="/" class="btn-pill">← Back to Home</a>`
+        }
       </div>
     </header>
 
@@ -652,7 +690,7 @@ export async function GET(req: NextRequest) {
     <!-- Footer -->
     <footer class="site-footer">
       <div class="footer-nav">
-        <a href="/admin">Admin Dashboard</a>
+        ${isAdmin ? `<a href="/admin">Admin Dashboard</a>` : `<a href="/">Home</a>`}
         <a href="/leaderboard">Leaderboard</a>
         <a href="/store">Store</a>
         <a href="/api/health?json=true">JSON API</a>
