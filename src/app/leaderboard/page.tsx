@@ -799,16 +799,19 @@ export default function LeaderboardPage() {
         {/* Dark Overlay with Brand Teal tint for readability */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-[#162725]/80 to-black/85 z-10" />
 
-        {/* Back Button */}
-        {canGoBack && (
-          <button
-            onClick={() => router.back()}
-            className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 backdrop-blur-md text-white text-xs font-semibold transition-all duration-200 border border-white/15 hover:border-white/30 shadow-md"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Kembali</span>
-          </button>
-        )}
+        {/* Back Button to Homepage */}
+        <button
+          onClick={() => {
+            router.push('/');
+            if (typeof window !== 'undefined') {
+              window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+          }}
+          className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 backdrop-blur-md text-white text-xs font-semibold transition-all duration-200 border border-white/15 hover:border-white/30 shadow-md cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Kembali</span>
+        </button>
 
         <div className="max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 relative z-20">
           <div className="text-center sm:text-left">
