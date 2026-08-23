@@ -115,6 +115,14 @@ export const PERIOD_CONFIGS: PeriodConfig[] = [
 export const MIN_MATCHES_PODIUM = 10;
 export const MIN_PARTNER_MATCHES_PODIUM = 5;
 
+export const HERO_IMAGES = [
+  '/images/dlobanimated.png',
+  '/images/dlobanimated1.png',
+  '/images/dlobanimated2.png',
+  '/images/dlobanimated3.png',
+  '/images/dlobanimated4.png',
+];
+
 function winRateColor(wr: number) {
   if (wr >= 70) return 'text-green-600 dark:text-green-400';
   if (wr >= 50) return 'text-yellow-600 dark:text-yellow-400';
@@ -243,11 +251,11 @@ export default function LeaderboardPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const carouselRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-rotate carousel
+  // Auto-rotate background images every 5 seconds
   useEffect(() => {
     carouselRef.current = setInterval(() => {
-      setCurrentImageIndex(prev => (prev + 1) % 4);
-    }, 4000);
+      setCurrentImageIndex(prev => (prev + 1) % HERO_IMAGES.length);
+    }, 5000);
 
     return () => {
       if (carouselRef.current) clearInterval(carouselRef.current);
@@ -768,48 +776,67 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300 pb-20 sm:pb-28">
-      {/* ── Top Hero Header ────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-[#203a38] via-[#2d4e4b] to-[#1a2d2b] text-white py-6 sm:py-10 px-3 sm:px-6 shadow-xl relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+      {/* ── Top Hero Header with Rotating Animated Background Images ─── */}
+      <div className="relative text-white py-10 sm:py-16 md:py-20 px-3 sm:px-6 shadow-xl overflow-hidden min-h-[16rem] sm:min-h-[20rem] flex items-center">
+        {/* Rotating Background Images with 5s smooth crossfade */}
+        <div className="absolute inset-0 z-0">
+          {HERO_IMAGES.map((src, idx) => (
+            <div
+              key={idx}
+              className={`absolute inset-0 transition-opacity duration-1000 ${
+                currentImageIndex === idx ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <img
+                src={src}
+                alt={`DLOB Hero ${idx + 1}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Dark Overlay with Brand Teal tint for readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-[#162725]/80 to-black/85 z-10" />
 
         {/* Back Button */}
         {canGoBack && (
           <button
             onClick={() => router.back()}
-            className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-sm text-white text-xs font-semibold transition-all duration-200 border border-white/10 hover:border-white/25 shadow-sm"
+            className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 backdrop-blur-md text-white text-xs font-semibold transition-all duration-200 border border-white/15 hover:border-white/30 shadow-md"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Kembali</span>
           </button>
         )}
 
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center sm:items-end justify-between gap-3 sm:gap-4 relative">
+        <div className="max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 relative z-20">
           <div className="text-center sm:text-left">
-            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300" />
-              <span className="text-xs font-semibold tracking-widest uppercase text-teal-200">
+            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1.5">
+              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300 drop-shadow-md" />
+              <span className="text-xs font-semibold tracking-widest uppercase text-teal-200 drop-shadow-sm">
                 DLOB Badminton
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight drop-shadow-lg">
               Leaderboard
             </h1>
-            <p className="text-teal-200 text-xs sm:text-sm mt-1">
+            <p className="text-teal-100 text-xs sm:text-sm md:text-base mt-1.5 font-medium drop-shadow-md max-w-lg">
               Statistik performa dan peringkat member DLOB Community
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-teal-200 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 text-xs text-teal-100 bg-black/40 border border-white/15 backdrop-blur-md px-3.5 py-2 rounded-full shadow-lg">
             <span className="inline-flex items-center gap-1.5 font-medium">
               <span
                 className={`w-2 h-2 rounded-full ${
-                  liveRefreshing ? 'bg-white animate-ping' : 'bg-green-300'
+                  liveRefreshing ? 'bg-white animate-ping' : 'bg-green-400'
                 }`}
               />
               {liveRefreshing ? 'Updating...' : 'Live'}
             </span>
             {lastUpdated && !liveRefreshing && (
-              <span className="text-teal-200/60 hidden sm:inline">
+              <span className="text-teal-200/70 hidden sm:inline">
                 · {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
