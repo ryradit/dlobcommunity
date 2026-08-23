@@ -887,13 +887,16 @@ export default function LeaderboardPage() {
               ];
               tabTitle = 'Pemain Terbaik';
             } else if (activeTab === 'pemain-tak-terkalahkan') {
-              const unbeaten = [...stats]
-                .filter(s => s.losses === 0 && s.wins > 0 && s.totalMatches >= MIN_MATCHES_PODIUM)
-                .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate);
+              const leastLosses = [...stats]
+                .filter(s => s.totalMatches >= MIN_MATCHES_PODIUM)
+                .sort((a, b) => {
+                  if (a.losses !== b.losses) return a.losses - b.losses;
+                  return b.wins - a.wins;
+                });
               top3 = [
-                { rank: 1, player: unbeaten[0] || null, metric: `${unbeaten[0]?.wins ?? 0} menang - 0 kalah` },
-                { rank: 2, player: unbeaten[1] || null, metric: `${unbeaten[1]?.wins ?? 0} menang - 0 kalah` },
-                { rank: 3, player: unbeaten[2] || null, metric: `${unbeaten[2]?.wins ?? 0} menang - 0 kalah` },
+                { rank: 1, player: leastLosses[0] || null, metric: `${leastLosses[0]?.losses ?? 0} Kalah · ${leastLosses[0]?.wins ?? 0} Menang (${leastLosses[0]?.winRate ?? 0}% WR)` },
+                { rank: 2, player: leastLosses[1] || null, metric: `${leastLosses[1]?.losses ?? 0} Kalah · ${leastLosses[1]?.wins ?? 0} Menang (${leastLosses[1]?.winRate ?? 0}% WR)` },
+                { rank: 3, player: leastLosses[2] || null, metric: `${leastLosses[2]?.losses ?? 0} Kalah · ${leastLosses[2]?.wins ?? 0} Menang (${leastLosses[2]?.winRate ?? 0}% WR)` },
               ];
               tabTitle = 'Pemain Tak Terkalahkan';
             } else if (activeTab === 'streak-terpanjang') {
@@ -1152,7 +1155,7 @@ export default function LeaderboardPage() {
                     <span>🏆</span>
                     <span>
                       {activeTab === 'pemain-tak-terkalahkan'
-                        ? `Kualifikasi: Minimal ${MIN_MATCHES_PODIUM} Pertandingan & 0 Kekalahan (100% WR)`
+                        ? `Kualifikasi: Minimal ${MIN_MATCHES_PODIUM} Pertandingan (Kekalahan Paling Sedikit)`
                         : `Kualifikasi Podium: Minimal ${MIN_MATCHES_PODIUM} Pertandingan`}
                     </span>
                   </div>
