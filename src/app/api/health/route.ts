@@ -320,19 +320,15 @@ export async function GET(req: NextRequest) {
       color: #ffffff;
     }
 
-    .logo-badge {
-      width: 34px;
-      height: 34px;
-      background: #1f1f23;
-      border: 1px solid #333338;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 15px;
-      letter-spacing: -0.02em;
-      color: #10a37f;
+    .brand-logo {
+      height: 38px;
+      width: auto;
+      filter: invert(1);
+      transition: transform 0.2s ease;
+    }
+
+    .brand:hover .brand-logo {
+      transform: scale(1.05);
     }
 
     .brand-title {
@@ -599,8 +595,7 @@ export async function GET(req: NextRequest) {
     <!-- Top Header -->
     <header class="top-nav">
       <a href="/" class="brand">
-        <div class="logo-badge">🏸</div>
-        <span class="brand-title">DLOB Community</span>
+        <img src="/dlob.png" alt="DLOB Community Logo" class="brand-logo" />
       </a>
 
       <div class="nav-actions">
