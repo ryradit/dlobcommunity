@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -39,7 +39,10 @@ interface PartnershipStat {
   longestStreak: number; // longest consecutive wins as a partnership
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers & Constants ───────────────────────────────────────────────────
+
+export const MIN_MATCHES_PODIUM = 10;
+export const MIN_PARTNER_MATCHES_PODIUM = 5;
 
 function winRateColor(wr: number) {
   if (wr >= 70) return 'text-green-600 dark:text-green-400';
@@ -865,7 +868,7 @@ export default function LeaderboardPage() {
               };
 
               const sorted = [...stats]
-                .filter(s => s.totalMatches > 0)
+                .filter(s => s.totalMatches >= MIN_MATCHES_PODIUM)
                 .map(s => ({
                   ...s,
                   bestPlayerScore: calculateBestPlayerScore(s, maxStats),
@@ -880,7 +883,7 @@ export default function LeaderboardPage() {
               tabTitle = 'Pemain Terbaik';
             } else if (activeTab === 'pemain-tak-terkalahkan') {
               const unbeaten = [...stats]
-                .filter(s => s.losses === 0 && s.wins > 0)
+                .filter(s => s.losses === 0 && s.wins > 0 && s.totalMatches >= MIN_MATCHES_PODIUM)
                 .sort((a, b) => b.wins - a.wins);
               top3 = [
                 { rank: 1, player: unbeaten[0] || null, metric: `${unbeaten[0]?.wins ?? 0} menang - 0 kalah` },
@@ -890,6 +893,7 @@ export default function LeaderboardPage() {
               tabTitle = 'Pemain Tak Terkalahkan';
             } else if (activeTab === 'streak-terpanjang') {
               const streaks = [...stats]
+                .filter(s => s.totalMatches >= MIN_MATCHES_PODIUM)
                 .sort((a, b) => {
                   // First sort by longestWinStreak descending
                   const streakDiff = b.longestWinStreak - a.longestWinStreak;
@@ -905,6 +909,7 @@ export default function LeaderboardPage() {
               tabTitle = 'Streak Terpanjang';
             } else if (activeTab === 'paling-rajin') {
               const diligent = [...stats]
+                .filter(s => s.totalMatches >= MIN_MATCHES_PODIUM)
                 .sort((a, b) => b.totalMatches - a.totalMatches || b.attendances - a.attendances);
               top3 = [
                 { rank: 1, player: diligent[0] || null, metric: `${diligent[0]?.totalMatches ?? 0} main · ${diligent[0]?.attendances ?? 0} pertemuan` },
@@ -916,7 +921,9 @@ export default function LeaderboardPage() {
 
             // For Pasangan Terbaik, render different podium type
             if (activeTab === 'pasangan-terbaik') {
-              const topPartnerships = [...sortedPartnerships].slice(0, 3);
+              const topPartnerships = [...sortedPartnerships]
+                .filter(p => p.totalMatches >= MIN_PARTNER_MATCHES_PODIUM)
+                .slice(0, 3);
               const medals = ['🥇', '🥈', '🥉'];
               const medalColors = [
                 'border-yellow-400 bg-gradient-to-br from-yellow-900/40 to-yellow-800/40',
@@ -926,7 +933,14 @@ export default function LeaderboardPage() {
               const textColors = ['text-yellow-300', 'text-gray-200', 'text-orange-300'];
 
               return (
-                <div className="space-y-8">
+                <div className="space-y-6">
+                  {/* Qualification Badge */}
+                  <div className="flex justify-center">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-xs font-semibold backdrop-blur-sm">
+                      <span>🏆</span>
+                      <span>Kualifikasi Podium: Minimal {MIN_PARTNER_MATCHES_PODIUM} Pertandingan Bersama</span>
+                    </div>
+                  </div>
                   {/* Add animations */}
                   <style>{`
                     @keyframes pulse-glow {
@@ -1126,7 +1140,14 @@ export default function LeaderboardPage() {
             const textColors = ['text-yellow-300', 'text-gray-200', 'text-orange-300'];
 
             return (
-              <div className="space-y-8">
+              <div className="space-y-6">
+                {/* Qualification Badge */}
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-xs font-semibold backdrop-blur-sm">
+                    <span>🏆</span>
+                    <span>Kualifikasi Podium: Minimal {MIN_MATCHES_PODIUM} Pertandingan</span>
+                  </div>
+                </div>
                 {/* Add animations */}
                 <style>{`
                   @keyframes pulse-glow {
@@ -1365,6 +1386,14 @@ export default function LeaderboardPage() {
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-white text-xs sm:text-sm">
                           <div className="flex items-center gap-1 sm:gap-2">
                             <span className="truncate">{s.name}</span>
+                            {s.totalMatches < MIN_MATCHES_PODIUM && s.totalMatches > 0 && (
+                              <span
+                                className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap"
+                                title={`${s.totalMatches}/${MIN_MATCHES_PODIUM} pertandingan untuk kualifikasi podium`}
+                              >
+                                &lt;10 main
+                              </span>
+                            )}
                             {!isPlayerInactive(s) && streakUp && s.currentStreak >= 3 && (
                               <span className="text-orange-500 dark:text-orange-400 text-xs font-bold whitespace-nowrap">
                                 🔥{s.currentStreak}
