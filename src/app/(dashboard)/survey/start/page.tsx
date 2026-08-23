@@ -218,10 +218,15 @@ export default function SurveyStartPage() {
           Responmu sudah kami terima. Masukan kamu sangat berarti untuk perkembangan komunitas DLOB.
         </p>
         <button
-          onClick={() => router.push('/survey')}
-          className="bg-[#3e6461] text-white px-8 py-3 rounded-2xl font-semibold hover:bg-[#2d4a47] transition-colors"
+          onClick={() => {
+            router.push('/');
+            if (typeof window !== 'undefined') {
+              window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+          }}
+          className="bg-[#3e6461] text-white px-8 py-3 rounded-2xl font-semibold hover:bg-[#2d4a47] transition-colors cursor-pointer"
         >
-          Kembali
+          Kembali ke Beranda
         </button>
       </div>
     );
