@@ -102,6 +102,12 @@ export default function Footer() {
                 <li><Link href="/galeri" className="hover:text-blue-400 transition-colors">Galeri</Link></li>
                 <li><Link href="/store" className="hover:text-blue-400 transition-colors">Toko</Link></li>
                 <li><Link href="/survey" className="hover:text-blue-400 transition-colors">Survey Member 📣</Link></li>
+                <li>
+                  <Link href="/api/health" className="hover:text-emerald-400 transition-colors inline-flex items-center gap-1.5 text-zinc-300">
+                    <span>Status API &amp; Sistem</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  </Link>
+                </li>
               </ul>
             </div>
             
@@ -147,7 +153,10 @@ export default function Footer() {
         <div className="text-center text-xs text-gray-500 mt-6 flex items-center justify-center gap-2">
           <span>Didukung oleh AI & Teknologi Pintar</span>
           <span>•</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-full"></span> Sistem Online</span>
+          <Link href="/api/health" className="inline-flex items-center gap-1.5 hover:text-emerald-400 transition-colors text-gray-400">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <span>Status Sistem &amp; API</span>
+          </Link>
         </div>
       </div>
     </footer>
