@@ -876,27 +876,14 @@ export default function LeaderboardPage() {
             let tabTitle = '';
 
             if (activeTab === 'pemain-terbaik') {
-              // Calculate max values for normalization
-              const maxStats = {
-                matches: Math.max(...stats.map(s => s.totalMatches), 1),
-                wins: Math.max(...stats.map(s => s.wins), 1),
-                losses: Math.max(...stats.map(s => s.losses), 1),
-                avgScore: Math.max(...stats.map(s => s.avgScore), 1),
-                streak: Math.max(...stats.map(s => s.longestWinStreak), 1),
-              };
-
-              const sorted = [...stats]
-                .filter(s => s.totalMatches >= MIN_MATCHES_PODIUM)
-                .map(s => ({
-                  ...s,
-                  bestPlayerScore: calculateBestPlayerScore(s, maxStats),
-                }))
-                .sort((a, b) => b.bestPlayerScore - a.bestPlayerScore);
+              const top1 = sortedRecap[0] && sortedRecap[0].totalMatches >= MIN_MATCHES_PODIUM ? sortedRecap[0] : null;
+              const top2 = sortedRecap[1] && sortedRecap[1].totalMatches >= MIN_MATCHES_PODIUM ? sortedRecap[1] : null;
+              const top3Player = sortedRecap[2] && sortedRecap[2].totalMatches >= MIN_MATCHES_PODIUM ? sortedRecap[2] : null;
 
               top3 = [
-                { rank: 1, player: sorted[0] || null, metric: `Points: ${sorted[0]?.bestPlayerScore ?? 0} · ${sorted[0]?.winRate ?? 0}% WR` },
-                { rank: 2, player: sorted[1] || null, metric: `Points: ${sorted[1]?.bestPlayerScore ?? 0} · ${sorted[1]?.winRate ?? 0}% WR` },
-                { rank: 3, player: sorted[2] || null, metric: `Points: ${sorted[2]?.bestPlayerScore ?? 0} · ${sorted[2]?.winRate ?? 0}% WR` },
+                { rank: 1, player: top1, metric: top1 ? `Points: ${(top1 as any).bestPlayerScore?.toFixed(1) ?? 0} · ${top1.winRate}% WR` : '' },
+                { rank: 2, player: top2, metric: top2 ? `Points: ${(top2 as any).bestPlayerScore?.toFixed(1) ?? 0} · ${top2.winRate}% WR` : '' },
+                { rank: 3, player: top3Player, metric: top3Player ? `Points: ${(top3Player as any).bestPlayerScore?.toFixed(1) ?? 0} · ${top3Player.winRate}% WR` : '' },
               ];
               tabTitle = 'Pemain Terbaik';
             } else if (activeTab === 'pemain-tak-terkalahkan') {
