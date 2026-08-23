@@ -547,6 +547,10 @@ export default function StorePage() {
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
 
   const openProduct = (product: Product) => {
+    if (product.id === 'nb-jersey') {
+      router.push('/store/jersey-dlob-new-batch');
+      return;
+    }
     setSelectedProductId(product.id);
     setSelectedColor(product.colorVariants[0]?.id ?? '');
     setSelectedSize('');
