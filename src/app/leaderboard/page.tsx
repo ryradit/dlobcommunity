@@ -103,7 +103,7 @@ export const PERIOD_CONFIGS: PeriodConfig[] = [
     shortTitle: 'Periode 3',
     subtitle: '1 Sep – 31 Des 2026',
     badgeText: 'Mulai 1 Sep',
-    badgeColor: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+    badgeColor: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
     icon: '⏳',
     startDate: '2026-09-01',
     endDate: '2026-12-31T23:59:59',
@@ -666,9 +666,9 @@ export default function LeaderboardPage() {
     const active = recapSort === col;
     return (
       <th
-        className={`px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors hover:text-purple-600 dark:hover:text-purple-400 ${
+        className={`px-4 py-3 text-right font-semibold cursor-pointer select-none group transition-colors hover:text-teal-600 dark:hover:text-teal-400 ${
           active
-            ? 'text-purple-600 dark:text-purple-400'
+            ? 'text-teal-600 dark:text-teal-400'
             : 'text-gray-500 dark:text-zinc-400'
         } ${className ?? ''}`}
         onClick={() => toggleRecapSort(col)}
@@ -757,7 +757,7 @@ export default function LeaderboardPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-purple-600 dark:text-purple-400 animate-spin mx-auto mb-4" />
+          <RefreshCw className="w-12 h-12 text-teal-600 dark:text-teal-400 animate-spin mx-auto mb-4" />
           <p className="text-gray-600 dark:text-zinc-400 font-semibold">Memuat leaderboard...</p>
         </div>
       </div>
@@ -769,7 +769,7 @@ export default function LeaderboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300 pb-20 sm:pb-28">
       {/* ── Top Hero Header ────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 text-white py-6 sm:py-10 px-3 sm:px-6 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#203a38] via-[#2d4e4b] to-[#1a2d2b] text-white py-6 sm:py-10 px-3 sm:px-6 shadow-xl relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
 
         {/* Back Button */}
@@ -787,19 +787,19 @@ export default function LeaderboardPage() {
           <div className="text-center sm:text-left">
             <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
               <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300" />
-              <span className="text-xs font-semibold tracking-widest uppercase text-purple-200">
+              <span className="text-xs font-semibold tracking-widest uppercase text-teal-200">
                 DLOB Badminton
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
               Leaderboard
             </h1>
-            <p className="text-purple-200 text-xs sm:text-sm mt-1">
+            <p className="text-teal-200 text-xs sm:text-sm mt-1">
               Statistik performa dan peringkat member DLOB Community
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-purple-200 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 text-xs text-teal-200 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
             <span className="inline-flex items-center gap-1.5 font-medium">
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -809,7 +809,7 @@ export default function LeaderboardPage() {
               {liveRefreshing ? 'Updating...' : 'Live'}
             </span>
             {lastUpdated && !liveRefreshing && (
-              <span className="text-purple-200/60 hidden sm:inline">
+              <span className="text-teal-200/60 hidden sm:inline">
                 · {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
@@ -847,7 +847,7 @@ export default function LeaderboardPage() {
                   onClick={() => handlePeriodChange(period.id)}
                   className={`relative p-2.5 sm:p-3 rounded-xl text-left transition-all duration-200 flex flex-col justify-between border ${
                     isActive
-                      ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-md border-purple-500 ring-2 ring-purple-400/30 scale-[1.01]'
+                      ? 'bg-gradient-to-br from-[#3e6461] to-[#243c3a] text-white shadow-md border-teal-500/60 ring-2 ring-teal-400/30 scale-[1.01]'
                       : 'bg-gray-50 dark:bg-zinc-800/60 text-gray-800 dark:text-zinc-200 border-gray-200/70 dark:border-zinc-700/60 hover:bg-gray-100 dark:hover:bg-zinc-800'
                   }`}
                 >
@@ -904,7 +904,7 @@ export default function LeaderboardPage() {
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`px-2 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm whitespace-nowrap transition-all duration-300 flex items-center gap-1 sm:gap-2 flex-shrink-0 ${
                   activeTab === tab.id
-                    ? 'bg-purple-600 text-white shadow-lg'
+                    ? 'bg-[#3e6461] text-white shadow-lg'
                     : 'bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-zinc-600'
                 }`}
               >
@@ -917,7 +917,7 @@ export default function LeaderboardPage() {
 
           {/* Empty period state when period has 0 matches */}
           {periodMatchesCount === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-4 bg-purple-50/50 dark:bg-purple-950/20 rounded-2xl border border-dashed border-purple-300 dark:border-purple-800/40 text-center max-w-lg mx-auto my-6">
+            <div className="flex flex-col items-center justify-center py-16 px-4 bg-teal-50/50 dark:bg-teal-950/20 rounded-2xl border border-dashed border-teal-300 dark:border-teal-800/40 text-center max-w-lg mx-auto my-6">
               <div className="text-5xl mb-3">⏳</div>
               <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
                 {currentPeriodConfig.title}
@@ -925,7 +925,7 @@ export default function LeaderboardPage() {
               <p className="text-xs sm:text-sm text-gray-600 dark:text-zinc-300 mb-4 max-w-sm">
                 Musim ini akan resmi dimulai pada <strong>{currentPeriodConfig.subtitle}</strong>. Pertandingan yang dicatat mulai tanggal tersebut akan otomatis masuk ke leaderboard periode ini!
               </p>
-              <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-purple-600 text-white shadow-md">
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-[#3e6461] text-white shadow-md">
                 <span>🏸</span>
                 <span>Siapkan dirimu untuk perebutan podium musim depan!</span>
               </div>
@@ -1249,7 +1249,7 @@ export default function LeaderboardPage() {
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 mb-4 max-w-sm">
                       Kualifikasi podium membutuhkan minimal <strong>{currentMinMatches} pertandingan</strong>.
                     </p>
-                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
                       <span>🔥</span>
                       <span>Jadilah pemain pertama yang mencapai rekor ini!</span>
                     </div>
@@ -1420,7 +1420,7 @@ export default function LeaderboardPage() {
         {activeTab !== 'pasangan-terbaik' && (
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-colors duration-300">
             <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-zinc-700 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2 flex-wrap">
-              <Zap className="w-5 h-5 text-purple-500 shrink-0" />
+              <Zap className="w-5 h-5 text-teal-500 shrink-0" />
               <h2 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg">Rekap Semua Member</h2>
               <span className="text-xs text-gray-400 dark:text-zinc-500">· Klik kolom untuk mengurutkan</span>
               <span className="ml-auto text-xs text-gray-400 dark:text-zinc-500">{stats.length} member</span>
@@ -1432,7 +1432,7 @@ export default function LeaderboardPage() {
                   <tr className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
                     <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-8">#</th>
                     <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Member</th>
-                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400 flex items-center justify-end gap-1" onClick={() => toggleRecapSort('bestPlayerScore')}>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-teal-600 dark:hover:text-teal-400 flex items-center justify-end gap-1" onClick={() => toggleRecapSort('bestPlayerScore')}>
                       <span className="inline-flex items-center justify-end gap-1">
                         <span className="hidden sm:inline">Points</span>
                         <span className="sm:hidden">Pts</span>
@@ -1545,7 +1545,7 @@ export default function LeaderboardPage() {
         {activeTab === 'pasangan-terbaik' && (
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-colors duration-300">
             <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-zinc-700 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2 flex-wrap">
-              <Users className="w-5 h-5 text-purple-500 shrink-0" />
+              <Users className="w-5 h-5 text-teal-500 shrink-0" />
               <h2 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg">Semua Pasangan (Min. 2 Pertandingan)</h2>
               <span className="text-xs text-gray-400 dark:text-zinc-500">· Klik kolom untuk mengurutkan</span>
               <span className="ml-auto text-xs text-gray-400 dark:text-zinc-500">{sortedPartnerships.length} pasangan</span>
@@ -1558,7 +1558,7 @@ export default function LeaderboardPage() {
                     <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500 dark:text-zinc-400 w-8">#</th>
                     <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-500 dark:text-zinc-400">Pasangan</th>
                     <th 
-                      className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-teal-600 dark:hover:text-teal-400"
                       onClick={() => togglePartnershipSort('wins')}
                     >
                       <span className={`text-xs ${partnershipSort === 'wins' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
@@ -1567,7 +1567,7 @@ export default function LeaderboardPage() {
                       {' '}<span className="hidden sm:inline">Menang</span><span className="sm:hidden">M</span>
                     </th>
                     <th 
-                      className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-teal-600 dark:hover:text-teal-400"
                       onClick={() => togglePartnershipSort('totalMatches')}
                     >
                       <span className={`text-xs ${partnershipSort === 'totalMatches' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
@@ -1576,7 +1576,7 @@ export default function LeaderboardPage() {
                       {' '}Main
                     </th>
                     <th 
-                      className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400"
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-right font-semibold cursor-pointer select-none group transition-colors text-gray-500 dark:text-zinc-400 hover:text-teal-600 dark:hover:text-teal-400"
                       onClick={() => togglePartnershipSort('winRate')}
                     >
                       <span className={`text-xs ${partnershipSort === 'winRate' ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}>
@@ -1607,10 +1607,10 @@ export default function LeaderboardPage() {
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-white text-xs sm:text-sm">
                           <div className="flex items-center gap-1 sm:gap-2">
                             <div className="flex gap-0.5 sm:gap-1 flex-shrink-0">
-                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs flex items-center justify-center bg-purple-600 text-white font-bold">
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs flex items-center justify-center bg-[#3e6461] text-white font-bold">
                                 {p.player1.charAt(0)}
                               </div>
-                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs flex items-center justify-center bg-purple-600 text-white font-bold">
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs flex items-center justify-center bg-[#3e6461] text-white font-bold">
                                 {p.player2.charAt(0)}
                               </div>
                             </div>
@@ -1650,7 +1650,7 @@ export default function LeaderboardPage() {
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-xl max-w-md w-full animate-in fade-in-0 zoom-in-95 duration-200">
               <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between">
                 <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg flex items-center gap-2">
-                  <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-teal-500" />
                   Sistem Points
                 </h3>
                 <button
@@ -1702,7 +1702,7 @@ export default function LeaderboardPage() {
                   </ul>
                 </div>
 
-                <div className="bg-purple-50 dark:bg-zinc-800/50 rounded-lg p-2 sm:p-3">
+                <div className="bg-teal-50 dark:bg-zinc-800/50 rounded-lg p-2 sm:p-3">
                   <p className="text-xs text-gray-700 dark:text-zinc-300">
                     💡 <strong>Tips:</strong> Fokus pada <strong>jumlah kemenangan</strong> untuk skor maksimal. Semakin banyak menang, semakin tinggi score. Konsistensi (win rate) tetap penting, tapi volume kemenangan adalah kunci utama!
                   </p>
@@ -1711,7 +1711,7 @@ export default function LeaderboardPage() {
               <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-zinc-700">
                 <button
                   onClick={() => setShowPointsInfo(false)}
-                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors text-sm sm:text-base"
+                  className="w-full px-4 py-2 bg-[#3e6461] hover:bg-[#2d4a47] text-white rounded-lg font-semibold transition-colors text-sm sm:text-base"
                 >
                   Mengerti
                 </button>
