@@ -30,14 +30,17 @@ export default function Navbar() {
     { href: '/kontak', label: 'Kontak' },
   ];
 
+  const isHome = pathname === '/';
+  const isDarkGlass = !isHome || scrolled || mobileMenuOpen;
+
   return (
     <header className="fixed top-0 inset-x-0 z-50 w-full pt-3.5 sm:pt-5 px-3 sm:px-6 pointer-events-none transition-all duration-300">
       <nav className="max-w-6xl mx-auto pointer-events-auto">
         <div
           className={`relative transition-all duration-300 rounded-2xl sm:rounded-full ${
-            scrolled || mobileMenuOpen
-              ? 'bg-zinc-950/80 backdrop-blur-xl border border-white/15 shadow-2xl shadow-black/60 py-2 sm:py-2.5 px-4 sm:px-6'
-              : 'bg-white/[0.04] backdrop-blur-md border border-white/10 shadow-lg py-2.5 sm:py-3 px-4 sm:px-6'
+            isDarkGlass
+              ? 'bg-zinc-950/90 backdrop-blur-xl border border-white/15 shadow-2xl shadow-black/50 py-2 sm:py-2.5 px-4 sm:px-6'
+              : 'bg-white/[0.05] backdrop-blur-md border border-white/10 shadow-lg py-2.5 sm:py-3 px-4 sm:px-6'
           }`}
         >
           <div className="flex justify-between items-center">
