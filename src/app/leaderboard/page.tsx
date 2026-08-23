@@ -41,6 +41,77 @@ interface PartnershipStat {
 
 // ─── Helpers & Constants ───────────────────────────────────────────────────
 
+export type LeaderboardPeriod = 'all-time' | 'p2-2026' | 'p1-2026' | 'p3-2026';
+
+export interface PeriodConfig {
+  id: LeaderboardPeriod;
+  title: string;
+  shortTitle: string;
+  subtitle: string;
+  badgeText: string;
+  badgeColor: string;
+  icon: string;
+  startDate: string | null;
+  endDate: string | null;
+  minMatches: number;
+  minPartnerMatches: number;
+}
+
+export const PERIOD_CONFIGS: PeriodConfig[] = [
+  {
+    id: 'all-time',
+    title: 'Sepanjang Masa',
+    shortTitle: 'Sepanjang Masa',
+    subtitle: 'Semua catatan sejak 20 Feb 2026',
+    badgeText: 'Total Record',
+    badgeColor: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+    icon: '🌟',
+    startDate: null,
+    endDate: null,
+    minMatches: 10,
+    minPartnerMatches: 5,
+  },
+  {
+    id: 'p2-2026',
+    title: 'Periode 2 (Mei – Agu 2026)',
+    shortTitle: 'Periode 2',
+    subtitle: '1 Mei – 31 Agu 2026',
+    badgeText: 'Musim Berjalan',
+    badgeColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    icon: '🟢',
+    startDate: '2026-05-01',
+    endDate: '2026-08-31T23:59:59',
+    minMatches: 7,
+    minPartnerMatches: 3,
+  },
+  {
+    id: 'p1-2026',
+    title: 'Periode 1 (Feb – Apr 2026)',
+    shortTitle: 'Periode 1',
+    subtitle: '20 Feb – 30 Apr 2026',
+    badgeText: 'Arsip Musim 1',
+    badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    icon: '📁',
+    startDate: '2026-02-01',
+    endDate: '2026-04-30T23:59:59',
+    minMatches: 7,
+    minPartnerMatches: 3,
+  },
+  {
+    id: 'p3-2026',
+    title: 'Periode 3 (Sep – Des 2026)',
+    shortTitle: 'Periode 3',
+    subtitle: '1 Sep – 31 Des 2026',
+    badgeText: 'Mulai 1 Sep',
+    badgeColor: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+    icon: '⏳',
+    startDate: '2026-09-01',
+    endDate: '2026-12-31T23:59:59',
+    minMatches: 7,
+    minPartnerMatches: 3,
+  },
+];
+
 export const MIN_MATCHES_PODIUM = 10;
 export const MIN_PARTNER_MATCHES_PODIUM = 5;
 
@@ -157,6 +228,11 @@ export default function LeaderboardPage() {
   const [liveRefreshing, setLiveRefreshing] = useState(false);
   const [firstMatchDate, setFirstMatchDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pemain-terbaik' | 'pemain-tak-terkalahkan' | 'streak-terpanjang' | 'paling-rajin' | 'pasangan-terbaik'>('pemain-terbaik');
+  const [activePeriod, setActivePeriod] = useState<LeaderboardPeriod>('p2-2026');
+  const [rawMatches, setRawMatches] = useState<any[]>([]);
+  const [rawMatchMembers, setRawMatchMembers] = useState<any[]>([]);
+  const [rawRealNames, setRawRealNames] = useState<Set<string>>(new Set());
+  const [periodMatchesCount, setPeriodMatchesCount] = useState<number>(0);
   const [showPointsInfo, setShowPointsInfo] = useState(false);
   const [canGoBack, setCanGoBack] = useState(true);
   const [partnerships, setPartnerships] = useState<PartnershipStat[]>([]);
@@ -177,6 +253,254 @@ export default function LeaderboardPage() {
       if (carouselRef.current) clearInterval(carouselRef.current);
     };
   }, []);
+
+  function computeAndSetPeriodStats(
+    periodId: LeaderboardPeriod,
+    allMatches: any[],
+    allMatchMembers: any[],
+    realNames: Set<string>
+  ) {
+    const periodConfig = PERIOD_CONFIGS.find(p => p.id === periodId) || PERIOD_CONFIGS[0];
+
+    // Filter matches by period date range
+    let filteredMatches = allMatches;
+    if (periodConfig.startDate) {
+      filteredMatches = filteredMatches.filter(m => {
+        if (!m.match_date) return false;
+        return m.match_date >= periodConfig.startDate! && (!periodConfig.endDate || m.match_date <= periodConfig.endDate!);
+      });
+    }
+
+    setPeriodMatchesCount(filteredMatches.length);
+
+    // First recorded match date in this period
+    if (filteredMatches.length > 0 && filteredMatches[0].match_date) {
+      const d = new Date(filteredMatches[0].match_date);
+      setFirstMatchDate(
+        d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      );
+    } else {
+      setFirstMatchDate(null);
+    }
+
+    // match_id -> YYYY-MM-DD
+    const matchDateMap = new Map<string, string>();
+    for (const m of filteredMatches) {
+      if (m.id && m.match_date) {
+        matchDateMap.set(m.id, new Date(m.match_date).toISOString().slice(0, 10));
+      }
+    }
+
+    // Distinct play dates per member in this period
+    const attendanceMap = new Map<string, Set<string>>();
+    for (const mm of allMatchMembers) {
+      if (!realNames.has(mm.member_name)) continue;
+      const date = matchDateMap.get(mm.match_id);
+      if (!date) continue;
+      if (!attendanceMap.has(mm.member_name)) attendanceMap.set(mm.member_name, new Set());
+      attendanceMap.get(mm.member_name)!.add(date);
+    }
+
+    const statMap = new Map<string, MemberStat>();
+    for (const name of realNames) {
+      statMap.set(name, {
+        name,
+        totalMatches: 0,
+        wins: 0,
+        losses: 0,
+        winRate: 0,
+        avgScore: 0,
+        longestWinStreak: 0,
+        currentStreak: 0,
+        attendances: attendanceMap.get(name)?.size ?? 0,
+        totalScore: 0,
+        lastMatchDate: null,
+      });
+    }
+
+    const playerMatchHistory = new Map<string, boolean[]>();
+    const playerWeightedStats = new Map<string, { weightedWins: number; weightedMatches: number }>();
+
+    for (const match of filteredMatches) {
+      const players = [
+        { name: match.team1_player1, team: 'team1' },
+        { name: match.team1_player2, team: 'team1' },
+        { name: match.team2_player1, team: 'team2' },
+        { name: match.team2_player2, team: 'team2' },
+      ].filter(p => p.name && realNames.has(p.name));
+
+      for (const { name, team } of players) {
+        const s = statMap.get(name);
+        if (!s) continue;
+        const won = match.winner === team;
+        const lost = match.winner && match.winner !== team;
+        const score = team === 'team1' ? (match.team1_score ?? 0) : (match.team2_score ?? 0);
+        
+        s.totalMatches++;
+        s.totalScore += score;
+        if (won) s.wins++;
+        if (lost) s.losses++;
+        
+        if (match.match_date) {
+          s.lastMatchDate = new Date(match.match_date).toISOString().slice(0, 10);
+        }
+        
+        if (!playerMatchHistory.has(name)) playerMatchHistory.set(name, []);
+        playerMatchHistory.get(name)!.push(won);
+        
+        const decayWeight = getDecayWeight(match.match_date);
+        if (decayWeight > 0) {
+          if (!playerWeightedStats.has(name)) {
+            playerWeightedStats.set(name, { weightedWins: 0, weightedMatches: 0 });
+          }
+          const ws = playerWeightedStats.get(name)!;
+          ws.weightedMatches += decayWeight;
+          if (won) ws.weightedWins += decayWeight;
+        }
+      }
+    }
+
+    for (const [name, history] of playerMatchHistory) {
+      const s = statMap.get(name);
+      if (!s) continue;
+      let longest = 0, current = 0;
+      for (const won of history) {
+        if (won) { current++; longest = Math.max(longest, current); }
+        else { current = 0; }
+      }
+      s.longestWinStreak = longest;
+      let cur = 0;
+      const lastResult = history[history.length - 1];
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i] === lastResult) cur++;
+        else break;
+      }
+      s.currentStreak = lastResult ? cur : -cur;
+      s.winRate = s.totalMatches > 0 ? Math.round((s.wins / s.totalMatches) * 100) : 0;
+      s.avgScore = s.totalMatches > 0 ? Math.round((s.totalScore / s.totalMatches) * 10) / 10 : 0;
+    }
+
+    const allStats = Array.from(statMap.values());
+    const maxStats = {
+      matches: Math.max(...allStats.map(s => s.totalMatches), 1),
+      wins: Math.max(...allStats.map(s => s.wins), 1),
+      losses: Math.max(...allStats.map(s => s.losses), 1),
+      avgScore: Math.max(...allStats.map(s => s.avgScore), 1),
+      streak: Math.max(...allStats.map(s => s.longestWinStreak), 1),
+      weightedMatches: Math.max(...Array.from(playerWeightedStats.values()).map(w => w.weightedMatches), 1),
+      weightedWins: Math.max(...Array.from(playerWeightedStats.values()).map(w => w.weightedWins), 1),
+    };
+
+    const statsWithScores = allStats.map(s => {
+      const weightedStats = playerWeightedStats.get(s.name);
+      return {
+        ...s,
+        weightedWins: weightedStats?.weightedWins,
+        weightedMatches: weightedStats?.weightedMatches,
+        bestPlayerScore: calculateBestPlayerScore({
+          ...s,
+          weightedWins: weightedStats?.weightedWins,
+          weightedMatches: weightedStats?.weightedMatches,
+        }, maxStats),
+      };
+    });
+
+    // Partnerships calculation for period
+    const partnershipMap = new Map<string, {
+      data: PartnershipStat;
+      history: boolean[];
+    }>();
+
+    for (const match of filteredMatches) {
+      const team1_p1 = match.team1_player1?.trim();
+      const team1_p2 = match.team1_player2?.trim();
+      if (team1_p1 && team1_p2 && realNames.has(team1_p1) && realNames.has(team1_p2)) {
+        const key = [team1_p1, team1_p2].sort().join('|');
+        if (!partnershipMap.has(key)) {
+          partnershipMap.set(key, {
+            data: {
+              player1: [team1_p1, team1_p2].sort()[0],
+              player2: [team1_p1, team1_p2].sort()[1],
+              totalMatches: 0,
+              wins: 0,
+              losses: 0,
+              winRate: 0,
+              combinedScore: 0,
+              longestStreak: 0,
+            },
+            history: [],
+          });
+        }
+        const entry = partnershipMap.get(key)!;
+        const p = entry.data;
+        p.totalMatches++;
+        const score1 = match.team1_score ?? 0;
+        p.combinedScore += score1;
+        const won = match.winner === 'team1';
+        entry.history.push(won);
+        if (won) p.wins++;
+        else if (match.winner === 'team2') p.losses++;
+      }
+
+      const team2_p1 = match.team2_player1?.trim();
+      const team2_p2 = match.team2_player2?.trim();
+      if (team2_p1 && team2_p2 && realNames.has(team2_p1) && realNames.has(team2_p2)) {
+        const key = [team2_p1, team2_p2].sort().join('|');
+        if (!partnershipMap.has(key)) {
+          partnershipMap.set(key, {
+            data: {
+              player1: [team2_p1, team2_p2].sort()[0],
+              player2: [team2_p1, team2_p2].sort()[1],
+              totalMatches: 0,
+              wins: 0,
+              losses: 0,
+              winRate: 0,
+              combinedScore: 0,
+              longestStreak: 0,
+            },
+            history: [],
+          });
+        }
+        const entry = partnershipMap.get(key)!;
+        const p = entry.data;
+        p.totalMatches++;
+        const score2 = match.team2_score ?? 0;
+        p.combinedScore += score2;
+        const won = match.winner === 'team2';
+        entry.history.push(won);
+        if (won) p.wins++;
+        else if (match.winner === 'team1') p.losses++;
+      }
+    }
+
+    partnershipMap.forEach((entry) => {
+      let longestStreak = 0, currentStreak = 0;
+      for (const won of entry.history) {
+        if (won) {
+          currentStreak++;
+          longestStreak = Math.max(longestStreak, currentStreak);
+        } else {
+          currentStreak = 0;
+        }
+      }
+      entry.data.longestStreak = longestStreak;
+      entry.data.winRate = entry.data.totalMatches > 0 ? Math.round((entry.data.wins / entry.data.totalMatches) * 100) : 0;
+    });
+
+    const qualifiedPartnerships = Array.from(partnershipMap.values())
+      .filter(entry => entry.data.totalMatches >= 2)
+      .map(entry => entry.data);
+
+    setPartnerships(qualifiedPartnerships);
+    setStats(statsWithScores);
+  }
+
+  function handlePeriodChange(newPeriod: LeaderboardPeriod) {
+    setActivePeriod(newPeriod);
+    if (rawMatches.length > 0) {
+      computeAndSetPeriodStats(newPeriod, rawMatches, rawMatchMembers, rawRealNames);
+    }
+  }
 
   useEffect(() => {
     fetchStats();
@@ -236,328 +560,11 @@ export default function LeaderboardPage() {
 
       if (!matches || !matchMembers) return;
 
-      // First recorded match date
-      if (matches.length > 0 && matches[0].match_date) {
-        const d = new Date(matches[0].match_date);
-        setFirstMatchDate(
-          d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-        );
-      }
+      setRawMatches(matches);
+      setRawMatchMembers(matchMembers);
+      setRawRealNames(realNames);
 
-      // match_id → YYYY-MM-DD
-      const matchDateMap = new Map<string, string>();
-      for (const m of matches) {
-        if (m.id && m.match_date) {
-          matchDateMap.set(m.id, new Date(m.match_date).toISOString().slice(0, 10));
-        }
-      }
-
-      // Distinct play dates per member
-      const attendanceMap = new Map<string, Set<string>>();
-      for (const mm of matchMembers) {
-        if (!realNames.has(mm.member_name)) continue;
-        const date = matchDateMap.get(mm.match_id);
-        if (!date) continue;
-        if (!attendanceMap.has(mm.member_name)) attendanceMap.set(mm.member_name, new Set());
-        attendanceMap.get(mm.member_name)!.add(date);
-      }
-
-      const statMap = new Map<string, MemberStat>();
-      for (const name of realNames) {
-        statMap.set(name, {
-          name,
-          totalMatches: 0,
-          wins: 0,
-          losses: 0,
-          winRate: 0,
-          avgScore: 0,
-          longestWinStreak: 0,
-          currentStreak: 0,
-          attendances: attendanceMap.get(name)?.size ?? 0,
-          totalScore: 0,
-          lastMatchDate: null,
-        });
-      }
-
-      const playerMatchHistory = new Map<string, boolean[]>();
-      // Track weighted metrics for 90-day rolling window
-      const playerWeightedStats = new Map<string, { weightedWins: number; weightedMatches: number }>();
-
-      for (const match of matches) {
-        const players = [
-          { name: match.team1_player1, team: 'team1' },
-          { name: match.team1_player2, team: 'team1' },
-          { name: match.team2_player1, team: 'team2' },
-          { name: match.team2_player2, team: 'team2' },
-        ].filter(p => p.name && realNames.has(p.name));
-
-        for (const { name, team } of players) {
-          const s = statMap.get(name);
-          if (!s) continue;
-          const won = match.winner === team;
-          const lost = match.winner && match.winner !== team;
-          const score = team === 'team1' ? (match.team1_score ?? 0) : (match.team2_score ?? 0);
-          
-          s.totalMatches++;
-          s.totalScore += score;
-          if (won) s.wins++;
-          if (lost) s.losses++;
-          
-          // Track last match date - will be updated to the most recent match
-          if (match.match_date) {
-            s.lastMatchDate = new Date(match.match_date).toISOString().slice(0, 10);
-          }
-          
-          if (!playerMatchHistory.has(name)) playerMatchHistory.set(name, []);
-          playerMatchHistory.get(name)!.push(won);
-          
-          // Calculate decay weight for 90-day rolling window
-          const decayWeight = getDecayWeight(match.match_date);
-          if (decayWeight > 0) {
-            if (!playerWeightedStats.has(name)) {
-              playerWeightedStats.set(name, { weightedWins: 0, weightedMatches: 0 });
-            }
-            const ws = playerWeightedStats.get(name)!;
-            ws.weightedMatches += decayWeight;
-            if (won) ws.weightedWins += decayWeight;
-          }
-        }
-      }
-
-      for (const [name, history] of playerMatchHistory) {
-        const s = statMap.get(name);
-        if (!s) continue;
-        let longest = 0, current = 0;
-        for (const won of history) {
-          if (won) { current++; longest = Math.max(longest, current); }
-          else { current = 0; }
-        }
-        s.longestWinStreak = longest;
-        let cur = 0;
-        const lastResult = history[history.length - 1];
-        for (let i = history.length - 1; i >= 0; i--) {
-          if (history[i] === lastResult) cur++;
-          else break;
-        }
-        s.currentStreak = lastResult ? cur : -cur;
-        s.winRate = s.totalMatches > 0 ? Math.round((s.wins / s.totalMatches) * 100) : 0;
-        s.avgScore = s.totalMatches > 0 ? Math.round((s.totalScore / s.totalMatches) * 10) / 10 : 0;
-      }
-
-      // Calculate best player scores for all members
-      const allStats = Array.from(statMap.values());
-      
-      // Calculate max stats for normalization (using weighted metrics where available)
-      const maxStats = {
-        matches: Math.max(...allStats.map(s => s.totalMatches), 1),
-        wins: Math.max(...allStats.map(s => s.wins), 1),
-        losses: Math.max(...allStats.map(s => s.losses), 1),
-        avgScore: Math.max(...allStats.map(s => s.avgScore), 1),
-        streak: Math.max(...allStats.map(s => s.longestWinStreak), 1),
-        weightedMatches: Math.max(...Array.from(playerWeightedStats.values()).map(w => w.weightedMatches), 1),
-        weightedWins: Math.max(...Array.from(playerWeightedStats.values()).map(w => w.weightedWins), 1),
-      };
-
-      const statsWithScores = allStats.map(s => {
-        const weightedStats = playerWeightedStats.get(s.name);
-        return {
-          ...s,
-          weightedWins: weightedStats?.weightedWins,
-          weightedMatches: weightedStats?.weightedMatches,
-          bestPlayerScore: calculateBestPlayerScore({
-            ...s,
-            weightedWins: weightedStats?.weightedWins,
-            weightedMatches: weightedStats?.weightedMatches,
-          }, maxStats),
-        };
-      });
-
-      // Fetch previous match week's score history for rank/score comparison
-      // Get all unique snapshot dates, ordered descending
-      const { data: snapshotDates } = await supabase
-        .from('score_history')
-        .select('snapshot_date')
-        .order('snapshot_date', { ascending: false })
-        .limit(20); // Get last 20 snapshots to find previous week
-
-      let previousWeekDateStr: string | null = null;
-      if (snapshotDates && snapshotDates.length > 0) {
-        // Get the most recent snapshot (likely today or last match day)
-        const lastSnapshotDate = snapshotDates[0].snapshot_date;
-        // Find a snapshot from more than 2 days ago (previous week)
-        const lastDate = new Date(lastSnapshotDate);
-        for (const snapshot of snapshotDates) {
-          const snapshotDate = new Date(snapshot.snapshot_date);
-          const daysDiff = (lastDate.getTime() - snapshotDate.getTime()) / (1000 * 60 * 60 * 24);
-          if (daysDiff >= 3) { // At least 3 days ago = previous match week
-            previousWeekDateStr = snapshot.snapshot_date;
-            break;
-          }
-        }
-      }
-
-      // If no snapshot from previous week, try getting the oldest one
-      if (!previousWeekDateStr && snapshotDates && snapshotDates.length > 1) {
-        previousWeekDateStr = snapshotDates[snapshotDates.length - 1].snapshot_date;
-      }
-
-      const { data: previousWeekSnapshotData } = previousWeekDateStr
-        ? await supabase
-            .from('score_history')
-            .select('member_name, best_player_score')
-            .eq('snapshot_date', previousWeekDateStr)
-        : { data: null };
-
-      // Build previous week's ranking map
-      const previousWeekScoresMap = new Map<string, { bestPlayerScore: number }>();
-      if (previousWeekSnapshotData) {
-        for (const snapshot of previousWeekSnapshotData) {
-          previousWeekScoresMap.set(snapshot.member_name, {
-            bestPlayerScore: snapshot.best_player_score ?? 0,
-          });
-        }
-      }
-
-      // Calculate rank changes by comparing positions
-      const sortedByBestScore = [...statsWithScores].sort((a, b) => {
-        const scoreA = (a as any).bestPlayerScore || 0;
-        const scoreB = (b as any).bestPlayerScore || 0;
-        return scoreB - scoreA; // desc
-      });
-
-      const todayRankMap = new Map<string, number>();
-      sortedByBestScore.forEach((stat, idx) => {
-        todayRankMap.set(stat.name, idx + 1);
-      });
-
-      // Build previous week's ranking
-      const previousWeekRankMap = new Map<string, number>();
-      const previousWeekStats = [...statsWithScores].map(stat => ({
-        ...stat,
-        bestPlayerScore: previousWeekScoresMap.get(stat.name)?.bestPlayerScore ?? 0,
-      }));
-      const sortedPreviousWeekByBestScore = previousWeekStats.sort((a, b) => {
-        const scoreA = a.bestPlayerScore || 0;
-        const scoreB = b.bestPlayerScore || 0;
-        return scoreB - scoreA; // desc
-      });
-      sortedPreviousWeekByBestScore.forEach((stat, idx) => {
-        previousWeekRankMap.set(stat.name, idx + 1);
-      });
-
-      // Add rank and score change to stats
-      const statsWithChanges = statsWithScores.map(stat => {
-        const previousData = previousWeekScoresMap.get(stat.name);
-        const previousBestPlayerScore = previousData?.bestPlayerScore ?? 0;
-        const currentBestPlayerScore = (stat as any).bestPlayerScore ?? 0;
-        const scoreChange = currentBestPlayerScore - previousBestPlayerScore;
-        const todayRank = todayRankMap.get(stat.name) ?? 999;
-        const previousRank = previousWeekRankMap.get(stat.name) ?? 999;
-        const rankChange = previousRank - todayRank; // positive = improved (lower rank = better)
-
-        return {
-          ...stat,
-          scoreChange,
-          previousScore: previousBestPlayerScore,
-          rankChange,
-          previousRank: previousRank,
-        };
-      });
-
-      // Calculate partnership statistics with streak tracking
-      const partnershipMap = new Map<string, {
-        data: PartnershipStat;
-        history: boolean[]; // track win/loss history for streak calculation
-      }>();
-      for (const match of matches) {
-        // Team 1 partnership
-        const team1_p1 = match.team1_player1?.trim();
-        const team1_p2 = match.team1_player2?.trim();
-        if (team1_p1 && team1_p2 && realNames.has(team1_p1) && realNames.has(team1_p2)) {
-          const key = [team1_p1, team1_p2].sort().join('|');
-          if (!partnershipMap.has(key)) {
-            partnershipMap.set(key, {
-              data: {
-                player1: [team1_p1, team1_p2].sort()[0],
-                player2: [team1_p1, team1_p2].sort()[1],
-                totalMatches: 0,
-                wins: 0,
-                losses: 0,
-                winRate: 0,
-                combinedScore: 0,
-                longestStreak: 0,
-              },
-              history: [],
-            });
-          }
-          const entry = partnershipMap.get(key)!;
-          const p = entry.data;
-          p.totalMatches++;
-          const score1 = match.team1_score ?? 0;
-          const score2 = match.team2_score ?? 0;
-          p.combinedScore += score1;
-          const won = match.winner === 'team1';
-          entry.history.push(won);
-          if (won) p.wins++;
-          else if (match.winner === 'team2') p.losses++;
-        }
-
-        // Team 2 partnership
-        const team2_p1 = match.team2_player1?.trim();
-        const team2_p2 = match.team2_player2?.trim();
-        if (team2_p1 && team2_p2 && realNames.has(team2_p1) && realNames.has(team2_p2)) {
-          const key = [team2_p1, team2_p2].sort().join('|');
-          if (!partnershipMap.has(key)) {
-            partnershipMap.set(key, {
-              data: {
-                player1: [team2_p1, team2_p2].sort()[0],
-                player2: [team2_p1, team2_p2].sort()[1],
-                totalMatches: 0,
-                wins: 0,
-                losses: 0,
-                winRate: 0,
-                combinedScore: 0,
-                longestStreak: 0,
-              },
-              history: [],
-            });
-          }
-          const entry = partnershipMap.get(key)!;
-          const p = entry.data;
-          p.totalMatches++;
-          const score2 = match.team2_score ?? 0;
-          p.combinedScore += score2;
-          const won = match.winner === 'team2';
-          entry.history.push(won);
-          if (won) p.wins++;
-          else if (match.winner === 'team1') p.losses++;
-        }
-      }
-
-      // Calculate longestStreak for each partnership
-      partnershipMap.forEach((entry) => {
-        let longestStreak = 0, currentStreak = 0;
-        for (const won of entry.history) {
-          if (won) {
-            currentStreak++;
-            longestStreak = Math.max(longestStreak, currentStreak);
-          } else {
-            currentStreak = 0;
-          }
-        }
-        entry.data.longestStreak = longestStreak;
-      });
-
-      // Filter partnerships with minimum 2 matches and calculate win rate
-      const qualifiedPartnerships = Array.from(partnershipMap.values())
-        .filter(entry => entry.data.totalMatches >= 2)
-        .map(entry => ({
-          ...entry.data,
-          winRate: entry.data.totalMatches > 0 ? Math.round((entry.data.wins / entry.data.totalMatches) * 100) : 0,
-        }));
-
-      setPartnerships(qualifiedPartnerships);
-      setStats(statsWithChanges);
+      computeAndSetPeriodStats(activePeriod, matches, matchMembers, realNames);
     } catch (e) {
       console.error(e);
     } finally {
@@ -578,9 +585,13 @@ export default function LeaderboardPage() {
     else { setPartnershipSort(col); setPartnershipDir('desc'); }
   }
 
+  const currentPeriodConfig = PERIOD_CONFIGS.find(p => p.id === activePeriod) || PERIOD_CONFIGS[0];
+  const currentMinMatches = currentPeriodConfig.minMatches;
+  const currentMinPartnerMatches = currentPeriodConfig.minPartnerMatches;
+
   const sortedPartnerships = [...partnerships].sort((a, b) => {
-    const aQualified = a.totalMatches >= MIN_PARTNER_MATCHES_PODIUM;
-    const bQualified = b.totalMatches >= MIN_PARTNER_MATCHES_PODIUM;
+    const aQualified = a.totalMatches >= currentMinPartnerMatches;
+    const bQualified = b.totalMatches >= currentMinPartnerMatches;
 
     // Qualified partnerships always rank above unqualified ones when sorting descending
     if (partnershipDir === 'desc' && partnershipSort !== 'totalMatches') {
@@ -601,8 +612,8 @@ export default function LeaderboardPage() {
   });
 
   const sortedRecap = [...stats].sort((a, b) => {
-    const aQualified = a.totalMatches >= MIN_MATCHES_PODIUM;
-    const bQualified = b.totalMatches >= MIN_MATCHES_PODIUM;
+    const aQualified = a.totalMatches >= currentMinMatches;
+    const bQualified = b.totalMatches >= currentMinMatches;
 
     // Qualified players always rank above unqualified ones when sorting descending
     if (recapDir === 'desc' && recapSort !== 'totalMatches') {
@@ -756,67 +767,49 @@ export default function LeaderboardPage() {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300 pb-20 sm:pb-28">
+      {/* ── Top Hero Header ────────────────────────────────────────── */}
+      <div className="bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 text-white py-6 sm:py-10 px-3 sm:px-6 shadow-xl relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
 
-      {/* ── Hero Banner with Rotating Background Images ─────────────── */}
-      <div className="relative px-3 sm:px-6 text-white text-center shadow-lg overflow-hidden py-12 sm:py-20 md:py-32 min-h-[24rem] sm:min-h-[28rem] md:min-h-[32rem]">
-        {/* Rotating Background Images */}
-        <div className="absolute inset-0 z-0">
-          {[
-            '/images/dlobanimated1.png',
-            '/images/dlobanimated2.png',
-            '/images/dlobanimated3.png',
-            '/images/dlobanimated4.png',
-          ].map((src, idx) => (
-            <div
-              key={idx}
-              className={`absolute inset-0 transition-opacity duration-1000 ${
-                currentImageIndex === idx ? 'opacity-100' : 'opacity-0'
-              }`}
-            >
-              <img
-                src={src}
-                alt={`DLOB Hero ${idx + 1}`}
-                className="w-full h-full object-cover"
-              />
+        {/* Back Button */}
+        {canGoBack && (
+          <button
+            onClick={() => router.back()}
+            className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-sm text-white text-xs font-semibold transition-all duration-200 border border-white/10 hover:border-white/25 shadow-sm"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Kembali</span>
+          </button>
+        )}
+
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center sm:items-end justify-between gap-3 sm:gap-4 relative">
+          <div className="text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300" />
+              <span className="text-xs font-semibold tracking-widest uppercase text-purple-200">
+                DLOB Badminton
+              </span>
             </div>
-          ))}
-        </div>
-
-        {/* Dark Overlay (65% opacity for readability) */}
-        <div className="absolute inset-0 bg-black/65 z-10" />
-
-        {/* Back button */}
-        <button
-          onClick={() => canGoBack ? router.back() : router.push('/dashboard')}
-          className="absolute left-2 sm:left-4 top-2 sm:top-4 z-20 inline-flex items-center gap-1 sm:gap-1.5 text-white/90 hover:text-white text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all backdrop-blur-sm"
-        >
-          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
-          <span className="hidden sm:inline">Kembali</span>
-          <span className="sm:hidden">Kembali</span>
-        </button>
-
-        {/* Content */}
-        <div className="max-w-4xl mx-auto relative z-20">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-3">
-            <Trophy className="w-8 h-8 sm:w-12 md:w-14 drop-shadow-lg" />
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight drop-shadow-lg text-center">DLOB Leaderboard</h1>
-            <Trophy className="w-8 h-8 sm:w-12 md:w-14 drop-shadow-lg" />
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+              Leaderboard
+            </h1>
+            <p className="text-purple-200 text-xs sm:text-sm mt-1">
+              Statistik performa dan peringkat member DLOB Community
+            </p>
           </div>
-          <p className="text-white/90 text-sm sm:text-base md:text-lg lg:text-xl font-medium drop-shadow-lg px-2 mb-3">Rekap performa & statistik seluruh member komunitas</p>
-          <div className="inline-flex flex-col sm:flex-row items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-2 rounded-full text-xs sm:text-sm font-medium">
-            <span className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2 text-xs text-purple-200 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+            <span className="inline-flex items-center gap-1.5 font-medium">
               <span
                 className={`w-2 h-2 rounded-full ${
                   liveRefreshing ? 'bg-white animate-ping' : 'bg-green-300'
                 }`}
               />
-              {liveRefreshing
-                ? 'Memperbarui...'
-                : 'Live'}
+              {liveRefreshing ? 'Updating...' : 'Live'}
             </span>
             {lastUpdated && !liveRefreshing && (
-              <span className="text-white/60 text-xs hidden sm:inline">
+              <span className="text-purple-200/60 hidden sm:inline">
                 · {lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
@@ -832,6 +825,59 @@ export default function LeaderboardPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
+
+        {/* ── Period Selector Tabs (3 Periods + All-Time) ─────────── */}
+        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl border border-gray-200/80 dark:border-zinc-800 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-2 px-1 sm:px-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
+              <span>📅</span>
+              <span>Pilih Periode / Musim</span>
+            </div>
+            <div className="text-xs font-medium text-gray-500 dark:text-zinc-400">
+              <strong className="text-gray-900 dark:text-white">{periodMatchesCount}</strong> Pertandingan Tercatat
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 sm:gap-2">
+            {PERIOD_CONFIGS.map(period => {
+              const isActive = activePeriod === period.id;
+              return (
+                <button
+                  key={period.id}
+                  onClick={() => handlePeriodChange(period.id)}
+                  className={`relative p-2.5 sm:p-3 rounded-xl text-left transition-all duration-200 flex flex-col justify-between border ${
+                    isActive
+                      ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-md border-purple-500 ring-2 ring-purple-400/30 scale-[1.01]'
+                      : 'bg-gray-50 dark:bg-zinc-800/60 text-gray-800 dark:text-zinc-200 border-gray-200/70 dark:border-zinc-700/60 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1 w-full mb-1">
+                    <span className="text-xs sm:text-sm font-black flex items-center gap-1">
+                      <span>{period.icon}</span>
+                      <span className="truncate">{period.shortTitle}</span>
+                    </span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold whitespace-nowrap ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : period.badgeColor
+                      }`}
+                    >
+                      {period.badgeText}
+                    </span>
+                  </div>
+                  <div
+                    className={`text-[11px] font-medium truncate ${
+                      isActive ? 'text-white/80' : 'text-gray-500 dark:text-zinc-400'
+                    }`}
+                  >
+                    {period.subtitle}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* ── Championship Podium with Tabs ─────────────────────────── */}
         <div className="space-y-4">
@@ -869,86 +915,102 @@ export default function LeaderboardPage() {
             ))}
           </div>
 
-          {/* Podium Display */}
-          {(() => {
-            // Different ranking logic for each tab
-            let top3: { rank: number; player: MemberStat | null; metric: string }[] = [];
-            let tabTitle = '';
+          {/* Empty period state when period has 0 matches */}
+          {periodMatchesCount === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 bg-purple-50/50 dark:bg-purple-950/20 rounded-2xl border border-dashed border-purple-300 dark:border-purple-800/40 text-center max-w-lg mx-auto my-6">
+              <div className="text-5xl mb-3">⏳</div>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
+                {currentPeriodConfig.title}
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-zinc-300 mb-4 max-w-sm">
+                Musim ini akan resmi dimulai pada <strong>{currentPeriodConfig.subtitle}</strong>. Pertandingan yang dicatat mulai tanggal tersebut akan otomatis masuk ke leaderboard periode ini!
+              </p>
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-purple-600 text-white shadow-md">
+                <span>🏸</span>
+                <span>Siapkan dirimu untuk perebutan podium musim depan!</span>
+              </div>
+            </div>
+          ) : (
+            /* Podium Display */
+            (() => {
+              // Different ranking logic for each tab
+              let top3: { rank: number; player: MemberStat | null; metric: string }[] = [];
+              let tabTitle = '';
 
-            if (activeTab === 'pemain-terbaik') {
-              const top1 = sortedRecap[0] && sortedRecap[0].totalMatches >= MIN_MATCHES_PODIUM ? sortedRecap[0] : null;
-              const top2 = sortedRecap[1] && sortedRecap[1].totalMatches >= MIN_MATCHES_PODIUM ? sortedRecap[1] : null;
-              const top3Player = sortedRecap[2] && sortedRecap[2].totalMatches >= MIN_MATCHES_PODIUM ? sortedRecap[2] : null;
+              if (activeTab === 'pemain-terbaik') {
+                const top1 = sortedRecap[0] && sortedRecap[0].totalMatches >= currentMinMatches ? sortedRecap[0] : null;
+                const top2 = sortedRecap[1] && sortedRecap[1].totalMatches >= currentMinMatches ? sortedRecap[1] : null;
+                const top3Player = sortedRecap[2] && sortedRecap[2].totalMatches >= currentMinMatches ? sortedRecap[2] : null;
 
-              top3 = [
-                { rank: 1, player: top1, metric: top1 ? `Points: ${(top1 as any).bestPlayerScore?.toFixed(1) ?? 0} · ${top1.winRate}% WR` : '' },
-                { rank: 2, player: top2, metric: top2 ? `Points: ${(top2 as any).bestPlayerScore?.toFixed(1) ?? 0} · ${top2.winRate}% WR` : '' },
-                { rank: 3, player: top3Player, metric: top3Player ? `Points: ${(top3Player as any).bestPlayerScore?.toFixed(1) ?? 0} · ${top3Player.winRate}% WR` : '' },
-              ];
-              tabTitle = 'Pemain Terbaik';
-            } else if (activeTab === 'pemain-tak-terkalahkan') {
-              const leastLosses = [...stats]
-                .filter(s => s.totalMatches >= MIN_MATCHES_PODIUM)
-                .sort((a, b) => {
-                  if (a.losses !== b.losses) return a.losses - b.losses;
-                  return b.wins - a.wins;
-                });
-              top3 = [
-                { rank: 1, player: leastLosses[0] || null, metric: `${leastLosses[0]?.losses ?? 0} Kalah · ${leastLosses[0]?.wins ?? 0} Menang (${leastLosses[0]?.winRate ?? 0}% WR)` },
-                { rank: 2, player: leastLosses[1] || null, metric: `${leastLosses[1]?.losses ?? 0} Kalah · ${leastLosses[1]?.wins ?? 0} Menang (${leastLosses[1]?.winRate ?? 0}% WR)` },
-                { rank: 3, player: leastLosses[2] || null, metric: `${leastLosses[2]?.losses ?? 0} Kalah · ${leastLosses[2]?.wins ?? 0} Menang (${leastLosses[2]?.winRate ?? 0}% WR)` },
-              ];
-              tabTitle = 'Pemain Tak Terkalahkan';
-            } else if (activeTab === 'streak-terpanjang') {
-              const streaks = [...stats]
-                .filter(s => s.totalMatches >= MIN_MATCHES_PODIUM)
-                .sort((a, b) => {
-                  // First sort by longestWinStreak descending
-                  const streakDiff = b.longestWinStreak - a.longestWinStreak;
-                  if (streakDiff !== 0) return streakDiff;
-                  // If streaks are equal, sort by losses ascending (fewer losses = higher rank)
-                  return a.losses - b.losses;
-                });
-              top3 = [
-                { rank: 1, player: streaks[0] || null, metric: `${streaks[0]?.longestWinStreak ?? 0}x Streak - ${streaks[0]?.losses ?? 0} Losses` },
-                { rank: 2, player: streaks[1] || null, metric: `${streaks[1]?.longestWinStreak ?? 0}x Streak - ${streaks[1]?.losses ?? 0} Losses` },
-                { rank: 3, player: streaks[2] || null, metric: `${streaks[2]?.longestWinStreak ?? 0}x Streak - ${streaks[2]?.losses ?? 0} Losses` },
-              ];
-              tabTitle = 'Streak Terpanjang';
-            } else if (activeTab === 'paling-rajin') {
-              const diligent = [...stats]
-                .filter(s => s.totalMatches >= MIN_MATCHES_PODIUM)
-                .sort((a, b) => b.totalMatches - a.totalMatches || b.attendances - a.attendances);
-              top3 = [
-                { rank: 1, player: diligent[0] || null, metric: `${diligent[0]?.totalMatches ?? 0} main · ${diligent[0]?.attendances ?? 0} pertemuan` },
-                { rank: 2, player: diligent[1] || null, metric: `${diligent[1]?.totalMatches ?? 0} main · ${diligent[1]?.attendances ?? 0} pertemuan` },
-                { rank: 3, player: diligent[2] || null, metric: `${diligent[2]?.totalMatches ?? 0} main · ${diligent[2]?.attendances ?? 0} pertemuan` },
-              ];
-              tabTitle = 'Paling Rajin';
-            }
+                top3 = [
+                  { rank: 1, player: top1, metric: top1 ? `Points: ${(top1 as any).bestPlayerScore?.toFixed(1) ?? 0} · ${top1.winRate}% WR` : '' },
+                  { rank: 2, player: top2, metric: top2 ? `Points: ${(top2 as any).bestPlayerScore?.toFixed(1) ?? 0} · ${top2.winRate}% WR` : '' },
+                  { rank: 3, player: top3Player, metric: top3Player ? `Points: ${(top3Player as any).bestPlayerScore?.toFixed(1) ?? 0} · ${top3Player.winRate}% WR` : '' },
+                ];
+                tabTitle = 'Pemain Terbaik';
+              } else if (activeTab === 'pemain-tak-terkalahkan') {
+                const leastLosses = [...stats]
+                  .filter(s => s.totalMatches >= currentMinMatches)
+                  .sort((a, b) => {
+                    if (a.losses !== b.losses) return a.losses - b.losses;
+                    return b.wins - a.wins;
+                  });
+                top3 = [
+                  { rank: 1, player: leastLosses[0] || null, metric: `${leastLosses[0]?.losses ?? 0} Kalah · ${leastLosses[0]?.wins ?? 0} Menang (${leastLosses[0]?.winRate ?? 0}% WR)` },
+                  { rank: 2, player: leastLosses[1] || null, metric: `${leastLosses[1]?.losses ?? 0} Kalah · ${leastLosses[1]?.wins ?? 0} Menang (${leastLosses[1]?.winRate ?? 0}% WR)` },
+                  { rank: 3, player: leastLosses[2] || null, metric: `${leastLosses[2]?.losses ?? 0} Kalah · ${leastLosses[2]?.wins ?? 0} Menang (${leastLosses[2]?.winRate ?? 0}% WR)` },
+                ];
+                tabTitle = 'Pemain Tak Terkalahkan';
+              } else if (activeTab === 'streak-terpanjang') {
+                const streaks = [...stats]
+                  .filter(s => s.totalMatches >= currentMinMatches)
+                  .sort((a, b) => {
+                    // First sort by longestWinStreak descending
+                    const streakDiff = b.longestWinStreak - a.longestWinStreak;
+                    if (streakDiff !== 0) return streakDiff;
+                    // If streaks are equal, sort by losses ascending (fewer losses = higher rank)
+                    return a.losses - b.losses;
+                  });
+                top3 = [
+                  { rank: 1, player: streaks[0] || null, metric: `${streaks[0]?.longestWinStreak ?? 0}x Streak - ${streaks[0]?.losses ?? 0} Losses` },
+                  { rank: 2, player: streaks[1] || null, metric: `${streaks[1]?.longestWinStreak ?? 0}x Streak - ${streaks[1]?.losses ?? 0} Losses` },
+                  { rank: 3, player: streaks[2] || null, metric: `${streaks[2]?.longestWinStreak ?? 0}x Streak - ${streaks[2]?.losses ?? 0} Losses` },
+                ];
+                tabTitle = 'Streak Terpanjang';
+              } else if (activeTab === 'paling-rajin') {
+                const diligent = [...stats]
+                  .filter(s => s.totalMatches >= currentMinMatches)
+                  .sort((a, b) => b.totalMatches - a.totalMatches || b.attendances - a.attendances);
+                top3 = [
+                  { rank: 1, player: diligent[0] || null, metric: `${diligent[0]?.totalMatches ?? 0} main · ${diligent[0]?.attendances ?? 0} pertemuan` },
+                  { rank: 2, player: diligent[1] || null, metric: `${diligent[1]?.totalMatches ?? 0} main · ${diligent[1]?.attendances ?? 0} pertemuan` },
+                  { rank: 3, player: diligent[2] || null, metric: `${diligent[2]?.totalMatches ?? 0} main · ${diligent[2]?.attendances ?? 0} pertemuan` },
+                ];
+                tabTitle = 'Paling Rajin';
+              }
 
-            // For Pasangan Terbaik, render different podium type
-            if (activeTab === 'pasangan-terbaik') {
-              const topPartnerships = [...sortedPartnerships]
-                .filter(p => p.totalMatches >= MIN_PARTNER_MATCHES_PODIUM)
-                .slice(0, 3);
-              const medals = ['🥇', '🥈', '🥉'];
-              const medalColors = [
-                'border-yellow-400 bg-gradient-to-br from-yellow-900/40 to-yellow-800/40',
-                'border-gray-300 bg-gradient-to-br from-gray-700/40 to-gray-600/40',
-                'border-orange-300 bg-gradient-to-br from-orange-700/40 to-orange-600/40',
-              ];
-              const textColors = ['text-yellow-300', 'text-gray-200', 'text-orange-300'];
+              // For Pasangan Terbaik, render different podium type
+              if (activeTab === 'pasangan-terbaik') {
+                const topPartnerships = [...sortedPartnerships]
+                  .filter(p => p.totalMatches >= currentMinPartnerMatches)
+                  .slice(0, 3);
+                const medals = ['🥇', '🥈', '🥉'];
+                const medalColors = [
+                  'border-yellow-400 bg-gradient-to-br from-yellow-900/40 to-yellow-800/40',
+                  'border-gray-300 bg-gradient-to-br from-gray-700/40 to-gray-600/40',
+                  'border-orange-300 bg-gradient-to-br from-orange-700/40 to-orange-600/40',
+                ];
+                const textColors = ['text-yellow-300', 'text-gray-200', 'text-orange-300'];
 
-              return (
-                <div className="space-y-6">
-                  {/* Qualification Badge */}
-                  <div className="flex justify-center">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-xs font-semibold backdrop-blur-sm">
-                      <span>🏆</span>
-                      <span>Kualifikasi Podium: Minimal {MIN_PARTNER_MATCHES_PODIUM} Pertandingan Bersama</span>
+                return (
+                  <div className="space-y-6">
+                    {/* Qualification Badge */}
+                    <div className="flex justify-center">
+                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-xs font-semibold backdrop-blur-sm">
+                        <span>🏆</span>
+                        <span>Kualifikasi Podium: Minimal {currentMinPartnerMatches} Pertandingan Bersama</span>
+                      </div>
                     </div>
-                  </div>
                   {/* Add animations */}
                   <style>{`
                     @keyframes pulse-glow {
@@ -1155,8 +1217,8 @@ export default function LeaderboardPage() {
                     <span>🏆</span>
                     <span>
                       {activeTab === 'pemain-tak-terkalahkan'
-                        ? `Kualifikasi: Minimal ${MIN_MATCHES_PODIUM} Pertandingan (Kekalahan Paling Sedikit)`
-                        : `Kualifikasi Podium: Minimal ${MIN_MATCHES_PODIUM} Pertandingan`}
+                        ? `Kualifikasi: Minimal ${currentMinMatches} Pertandingan (Kekalahan Paling Sedikit)`
+                        : `Kualifikasi Podium: Minimal ${currentMinMatches} Pertandingan`}
                     </span>
                   </div>
                 </div>
@@ -1185,7 +1247,7 @@ export default function LeaderboardPage() {
                       Belum Ada Pemain Tak Terkalahkan
                     </h3>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 mb-4 max-w-sm">
-                      Kualifikasi podium membutuhkan minimal <strong>{MIN_MATCHES_PODIUM} pertandingan</strong> dengan <strong>0 kekalahan</strong> (100% Win Rate).
+                      Kualifikasi podium membutuhkan minimal <strong>{currentMinMatches} pertandingan</strong>.
                     </p>
                     <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                       <span>🔥</span>
@@ -1338,7 +1400,7 @@ export default function LeaderboardPage() {
                 )}
               </div>
             );
-          })()}
+          })())}
         </div>
 
         {/* ── Disclaimer ─────────────────────────────────────────────── */}
@@ -1409,7 +1471,7 @@ export default function LeaderboardPage() {
                         }`}
                       >
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-medium">
-                          {s.totalMatches >= MIN_MATCHES_PODIUM ? (
+                          {s.totalMatches >= currentMinMatches ? (
                             i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1
                           ) : (
                             <span className="text-gray-300 dark:text-zinc-600 font-normal">-</span>
@@ -1418,12 +1480,12 @@ export default function LeaderboardPage() {
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-white text-xs sm:text-sm">
                           <div className="flex items-center gap-1 sm:gap-2">
                             <span className="truncate">{s.name}</span>
-                            {s.totalMatches < MIN_MATCHES_PODIUM && s.totalMatches > 0 && (
+                            {s.totalMatches < currentMinMatches && s.totalMatches > 0 && (
                               <span
                                 className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap"
-                                title={`${s.totalMatches}/${MIN_MATCHES_PODIUM} pertandingan untuk kualifikasi podium`}
+                                title={`${s.totalMatches}/${currentMinMatches} pertandingan untuk kualifikasi podium`}
                               >
-                                &lt;10 main
+                                &lt;{currentMinMatches} main
                               </span>
                             )}
                             {!isPlayerInactive(s) && streakUp && s.currentStreak >= 3 && (
@@ -1536,7 +1598,7 @@ export default function LeaderboardPage() {
                     sortedPartnerships.map((p, i) => (
                       <tr key={`${p.player1}|${p.player2}`} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-medium">
-                          {p.totalMatches >= MIN_PARTNER_MATCHES_PODIUM ? (
+                          {p.totalMatches >= currentMinPartnerMatches ? (
                             i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1
                           ) : (
                             <span className="text-gray-300 dark:text-zinc-600 font-normal">-</span>
@@ -1553,12 +1615,12 @@ export default function LeaderboardPage() {
                               </div>
                             </div>
                             <span className="font-medium truncate">{p.player1} & {p.player2}</span>
-                            {p.totalMatches < MIN_PARTNER_MATCHES_PODIUM && (
+                            {p.totalMatches < currentMinPartnerMatches && (
                               <span
                                 className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap ml-1"
-                                title={`${p.totalMatches}/${MIN_PARTNER_MATCHES_PODIUM} pertandingan bersama untuk kualifikasi`}
+                                title={`${p.totalMatches}/${currentMinPartnerMatches} pertandingan bersama untuk kualifikasi`}
                               >
-                                &lt;5 main
+                                &lt;{currentMinPartnerMatches} main
                               </span>
                             )}
                           </div>
