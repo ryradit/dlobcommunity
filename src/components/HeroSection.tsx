@@ -77,11 +77,10 @@ export default function HeroSection() {
       />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 pt-6 pb-12 sm:px-6 md:pt-8 md:pb-20 lg:px-8">
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-8 items-start">
+        <div className="flex flex-col space-y-10 pt-8">
           
-          {/* --- LEFT COLUMN --- */}
-          <div className="lg:col-span-7 flex flex-col justify-center space-y-8 pt-8">
-            
+          {/* Top Hero Text Content */}
+          <div className="max-w-4xl space-y-8">
             {/* Badge */}
             <div className="animate-fade-in delay-100">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-md transition-colors hover:bg-white/10">
@@ -108,7 +107,7 @@ export default function HeroSection() {
             </h1>
 
             {/* Description */}
-            <p className="animate-fade-in delay-300 max-w-xl text-lg text-zinc-400 leading-relaxed">
+            <p className="animate-fade-in delay-300 max-w-2xl text-lg text-zinc-400 leading-relaxed">
               Platform komunitas bulu tangkis terdepan yang mengotomatisasi pelacakan kehadiran, 
               penjadwalan pertandingan, dan pengumpulan pembayaran dengan wawasan bertenaga AI.
             </p>
@@ -135,108 +134,121 @@ export default function HeroSection() {
             </div>
           </div>
 
-          {/* --- RIGHT COLUMN --- */}
-          <div className="lg:col-span-5 space-y-6 lg:mt-12">
+          {/* --- 2 CARDS BELOW BERGABUNG SEKARANG BUTTON --- */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
             
-            {/* Stats Card */}
-            <div className="animate-fade-in delay-500 relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl shadow-2xl">
+            {/* Card 1: Stats Card */}
+            <div className="animate-fade-in delay-500 relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 backdrop-blur-xl shadow-2xl flex flex-col justify-between">
               {/* Card Glow Effect */}
               <div className="absolute top-0 right-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-white/5 blur-3xl pointer-events-none" />
 
               <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-8">
+                <div className="flex items-center gap-4 mb-6">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
                     <Target className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                  <div className="text-3xl font-bold tracking-tight text-white">50+</div>
-                  <div className="text-sm text-zinc-200 font-medium">Pemain Aktif</div>
+                    <div className="text-3xl font-bold tracking-tight text-white">50+</div>
+                    <div className="text-sm text-zinc-200 font-medium">Pemain Aktif</div>
                   </div>
                 </div>
 
                 {/* Progress Bar Section */}
-                <div className="space-y-3 mb-8">
+                <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-zinc-200 font-medium">Tingkat Kepuasan</span>
                     <span className="text-white font-semibold">98%</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800/50">
-                    <div className="h-full w-[99%] rounded-full bg-gradient-to-r from-white to-zinc-400" />
+                    <div className="h-full w-[98%] rounded-full bg-gradient-to-r from-white to-zinc-400" />
                   </div>
                 </div>
 
                 <div className="h-px w-full bg-white/10 mb-6" />
 
                 {/* Mini Stats Grid */}
-                <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="grid grid-cols-3 gap-2 text-center">
                   <StatItem value="100+" label="Pertandingan/Bulan" />
                   <div className="w-px h-full bg-white/10 mx-auto" />
                   <StatItem value="5" label="Tahun Berdiri" />
                   <div className="w-px h-full bg-white/10 mx-auto" />
                   <StatItem value="24/7" label="AI Analytics" />
                 </div>
+              </div>
 
-                {/* Tag Pills */}
-                <div className="mt-8 flex flex-wrap gap-2">
-                  <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-medium tracking-wide text-zinc-300">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    ACTIVE
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-medium tracking-wide text-zinc-300">
-                    <Crown className="w-3 h-3 text-yellow-500" />
-                    PREMIUM
-                  </div>
+              {/* Tag Pills */}
+              <div className="relative z-10 mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-2">
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-medium tracking-wide text-zinc-300">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                  ACTIVE
+                </div>
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-medium tracking-wide text-zinc-300">
+                  <Crown className="w-3 h-3 text-yellow-500" />
+                  PREMIUM
                 </div>
               </div>
             </div>
 
-            {/* Features Card */}
-            <div className="animate-fade-in delay-500 relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-              <h3 className="mb-6 text-xs font-semibold text-zinc-200 uppercase tracking-wide">Fitur Unggulan Platform</h3>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
-                    🤖
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-white">AI Coaching</p>
-                    <p className="text-[10px] text-zinc-300 font-medium">Wawasan mendalam</p>
-                  </div>
+            {/* Card 2: Features Card */}
+            <div className="animate-fade-in delay-500 relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 backdrop-blur-xl shadow-2xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider">Fitur Unggulan Platform</h3>
+                  <span className="text-[10px] font-semibold text-zinc-400 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
+                    4 Core Modules
+                  </span>
                 </div>
                 
-                <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
-                    🏆
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="flex items-start gap-3 group hover:bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-lg">
+                      🤖
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">AI Coaching</p>
+                      <p className="text-xs text-zinc-400 font-medium">Wawasan mendalam</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-white">Ranking System</p>
-                    <p className="text-[10px] text-zinc-300 font-medium">Leaderboard realtime</p>
+                  
+                  <div className="flex items-start gap-3 group hover:bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-lg">
+                      🏆
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Ranking System</p>
+                      <p className="text-xs text-zinc-400 font-medium">Leaderboard realtime</p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
-                    💳
+                  
+                  <div className="flex items-start gap-3 group hover:bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-lg">
+                      💳
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Manajemen Pembayaran</p>
+                      <p className="text-xs text-zinc-400 font-medium">Sistem terintegrasi</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-white">Manajemen Pembayaran</p>
-                    <p className="text-[10px] text-zinc-300 font-medium">Sistem terintegrasi</p>
-                  </div>
-                </div>
 
-                <div className="flex items-start gap-2 group hover:bg-white/5 p-2 rounded-lg transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-sm">
-                    📊
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-white">Analitik AI</p>
-                    <p className="text-[10px] text-zinc-300 font-medium">Wawasan mendalam</p>
+                  <div className="flex items-start gap-3 group hover:bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-lg">
+                      📊
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Analitik AI</p>
+                      <p className="text-xs text-zinc-400 font-medium">Wawasan mendalam</p>
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Bottom info strip in Features card for balance */}
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-zinc-400">
+                <span>⚡ Real-time synchronization</span>
+                <span className="text-zinc-300 font-medium">Auto-updated</span>
               </div>
             </div>
 
