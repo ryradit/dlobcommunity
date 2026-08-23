@@ -121,13 +121,17 @@ export async function GET(req: NextRequest) {
       let status: ServiceHealth['status'] = 'down';
       let message = 'Layanan Gemini tidak dapat dijangkau';
 
-      if (
+      const isQuotaExceeded =
         errMsg.includes('429') ||
         errMsg.toLowerCase().includes('quota') ||
-        errMsg.toLowerCase().includes('resource exhausted')
-      ) {
+        errMsg.toLowerCase().includes('resource_exhausted') ||
+        errMsg.toLowerCase().includes('resource exhausted') ||
+        errMsg.toLowerCase().includes('rate limit') ||
+        errMsg.toLowerCase().includes('too many requests');
+
+      if (isQuotaExceeded) {
         status = 'degraded';
-        message = 'Batas kuota tercapai (Rate Limit 429) — fallback otomatis aktif';
+        message = 'Batas kuota harian/menit Gemini tercapai (RESOURCE_EXHAUSTED 429) — fallback otomatis aktif';
       } else if (errMsg.includes('401') || errMsg.includes('403') || errMsg.toLowerCase().includes('api key')) {
         status = 'down';
         message = 'API Key Gemini tidak valid atau kadaluarsa';
@@ -136,7 +140,7 @@ export async function GET(req: NextRequest) {
         message = 'Respons lambat (>6s) — fallback otomatis aktif';
       } else if (errMsg.includes('500') || errMsg.includes('503')) {
         status = 'down';
-        message = 'Server Gemini sedang pemeliharaan / down (503)';
+        message = 'Server Google Gemini sedang pemeliharaan / down (503)';
       }
 
       services.gemini = {
@@ -144,9 +148,9 @@ export async function GET(req: NextRequest) {
         category: 'AI Services',
         status,
         latencyMs,
-        uptimePercent: '98.50%',
+        uptimePercent: isQuotaExceeded ? '98.50%' : '96.00%',
         message,
-        details: { error: errMsg.slice(0, 150) },
+        details: { error: errMsg.slice(0, 150), isQuotaExceeded },
       };
     }
   }
@@ -351,12 +355,23 @@ export async function GET(req: NextRequest) {
         );
 
         if (!hasOpenIncident) {
+          const isQuota =
+            srv.details?.isQuotaExceeded ||
+            srv.message?.toLowerCase().includes('kuota') ||
+            srv.message?.toLowerCase().includes('quota');
+
+          const incidentTitle = isQuota
+            ? `Batas Kuota Tercapai: ${srv.name}`
+            : `Gangguan Layanan ${srv.name}`;
+
           await supabase.from('system_incidents').insert({
-            title: `Gangguan Layanan ${srv.name}`,
+            title: incidentTitle,
             service_name: key,
-            impact: srv.status === 'down' ? 'major' : 'minor',
+            impact: srv.status === 'down' ? 'major' : isQuota ? 'minor' : 'moderate',
             status: 'investigating',
-            description: srv.message || `Layanan ${srv.name} mengalami penurunan performa atau gangguan koneksi.`,
+            description:
+              srv.message ||
+              `Layanan ${srv.name} mengalami penurunan performa atau gangguan koneksi.`,
             started_at: new Date().toISOString(),
             created_by: 'system_auto',
           });
