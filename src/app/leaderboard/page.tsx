@@ -888,8 +888,8 @@ export default function LeaderboardPage() {
               tabTitle = 'Pemain Terbaik';
             } else if (activeTab === 'pemain-tak-terkalahkan') {
               const unbeaten = [...stats]
-                .filter(s => s.losses === 0 && s.wins > 0 && s.totalMatches >= MIN_MATCHES_PODIUM)
-                .sort((a, b) => b.wins - a.wins);
+                .filter(s => s.losses === 0 && s.wins > 0)
+                .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate);
               top3 = [
                 { rank: 1, player: unbeaten[0] || null, metric: `${unbeaten[0]?.wins ?? 0} menang - 0 kalah` },
                 { rank: 2, player: unbeaten[1] || null, metric: `${unbeaten[1]?.wins ?? 0} menang - 0 kalah` },
@@ -1150,7 +1150,11 @@ export default function LeaderboardPage() {
                 <div className="flex justify-center">
                   <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-xs font-semibold backdrop-blur-sm">
                     <span>🏆</span>
-                    <span>Kualifikasi Podium: Minimal {MIN_MATCHES_PODIUM} Pertandingan</span>
+                    <span>
+                      {activeTab === 'pemain-tak-terkalahkan'
+                        ? 'Kualifikasi: 0 Kekalahan (Diurutkan dari Kemenangan Terbanyak)'
+                        : `Kualifikasi Podium: Minimal ${MIN_MATCHES_PODIUM} Pertandingan`}
+                    </span>
                   </div>
                 </div>
                 {/* Add animations */}
