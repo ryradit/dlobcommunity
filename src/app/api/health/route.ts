@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
   } else {
     try {
       const { error } = (await withTimeout(
-        Promise.resolve(supabase.from('members').select('id').limit(1)),
+        Promise.resolve(supabase.from('profiles').select('id').limit(1)),
         4000,
         'Supabase query timeout (>4s)'
       )) as any;
