@@ -203,45 +203,69 @@ export default function HeroSection() {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div className="flex items-start gap-3 group hover:bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-lg">
+                  <Link 
+                    href="/dashboard/coaching" 
+                    className="flex items-start gap-3 group hover:bg-white/10 p-3 rounded-2xl border border-white/5 hover:border-white/20 transition-all cursor-pointer"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 group-hover:scale-105 transition-all text-lg">
                       🤖
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">AI Coaching</p>
-                      <p className="text-xs text-zinc-400 font-medium">Wawasan mendalam</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-white group-hover:text-teal-300 transition-colors">AI Coaching</p>
+                        <ArrowRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                      <p className="text-xs text-zinc-400 font-medium truncate">Wawasan mendalam</p>
                     </div>
-                  </div>
+                  </Link>
                   
-                  <div className="flex items-start gap-3 group hover:bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-lg">
+                  <Link 
+                    href="/leaderboard" 
+                    className="flex items-start gap-3 group hover:bg-white/10 p-3 rounded-2xl border border-white/5 hover:border-white/20 transition-all cursor-pointer"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 group-hover:scale-105 transition-all text-lg">
                       🏆
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">Ranking System</p>
-                      <p className="text-xs text-zinc-400 font-medium">Leaderboard realtime</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-white group-hover:text-teal-300 transition-colors">Ranking System</p>
+                        <ArrowRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                      <p className="text-xs text-zinc-400 font-medium truncate">Leaderboard realtime</p>
                     </div>
-                  </div>
+                  </Link>
                   
-                  <div className="flex items-start gap-3 group hover:bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-lg">
+                  <Link 
+                    href="/dashboard/pembayaran" 
+                    className="flex items-start gap-3 group hover:bg-white/10 p-3 rounded-2xl border border-white/5 hover:border-white/20 transition-all cursor-pointer"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 group-hover:scale-105 transition-all text-lg">
                       💳
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">Manajemen Pembayaran</p>
-                      <p className="text-xs text-zinc-400 font-medium">Sistem terintegrasi</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-white group-hover:text-teal-300 transition-colors">Manajemen Pembayaran</p>
+                        <ArrowRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                      <p className="text-xs text-zinc-400 font-medium truncate">Sistem terintegrasi</p>
                     </div>
-                  </div>
+                  </Link>
 
-                  <div className="flex items-start gap-3 group hover:bg-white/5 p-3 rounded-2xl border border-white/5 transition-all">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 text-lg">
+                  <Link 
+                    href="/dashboard/analitik" 
+                    className="flex items-start gap-3 group hover:bg-white/10 p-3 rounded-2xl border border-white/5 hover:border-white/20 transition-all cursor-pointer"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 flex-shrink-0 group-hover:bg-white/20 group-hover:scale-105 transition-all text-lg">
                       📊
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">Analitik AI</p>
-                      <p className="text-xs text-zinc-400 font-medium">Wawasan mendalam</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-white group-hover:text-teal-300 transition-colors">Analitik AI</p>
+                        <ArrowRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                      <p className="text-xs text-zinc-400 font-medium truncate">Wawasan mendalam</p>
                     </div>
-                  </div>
+                  </Link>
                 </div>
               </div>
 
