@@ -888,7 +888,7 @@ export default function LeaderboardPage() {
               tabTitle = 'Pemain Terbaik';
             } else if (activeTab === 'pemain-tak-terkalahkan') {
               const unbeaten = [...stats]
-                .filter(s => s.losses === 0 && s.wins > 0)
+                .filter(s => s.losses === 0 && s.wins > 0 && s.totalMatches >= MIN_MATCHES_PODIUM)
                 .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate);
               top3 = [
                 { rank: 1, player: unbeaten[0] || null, metric: `${unbeaten[0]?.wins ?? 0} menang - 0 kalah` },
@@ -1152,7 +1152,7 @@ export default function LeaderboardPage() {
                     <span>🏆</span>
                     <span>
                       {activeTab === 'pemain-tak-terkalahkan'
-                        ? 'Kualifikasi: 0 Kekalahan (Diurutkan dari Kemenangan Terbanyak)'
+                        ? `Kualifikasi: Minimal ${MIN_MATCHES_PODIUM} Pertandingan & 0 Kekalahan (100% WR)`
                         : `Kualifikasi Podium: Minimal ${MIN_MATCHES_PODIUM} Pertandingan`}
                     </span>
                   </div>
@@ -1175,148 +1175,164 @@ export default function LeaderboardPage() {
                   .float { animation: float 3s ease-in-out infinite; }
                 `}</style>
                 
-                {/* Podium Layout - Responsive */}
-                <div className="flex flex-col sm:flex-row items-flex-end justify-center gap-4 sm:gap-5 md:gap-7 min-h-[28rem] sm:min-h-[36rem] md:min-h-[550px] px-2 sm:px-4">
-                  {/* 2nd Place - Left */}
-                  <div className="flex flex-col items-center w-full sm:w-auto">
-                    {top3[1].player ? (
-                      <>
-                        {/* Medal Badge - Top */}
-                        <div className="text-5xl sm:text-6xl mb-0 drop-shadow-lg">
-                          {medals[1]}
-                        </div>
-
-                        {/* Chibi Character - NO BORDER */}
-                        <div className="relative sm:w-28 sm:h-56 w-24 h-48 mb-0">
-                          <img
-                            key={`${activeTab}-2nd-${top3[1].player?.name}`}
-                            src={getChibiImagePath(top3[1].player?.name || '')}
-                            alt={top3[1].player?.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        </div>
-
-                        {/* Info Card */}
-                        <div className={`rounded-lg p-5 sm:p-6 border-2 shadow-lg w-full sm:w-52 md:w-60 text-center mb-0 ${medalColors[1]}`}>
-                          <div className={`text-sm sm:text-base font-bold ${textColors[1]} mb-1`}>
-                            {top3[1].player?.name}
-                          </div>
-                          {activeTab !== 'paling-rajin' && (
-                            <div className="text-xs text-gray-300 mb-1 font-semibold">
-                              {top3[1].player?.winRate || 0}% WR
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-400 line-clamp-2">{top3[1].metric}</div>
-                        </div>
-
-                        {/* Podium Rank */}
-                        <div className="w-full sm:w-52 md:w-60 h-16 sm:h-20 md:h-28 bg-gradient-to-b from-gray-500 to-gray-600 border-2 border-gray-700 shadow-lg flex items-center justify-center">
-                          <span className="text-4xl sm:text-5xl font-black text-gray-300">2</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center text-gray-400 py-8">-</div>
-                    )}
+                {top3.every(t => !t.player) ? (
+                  <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 bg-gray-50/50 dark:bg-zinc-800/30 rounded-2xl border border-dashed border-gray-300 dark:border-zinc-700 text-center max-w-lg mx-auto my-4 sm:my-6">
+                    <div className="text-5xl mb-3">🛡️</div>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
+                      Belum Ada Pemain Tak Terkalahkan
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 mb-4 max-w-sm">
+                      Kualifikasi podium membutuhkan minimal <strong>{MIN_MATCHES_PODIUM} pertandingan</strong> dengan <strong>0 kekalahan</strong> (100% Win Rate).
+                    </p>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                      <span>🔥</span>
+                      <span>Jadilah pemain pertama yang mencapai rekor ini!</span>
+                    </div>
                   </div>
-
-                  {/* 1st Place - Center High - CHAMPION */}
-                  <div className="flex flex-col items-center mb-0 sm:mb-10 md:mb-16 w-full sm:w-auto order-first sm:order-none">
-                    {top3[0].player ? (
-                      <>
-                        {/* Medal Badge - Top with Glow */}
-                        <div className="pulse-glow text-6xl sm:text-7xl md:text-8xl mb-0 drop-shadow-lg animate-bounce">
-                          {medals[0]}
-                        </div>
-
-                        {/* Chibi Character - Champion - NO BORDER */}
-                        <div className="relative sm:w-32 sm:h-64 w-28 h-56 mb-0">
-                          <img
-                            key={`${activeTab}-1st-${top3[0].player?.name}`}
-                            src={getChibiImagePath(top3[0].player?.name || '')}
-                            alt={top3[0].player?.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        </div>
-
-                        {/* Info Card - Champion */}
-                        <div className={`rounded-xl p-6 sm:p-7 md:p-8 border-3 shadow-2xl w-full sm:w-60 md:w-72 text-center mb-0 ${medalColors[0]} backdrop-blur-sm`}>
-                          <div className="absolute -top-3 -right-2 text-3xl sm:text-4xl">👑</div>
-                          <div className="text-lg sm:text-xl font-black text-yellow-300 mb-2 drop-shadow-lg">
-                            {top3[0].player?.name}
+                ) : (
+                  /* Podium Layout - Responsive */
+                  <div className="flex flex-col sm:flex-row items-flex-end justify-center gap-4 sm:gap-5 md:gap-7 min-h-[28rem] sm:min-h-[36rem] md:min-h-[550px] px-2 sm:px-4">
+                    {/* 2nd Place - Left */}
+                    <div className="flex flex-col items-center w-full sm:w-auto">
+                      {top3[1].player ? (
+                        <>
+                          {/* Medal Badge - Top */}
+                          <div className="text-5xl sm:text-6xl mb-0 drop-shadow-lg">
+                            {medals[1]}
                           </div>
-                          {activeTab !== 'paling-rajin' && (
-                            <div className="text-xs sm:text-sm text-yellow-200 mb-2 font-semibold">
-                              {top3[0].player && top3[0].player.longestWinStreak >= 3 ? (
-                                <span>🔥 {top3[0].player.longestWinStreak}x Streak - ON FIRE</span>
-                              ) : (
-                                <span>💯 {top3[0].player?.winRate || 0}% Win Rate</span>
-                              )}
-                            </div>
-                          )}
-                          <div className="text-xs text-yellow-100 line-clamp-2">{top3[0].metric}</div>
-                        </div>
 
-                        {/* Podium Rank - Champion */}
-                        <div className="w-full sm:w-60 md:w-72 h-24 sm:h-32 md:h-48 bg-gradient-to-b from-yellow-600 to-yellow-700 border-3 border-yellow-800 shadow-2xl flex items-center justify-center">
-                          <span className="text-5xl sm:text-6xl md:text-8xl font-black text-yellow-200">1</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center text-gray-400 py-8">-</div>
-                    )}
-                  </div>
-
-                  {/* 3rd Place - Right */}
-                  <div className="flex flex-col items-center w-full sm:w-auto">
-                    {top3[2].player ? (
-                      <>
-                        {/* Medal Badge - Top */}
-                        <div className="text-5xl sm:text-6xl mb-0 drop-shadow-lg">
-                          {medals[2]}
-                        </div>
-
-                        {/* Chibi Character - NO BORDER */}
-                        <div className="relative sm:w-28 sm:h-56 w-24 h-48 mb-0">
-                          <img
-                            key={`${activeTab}-3rd-${top3[2].player?.name}`}
-                            src={getChibiImagePath(top3[2].player?.name || '')}
-                            alt={top3[2].player?.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        </div>
-
-                        {/* Info Card */}
-                        <div className={`rounded-lg p-5 sm:p-6 border-2 shadow-lg w-full sm:w-52 md:w-60 text-center mb-0 ${medalColors[2]}`}>
-                          <div className={`text-sm sm:text-base font-bold ${textColors[2]} mb-1`}>
-                            {top3[2].player?.name}
+                          {/* Chibi Character - NO BORDER */}
+                          <div className="relative sm:w-28 sm:h-56 w-24 h-48 mb-0">
+                            <img
+                              key={`${activeTab}-2nd-${top3[1].player?.name}`}
+                              src={getChibiImagePath(top3[1].player?.name || '')}
+                              alt={top3[1].player?.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
                           </div>
-                          {activeTab !== 'paling-rajin' && (
-                            <div className="text-xs text-gray-300 mb-1 font-semibold">
-                              {top3[2].player?.winRate || 0}% WR
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-400 line-clamp-2">{top3[2].metric}</div>
-                        </div>
 
-                        {/* Podium Rank */}
-                        <div className="w-full sm:w-52 md:w-60 h-10 sm:h-12 md:h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 shadow-lg flex items-center justify-center">
-                          <span className="text-3xl sm:text-4xl font-black text-orange-200">3</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center text-gray-400 py-8">-</div>
-                    )}
+                          {/* Info Card */}
+                          <div className={`rounded-lg p-5 sm:p-6 border-2 shadow-lg w-full sm:w-52 md:w-60 text-center mb-0 ${medalColors[1]}`}>
+                            <div className={`text-sm sm:text-base font-bold ${textColors[1]} mb-1`}>
+                              {top3[1].player?.name}
+                            </div>
+                            {activeTab !== 'paling-rajin' && (
+                              <div className="text-xs text-gray-300 mb-1 font-semibold">
+                                {top3[1].player?.winRate || 0}% WR
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-400 line-clamp-2">{top3[1].metric}</div>
+                          </div>
+
+                          {/* Podium Rank */}
+                          <div className="w-full sm:w-52 md:w-60 h-16 sm:h-20 md:h-28 bg-gradient-to-b from-gray-500 to-gray-600 border-2 border-gray-700 shadow-lg flex items-center justify-center">
+                            <span className="text-4xl sm:text-5xl font-black text-gray-300">2</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center text-gray-400 py-8">-</div>
+                      )}
+                    </div>
+
+                    {/* 1st Place - Center High - CHAMPION */}
+                    <div className="flex flex-col items-center mb-0 sm:mb-10 md:mb-16 w-full sm:w-auto order-first sm:order-none">
+                      {top3[0].player ? (
+                        <>
+                          {/* Medal Badge - Top with Glow */}
+                          <div className="pulse-glow text-6xl sm:text-7xl md:text-8xl mb-0 drop-shadow-lg animate-bounce">
+                            {medals[0]}
+                          </div>
+
+                          {/* Chibi Character - Champion - NO BORDER */}
+                          <div className="relative sm:w-32 sm:h-64 w-28 h-56 mb-0">
+                            <img
+                              key={`${activeTab}-1st-${top3[0].player?.name}`}
+                              src={getChibiImagePath(top3[0].player?.name || '')}
+                              alt={top3[0].player?.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+
+                          {/* Info Card - Champion */}
+                          <div className={`rounded-xl p-6 sm:p-7 md:p-8 border-3 shadow-2xl w-full sm:w-60 md:w-72 text-center mb-0 ${medalColors[0]} backdrop-blur-sm`}>
+                            <div className="absolute -top-3 -right-2 text-3xl sm:text-4xl">👑</div>
+                            <div className="text-lg sm:text-xl font-black text-yellow-300 mb-2 drop-shadow-lg">
+                              {top3[0].player?.name}
+                            </div>
+                            {activeTab !== 'paling-rajin' && (
+                              <div className="text-xs sm:text-sm text-yellow-200 mb-2 font-semibold">
+                                {top3[0].player && top3[0].player.longestWinStreak >= 3 ? (
+                                  <span>🔥 {top3[0].player.longestWinStreak}x Streak - ON FIRE</span>
+                                ) : (
+                                  <span>💯 {top3[0].player?.winRate || 0}% Win Rate</span>
+                                )}
+                              </div>
+                            )}
+                            <div className="text-xs text-yellow-100 line-clamp-2">{top3[0].metric}</div>
+                          </div>
+
+                          {/* Podium Rank - Champion */}
+                          <div className="w-full sm:w-60 md:w-72 h-24 sm:h-32 md:h-48 bg-gradient-to-b from-yellow-600 to-yellow-700 border-3 border-yellow-800 shadow-2xl flex items-center justify-center">
+                            <span className="text-5xl sm:text-6xl md:text-8xl font-black text-yellow-200">1</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center text-gray-400 py-8">-</div>
+                      )}
+                    </div>
+
+                    {/* 3rd Place - Right */}
+                    <div className="flex flex-col items-center w-full sm:w-auto">
+                      {top3[2].player ? (
+                        <>
+                          {/* Medal Badge - Top */}
+                          <div className="text-5xl sm:text-6xl mb-0 drop-shadow-lg">
+                            {medals[2]}
+                          </div>
+
+                          {/* Chibi Character - NO BORDER */}
+                          <div className="relative sm:w-28 sm:h-56 w-24 h-48 mb-0">
+                            <img
+                              key={`${activeTab}-3rd-${top3[2].player?.name}`}
+                              src={getChibiImagePath(top3[2].player?.name || '')}
+                              alt={top3[2].player?.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+
+                          {/* Info Card */}
+                          <div className={`rounded-lg p-5 sm:p-6 border-2 shadow-lg w-full sm:w-52 md:w-60 text-center mb-0 ${medalColors[2]}`}>
+                            <div className={`text-sm sm:text-base font-bold ${textColors[2]} mb-1`}>
+                              {top3[2].player?.name}
+                            </div>
+                            {activeTab !== 'paling-rajin' && (
+                              <div className="text-xs text-gray-300 mb-1 font-semibold">
+                                {top3[2].player?.winRate || 0}% WR
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-400 line-clamp-2">{top3[2].metric}</div>
+                          </div>
+
+                          {/* Podium Rank */}
+                          <div className="w-full sm:w-52 md:w-60 h-10 sm:h-12 md:h-16 bg-gradient-to-b from-orange-600 to-orange-700 border-2 border-orange-800 shadow-lg flex items-center justify-center">
+                            <span className="text-3xl sm:text-4xl font-black text-orange-200">3</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center text-gray-400 py-8">-</div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })()}
