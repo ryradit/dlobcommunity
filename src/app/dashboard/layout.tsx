@@ -13,17 +13,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   
   useEffect(() => {
-    // Non-blocking redirect - only after 500ms to avoid flash
+    // Redirect unauthenticated visitors to login
     const timer = setTimeout(() => {
       if (!loading && !user) {
-        router.replace('/login');
+        router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
       } else if (!loading && isAdmin && viewAs === 'admin') {
         router.replace('/admin');
       }
-    }, 500);
+    }, 200);
 
     return () => clearTimeout(timer);
-  }, [user, isAdmin, viewAs, loading, router]);
+  }, [user, isAdmin, viewAs, loading, router, pathname]);
 
   // Always show content immediately for fast perceived performance
   return (

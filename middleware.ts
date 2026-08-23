@@ -91,6 +91,16 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
+  // Protect /dashboard and /admin routes if no session
+  if (path.startsWith('/dashboard') || path.startsWith('/admin')) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', path);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   // For other routes or when no token, check session
   await supabase.auth.getSession();
 

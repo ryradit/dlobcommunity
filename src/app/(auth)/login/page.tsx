@@ -24,10 +24,12 @@ export default function LoginPage() {
   const { signIn, signInWithGoogle, user } = useAuth();
   const router = useRouter();
 
-  // Redirect to dashboard if already logged in
+  // Redirect to dashboard (or target URL) if already logged in
   useEffect(() => {
     if (user) {
-      router.push('/dashboard');
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectUrl = searchParams.get('redirect') || '/dashboard';
+      router.push(redirectUrl);
     }
   }, [user, router]);
 
