@@ -651,8 +651,8 @@ export default function NewBatchPreOrderPage() {
       </div>
 
       {/* Disclaimer */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl px-5 py-4">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-3">
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4">
           <span className="text-amber-500 text-xl mt-0.5">⚠️</span>
           <div>
             <p className="font-semibold text-amber-800 text-sm">Informasi Pre-Order</p>
@@ -661,6 +661,10 @@ export default function NewBatchPreOrderPage() {
               Kami akan menghubungi Anda via WhatsApp untuk konfirmasi pembayaran. 🏸
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-5 py-3 text-xs text-blue-900">
+          <span className="text-blue-600 font-bold">💡 Catatan Logo:</span>
+          <span>Logo di gambar dan video hanya contoh, aslinya sekarang sudah menggunakan logo official D&apos;LOB.</span>
         </div>
       </div>
 

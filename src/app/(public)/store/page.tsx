@@ -177,7 +177,7 @@ const products: Product[] = [
     id: 'nb-jersey',
     name: 'Jersey DLOB New Batch',
     tagline: 'Fresh Colors · New Batch 2026',
-    description: 'Batch terbaru jersey resmi DLOB! Hadir dalam 3 pilihan warna cerah — Biru (#0b244c), Kuning (#FFC000), dan Merah (#ff0000). Menggunakan material Milano Standard premium yang ringan, adem, dan menyerap keringat dengan sangat baik untuk performa maksimal di lapangan badminton.',
+    description: 'Batch terbaru jersey resmi DLOB! Hadir dalam 3 pilihan warna cerah — Biru (#0b244c), Kuning (#FFC000), dan Merah (#ff0000). Menggunakan material Milano Standard premium yang ringan, adem, dan menyerap keringat. Catatan: Logo di gambar dan video hanya contoh, aslinya sekarang sudah menggunakan logo official D\'LOB.',
     badge: 'PRE-ORDER AKTIF',
     badgeType: 'active-preorder',
     coverImage: null,
@@ -800,6 +800,10 @@ export default function StorePage() {
                     <p className="text-sm sm:text-base text-zinc-300 mt-3 leading-relaxed">
                       Koleksi batch terbaru dengan 3 warna eksklusif (<span className="text-blue-400 font-semibold">Biru</span>, <span className="text-amber-400 font-semibold">Kuning</span>, dan <span className="text-red-400 font-semibold">Merah</span>). Didesain untuk kenyamanan sirkulasi udara maksimal selama bermain rally intensif.
                     </p>
+                    <div className="mt-3 p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 text-xs text-zinc-300">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span><strong>Catatan:</strong> Logo di gambar dan video hanya contoh, aslinya sekarang sudah menggunakan logo official D&apos;LOB.</span>
+                    </div>
                   </div>
 
                   {/* Highlights Grid */}

@@ -177,9 +177,9 @@ export default function JerseyDlobNewBatchPage() {
         </div>
       </div>
 
-      {/* Pre-Order Disclaimer */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl px-5 py-4">
+      {/* Pre-Order Disclaimer & Logo Notice */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-3">
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4">
           <span className="text-amber-500 text-xl mt-0.5">⚠️</span>
           <div>
             <p className="font-semibold text-amber-800 text-sm">Informasi Pre-Order</p>
@@ -188,6 +188,10 @@ export default function JerseyDlobNewBatchPage() {
               <span className="font-bold">15 order</span> terpenuhi. Terima kasih atas kesabaran dan dukungan Anda! 🏸
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-5 py-3 text-xs text-blue-900">
+          <span className="text-blue-600 font-bold">💡 Catatan Logo:</span>
+          <span>Logo di gambar dan video hanya contoh, aslinya sekarang sudah menggunakan logo official D&apos;LOB.</span>
         </div>
       </div>
 
