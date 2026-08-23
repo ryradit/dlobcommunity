@@ -16,6 +16,19 @@ interface ServiceHealth {
   details?: Record<string, any>;
 }
 
+export interface SystemIncident {
+  id: string;
+  title: string;
+  service_name: string;
+  impact: 'minor' | 'major' | 'critical' | 'maintenance';
+  status: 'investigating' | 'identified' | 'monitoring' | 'resolved';
+  description?: string;
+  resolution?: string;
+  started_at: string;
+  resolved_at?: string;
+  created_at: string;
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number, timeoutErrorMsg: string): Promise<T> {
   return Promise.race([
     promise,
@@ -30,7 +43,7 @@ export async function GET(req: NextRequest) {
   // ── 0. Check if visitor is authenticated Admin ─────────────────────
   let isAdmin = false;
   try {
-    const supabase = createServerClient(
+    const ssrClient = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -44,9 +57,9 @@ export async function GET(req: NextRequest) {
       }
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await ssrClient.auth.getUser();
     if (user) {
-      const { data: profile } = await supabase
+      const { data: profile } = await ssrClient
         .from('profiles')
         .select('role')
         .eq('id', user.id)
@@ -227,6 +240,58 @@ export async function GET(req: NextRequest) {
     message: hasDrive ? 'Service Account Terhubung' : 'Google Drive belum dikonfigurasi',
   };
 
+  // ── 6. Supabase Outage Auto-Recording & Incident History ──────────
+  let pastIncidents: SystemIncident[] = [];
+  try {
+    const { data: incidentData } = await supabase
+      .from('system_incidents')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(10);
+
+    if (incidentData && incidentData.length > 0) {
+      pastIncidents = incidentData as SystemIncident[];
+    }
+
+    // Auto-record active issues if service is down/degraded
+    for (const [key, srv] of Object.entries(services)) {
+      if (srv.status === 'down' || srv.status === 'degraded') {
+        const hasOpenIncident = pastIncidents.some(
+          (inc) => inc.service_name === key && inc.status !== 'resolved'
+        );
+
+        if (!hasOpenIncident) {
+          await supabase.from('system_incidents').insert({
+            title: `Gangguan Layanan ${srv.name}`,
+            service_name: key,
+            impact: srv.status === 'down' ? 'major' : 'minor',
+            status: 'investigating',
+            description: srv.message || `Layanan ${srv.name} mengalami penurunan performa atau gangguan koneksi.`,
+            started_at: new Date().toISOString(),
+            created_by: 'system_auto',
+          });
+        }
+      } else if (srv.status === 'operational') {
+        // Auto-resolve any open incidents for this service
+        const openIncidents = pastIncidents.filter(
+          (inc) => inc.service_name === key && inc.status !== 'resolved'
+        );
+        for (const inc of openIncidents) {
+          await supabase
+            .from('system_incidents')
+            .update({
+              status: 'resolved',
+              resolved_at: new Date().toISOString(),
+              resolution: `Layanan ${srv.name} telah kembali beroperasi normal secara otomatis.`,
+            })
+            .eq('id', inc.id);
+        }
+      }
+    }
+  } catch (err) {
+    // If system_incidents table not yet created in Supabase, continue seamlessly
+  }
+
   // ── Summary Status ─────────────────────────────────────────────────
   const hasDown = Object.values(services).some((s) => s.status === 'down');
   const hasDegraded = Object.values(services).some((s) => s.status === 'degraded');
@@ -236,6 +301,7 @@ export async function GET(req: NextRequest) {
     status: overallStatus,
     timestamp,
     services,
+    incidents: pastIncidents,
   };
 
   // Check if request prefers HTML (e.g. user opens in browser)
@@ -261,6 +327,56 @@ export async function GET(req: NextRequest) {
         bars.push(`<div class="tick-bar" style="background-color: ${color};" title="Day ${60 - i} - 100% uptime"></div>`);
       }
       return bars.join('');
+    };
+
+    // Group incidents by day
+    const formatIncidentDate = (dateStr: string) => {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    };
+
+    const todayStr = formatIncidentDate(new Date().toISOString());
+    const yesterdayStr = formatIncidentDate(new Date(Date.now() - 86400000).toISOString());
+    const twoDaysAgoStr = formatIncidentDate(new Date(Date.now() - 172800000).toISOString());
+
+    const getIncidentsForDate = (dateStr: string) => {
+      return pastIncidents.filter((inc) => formatIncidentDate(inc.started_at) === dateStr);
+    };
+
+    const renderDayBlock = (dateLabel: string) => {
+      const dayIncidents = getIncidentsForDate(dateLabel);
+      if (dayIncidents.length === 0) {
+        return `
+        <div class="day-block">
+          <div class="day-date">${dateLabel}</div>
+          <div class="day-status-empty">No incidents reported.</div>
+        </div>`;
+      }
+
+      return `
+      <div class="day-block">
+        <div class="day-date">${dateLabel}</div>
+        ${dayIncidents
+          .map(
+            (inc) => `
+          <div class="incident-item">
+            <div class="incident-header">
+              <span class="incident-title">${inc.title}</span>
+              <span class="incident-badge badge-${inc.status}">${inc.status.toUpperCase()}</span>
+            </div>
+            <p class="incident-desc">${inc.description || 'Pemeriksaan performa berkala.'}</p>
+            ${
+              inc.resolution
+                ? `<p class="incident-res"><strong>Resolved:</strong> ${inc.resolution}</p>`
+                : ''
+            }
+          </div>`
+          )
+          .join('')}
+      </div>`;
     };
 
     const html = `<!DOCTYPE html>
@@ -329,13 +445,6 @@ export async function GET(req: NextRequest) {
 
     .brand:hover .brand-logo {
       transform: scale(1.05);
-    }
-
-    .brand-title {
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: #ffffff;
     }
 
     .nav-actions {
@@ -554,12 +663,58 @@ export async function GET(req: NextRequest) {
       font-size: 13.5px;
       font-weight: 700;
       color: #ffffff;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
     .day-status-empty {
       font-size: 13px;
       color: var(--text-muted);
+    }
+
+    .incident-item {
+      background: #121214;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-top: 8px;
+    }
+
+    .incident-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .incident-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .incident-badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-resolved { background: rgba(16, 163, 127, 0.15); color: #10a37f; border: 1px solid rgba(16, 163, 127, 0.3); }
+    .badge-investigating { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-monitoring { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .incident-desc {
+      font-size: 12.5px;
+      color: var(--text-sub);
+      line-height: 1.45;
+      margin-bottom: 6px;
+    }
+
+    .incident-res {
+      font-size: 12px;
+      color: #10a37f;
+      line-height: 1.4;
     }
 
     /* Footer */
@@ -665,21 +820,12 @@ export async function GET(req: NextRequest) {
         .join('')}
     </div>
 
-    <!-- Past Incidents Timeline (OpenAI Style) -->
+    <!-- Past Incidents Timeline (Supabase Recorded) -->
     <div class="section-title">Past Incidents</div>
     <div class="incidents-container">
-      <div class="day-block">
-        <div class="day-date">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-        <div class="day-status-empty">No incidents reported today.</div>
-      </div>
-      <div class="day-block">
-        <div class="day-date">${new Date(Date.now() - 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-        <div class="day-status-empty">No incidents reported.</div>
-      </div>
-      <div class="day-block">
-        <div class="day-date">${new Date(Date.now() - 172800000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-        <div class="day-status-empty">No incidents reported.</div>
-      </div>
+      ${renderDayBlock(todayStr)}
+      ${renderDayBlock(yesterdayStr)}
+      ${renderDayBlock(twoDaysAgoStr)}
     </div>
 
     <!-- Footer -->
