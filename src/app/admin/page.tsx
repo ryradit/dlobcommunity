@@ -12,6 +12,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
+import SystemHealthMonitor from '@/components/admin/SystemHealthMonitor';
 
 interface AdminStats {
   totalMembers: number;
@@ -512,6 +513,9 @@ export default function AdminDashboardPage() {
           Selamat datang kembali, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! Kelola komunitas Anda dari sini.
         </p>
       </div>
+
+      {/* Live System & API Status Monitor */}
+      <SystemHealthMonitor />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {loading ? (
