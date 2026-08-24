@@ -458,7 +458,7 @@ export default function RekapNewBatchPage() {
             `'${o.no_wa}`,
             it.warna.toUpperCase(),
             it.ukuran,
-            it.lengan.toUpperCase(),
+            it.lengan === 'panjang' ? 'LENGAN PANJANG' : 'LENGAN PENDEK',
             `"${it.tanpa_nama_punggung ? '(Tanpa Nama)' : it.nama_punggung || '-'}"`,
             it.harga.toString(),
             o.status.toUpperCase(),
@@ -506,13 +506,14 @@ export default function RekapNewBatchPage() {
 
     text += `📐 *REKAP UKURAN & LENGAN:*\n`;
     Object.entries(sizeCountMap).forEach(([size, data]) => {
-      text += `• Size ${size}: ${data.pendek + data.panjang} pcs (${data.pendek} Pendek, ${data.panjang} Panjang)\n`;
+      text += `• Size ${size}: ${data.pendek + data.panjang} pcs (${data.pendek} Lengan Pendek, ${data.panjang} Lengan Panjang)\n`;
     });
 
     text += `\n📝 *RINCIAN NAMA PUNGGUNG PER JERSEY:*\n`;
     allItems.forEach((it, idx) => {
       const np = it.tanpa_nama_punggung ? '(Tanpa Nama)' : it.nama_punggung ? `"${it.nama_punggung}"` : '(Polos)';
-      text += `${idx + 1}. [${it.warna.toUpperCase()}] Size ${it.ukuran} (${it.lengan}) | Nama: ${np} | a.n ${it.orderName}\n`;
+      const lenganLabel = it.lengan === 'panjang' ? 'Lengan Panjang' : 'Lengan Pendek';
+      text += `${idx + 1}. [${it.warna.toUpperCase()}] Size ${it.ukuran} (${lenganLabel}) | Nama: ${np} | a.n ${it.orderName}\n`;
     });
 
     navigator.clipboard.writeText(text);
@@ -1076,8 +1077,8 @@ export default function RekapNewBatchPage() {
                                 </span>
 
                                 <div className="flex items-center gap-1">
-                                  <span className="text-[11px] text-gray-500 font-mono mr-1">
-                                    {item.lengan === 'panjang' ? 'Panjang' : 'Pendek'}
+                                  <span className="text-[11px] text-gray-500 font-medium mr-1">
+                                    {item.lengan === 'panjang' ? 'Lengan Panjang (+10k)' : 'Lengan Pendek'}
                                   </span>
 
                                   {/* Edit button */}
