@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, Users, Shield, Sparkles, Dumbbell, FileText, TrendingUp, Sun, Moon, ChevronLeft, ChevronRight, MessageSquare, Trophy } from 'lucide-react';
+import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, Users, Shield, Sparkles, Dumbbell, FileText, TrendingUp, Sun, Moon, ChevronLeft, ChevronRight, MessageSquare, Trophy, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import ViewSwitcher from './ViewSwitcher';
 
@@ -57,6 +57,12 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
     }
   }, [user?.user_metadata?.avatar_url, user?.id]); // Also watch user id to ensure refresh on user change
 
+  const isOwner =
+    user?.email?.toLowerCase().includes('ryradit') ||
+    user?.user_metadata?.full_name?.toLowerCase().includes('ryan radityatama') ||
+    user?.user_metadata?.name?.toLowerCase().includes('ryan radityatama') ||
+    user?.email === 'ryradit@gmail.com';
+
   const adminMenuItems = [
     {
       label: 'Dashboard',
@@ -78,6 +84,15 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
       href: '/admin/keuangan',
       icon: TrendingUp,
     },
+    ...(isOwner
+      ? [
+          {
+            label: 'Rekap New Batch',
+            href: '/admin/rekap-new-batch',
+            icon: ShoppingBag,
+          },
+        ]
+      : []),
     {
       label: 'Analitik',
       href: '/admin/analitik',

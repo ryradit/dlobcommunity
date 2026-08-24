@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Zap, TrendingUp, Calendar, Shield, Activity, UserPlus, Edit, Award, Target, DollarSign, TrendingDown, Bell, HelpCircle } from 'lucide-react';
+import { Users, Zap, TrendingUp, Calendar, Shield, Activity, UserPlus, Edit, Award, Target, DollarSign, TrendingDown, Bell, HelpCircle, ShoppingBag, ChevronRight } from 'lucide-react';
 import { StatCardSkeleton, ActivityItemSkeleton } from '@/components/LoadingSkeletons';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -516,6 +516,40 @@ export default function AdminDashboardPage() {
 
       {/* Live System & API Status Monitor */}
       <SystemHealthMonitor />
+
+      {/* Super Admin / Owner Exclusive: New Batch Recap Highlight */}
+      {(user?.email?.toLowerCase().includes('ryradit') ||
+        user?.user_metadata?.full_name?.toLowerCase().includes('ryan radityatama') ||
+        user?.user_metadata?.name?.toLowerCase().includes('ryan radityatama') ||
+        user?.email === 'ryradit@gmail.com') && (
+        <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-emerald-500 text-black shadow-md">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm">
+                  Rekapitulasi Pre-Order Jersey New Batch 2026
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  Owner Exclusive
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-zinc-400 mt-0.5">
+                Pantau total jersey terpesan, matriks konveksi/vendor, dan kelola status pemesanan.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/admin/rekap-new-batch"
+            className="px-5 py-2.5 rounded-full text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-950/20 transition-all flex items-center justify-center gap-1.5 shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <span>Buka Rekapitulasi</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {loading ? (
