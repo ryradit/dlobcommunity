@@ -116,9 +116,9 @@ export default function AISizeRecommenderModal({
             </div>
             <div>
               <h3 className="text-lg font-bold flex items-center gap-2">
-                <span>AI Size Recommender</span>
+                <span>D&apos;LOB AI Size Recommender</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Gemini AI
+                  D&apos;LOB AI
                 </span>
               </h3>
               <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>
@@ -252,7 +252,7 @@ export default function AISizeRecommenderModal({
               {loading ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  <span>Menganalisis dengan Gemini AI...</span>
+                  <span>Menganalisis dengan D&apos;LOB AI...</span>
                 </>
               ) : (
                 <>

@@ -247,7 +247,7 @@ function ItemCard({
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm hover:scale-105 active:scale-95 transition-all"
               >
                 <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
-                <span>AI Rekomendasi Ukuran</span>
+                <span>D&apos;LOB AI Rekomendasi Ukuran</span>
               </button>
               <button
                 type="button"
