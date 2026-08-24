@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import SmartCropImage from '@/components/SmartCropImage';
 import ZoomableImage from '@/components/ZoomableImage';
 
+export type SizeCategory = 'dewasa' | 'kids' | 'balita';
+
 // Supabase storage public URLs for videos
 const SUPABASE_VIDEOS = {
   videomodel1: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/store-videos/videomodel1.mp4',
@@ -32,11 +34,40 @@ interface ColorVariant {
   bgColor: string;
 }
 
-interface SizePrice {
-  size: string;
+export interface SizeOption {
+  id: string;
+  label: string;
+  category: SizeCategory;
+  keterangan?: string;
+  tinggi: number;
+  lebar: number;
   pendekPrice: number;
   panjangPrice: number;
 }
+
+export const allSizeOptions: SizeOption[] = [
+  // Dewasa (Adult)
+  { id: 'XS', label: 'XS', category: 'dewasa', tinggi: 65, lebar: 45, pendekPrice: 110000, panjangPrice: 120000 },
+  { id: 'S', label: 'S', category: 'dewasa', tinggi: 68, lebar: 48, pendekPrice: 110000, panjangPrice: 120000 },
+  { id: 'M', label: 'M', category: 'dewasa', tinggi: 71, lebar: 51, pendekPrice: 110000, panjangPrice: 120000 },
+  { id: 'L', label: 'L', category: 'dewasa', tinggi: 74, lebar: 54, pendekPrice: 110000, panjangPrice: 120000 },
+  { id: 'XL', label: 'XL', category: 'dewasa', tinggi: 77, lebar: 57, pendekPrice: 110000, panjangPrice: 120000 },
+  { id: 'XXL', label: 'XXL', category: 'dewasa', tinggi: 80, lebar: 62, pendekPrice: 120000, panjangPrice: 130000 },
+  { id: '3XL', label: '3XL', category: 'dewasa', tinggi: 83, lebar: 65, pendekPrice: 130000, panjangPrice: 140000 },
+
+  // Kids (7-13 Tahun) - 100k
+  { id: 'Kids S', label: 'S', category: 'kids', keterangan: '7-8 TAHUN', tinggi: 57, lebar: 43, pendekPrice: 100000, panjangPrice: 110000 },
+  { id: 'Kids M', label: 'M', category: 'kids', keterangan: '8-9 TAHUN', tinggi: 59, lebar: 44, pendekPrice: 100000, panjangPrice: 110000 },
+  { id: 'Kids L', label: 'L', category: 'kids', keterangan: '10-11 TAHUN', tinggi: 62, lebar: 46, pendekPrice: 100000, panjangPrice: 110000 },
+  { id: 'Kids XL', label: 'XL', category: 'kids', keterangan: '12-13 TAHUN', tinggi: 65, lebar: 48, pendekPrice: 100000, panjangPrice: 110000 },
+
+  // Balita (1-6 Tahun) - 100k
+  { id: 'Balita XS', label: 'XS', category: 'balita', keterangan: '1 - 2 TAHUN', tinggi: 36, lebar: 28, pendekPrice: 100000, panjangPrice: 110000 },
+  { id: 'Balita S', label: 'S', category: 'balita', keterangan: '2 - 3 TAHUN', tinggi: 40, lebar: 31, pendekPrice: 100000, panjangPrice: 110000 },
+  { id: 'Balita M', label: 'M', category: 'balita', keterangan: '3 - 4 TAHUN', tinggi: 43, lebar: 34, pendekPrice: 100000, panjangPrice: 110000 },
+  { id: 'Balita L', label: 'L', category: 'balita', keterangan: '4 - 5 TAHUN', tinggi: 45, lebar: 36, pendekPrice: 100000, panjangPrice: 110000 },
+  { id: 'Balita XL', label: 'XL', category: 'balita', keterangan: '5 - 6 TAHUN', tinggi: 47, lebar: 38, pendekPrice: 100000, panjangPrice: 110000 },
+];
 
 // --- Jersey DLOB Official ---
 const officialColorVariants: ColorVariant[] = [
@@ -131,26 +162,6 @@ const newBatchColorVariants: ColorVariant[] = [
   },
 ];
 
-const sizePrices: SizePrice[] = [
-  { size: 'XS',  pendekPrice: 110000, panjangPrice: 120000 },
-  { size: 'S',   pendekPrice: 110000, panjangPrice: 120000 },
-  { size: 'M',   pendekPrice: 110000, panjangPrice: 120000 },
-  { size: 'L',   pendekPrice: 110000, panjangPrice: 120000 },
-  { size: 'XL',  pendekPrice: 110000, panjangPrice: 120000 },
-  { size: 'XXL', pendekPrice: 120000, panjangPrice: 130000 },
-  { size: '3XL', pendekPrice: 130000, panjangPrice: 140000 },
-];
-
-const sizeGuide = [
-  { size: 'XS',  tinggi: 65, lebar: 45 },
-  { size: 'S',   tinggi: 68, lebar: 48 },
-  { size: 'M',   tinggi: 71, lebar: 51 },
-  { size: 'L',   tinggi: 74, lebar: 54 },
-  { size: 'XL',  tinggi: 77, lebar: 57 },
-  { size: 'XXL', tinggi: 80, lebar: 62 },
-  { size: '3XL', tinggi: 83, lebar: 65 },
-];
-
 interface Product {
   id: string;
   name: string;
@@ -169,6 +180,7 @@ interface Product {
   isClosed?: boolean;
   estimatedDelivery: string;
   comingSoon: boolean;
+  startingPrice: number;
   introductionVideos?: string[];
 }
 
@@ -176,8 +188,8 @@ const products: Product[] = [
   {
     id: 'nb-jersey',
     name: 'Jersey DLOB New Batch',
-    tagline: 'Fresh Colors · New Batch 2026',
-    description: 'Batch terbaru jersey resmi DLOB! Hadir dalam 3 pilihan warna cerah — Biru (#0b244c), Kuning (#FFC000), dan Merah (#ff0000). Menggunakan material Milano Standard premium yang ringan, adem, dan menyerap keringat. Catatan: Logo di gambar dan video hanya contoh, aslinya sekarang sudah menggunakan logo official D\'LOB.',
+    tagline: 'Fresh Colors · Dewasa, Kids & Balita Edition',
+    description: 'Batch terbaru jersey resmi DLOB! Hadir dalam 3 pilihan warna cerah — Biru (#0b244c), Kuning (#FFC000), dan Merah (#ff0000). Tersedia dalam ukuran Dewasa (Rp 110k), Kids (Rp 100k), dan Balita 👶 (Rp 100k). Menggunakan material Milano Standard premium yang ringan, adem, dan menyerap keringat. Catatan: Logo di gambar dan video hanya contoh, aslinya sekarang sudah menggunakan logo official D\'LOB.',
     badge: 'PRE-ORDER AKTIF',
     badgeType: 'active-preorder',
     coverImage: null,
@@ -191,6 +203,7 @@ const products: Product[] = [
     isClosed: false,
     estimatedDelivery: 'Kuota 15 Order',
     comingSoon: false,
+    startingPrice: 100000,
     introductionVideos: [
       SUPABASE_VIDEOS.nb_biru1,
       SUPABASE_VIDEOS.nb_biru2,
@@ -217,6 +230,7 @@ const products: Product[] = [
     isClosed: true,
     estimatedDelivery: 'Batch Ditutup',
     comingSoon: false,
+    startingPrice: 110000,
     introductionVideos: [
       SUPABASE_VIDEOS.videomodel1,
       SUPABASE_VIDEOS.videomodel3,
@@ -241,6 +255,7 @@ const products: Product[] = [
     isClosed: false,
     estimatedDelivery: 'TBA (Concept)',
     comingSoon: true,
+    startingPrice: 110000,
     introductionVideos: [
       SUPABASE_VIDEOS.videomodel4,
       SUPABASE_VIDEOS.videomodel6,
@@ -395,7 +410,6 @@ function CatalogCard({
             <svg viewBox="0 0 200 200" className="w-28 h-28 opacity-20" fill="none" stroke="white" strokeWidth="1.5">
               <rect x="20" y="20" width="60" height="60" rx="4" /><rect x="120" y="20" width="60" height="60" rx="4" />
               <rect x="20" y="120" width="60" height="60" rx="4" /><rect x="120" y="120" width="60" height="60" rx="4" />
-              <line x1="80" y1="50" x2="120" y2="50" /><line x1="80" y1="150" x2="120" y2="150" />
             </svg>
             <p className="text-white/40 text-xs tracking-widest uppercase font-semibold">Teaser Concept</p>
           </div>
@@ -459,7 +473,7 @@ function CatalogCard({
             <p className="text-sm font-semibold text-zinc-400 mt-1">Status: Segera Hadir</p>
           ) : (
             <p className="text-sm font-bold text-white mt-1">
-              Mulai <span className="text-emerald-400 font-mono">{formatPrice(sizePrices[0].pendekPrice)}</span>
+              Mulai <span className="text-emerald-400 font-mono">{formatPrice(product.startingPrice)}</span>
             </p>
           )}
         </div>
@@ -486,6 +500,7 @@ export default function StorePage() {
   const [selectedSleeve, setSelectedSleeve]         = useState<'pendek' | 'panjang'>('pendek');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
+  const [sizeGuideTab, setSizeGuideTab]             = useState<SizeCategory>('dewasa');
   const [filterCategory, setFilterCategory]         = useState<'all' | 'preorder' | 'closed' | 'coming-soon'>('all');
   const router = useRouter();
 
@@ -502,7 +517,7 @@ export default function StorePage() {
     ? selectedProduct.colorVariants.find((v) => v.id === selectedColor) ?? selectedProduct.colorVariants[0]
     : null;
   const currentImage = selectedVariant?.images[selectedImageIndex] ?? selectedVariant?.images[0] ?? null;
-  const selectedSizeData = sizePrices.find((sp) => sp.size === selectedSize);
+  const selectedSizeData = allSizeOptions.find((sp) => sp.id === selectedSize);
   const currentPrice = selectedSizeData
     ? (selectedSleeve === 'pendek' ? selectedSizeData.pendekPrice : selectedSizeData.panjangPrice)
     : null;
@@ -533,7 +548,7 @@ export default function StorePage() {
         <div className="text-xs sm:text-sm text-zinc-300">
           <p className="font-semibold text-white mb-0.5">Informasi Batch &amp; Pemesanan Jersey DLOB</p>
           <p className="text-zinc-400 leading-relaxed">
-            Pemesanan jersey saat ini difokuskan pada <strong className="text-emerald-400">Pre-Order New Batch 2026</strong>. Edisi batch reguler sebelumnya telah resmi ditutup. Produksi batch baru berjalan setelah kuota minimum <strong className="text-white">15 pesanan</strong> terkumpul.
+            Pemesanan jersey saat ini difokuskan pada <strong className="text-emerald-400">Pre-Order New Batch 2026</strong> (tersedia size Dewasa, Kids &amp; Balita 👶). Edisi batch reguler sebelumnya telah resmi ditutup. Produksi batch baru berjalan setelah kuota minimum <strong className="text-white">15 pesanan</strong> terkumpul.
           </p>
         </div>
       </div>
@@ -543,7 +558,7 @@ export default function StorePage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white selection:bg-white selection:text-black">
 
-      {/* Size Guide Modal */}
+      {/* ── Size Guide Modal (3 Tables: Dewasa, Kids, Balita) ── */}
       {showSizeGuideModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-zinc-900 border border-white/15 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8">
@@ -558,11 +573,44 @@ export default function StorePage() {
                 ✕
               </button>
             </div>
+
+            {/* Category Tabs inside Modal */}
+            <div className="grid grid-cols-3 gap-2 p-1 bg-white/5 border border-white/10 rounded-full mb-6">
+              <button
+                type="button"
+                onClick={() => setSizeGuideTab('dewasa')}
+                className={`py-2 px-3 text-xs font-bold rounded-full transition-all ${
+                  sizeGuideTab === 'dewasa' ? 'bg-white text-black shadow-md' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Dewasa (110k)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSizeGuideTab('kids')}
+                className={`py-2 px-3 text-xs font-bold rounded-full transition-all ${
+                  sizeGuideTab === 'kids' ? 'bg-white text-black shadow-md' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Kids (100k)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSizeGuideTab('balita')}
+                className={`py-2 px-3 text-xs font-bold rounded-full transition-all ${
+                  sizeGuideTab === 'balita' ? 'bg-white text-black shadow-md' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Balita 👶 (100k)
+              </button>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-white/10 bg-white/5 text-zinc-300">
-                    <th className="text-left py-3 px-4 font-semibold">Ukuran</th>
+                    <th className="text-left py-3 px-4 font-semibold">Size</th>
+                    <th className="text-left py-3 px-4 font-semibold">Keterangan</th>
                     <th className="text-right py-3 px-4 font-semibold">Tinggi (cm)</th>
                     <th className="text-right py-3 px-4 font-semibold">Lebar (cm)</th>
                     <th className="text-right py-3 px-4 font-semibold">Lengan Pendek</th>
@@ -570,30 +618,32 @@ export default function StorePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-zinc-300">
-                  {sizeGuide.map((item) => {
-                    const priceItem = sizePrices.find((sp) => sp.size === item.size);
-                    return (
-                      <tr key={item.size} className="hover:bg-white/5 transition-colors">
-                        <td className="py-3 px-4 font-bold text-white">{item.size}</td>
+                  {allSizeOptions
+                    .filter((s) => s.category === sizeGuideTab)
+                    .map((item) => (
+                      <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                        <td className="py-3 px-4 font-bold text-white">{item.label}</td>
+                        <td className="py-3 px-4 text-zinc-400 text-xs">{item.keterangan || 'Dewasa Standard'}</td>
                         <td className="text-right py-3 px-4 font-mono">{item.tinggi}</td>
                         <td className="text-right py-3 px-4 font-mono">{item.lebar}</td>
-                        <td className="text-right py-3 px-4 font-mono text-emerald-400">
-                          {priceItem ? formatPrice(priceItem.pendekPrice) : '-'}
+                        <td className="text-right py-3 px-4 font-mono text-emerald-400 font-bold">
+                          {formatPrice(item.pendekPrice)}
                         </td>
                         <td className="text-right py-3 px-4 font-mono text-emerald-400">
-                          {priceItem ? formatPrice(priceItem.panjangPrice) : '-'}
+                          {formatPrice(item.panjangPrice)}
                         </td>
                       </tr>
-                    );
-                  })}
+                    ))}
                 </tbody>
               </table>
             </div>
+
             <div className="mt-6 p-4 bg-white/5 rounded-2xl border border-white/10 text-xs text-zinc-400 space-y-1">
               <p className="font-semibold text-white">💡 Catatan Pengukuran:</p>
               <p>• Satuan ukuran dalam Centimeter (cm) dengan toleransi jahitan ±2cm.</p>
               <p>• Lengan panjang dikenakan biaya tambahan +Rp 10.000 dari harga lengan pendek.</p>
             </div>
+
             <div className="mt-6 text-center">
               <button
                 onClick={() => setShowSizeGuideModal(false)}
@@ -691,15 +741,15 @@ export default function StorePage() {
                   <p className="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Model Jersey</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white">7+</p>
-                  <p className="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Varian Warna</p>
+                  <p className="text-2xl font-bold text-white">3 Tipe</p>
+                  <p className="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Dewasa, Kids &amp; Balita</p>
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white">Milano</p>
                   <p className="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Standard Premium</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white">XS - 3XL</p>
+                  <p className="text-2xl font-bold text-white">16</p>
                   <p className="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Pilihan Ukuran</p>
                 </div>
               </div>
@@ -798,7 +848,7 @@ export default function StorePage() {
                       Jersey DLOB <span className="font-bold italic text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-100">New Batch 2026</span>
                     </h3>
                     <p className="text-sm sm:text-base text-zinc-300 mt-3 leading-relaxed">
-                      Koleksi batch terbaru dengan 3 warna eksklusif (<span className="text-blue-400 font-semibold">Biru</span>, <span className="text-amber-400 font-semibold">Kuning</span>, dan <span className="text-red-400 font-semibold">Merah</span>). Didesain untuk kenyamanan sirkulasi udara maksimal selama bermain rally intensif.
+                      Koleksi batch terbaru dengan 3 warna eksklusif (<span className="text-blue-400 font-semibold">Biru</span>, <span className="text-amber-400 font-semibold">Kuning</span>, dan <span className="text-red-400 font-semibold">Merah</span>). Kini tersedia dalam size <strong>Dewasa</strong>, <strong>Kids (7-13 Thn)</strong>, dan <strong>Balita 👶 (1-6 Thn)</strong>!
                     </p>
                     <div className="mt-3 p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 text-xs text-zinc-300">
                       <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -814,14 +864,14 @@ export default function StorePage() {
                       <p className="text-[11px] text-emerald-400 mt-0.5">Min. 15 Kuota</p>
                     </div>
                     <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                      <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Material</p>
-                      <p className="text-sm font-bold text-white mt-0.5">Milano Standard</p>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">Ringan &amp; Breathable</p>
+                      <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Tipe Ukuran</p>
+                      <p className="text-sm font-bold text-white mt-0.5">Dewasa, Kids &amp; Balita</p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">Milano Standard</p>
                     </div>
                     <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                      <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Harga</p>
-                      <p className="text-sm font-bold text-emerald-400 font-mono mt-0.5">Rp 110.000</p>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">Ukuran XS s/d 3XL</p>
+                      <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Harga Mulai</p>
+                      <p className="text-sm font-bold text-emerald-400 font-mono mt-0.5">Rp 100.000</p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">Kids/Balita (100k), Dewasa (110k)</p>
                     </div>
                   </div>
 
@@ -1084,24 +1134,24 @@ export default function StorePage() {
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Pilih Ukuran</h3>
                         <button
-                          onClick={() => setShowSizeGuideModal(true)}
+                          onClick={() => { setSizeGuideTab('dewasa'); setShowSizeGuideModal(true); }}
                           className="text-xs text-emerald-400 hover:underline font-semibold flex items-center gap-1"
                         >
                           📏 Panduan Ukuran
                         </button>
                       </div>
                       <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                        {['XS','S','M','L','XL','XXL','3XL'].map((size) => (
+                        {allSizeOptions.filter((s) => s.category === 'dewasa').map((sizeObj) => (
                           <button
-                            key={size}
-                            onClick={() => setSelectedSize(size)}
+                            key={sizeObj.id}
+                            onClick={() => setSelectedSize(sizeObj.id)}
                             className={`py-2.5 rounded-full text-xs font-bold border transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                              selectedSize === size
+                              selectedSize === sizeObj.id
                                 ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-md'
                                 : 'border-white/15 text-zinc-300 hover:border-white/30 bg-white/5'
                             }`}
                           >
-                            {size}
+                            {sizeObj.label}
                           </button>
                         ))}
                       </div>

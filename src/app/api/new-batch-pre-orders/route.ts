@@ -3,8 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 
 function getSizePrice(size: string, sleeve: string): number {
   let base = 110000;
-  if (size === 'XXL') base = 120000;
-  if (size === '3XL') base = 130000;
+  if (size.startsWith('Kids') || size.startsWith('Balita')) {
+    base = 100000;
+  } else if (size === 'XXL') {
+    base = 120000;
+  } else if (size === '3XL') {
+    base = 130000;
+  }
   return base + (sleeve === 'panjang' ? 10000 : 0);
 }
 
@@ -30,7 +35,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validSizes   = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+    const validSizes = [
+      // Adult
+      'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL',
+      // Kids
+      'Kids S', 'Kids M', 'Kids L', 'Kids XL',
+      // Balita
+      'Balita XS', 'Balita S', 'Balita M', 'Balita L', 'Balita XL',
+    ];
     const validColors  = ['biru', 'kuning', 'merah'];
     const validSleeves = ['pendek', 'panjang'];
 

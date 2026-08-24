@@ -32,12 +32,15 @@ create table if not exists public.new_batch_order_items (
   created_at    timestamptz not null default now(),
 
   warna         text not null check (warna in ('biru', 'kuning', 'merah')),
-  ukuran        text not null check (ukuran in ('XS','S','M','L','XL','XXL','3XL')),
+  ukuran        text not null, -- 'XS'..'3XL', 'Kids S'..'Kids XL', 'Balita XS'..'Balita XL'
   lengan        text not null default 'pendek' check (lengan in ('pendek', 'panjang')),
   nama_punggung text,
   tanpa_nama_punggung boolean not null default false,
   harga         integer not null
 );
+
+-- Migration helper if table already exists
+alter table if exists public.new_batch_order_items drop constraint if exists new_batch_order_items_ukuran_check;
 
 -- ── Row Level Security ────────────────────────────────────────
 alter table public.new_batch_orders enable row level security;
