@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import * as XLSX from 'xlsx';
 import {
   ShoppingBag,
   Package,
@@ -25,7 +26,8 @@ import {
   Edit2,
   Plus,
   X,
-  Check
+  Check,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export type SizeCategory = 'dewasa' | 'kids' | 'balita';
@@ -490,6 +492,112 @@ export default function RekapNewBatchPage() {
     document.body.removeChild(link);
   };
 
+  // Export Excel (.xlsx / .xls)
+  const handleExportExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // ── Sheet 1: Daftar Pesanan Lengkap ──
+      const ordersData: any[] = [];
+      orders.forEach((o) => {
+        if (o.new_batch_order_items && o.new_batch_order_items.length > 0) {
+          o.new_batch_order_items.forEach((it) => {
+            const isBalita = it.ukuran.startsWith('Balita');
+            const isKids = it.ukuran.startsWith('Kids');
+            const cat = isBalita ? 'Balita' : isKids ? 'Kids' : 'Dewasa';
+
+            ordersData.push({
+              'No': ordersData.length + 1,
+              'ID Order': o.id,
+              'Tanggal Pesan': formatDate(o.created_at),
+              'Nama Pemesan': o.nama,
+              'No WhatsApp': o.no_wa,
+              'Warna Jersey': it.warna.toUpperCase(),
+              'Kategori': cat,
+              'Ukuran Size': it.ukuran,
+              'Tipe Lengan': it.lengan === 'panjang' ? 'Lengan Panjang (+10k)' : 'Lengan Pendek',
+              'Nama Punggung': it.tanpa_nama_punggung ? '(Tanpa Nama)' : (it.nama_punggung || '-'),
+              'Harga Item (Rp)': it.harga,
+              'Status Order': statusBadges[o.status]?.label || o.status,
+              'Total Bayar (Rp)': o.total_harga,
+            });
+          });
+        } else {
+          ordersData.push({
+            'No': ordersData.length + 1,
+            'ID Order': o.id,
+            'Tanggal Pesan': formatDate(o.created_at),
+            'Nama Pemesan': o.nama,
+            'No WhatsApp': o.no_wa,
+            'Warna Jersey': '-',
+            'Kategori': '-',
+            'Ukuran Size': '-',
+            'Tipe Lengan': '-',
+            'Nama Punggung': '-',
+            'Harga Item (Rp)': o.total_harga,
+            'Status Order': statusBadges[o.status]?.label || o.status,
+            'Total Bayar (Rp)': o.total_harga,
+          });
+        }
+      });
+
+      const wsOrders = XLSX.utils.json_to_sheet(ordersData);
+      XLSX.utils.book_append_sheet(wb, wsOrders, 'Daftar Pesanan Lengkap');
+
+      // ── Sheet 2: Matriks Produksi Vendor ──
+      const matrixData: any[] = [];
+      Object.entries(sizeCountMap).forEach(([size, counts]) => {
+        const isBalita = size.startsWith('Balita');
+        const isKids = size.startsWith('Kids');
+        const cat = isBalita ? 'Balita 👶' : isKids ? 'Kids 👦' : 'Dewasa 👤';
+
+        matrixData.push({
+          'Kategori': cat,
+          'Ukuran Size': size,
+          'Lengan Pendek (pcs)': counts.pendek,
+          'Lengan Panjang (pcs)': counts.panjang,
+          'Subtotal Pcs': counts.pendek + counts.panjang,
+        });
+      });
+
+      // Total row for Matrix
+      const totalPendek = Object.values(sizeCountMap).reduce((sum, c) => sum + c.pendek, 0);
+      const totalPanjang = Object.values(sizeCountMap).reduce((sum, c) => sum + c.panjang, 0);
+      matrixData.push({
+        'Kategori': 'TOTAL KESELURUHAN',
+        'Ukuran Size': 'SEMUA UKURAN',
+        'Lengan Pendek (pcs)': totalPendek,
+        'Lengan Panjang (pcs)': totalPanjang,
+        'Subtotal Pcs': totalJersey,
+      });
+
+      const wsMatrix = XLSX.utils.json_to_sheet(matrixData);
+      XLSX.utils.book_append_sheet(wb, wsMatrix, 'Matriks Produksi Vendor');
+
+      // ── Sheet 3: Ringkasan Eksekutif ──
+      const summaryData = [
+        { 'Indikator': 'Tanggal Rekapitulasi', 'Keterangan': new Date().toLocaleDateString('id-ID', { dateStyle: 'full' }) },
+        { 'Indikator': 'Total Jersey Dipesan', 'Keterangan': `${totalJersey} pcs` },
+        { 'Indikator': 'Target Kuota Produksi', 'Keterangan': `${quotaTarget} pcs (${quotaProgress}%)` },
+        { 'Indikator': 'Jumlah Pemesan Aktif', 'Keterangan': `${activeOrders.length} orang` },
+        { 'Indikator': 'Total Estimasi Omset', 'Keterangan': formatRp(totalOmset) },
+        { 'Indikator': 'Jumlah Jersey Biru Navy', 'Keterangan': `${colorCount.biru} pcs` },
+        { 'Indikator': 'Jumlah Jersey Kuning', 'Keterangan': `${colorCount.kuning} pcs` },
+        { 'Indikator': 'Jumlah Jersey Merah', 'Keterangan': `${colorCount.merah} pcs` },
+        { 'Indikator': 'Jumlah Kategori Dewasa', 'Keterangan': `${categoryCount.dewasa} pcs` },
+        { 'Indikator': 'Jumlah Kategori Kids', 'Keterangan': `${categoryCount.kids} pcs` },
+        { 'Indikator': 'Jumlah Kategori Balita', 'Keterangan': `${categoryCount.balita} pcs` },
+      ];
+      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Ringkasan & Finansial');
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `Rekap_PreOrder_Jersey_DLOB_New_Batch_${dateStr}.xlsx`);
+    } catch (err: any) {
+      alert(`Gagal mengekspor file Excel: ${err.message}`);
+    }
+  };
+
   // Copy WhatsApp Vendor Summary
   const handleCopyWASummary = () => {
     let text = `*REKAP PESANAN JERSEY DLOB NEW BATCH 2026*\n`;
@@ -762,7 +870,7 @@ export default function RekapNewBatchPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={fetchOrders}
             disabled={loading}
@@ -774,10 +882,19 @@ export default function RekapNewBatchPage() {
 
           <button
             onClick={handleCopyWASummary}
-            className="px-4 py-2.5 rounded-full text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5"
+            className="px-4 py-2.5 rounded-full text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5"
           >
             <Copy className="w-3.5 h-3.5" />
-            <span>{copiedWA ? 'Tersalin!' : 'Salin Format WA Vendor'}</span>
+            <span>{copiedWA ? 'Tersalin!' : 'Salin WA Vendor'}</span>
+          </button>
+
+          <button
+            onClick={handleExportExcel}
+            className="px-4 py-2.5 rounded-full text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5"
+            title="Download file spreadsheet Excel lengkap dengan multi-sheet"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+            <span>Export Excel (.xlsx)</span>
           </button>
 
           <button
