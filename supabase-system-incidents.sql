@@ -24,6 +24,11 @@ CREATE INDEX IF NOT EXISTS idx_system_incidents_status ON public.system_incident
 -- Enable RLS
 ALTER TABLE public.system_incidents ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies to prevent 42710 already exists error
+DROP POLICY IF EXISTS "Allow public read access on system_incidents" ON public.system_incidents;
+DROP POLICY IF EXISTS "Allow authenticated insert on system_incidents" ON public.system_incidents;
+DROP POLICY IF EXISTS "Allow authenticated update on system_incidents" ON public.system_incidents;
+
 -- 1. Anyone can view system incidents (Public transparency)
 CREATE POLICY "Allow public read access on system_incidents"
   ON public.system_incidents

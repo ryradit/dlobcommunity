@@ -39,14 +39,20 @@ create table if not exists public.new_batch_order_items (
   harga         integer not null
 );
 
--- Migration helper if table already exists
+-- Migration helper if table already exists: drop strict check on ukuran
 alter table if exists public.new_batch_order_items drop constraint if exists new_batch_order_items_ukuran_check;
 
 -- ── Row Level Security ────────────────────────────────────────
 alter table public.new_batch_orders enable row level security;
 alter table public.new_batch_order_items enable row level security;
 
--- Anyone can INSERT orders (public pre-order form)
+-- Drop existing policies first to prevent 42710 already exists error
+drop policy if exists "Allow public insert orders" on public.new_batch_orders;
+drop policy if exists "Allow public insert items" on public.new_batch_order_items;
+drop policy if exists "Service role select orders" on public.new_batch_orders;
+drop policy if exists "Service role select items" on public.new_batch_order_items;
+
+-- 1. Anyone can INSERT orders (public pre-order form)
 create policy "Allow public insert orders"
   on public.new_batch_orders for insert
   to anon, authenticated with check (true);
@@ -55,11 +61,11 @@ create policy "Allow public insert items"
   on public.new_batch_order_items for insert
   to anon, authenticated with check (true);
 
--- Only service role can SELECT
+-- 2. Service role & authenticated can SELECT / UPDATE
 create policy "Service role select orders"
   on public.new_batch_orders for select
-  to service_role using (true);
+  to service_role, authenticated using (true);
 
 create policy "Service role select items"
   on public.new_batch_order_items for select
-  to service_role using (true);
+  to service_role, authenticated using (true);
