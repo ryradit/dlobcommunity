@@ -9,6 +9,14 @@ interface AISizeResponse {
   success: boolean;
   recommendedCategory: SizeCategory;
   recommendedSize: string;
+  measurements?: {
+    category: SizeCategory;
+    label: string;
+    tinggi: number;
+    lebar: number;
+    keterangan: string;
+    price: number;
+  };
   alternativeSize?: string;
   fitType?: string;
   reasoning: string;
@@ -289,11 +297,46 @@ export default function AISizeRecommenderModal({
                 {result.reasoning}
               </p>
 
+              {/* ── Table Size Grounding Breakdown ── */}
+              {result.measurements && (
+                <div className={`p-4 rounded-2xl border text-xs space-y-2 ${
+                  isDark ? 'bg-zinc-900/90 border-white/10' : 'bg-white border-gray-200'
+                }`}>
+                  <div className="flex items-center justify-between pb-2 border-b border-white/5 font-semibold">
+                    <span className="flex items-center gap-1.5 text-emerald-500">
+                      <span>📏</span>
+                      <span>Spesifikasi Tabel {result.recommendedSize}:</span>
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-400">{result.measurements.keterangan}</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
+                    <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-[10px] text-zinc-400 uppercase">Tinggi Jersey</p>
+                      <p className="text-sm font-bold font-mono text-emerald-400 mt-0.5">{result.measurements.tinggi} cm</p>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-[10px] text-zinc-400 uppercase">Lebar Dada</p>
+                      <p className="text-sm font-bold font-mono text-emerald-400 mt-0.5">{result.measurements.lebar} cm</p>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-[10px] text-zinc-400 uppercase">Toleransi</p>
+                      <p className="text-sm font-bold font-mono text-zinc-300 mt-0.5">±2 cm</p>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+                      <p className="text-[10px] text-zinc-400 uppercase">Harga Dasar</p>
+                      <p className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(result.measurements.price)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {result.alternativeSize && (
                 <div className={`p-3 rounded-2xl text-xs flex items-center justify-between ${
                   isDark ? 'bg-zinc-900/80 border border-white/5' : 'bg-white border border-emerald-100'
                 }`}>
-                  <span className="text-gray-500 dark:text-zinc-400">Ukuran Alternatif (Longgar):</span>
+                  <span className="text-gray-500 dark:text-zinc-400">Ukuran Alternatif (Lebih Longgar):</span>
                   <span className="font-bold text-gray-900 dark:text-white font-mono">{result.alternativeSize}</span>
                 </div>
               )}
