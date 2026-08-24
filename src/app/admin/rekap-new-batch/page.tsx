@@ -881,28 +881,12 @@ export default function RekapNewBatchPage() {
           </button>
 
           <button
-            onClick={handleCopyWASummary}
-            className="px-4 py-2.5 rounded-full text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5"
-          >
-            <Copy className="w-3.5 h-3.5" />
-            <span>{copiedWA ? 'Tersalin!' : 'Salin WA Vendor'}</span>
-          </button>
-
-          <button
             onClick={handleExportExcel}
-            className="px-4 py-2.5 rounded-full text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5"
-            title="Download file spreadsheet Excel lengkap dengan multi-sheet"
+            className="px-5 py-2.5 rounded-full text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5"
+            title="Download file spreadsheet Excel lengkap (.xlsx)"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
             <span>Export Excel (.xlsx)</span>
-          </button>
-
-          <button
-            onClick={handleExportCSV}
-            className="px-4 py-2.5 rounded-full text-xs font-bold bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-black shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
           </button>
         </div>
       </div>
