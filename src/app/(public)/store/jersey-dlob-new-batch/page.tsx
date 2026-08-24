@@ -97,6 +97,8 @@ const productInfo = {
   origin: 'Indonesia',
 };
 
+import AISizeRecommenderModal from '@/components/store/AISizeRecommenderModal';
+
 export default function JerseyDlobNewBatchPage() {
   const router = useRouter();
   const [selectedColor, setSelectedColor] = useState('nb-blue');
@@ -105,6 +107,7 @@ export default function JerseyDlobNewBatchPage() {
   const [selectedSleeve, setSelectedSleeve] = useState<'pendek' | 'panjang'>('pendek');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
   const [sizeGuideTab, setSizeGuideTab] = useState<SizeCategory>('dewasa');
 
   const selectedVariant = colorVariants.find((v) => v.id === selectedColor) ?? colorVariants[0];
@@ -126,6 +129,17 @@ export default function JerseyDlobNewBatchPage() {
 
   return (
     <div className="min-h-screen bg-white">
+
+      {/* ── AI Size Recommender Modal ── */}
+      <AISizeRecommenderModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onApplySize={(cat, sizeId) => {
+          setSelectedCategory(cat);
+          setSelectedSize(sizeId);
+        }}
+        theme="light"
+      />
 
       {/* ── Size Guide Modal (3 Tables) ── */}
       {showSizeGuideModal && (
@@ -390,14 +404,24 @@ export default function JerseyDlobNewBatchPage() {
 
             {/* Choose Size */}
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                 <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Pilih Ukuran ({selectedCategory})</h3>
-                <button
-                  onClick={() => { setSizeGuideTab(selectedCategory); setShowSizeGuideModal(true); }}
-                  className="text-xs text-blue-600 hover:underline font-semibold flex items-center gap-1"
-                >
-                  📏 Panduan Ukuran
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAIModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+                    <span>AI Rekomendasi Ukuran</span>
+                  </button>
+                  <button
+                    onClick={() => { setSizeGuideTab(selectedCategory); setShowSizeGuideModal(true); }}
+                    className="text-xs text-blue-600 hover:underline font-semibold flex items-center gap-1"
+                  >
+                    📏 Panduan Ukuran
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {availableSizes.map((s) => (

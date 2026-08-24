@@ -129,6 +129,7 @@ function ItemCard({
   onChange,
   onRemove,
   onShowSizeGuide,
+  onShowAIRecommend,
   onZoom,
 }: {
   item: OrderItem;
@@ -137,6 +138,7 @@ function ItemCard({
   onChange: (patch: Partial<OrderItem>) => void;
   onRemove: () => void;
   onShowSizeGuide: () => void;
+  onShowAIRecommend: () => void;
   onZoom: (src: string) => void;
 }) {
   const selectedWarna = warnaOptions.find((w) => w.value === item.warna);
@@ -236,15 +238,25 @@ function ItemCard({
 
         {/* ── Kategori & Ukuran ── */}
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <label className="text-sm font-semibold text-gray-700">2. Pilih Tipe &amp; Ukuran *</label>
-            <button
-              type="button"
-              onClick={onShowSizeGuide}
-              className="text-xs text-blue-600 hover:text-blue-800 font-semibold underline flex items-center gap-1"
-            >
-              📏 Panduan Ukuran Lengkap
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onShowAIRecommend}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm hover:scale-105 active:scale-95 transition-all"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+                <span>AI Rekomendasi Ukuran</span>
+              </button>
+              <button
+                type="button"
+                onClick={onShowSizeGuide}
+                className="text-xs text-blue-600 hover:text-blue-800 font-semibold underline flex items-center gap-1"
+              >
+                📏 Panduan Ukuran
+              </button>
+            </div>
           </div>
 
           {/* Category Tabs */}
@@ -383,6 +395,8 @@ function ItemCard({
   );
 }
 
+import AISizeRecommenderModal from '@/components/store/AISizeRecommenderModal';
+
 // ── Main Page Component ──────────────────────────────────────
 export default function NewBatchPreOrderPage() {
   const router = useRouter();
@@ -394,6 +408,7 @@ export default function NewBatchPreOrderPage() {
   const [submitted, setSubmitted] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [sizeGuideTab, setSizeGuideTab] = useState<SizeCategory>('dewasa');
+  const [aiModalIndex, setAiModalIndex] = useState<number | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [copiedRek, setCopiedRek] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
@@ -546,6 +561,18 @@ export default function NewBatchPreOrderPage() {
           <img src={zoomImage} alt="Zoom preview" className="max-h-[90vh] max-w-[90vw] object-contain rounded-2xl" />
         </div>
       )}
+
+      {/* ── AI Size Recommender Modal ── */}
+      <AISizeRecommenderModal
+        isOpen={aiModalIndex !== null}
+        onClose={() => setAiModalIndex(null)}
+        onApplySize={(cat, sizeId) => {
+          if (aiModalIndex !== null) {
+            updateItem(aiModalIndex, { kategoriUkuran: cat, ukuran: sizeId });
+          }
+        }}
+        theme="light"
+      />
 
       {/* ── Size Guide Modal (3 Tables: Adult, Kids, Balita) ── */}
       {showSizeGuide && (
@@ -734,6 +761,7 @@ export default function NewBatchPreOrderPage() {
                 onChange={(patch) => updateItem(index, patch)}
                 onRemove={() => removeItem(index)}
                 onShowSizeGuide={() => setShowSizeGuide(true)}
+                onShowAIRecommend={() => setAiModalIndex(index)}
                 onZoom={(src) => setZoomImage(src)}
               />
             ))}

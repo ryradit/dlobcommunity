@@ -493,6 +493,8 @@ function CatalogCard({
   );
 }
 
+import AISizeRecommenderModal from '@/components/store/AISizeRecommenderModal';
+
 export default function StorePage() {
   const [selectedProductId, setSelectedProductId]   = useState<string | null>(null);
   const [selectedColor, setSelectedColor]           = useState('biru');
@@ -500,6 +502,7 @@ export default function StorePage() {
   const [selectedSleeve, setSelectedSleeve]         = useState<'pendek' | 'panjang'>('pendek');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showSizeGuideModal, setShowSizeGuideModal] = useState(false);
+  const [showAIModal, setShowAIModal]               = useState(false);
   const [sizeGuideTab, setSizeGuideTab]             = useState<SizeCategory>('dewasa');
   const [filterCategory, setFilterCategory]         = useState<'all' | 'preorder' | 'closed' | 'coming-soon'>('all');
   const router = useRouter();
@@ -557,6 +560,16 @@ export default function StorePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white selection:bg-white selection:text-black">
+
+      {/* ── AI Size Recommender Modal ── */}
+      <AISizeRecommenderModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onApplySize={(_cat, sizeId) => {
+          setSelectedSize(sizeId);
+        }}
+        theme="dark"
+      />
 
       {/* ── Size Guide Modal (3 Tables: Dewasa, Kids, Balita) ── */}
       {showSizeGuideModal && (
@@ -1131,14 +1144,24 @@ export default function StorePage() {
 
                     {/* Choose Size */}
                     <div className="mb-8">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                         <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Pilih Ukuran</h3>
-                        <button
-                          onClick={() => { setSizeGuideTab('dewasa'); setShowSizeGuideModal(true); }}
-                          className="text-xs text-emerald-400 hover:underline font-semibold flex items-center gap-1"
-                        >
-                          📏 Panduan Ukuran
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setShowAIModal(true)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-black shadow-md shadow-emerald-950/40 hover:scale-105 active:scale-95 transition-all"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-black animate-pulse" />
+                            <span>AI Rekomendasi Ukuran</span>
+                          </button>
+                          <button
+                            onClick={() => { setSizeGuideTab('dewasa'); setShowSizeGuideModal(true); }}
+                            className="text-xs text-emerald-400 hover:underline font-semibold flex items-center gap-1"
+                          >
+                            📏 Panduan Ukuran
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                         {allSizeOptions.filter((s) => s.category === 'dewasa').map((sizeObj) => (
