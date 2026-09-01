@@ -28,7 +28,8 @@ import {
   X,
   Check,
   FileSpreadsheet,
-  Mail
+  Mail,
+  FileText
 } from 'lucide-react';
 
 export type SizeCategory = 'dewasa' | 'kids' | 'balita';
@@ -1232,6 +1233,17 @@ export default function RekapNewBatchPage() {
                         <p className="text-[11px] text-gray-500 dark:text-zinc-400 mt-0.5">
                           {formatDate(order.created_at)}
                         </p>
+                        {/* Direct PDF View Button */}
+                        <a
+                          href={`/api/new-batch-pre-orders/receipt-pdf?id=${order.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 border border-gray-200 dark:border-white/10 px-2 py-0.5 rounded-md mt-2 transition-all w-fit cursor-pointer shadow-2xs"
+                          title="Buka / Preview / Download Kwitansi PDF resmi di tab baru"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span>Lihat PDF</span>
+                        </a>
                       </td>
 
                       {/* 2. Customer Info */}
