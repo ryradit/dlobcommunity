@@ -31,24 +31,25 @@ const colorDot = (w: string) =>
   w === 'biru' ? '#0b244c' : w === 'kuning' ? '#FFC000' : '#cc0000';
 
 function buildReceiptHtml(p: ReceiptPayload): string {
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+  const cLabel = (w: string) => w === 'biru' ? 'Biru' : w === 'kuning' ? 'Kuning' : 'Merah';
+
   const itemsRows = p.items
-    .map((it, i) => {
+    .map((it) => {
       const backLabel = it.tanpa_nama_punggung
-        ? '<em style="color:#9ca3af;">Tanpa nama</em>'
+        ? '<span style="color:#6b7280;">-</span>'
         : it.nama_punggung
         ? `<strong>${it.nama_punggung}</strong>`
-        : '<em style="color:#9ca3af;">—</em>';
-      const sleeveLabel = it.lengan === 'panjang' ? 'Lengan Panjang' : 'Lengan Pendek';
+        : '<span style="color:#6b7280;">-</span>';
+      const sleeveLabel = it.lengan === 'panjang' ? 'Panjang' : 'Pendek';
       return `
-        <tr style="background:${i % 2 === 0 ? '#f9fafb' : '#ffffff'};">
-          <td style="padding:10px 14px;font-size:13px;color:#111827;">
-            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorDot(it.warna)};margin-right:6px;vertical-align:middle;"></span>
-            <strong>${colorLabel(it.warna)}</strong>
-          </td>
-          <td style="padding:10px 14px;font-size:13px;color:#111827;font-weight:700;">${it.ukuran}</td>
-          <td style="padding:10px 14px;font-size:13px;color:#4b5563;">${sleeveLabel}</td>
-          <td style="padding:10px 14px;font-size:13px;">${backLabel}</td>
-          <td style="padding:10px 14px;font-size:13px;color:#059669;font-weight:700;text-align:right;">${formatRp(it.harga)}</td>
+        <tr style="background:#ffffff;border-bottom:1px solid #e5e7eb;">
+          <td style="padding:10px 12px;font-size:12px;color:#111827;"><strong>${cLabel(it.warna)}</strong></td>
+          <td style="padding:10px 12px;font-size:12px;color:#111827;font-weight:700;">${it.ukuran}</td>
+          <td style="padding:10px 12px;font-size:12px;color:#4b5563;">${sleeveLabel}</td>
+          <td style="padding:10px 12px;font-size:12px;color:#111827;">${backLabel}</td>
+          <td style="padding:10px 12px;font-size:12px;color:#000000;font-weight:700;text-align:right;">${fmt(it.harga)}</td>
         </tr>`;
     })
     .join('');
@@ -56,91 +57,104 @@ function buildReceiptHtml(p: ReceiptPayload): string {
   const orderDate = new Date(p.created_at).toLocaleDateString('id-ID', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
+  const orderNum = p.orderNumber || ('#' + p.orderId.slice(0, 8).toUpperCase());
 
-  return `<!DOCTYPE html>
-<html lang="id">
-<head><meta charset="utf-8"><title>Kwitansi Jersey DLOB</title></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#0b244c,#1a3a6b);padding:32px;text-align:center;">
-            <img src="https://dlobcommunity.com/dlob.png" alt="DLOB" style="width:60px;height:auto;margin-bottom:14px;filter:brightness(0) invert(1);">
-            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;">DLOB Community</h1>
-            <p style="margin:4px 0 0;color:#93c5fd;font-size:13px;">Pre-Order Jersey New Batch</p>
-          </td>
-        </tr>
-        <!-- Paid Banner -->
-        <tr>
-          <td style="background:#dcfce7;padding:16px 32px;text-align:center;border-bottom:2px dashed #bbf7d0;">
-            <p style="margin:0;color:#15803d;font-size:18px;font-weight:800;">✅ Pembayaran Lunas!</p>
-            <p style="margin:4px 0 0;color:#166534;font-size:13px;">Pesanan kamu telah dikonfirmasi dan akan segera diproses.</p>
-          </td>
-        </tr>
-        <!-- Body -->
-        <tr><td style="padding:28px 32px;">
-          <p style="margin:0 0 20px;font-size:15px;color:#374151;">Halo <strong>${p.nama}</strong>! 👋<br>Berikut kwitansi digital pembayaran jersey Pre-Order DLOB New Batch kamu.</p>
-          <!-- Order Meta -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:12px;padding:14px 18px;margin-bottom:24px;border:1px solid #e5e7eb;">
-            <tr>
-              <td style="font-size:12px;color:#6b7280;padding:3px 0;width:50%;">🆔 No. Order</td>
-              <td style="font-size:12px;color:#111827;font-weight:700;font-family:monospace;">${p.orderNumber || '#' + p.orderId.slice(0, 8).toUpperCase()}</td>
-            </tr>
-            <tr>
-              <td style="font-size:12px;color:#6b7280;padding:3px 0;">📅 Tanggal</td>
-              <td style="font-size:12px;color:#111827;font-weight:600;">${orderDate}</td>
-            </tr>
-            <tr>
-              <td style="font-size:12px;color:#6b7280;padding:3px 0;">📱 WhatsApp</td>
-              <td style="font-size:12px;color:#111827;font-weight:600;">${p.no_wa}</td>
-            </tr>
-          </table>
-          <!-- Items -->
-          <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">Detail Pesanan</p>
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:16px;">
-            <thead>
-              <tr style="background:#111827;">
-                <th style="padding:10px 14px;font-size:11px;color:#d1d5db;text-align:left;">Warna</th>
-                <th style="padding:10px 14px;font-size:11px;color:#d1d5db;text-align:left;">Ukuran</th>
-                <th style="padding:10px 14px;font-size:11px;color:#d1d5db;text-align:left;">Lengan</th>
-                <th style="padding:10px 14px;font-size:11px;color:#d1d5db;text-align:left;">Nama Punggung</th>
-                <th style="padding:10px 14px;font-size:11px;color:#d1d5db;text-align:right;">Harga</th>
-              </tr>
-            </thead>
-            <tbody>${itemsRows}</tbody>
-          </table>
-          <!-- Total -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#0b244c;border-radius:12px;padding:16px 20px;margin-bottom:24px;">
-            <tr>
-              <td style="font-size:14px;color:#93c5fd;font-weight:600;">Total Pembayaran</td>
-              <td style="font-size:20px;color:#fff;font-weight:800;text-align:right;font-family:monospace;">${formatRp(p.total_harga)}</td>
-            </tr>
-          </table>
-          <!-- Note -->
-          <div style="background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:14px 18px;margin-bottom:24px;">
-            <p style="margin:0;font-size:13px;color:#92400e;line-height:1.6;">
-              <strong>📦 Info Proses:</strong> Jersey akan diproses setelah semua pesanan terkumpul. Tim DLOB akan menghubungi kamu via WhatsApp untuk info pengiriman.
-            </p>
+  return `<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>Kwitansi DLOB</title></head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#111827;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1.5px solid #111827;border-radius:6px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+  
+  <!-- Header with Brand & Red LUNAS Stamp -->
+  <tr><td style="padding:28px 28px 20px;border-bottom:1.5px solid #111827;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="vertical-align:top;">
+          <h1 style="margin:0;color:#000000;font-size:20px;font-weight:800;letter-spacing:0.5px;">DLOB COMMUNITY</h1>
+          <p style="margin:2px 0 6px;color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Badminton Club & Community Ecosystem</p>
+          <p style="margin:0;color:#000000;font-size:13px;font-weight:700;text-transform:uppercase;">KWITANSI PEMBAYARAN RESMI</p>
+        </td>
+        <td style="vertical-align:top;text-align:right;width:120px;">
+          <!-- RED STAMP LUNAS -->
+          <div style="display:inline-block;border:2.5px solid #dc2626;border-radius:4px;padding:6px 14px;text-align:center;transform:rotate(-4deg);">
+            <span style="display:block;color:#dc2626;font-size:16px;font-weight:900;letter-spacing:2px;line-height:1;">LUNAS</span>
+            <span style="display:block;color:#dc2626;font-size:7.5px;font-weight:800;letter-spacing:0.5px;margin-top:2px;">PAID & VERIFIED</span>
           </div>
-          <!-- CTA -->
-          <div style="text-align:center;">
-            <a href="https://www.dlobcommunity.com" style="display:inline-block;background:#0b244c;color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 28px;border-radius:999px;">🏸 Kunjungi DLOB Community</a>
-          </div>
-        </td></tr>
-        <!-- Footer -->
-        <tr>
-          <td style="padding:20px 32px;border-top:1px solid #e5e7eb;text-align:center;">
-            <p style="margin:0;font-size:11px;color:#9ca3af;">© ${new Date().getFullYear()} DLOB Community · <a href="https://www.dlobcommunity.com" style="color:#2563eb;text-decoration:none;">dlobcommunity.com</a></p>
-            <p style="margin:4px 0 0;font-size:11px;color:#d1d5db;">Email ini dikirim otomatis. Jangan balas email ini.</p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- Meta Info (2 Columns) -->
+  <tr><td style="padding:18px 28px 12px;border-bottom:1px solid #e5e7eb;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="vertical-align:top;width:50%;font-size:12px;line-height:1.6;">
+          <span style="color:#6b7280;">No. Order:</span> <strong style="color:#000000;font-family:monospace;">${orderNum}</strong><br>
+          <span style="color:#6b7280;">Tanggal:</span> <strong style="color:#000000;">${orderDate}</strong>
+        </td>
+        <td style="vertical-align:top;width:50%;font-size:12px;line-height:1.6;">
+          <span style="color:#6b7280;">Pemesan:</span> <strong style="color:#000000;">${p.nama}</strong><br>
+          <span style="color:#6b7280;">WhatsApp:</span> <strong style="color:#000000;">${p.no_wa}</strong>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- Items Table -->
+  <tr><td style="padding:18px 28px;">
+    <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#000000;text-transform:uppercase;letter-spacing:0.05em;">Rincian Pesanan</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #111827;border-radius:4px;overflow:hidden;margin-bottom:16px;">
+      <thead><tr style="background:#111827;color:#ffffff;">
+        <th style="padding:8px 12px;font-size:11px;text-align:left;font-weight:700;text-transform:uppercase;">Item / Warna</th>
+        <th style="padding:8px 12px;font-size:11px;text-align:left;font-weight:700;text-transform:uppercase;">Ukuran</th>
+        <th style="padding:8px 12px;font-size:11px;text-align:left;font-weight:700;text-transform:uppercase;">Lengan</th>
+        <th style="padding:8px 12px;font-size:11px;text-align:left;font-weight:700;text-transform:uppercase;">Nama Punggung</th>
+        <th style="padding:8px 12px;font-size:11px;text-align:right;font-weight:700;text-transform:uppercase;">Harga</th>
+      </tr></thead>
+      <tbody>${itemsRows}</tbody>
+    </table>
+
+    <!-- Total Box -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+      <tr>
+        <td></td>
+        <td style="width:240px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1.5px solid #000000;background:#ffffff;padding:10px 14px;border-radius:4px;">
+            <tr>
+              <td style="font-size:12px;font-weight:800;color:#000000;text-transform:uppercase;">TOTAL BAYAR</td>
+              <td style="font-size:16px;font-weight:900;color:#000000;text-align:right;font-family:monospace;">${fmt(p.total_harga)}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Note -->
+    <div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:4px;padding:12px 14px;margin-bottom:20px;">
+      <p style="margin:0;font-size:11.5px;color:#4b5563;line-height:1.5;">
+        <strong style="color:#111827;">Keterangan:</strong> Pembayaran telah diverifikasi oleh admin DLOB Community. Kwitansi resmi dalam format PDF telah dilampirkan pada email ini.
+      </p>
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-bottom:8px;">
+      <a href="https://www.dlobcommunity.com" style="display:inline-block;background:#000000;color:#ffffff;text-decoration:none;font-size:12px;font-weight:700;padding:10px 24px;border-radius:4px;">
+        Kunjungi Website DLOB Community
+      </a>
+    </div>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="padding:14px 28px;border-top:1px solid #111827;background:#fafafa;text-align:center;">
+    <p style="margin:0;font-size:11px;color:#6b7280;">© ${new Date().getFullYear()} DLOB Community · <a href="https://www.dlobcommunity.com" style="color:#111827;text-decoration:underline;">www.dlobcommunity.com</a></p>
+    <p style="margin:3px 0 0;font-size:10px;color:#9ca3af;">Dokumen kwitansi elektronik resmi & sah. Jangan balas email ini.</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
 }
 
 export async function POST(request: NextRequest) {
