@@ -463,8 +463,9 @@ async function sendReceiptEmail(data: any): Promise<void> {
   // Generate PDF buffer using React-PDF
   let pdfBuffer: Buffer | null = null;
   try {
-    const pdfDoc = JerseyReceiptPDF({ data: receiptData });
+    const pdfDoc = JerseyReceiptPDF({ data: receiptData }) as any;
     pdfBuffer = await renderToBuffer(pdfDoc);
+    console.log(`[Jersey Receipt] 📄 Generated PDF attachment (${pdfBuffer.length} bytes) for ${data.order_number || data.id}`);
   } catch (pdfErr: any) {
     console.error('[Jersey Receipt] PDF Generation Error:', pdfErr?.message || pdfErr);
   }
