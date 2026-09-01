@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   // Optimized for Vercel deployment
   // Disable source maps in production
   // Mark heavy native/server packages as external to prevent large lambda bundle sizes
-  serverExternalPackages: ['sharp', '@react-pdf/renderer', 'googleapis', '@google-cloud/vertexai'],
+  serverExternalPackages: ['sharp', '@react-pdf/renderer', 'googleapis', '@google-cloud/vertexai', 'google-auth-library'],
   experimental: {
     serverSourceMaps: false,
   },
