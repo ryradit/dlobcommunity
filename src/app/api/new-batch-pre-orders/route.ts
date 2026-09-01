@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { JerseyReceiptPDF } from '@/lib/jerseyReceiptPDF';
+import fs from 'fs';
+import path from 'path';
 
 function getSizePrice(size: string, sleeve: string): number {
   let base = 110000;
@@ -371,15 +373,24 @@ function buildReceiptHtml(p: {
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1.5px solid #111827;border-radius:6px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
   
   <!-- Header with Brand & Red LUNAS Stamp -->
-  <tr><td style="padding:28px 28px 20px;border-bottom:1.5px solid #111827;">
+  <tr><td style="padding:24px 28px 18px;border-bottom:1.5px solid #111827;">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
-        <td style="vertical-align:top;">
-          <h1 style="margin:0;color:#000000;font-size:20px;font-weight:800;letter-spacing:0.5px;">DLOB COMMUNITY</h1>
-          <p style="margin:2px 0 6px;color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Badminton Club & Community Ecosystem</p>
-          <p style="margin:0;color:#000000;font-size:13px;font-weight:700;text-transform:uppercase;">KWITANSI PEMBAYARAN RESMI</p>
+        <td style="vertical-align:middle;">
+          <table cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="vertical-align:middle;padding-right:12px;">
+                <img src="https://dlobcommunity.com/icon-dlob-hitam.png" alt="DLOB Logo" style="width:40px;height:40px;display:block;" />
+              </td>
+              <td style="vertical-align:middle;">
+                <h1 style="margin:0;color:#000000;font-size:18px;font-weight:800;letter-spacing:0.5px;">DLOB COMMUNITY</h1>
+                <p style="margin:2px 0 3px;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Badminton Club & Community</p>
+                <p style="margin:0;color:#000000;font-size:11px;font-weight:700;text-transform:uppercase;">KWITANSI PEMBAYARAN RESMI</p>
+              </td>
+            </tr>
+          </table>
         </td>
-        <td style="vertical-align:top;text-align:right;width:120px;">
+        <td style="vertical-align:middle;text-align:right;width:120px;">
           <!-- RED STAMP LUNAS -->
           <div style="display:inline-block;border:2.5px solid #dc2626;border-radius:4px;padding:6px 14px;text-align:center;transform:rotate(-4deg);">
             <span style="display:block;color:#dc2626;font-size:16px;font-weight:900;letter-spacing:2px;line-height:1;">LUNAS</span>
@@ -479,6 +490,17 @@ async function sendReceiptEmail(data: any): Promise<void> {
     auth: { user: smtpUser, pass: smtpPass },
   });
 
+  let logoBase64: string | undefined = undefined;
+  try {
+    const logoFile = path.join(process.cwd(), 'public/icon-dlob-hitam.png');
+    if (fs.existsSync(logoFile)) {
+      const buf = fs.readFileSync(logoFile);
+      logoBase64 = `data:image/png;base64,${buf.toString('base64')}`;
+    }
+  } catch (e) {
+    console.warn('[Jersey Receipt] Logo load fallback:', e);
+  }
+
   const receiptData = {
     orderId:     data.id,
     orderNumber: data.order_number,
@@ -487,6 +509,7 @@ async function sendReceiptEmail(data: any): Promise<void> {
     total_harga: data.total_harga,
     created_at:  data.created_at,
     items:       data.new_batch_order_items || [],
+    logoSrc:     logoBase64,
   };
 
   // Generate PDF buffer using React-PDF

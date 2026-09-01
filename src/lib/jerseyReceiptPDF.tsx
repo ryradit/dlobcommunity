@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Document, Page, Text, View, StyleSheet,
+  Document, Page, Text, View, StyleSheet, Image,
 } from '@react-pdf/renderer';
 
 const styles = StyleSheet.create({
@@ -23,35 +23,42 @@ const styles = StyleSheet.create({
   topSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     borderBottomWidth: 1.5,
     borderBottomColor: '#111827',
     borderBottomStyle: 'solid',
-    paddingBottom: 14,
+    paddingBottom: 12,
     marginBottom: 14,
   },
   brandBlock: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 38,
+    height: 38,
+    marginRight: 10,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Helvetica-Bold',
     color: '#000000',
     letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 8.5,
+    fontSize: 8,
     fontFamily: 'Helvetica',
     color: '#4b5563',
-    marginTop: 2,
+    marginTop: 1.5,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   receiptType: {
-    fontSize: 11,
+    fontSize: 9.5,
     fontFamily: 'Helvetica-Bold',
     color: '#111827',
-    marginTop: 4,
+    marginTop: 2,
     textTransform: 'uppercase',
   },
   // RED LUNAS STAMP
@@ -229,6 +236,7 @@ type Item = {
 type ReceiptData = {
   orderId: string; orderNumber?: string; nama: string; no_wa: string;
   total_harga: number; created_at: string; items: Item[];
+  logoSrc?: string;
 };
 
 export function JerseyReceiptPDF({ data }: { data: ReceiptData }) {
@@ -245,9 +253,14 @@ export function JerseyReceiptPDF({ data }: { data: ReceiptData }) {
             {/* Top Header with Brand & Red Stamp */}
             <View style={styles.topSection}>
               <View style={styles.brandBlock}>
-                <Text style={styles.title}>DLOB COMMUNITY</Text>
-                <Text style={styles.subtitle}>Badminton Club & Community Ecosystem</Text>
-                <Text style={styles.receiptType}>KWITANSI PEMBAYARAN RESMI</Text>
+                {data.logoSrc ? (
+                  <Image src={data.logoSrc} style={styles.logo} />
+                ) : null}
+                <View>
+                  <Text style={styles.title}>DLOB COMMUNITY</Text>
+                  <Text style={styles.subtitle}>Badminton Club & Community Ecosystem</Text>
+                  <Text style={styles.receiptType}>KWITANSI PEMBAYARAN RESMI</Text>
+                </View>
               </View>
 
               {/* RED STAMP "LUNAS" */}
