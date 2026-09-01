@@ -384,8 +384,7 @@ function buildReceiptHtml(p: {
               </td>
               <td style="vertical-align:middle;">
                 <h1 style="margin:0;color:#000000;font-size:18px;font-weight:800;letter-spacing:0.5px;">DLOB COMMUNITY</h1>
-                <p style="margin:2px 0 3px;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Badminton Club & Community</p>
-                <p style="margin:0;color:#000000;font-size:11px;font-weight:700;text-transform:uppercase;">KWITANSI PEMBAYARAN RESMI</p>
+                <p style="margin:2px 0 0;color:#000000;font-size:11px;font-weight:700;text-transform:uppercase;">KWITANSI PEMBAYARAN RESMI</p>
               </td>
             </tr>
           </table>

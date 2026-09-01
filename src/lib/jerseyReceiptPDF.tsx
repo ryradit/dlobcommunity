@@ -258,7 +258,6 @@ export function JerseyReceiptPDF({ data }: { data: ReceiptData }) {
                 ) : null}
                 <View>
                   <Text style={styles.title}>DLOB COMMUNITY</Text>
-                  <Text style={styles.subtitle}>Badminton Club & Community Ecosystem</Text>
                   <Text style={styles.receiptType}>KWITANSI PEMBAYARAN RESMI</Text>
                 </View>
               </View>
