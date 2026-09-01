@@ -7,7 +7,7 @@ import { ArrowRight } from 'lucide-react';
 
 export default function FeaturesSection() {
   return (
-    <section id="features-section" className="py-20 px-4 bg-white relative overflow-hidden">
+    <section id="features-section" className="pt-28 sm:pt-36 md:pt-40 pb-20 px-4 bg-white relative overflow-hidden">
       <div className="max-w-6xl mx-auto">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left - Image */}
