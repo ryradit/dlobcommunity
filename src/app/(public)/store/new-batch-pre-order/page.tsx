@@ -561,6 +561,7 @@ export default function NewBatchPreOrderPage() {
   const router = useRouter();
   const [nama, setNama] = useState('');
   const [noWa, setNoWa] = useState('');
+  const [email, setEmail] = useState('');
   const [items, setItems] = useState<OrderItem[]>([emptyItem()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -596,6 +597,9 @@ export default function NewBatchPreOrderPage() {
   const validate = () => {
     if (!nama.trim()) { alert('Mohon isi nama lengkap'); return false; }
     if (!noWa.trim() || noWa.length < 9) { alert('Mohon isi nomor WhatsApp yang valid'); return false; }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      alert('Format email tidak valid'); return false;
+    }
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       if (!it.warna) { alert(`Jersey #${i + 1}: Mohon pilih warna`); return false; }
@@ -613,6 +617,7 @@ export default function NewBatchPreOrderPage() {
         body: JSON.stringify({
           nama: nama.trim(),
           noWa: noWa.trim(),
+          email: email.trim() || null,
           items: items.map((it) => ({
             warna: it.warna,
             ukuran: it.ukuran,
@@ -897,6 +902,20 @@ export default function NewBatchPreOrderPage() {
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
                 />
+              </div>
+              {/* Email — optional, used for receipt */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                  Email <span className="text-gray-400 font-normal normal-case">(Opsional — untuk kwitansi digital)</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Contoh: budi@email.com"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+                />
+                <p className="text-[11px] text-gray-400 mt-1.5">Isi email untuk menerima kwitansi otomatis saat pembayaran dikonfirmasi.</p>
               </div>
             </div>
           </div>

@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
     try { body = await request.json(); }
     catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
-    const { nama, noWa, items } = body;
+    const { nama, noWa, items, email } = body;
 
     if (!nama || !noWa || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
     // Insert order header
     const { data: order, error: orderError } = await supabase
       .from('new_batch_orders')
-      .insert([{ nama, no_wa: noWa, total_harga: totalHarga, jumlah_item: items.length }])
+      .insert([{ nama, no_wa: noWa, email: email || null, total_harga: totalHarga, jumlah_item: items.length }])
       .select()
       .single();
 
@@ -330,11 +330,29 @@ export async function PATCH(request: NextRequest) {
       .from('new_batch_orders')
       .update({ status })
       .eq('id', id)
-      .select()
+      .select('*, new_batch_order_items(*)')
       .single();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Auto-send receipt email when marked paid and email is available
+    if (status === 'paid' && data?.email) {
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dlobcommunity.com';
+      fetch(`${baseUrl}/api/jersey-receipt-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: data.id,
+          email: data.email,
+          nama: data.nama,
+          no_wa: data.no_wa,
+          total_harga: data.total_harga,
+          created_at: data.created_at,
+          items: data.new_batch_order_items || [],
+        }),
+      }).catch((err) => console.error('[Receipt Email Fire Error]:', err));
     }
 
     return NextResponse.json({ success: true, data });

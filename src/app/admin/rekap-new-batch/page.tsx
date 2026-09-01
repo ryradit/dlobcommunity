@@ -49,6 +49,7 @@ interface Order {
   created_at: string;
   nama: string;
   no_wa: string;
+  email?: string | null;
   total_harga: number;
   jumlah_item: number;
   status: 'pending' | 'confirmed' | 'paid' | 'produced' | 'delivered' | 'cancelled';
@@ -152,6 +153,7 @@ export default function RekapNewBatchPage() {
   }, [isOwner]);
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    const order = orders.find((o) => o.id === orderId);
     try {
       setIsUpdatingStatus(orderId);
       const res = await fetch('/api/new-batch-pre-orders', {
@@ -163,6 +165,10 @@ export default function RekapNewBatchPage() {
         setOrders((prev) =>
           prev.map((o) => (o.id === orderId ? { ...o, status: newStatus as any } : o))
         );
+        // If just marked paid and no email — remind admin to ask for email via WA
+        if (newStatus === 'paid' && order && !order.email) {
+          console.info(`[Rekap] Order ${orderId} marked paid but has no email — wa.me link available in table.`);
+        }
       }
     } catch (err) {
       console.error('Failed to update status:', err);
@@ -1155,6 +1161,21 @@ export default function RekapNewBatchPage() {
                           <MessageCircle className="w-3.5 h-3.5" />
                           <span>{order.no_wa}</span>
                         </a>
+                        {/* Email — show if exists, or wa.me nudge to ask for it */}
+                        {order.email ? (
+                          <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-1 font-medium truncate max-w-[160px]">
+                            ✉️ {order.email}
+                          </p>
+                        ) : (
+                          <a
+                            href={`https://wa.me/${waNumber.startsWith('0') ? '62' + waNumber.slice(1) : waNumber}?text=${encodeURIComponent(`Halo kak ${order.nama}! 👋 Pesanan jersey kamu sudah kami konfirmasi ✅\n\nBoleh minta alamat email kamu? Kami ingin mengirimkan kwitansi digital ke email kamu.\n\nTerima kasih! 🏸\n— DLOB Community`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-amber-500 hover:text-amber-700 hover:underline text-[11px] mt-1 font-semibold"
+                          >
+                            <span>⚠️ Tanya email via WA</span>
+                          </a>
+                        )}
                       </td>
 
                       {/* 3. Jersey Line Items with Individual Edit / Delete Buttons */}
