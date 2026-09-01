@@ -1004,6 +1004,14 @@ export default function NewBatchPreOrderPage() {
                   <span className="text-gray-500">WhatsApp:</span>
                   <span className="font-bold text-gray-900">{noWa}</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Email:</span>
+                  {email.trim() ? (
+                    <span className="font-bold text-gray-900">{email.trim()}</span>
+                  ) : (
+                    <span className="text-amber-500 font-semibold">Tidak diisi — kwitansi tidak akan dikirim</span>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
