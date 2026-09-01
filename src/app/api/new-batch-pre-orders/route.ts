@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-
 import nodemailer from 'nodemailer';
+import { renderToBuffer } from '@react-pdf/renderer';
+import { JerseyReceiptPDF } from '@/lib/jerseyReceiptPDF';
 
 function getSizePrice(size: string, sleeve: string): number {
   let base = 110000;
@@ -435,7 +436,12 @@ function buildReceiptHtml(p: {
 async function sendReceiptEmail(data: any): Promise<void> {
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
-  if (!smtpUser || !smtpPass || !data?.email) return;
+  if (!smtpUser || !smtpPass) {
+    throw new Error('SMTP credentials not configured in environment');
+  }
+  if (!data?.email) {
+    throw new Error('Email address is missing');
+  }
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.dreamhost.com',
@@ -444,58 +450,128 @@ async function sendReceiptEmail(data: any): Promise<void> {
     auth: { user: smtpUser, pass: smtpPass },
   });
 
-  await transporter.sendMail({
+  const receiptData = {
+    orderId:     data.id,
+    orderNumber: data.order_number,
+    nama:        data.nama,
+    no_wa:       data.no_wa,
+    total_harga: data.total_harga,
+    created_at:  data.created_at,
+    items:       data.new_batch_order_items || [],
+  };
+
+  // Generate PDF buffer using React-PDF
+  let pdfBuffer: Buffer | null = null;
+  try {
+    const pdfDoc = JerseyReceiptPDF({ data: receiptData });
+    pdfBuffer = await renderToBuffer(pdfDoc);
+  } catch (pdfErr: any) {
+    console.error('[Jersey Receipt] PDF Generation Error:', pdfErr?.message || pdfErr);
+  }
+
+  const mailOptions: any = {
     from: `DLOB Community <${smtpUser}>`,
     to: data.email,
     subject: `✅ Kwitansi Pembayaran Jersey DLOB — ${data.nama}`,
-    html: buildReceiptHtml({
-      orderId:     data.id,
-      orderNumber: data.order_number,
-      nama:        data.nama,
-      no_wa:       data.no_wa,
-      total_harga: data.total_harga,
-      created_at:  data.created_at,
-      items:       data.new_batch_order_items || [],
-    }),
-  });
+    html: buildReceiptHtml(receiptData),
+  };
 
-  console.log(`[Jersey Receipt] ✅ Sent to ${data.email} — ${data.order_number || data.id}`);
+  if (pdfBuffer) {
+    const safeOrderNum = (data.order_number || `dlb-${data.id.slice(0, 8)}`).toUpperCase();
+    mailOptions.attachments = [
+      {
+        filename: `Kwitansi-DLOB-${safeOrderNum}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      },
+    ];
+  }
+
+  await transporter.sendMail(mailOptions);
+  console.log(`[Jersey Receipt] ✅ Sent with PDF attachment to ${data.email} — ${data.order_number || data.id}`);
 }
 
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, status } = body;
+    const { id, status, email, send_receipt } = body;
 
-    if (!id || !status) {
-      return NextResponse.json({ error: 'Missing required fields: id, status' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: 'Missing required field: id' }, { status: 400 });
     }
 
-    const validStatuses = ['pending', 'confirmed', 'paid', 'produced', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    const updates: Record<string, any> = {};
+    if (status !== undefined) {
+      const validStatuses = ['pending', 'confirmed', 'paid', 'produced', 'delivered', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      }
+      updates.status = status;
+    }
+
+    if (email !== undefined) {
+      updates.email = email ? email.trim() : null;
     }
 
     const supabase = getServiceClient();
-    const { data, error } = await supabase
-      .from('new_batch_orders')
-      .update({ status })
-      .eq('id', id)
-      .select('*, new_batch_order_items(*)')
-      .single();
+    let data: any = null;
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (Object.keys(updates).length > 0) {
+      const { data: updated, error } = await supabase
+        .from('new_batch_orders')
+        .update(updates)
+        .eq('id', id)
+        .select('*, new_batch_order_items(*)')
+        .single();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      data = updated;
+    } else {
+      const { data: fetched, error } = await supabase
+        .from('new_batch_orders')
+        .select('*, new_batch_order_items(*)')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      data = fetched;
     }
 
-    // Auto-send receipt email directly (no self-referencing fetch)
-    if (status === 'paid' && data?.email) {
-      sendReceiptEmail(data).catch((err) =>
-        console.error('[Receipt Email Error]:', err?.message)
-      );
+    let receiptResult = { attempted: false, success: false, message: '' };
+
+    // Trigger sending receipt if status became 'paid' OR explicitly requested via send_receipt
+    const shouldSendReceipt = status === 'paid' || send_receipt === true;
+    if (shouldSendReceipt) {
+      if (!data?.email) {
+        receiptResult = {
+          attempted: true,
+          success: false,
+          message: 'Email pemesan belum diisi di database.',
+        };
+      } else {
+        try {
+          await sendReceiptEmail(data);
+          receiptResult = {
+            attempted: true,
+            success: true,
+            message: `Kwitansi PDF berhasil dikirim ke ${data.email}`,
+          };
+        } catch (err: any) {
+          console.error('[Receipt Email Error]:', err?.message);
+          receiptResult = {
+            attempted: true,
+            success: false,
+            message: `Gagal mengirim email: ${err?.message || 'Unknown error'}`,
+          };
+        }
+      }
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data, receipt: receiptResult });
   } catch (error: any) {
     return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
   }

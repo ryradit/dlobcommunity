@@ -27,7 +27,8 @@ import {
   Plus,
   X,
   Check,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Mail
 } from 'lucide-react';
 
 export type SizeCategory = 'dewasa' | 'kids' | 'balita';
@@ -111,6 +112,7 @@ export default function RekapNewBatchPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [copiedWA, setCopiedWA] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
+  const [isSendingReceipt, setIsSendingReceipt] = useState<string | null>(null);
 
   // ── Edit & Add Modal State ──
   const [editingItem, setEditingItem] = useState<{
@@ -162,19 +164,96 @@ export default function RekapNewBatchPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: orderId, status: newStatus }),
       });
+      const data = await res.json();
       if (res.ok) {
         setOrders((prev) =>
           prev.map((o) => (o.id === orderId ? { ...o, status: newStatus as any } : o))
         );
-        // If just marked paid and no email — remind admin to ask for email via WA
-        if (newStatus === 'paid' && order && !order.email) {
-          console.info(`[Rekap] Order ${orderId} marked paid but has no email — wa.me link available in table.`);
+        if (newStatus === 'paid') {
+          if (!order?.email) {
+            alert('⚠️ Status berhasil diubah menjadi LUNAS.\n\nNamun pesanan ini belum memiliki email, sehingga kwitansi PDF belum dikirim.\n\nSilakan klik tombol "+ Set Email" untuk menambahkan email pemesan agar kwitansi dapat dikirim.');
+          } else if (data.receipt?.success) {
+            alert(`✅ Status LUNAS berhasil disimpan!\n\n${data.receipt.message}`);
+          } else if (data.receipt?.attempted && !data.receipt?.success) {
+            alert(`⚠️ Status LUNAS berhasil disimpan, tetapi gagal mengirim email:\n${data.receipt.message}`);
+          }
         }
+      } else {
+        alert(`Gagal mengubah status: ${data.error || 'Terjadi kesalahan'}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update status:', err);
+      alert(`Terjadi kesalahan: ${err?.message}`);
     } finally {
       setIsUpdatingStatus(null);
+    }
+  };
+
+  const handleSetEmail = async (orderId: string, currentEmail: string = '') => {
+    const newEmail = window.prompt('Masukkan alamat email pemesan untuk mengirim kwitansi:', currentEmail);
+    if (newEmail === null) return;
+    const trimmed = newEmail.trim();
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      alert('Format email tidak valid');
+      return;
+    }
+
+    try {
+      setIsUpdatingStatus(orderId);
+      const res = await fetch('/api/new-batch-pre-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: orderId, email: trimmed || null }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, email: trimmed || null } : o))
+        );
+        const order = orders.find((o) => o.id === orderId);
+        if (trimmed && order?.status === 'paid') {
+          const wantSend = window.confirm('Email berhasil disimpan. Apakah ingin langsung mengirim kwitansi PDF ke email ini?');
+          if (wantSend) {
+            handleSendReceipt(orderId, trimmed);
+          }
+        } else {
+          alert('Email pemesan berhasil disimpan.');
+        }
+      } else {
+        alert(`Gagal menyimpan email: ${data.error || 'Terjadi kesalahan'}`);
+      }
+    } catch (err: any) {
+      alert(`Terjadi kesalahan: ${err.message}`);
+    } finally {
+      setIsUpdatingStatus(null);
+    }
+  };
+
+  const handleSendReceipt = async (orderId: string, emailOverride?: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    const targetEmail = emailOverride || order?.email;
+    if (!targetEmail) {
+      handleSetEmail(orderId);
+      return;
+    }
+
+    try {
+      setIsSendingReceipt(orderId);
+      const res = await fetch('/api/new-batch-pre-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: orderId, send_receipt: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.receipt?.success) {
+        alert(`✅ Kwitansi PDF berhasil dikirim ke ${targetEmail}!`);
+      } else {
+        alert(`⚠️ Gagal mengirim kwitansi: ${data.receipt?.message || data.error || 'Terjadi kesalahan'}`);
+      }
+    } catch (err: any) {
+      alert(`Terjadi kesalahan saat mengirim kwitansi: ${err.message}`);
+    } finally {
+      setIsSendingReceipt(null);
     }
   };
 
@@ -1156,31 +1235,70 @@ export default function RekapNewBatchPage() {
                       </td>
 
                       {/* 2. Customer Info */}
-                      <td className="py-4 px-4 align-top">
+                      <td className="py-4 px-4 align-top space-y-1">
                         <p className="font-bold text-gray-900 dark:text-white text-sm">{order.nama}</p>
-                        <a
-                          href={waLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-mono text-xs mt-1"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>{order.no_wa}</span>
-                        </a>
-                        {/* Email — show if exists, or wa.me nudge to ask for it */}
-                        {order.email ? (
-                          <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-1 font-medium truncate max-w-[160px]">
-                            ✉️ {order.email}
-                          </p>
-                        ) : (
+                        <div>
                           <a
-                            href={`https://wa.me/${waNumber.startsWith('0') ? '62' + waNumber.slice(1) : waNumber}?text=${encodeURIComponent(`Halo kak ${order.nama}! 👋 Pesanan jersey kamu sudah kami konfirmasi ✅\n\nBoleh minta alamat email kamu? Kami ingin mengirimkan kwitansi digital ke email kamu.\n\nTerima kasih! 🏸\n— DLOB Community`)}`}
+                            href={waLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-amber-500 hover:text-amber-700 hover:underline text-[11px] mt-1 font-semibold"
+                            className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-mono text-xs"
                           >
-                            <span>⚠️ Tanya email via WA</span>
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>{order.no_wa}</span>
                           </a>
+                        </div>
+
+                        {/* Email — show if exists, or wa.me nudge to ask for it */}
+                        {order.email ? (
+                          <div className="space-y-1 pt-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium truncate max-w-[140px]" title={order.email}>
+                                ✉️ {order.email}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleSetEmail(order.id, order.email || '')}
+                                className="text-[10px] text-gray-400 hover:text-black dark:hover:text-white underline cursor-pointer"
+                              >
+                                Ubah
+                              </button>
+                            </div>
+                            
+                            {/* If paid, allow sending / re-sending receipt PDF */}
+                            {order.status === 'paid' && (
+                              <button
+                                type="button"
+                                disabled={isSendingReceipt === order.id}
+                                onClick={() => handleSendReceipt(order.id)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-md text-[10px] font-bold transition-all disabled:opacity-50 cursor-pointer"
+                                title="Kirim / Kirim Ulang Kwitansi PDF ke email pemesan"
+                              >
+                                <Mail className="w-3 h-3" />
+                                <span>{isSendingReceipt === order.id ? 'Mengirim...' : 'Kirim Kwitansi PDF'}</span>
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-1 pt-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => handleSetEmail(order.id)}
+                                className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-700 dark:text-zinc-200 rounded-md transition-all cursor-pointer"
+                              >
+                                <span>+ Set Email</span>
+                              </button>
+                              <a
+                                href={`https://wa.me/${waNumber.startsWith('0') ? '62' + waNumber.slice(1) : waNumber}?text=${encodeURIComponent(`Halo kak ${order.nama}! 👋 Pesanan jersey kamu sudah kami konfirmasi ✅\n\nBoleh minta alamat email kamu? Kami ingin mengirimkan kwitansi digital ke email kamu.\n\nTerima kasih! 🏸\n— DLOB Community`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-0.5 text-amber-500 hover:text-amber-700 hover:underline text-[10px] font-semibold"
+                              >
+                                <span>Tanya WA</span>
+                              </a>
+                            </div>
+                          </div>
                         )}
                       </td>
 
