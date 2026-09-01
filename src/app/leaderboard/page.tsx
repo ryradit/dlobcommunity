@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import FloatingAIChat from '@/components/FloatingAIChat';
+import { getMemberImageUrl } from '@/lib/membersStorage';
 import {
   Trophy, Calendar, Flame, Users, RefreshCw, Zap, Info, ArrowLeft, ArrowUp, ArrowDown,
 } from 'lucide-react';
@@ -219,7 +220,7 @@ function getChibiImagePath(memberName: string): string {
     cleanName = nameMap[cleanName];
   }
   
-  return `/images/members/members-chibi/${cleanName}chibi.png`;
+  return getMemberImageUrl(`members-chibi/${cleanName}chibi.png`);
 }
 
 // ─── Main component ─────────────────────────────────────────────────────────

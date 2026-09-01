@@ -50,7 +50,7 @@ export default function HeroSection() {
           <div 
             className="absolute inset-0 bg-cover bg-[center_top] md:bg-center"
             style={{
-              backgroundImage: 'url("/badminton-hero-pure-sky.jpg")',
+              backgroundImage: 'url("/badminton-hero-pure-sky.webp")',
             }}
           >
             {/* Subtle depth overlay */}
@@ -76,7 +76,7 @@ export default function HeroSection() {
         <div 
           className="athlete-cutout-3d absolute inset-x-0 top-0 z-20 pointer-events-none bg-cover bg-[center_top] md:bg-center"
           style={{
-            backgroundImage: 'url("/Gemini_Generated_Image_y47cojy47cojy47c-jukebox-bg-removed-2060x1374.png")',
+            backgroundImage: 'url("/badminton-hero-cutout.webp")',
           }}
         />
 

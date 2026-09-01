@@ -5,6 +5,7 @@ import { Heart, ArrowLeft, ChevronRight, Sparkles, ShieldCheck, Truck, Layers, C
 import { useRouter } from 'next/navigation';
 import SmartCropImage from '@/components/SmartCropImage';
 import ZoomableImage from '@/components/ZoomableImage';
+import { getMemberImageUrl } from '@/lib/membersStorage';
 
 export type SizeCategory = 'dewasa' | 'kids' | 'balita';
 
@@ -75,21 +76,21 @@ const officialColorVariants: ColorVariant[] = [
     id: 'biru',   
     name: 'Biru Navy', 
     color: 'Biru Navy', 
-    images: ['/images/members/model/biru3.png','/images/members/model/biru4.png','/images/members/model/biru5.png'], 
+    images: ['model/biru3.png','model/biru4.png','model/biru5.png'].map(getMemberImageUrl), 
     bgColor: '#0b244c',
   },
   { 
     id: 'pink',   
     name: 'Pink',      
     color: 'Pink',      
-    images: ['/images/members/model/pink8.png','/images/members/model/pink6.png','/images/members/model/pink7.png','/images/members/model/pink9.png'], 
+    images: ['model/pink8.png','model/pink6.png','model/pink7.png','model/pink9.png'].map(getMemberImageUrl), 
     bgColor: '#c8a19c',
   },
   { 
     id: 'kuning', 
     name: 'Kuning', 
     color: 'Kuning', 
-    images: ['/images/members/model/kuning3.png','/images/members/model/kuning4.png','/images/members/model/kuning 5.png','/images/members/model/kuning6.png'], 
+    images: ['model/kuning3.png','model/kuning4.png','model/kuning 5.png','model/kuning6.png'].map(getMemberImageUrl), 
     bgColor: '#fecb00',
   },
 ];
@@ -100,28 +101,28 @@ const circuitNoirColorVariants: ColorVariant[] = [
     id: 'midnight',  
     name: 'Midnight Black',   
     color: 'Midnight Black',   
-    images: ['/images/members/model/hitam1.jpeg','/images/members/model/hitam2.jpeg','/images/members/model/hitam3.jpeg'], 
+    images: ['model/hitam1.jpeg','model/hitam2.jpeg','model/hitam3.jpeg'].map(getMemberImageUrl), 
     bgColor: '#0d0d0d',
   },
   { 
     id: 'charcoal',  
     name: 'Charcoal Grey',    
     color: 'Charcoal Grey',    
-    images: ['/images/members/model/grey1.png','/images/members/model/grey2.jpeg','/images/members/model/grey3.png'], 
+    images: ['model/grey1.png','model/grey2.jpeg','model/grey3.png'].map(getMemberImageUrl), 
     bgColor: '#3a3a3a',
   },
   { 
     id: 'steelblue', 
     name: 'Steel Blue Night', 
     color: 'Steel Blue Night', 
-    images: ['/images/members/model/bluenight1.jpeg','/images/members/model/bluenight2.jpeg','/images/members/model/bluenight3.jpeg'], 
+    images: ['model/bluenight1.jpeg','model/bluenight2.jpeg','model/bluenight3.jpeg'].map(getMemberImageUrl), 
     bgColor: '#1e2d40',
   },
   { 
     id: 'blossomrose', 
     name: 'Blossom Rose', 
     color: 'Blossom Rose', 
-    images: ['/images/members/model/magentaspecial.png','/images/members/model/magentaspecial2.png','/images/members/model/magentaspecial3.png','/images/members/model/magentaspecial4.png','/images/members/model/magentaspecial5.png'], 
+    images: ['model/magentaspecial.png','model/magentaspecial2.png','model/magentaspecial3.png','model/magentaspecial4.png','model/magentaspecial5.png'].map(getMemberImageUrl), 
     bgColor: '#c8a19c',
   },
 ];
@@ -219,7 +220,7 @@ const products: Product[] = [
     description: 'Jersey edisi reguler klasik DLOB dengan teknologi Milano Standard. Pemesanan untuk batch reguler ini saat ini telah resmi ditutup. Silakan ikuti Pre-Order New Batch 2026 yang sedang dibuka!',
     badge: 'BATCH DITUTUP',
     badgeType: 'closed',
-    coverImage: '/images/members/model/biru3.png',
+    coverImage: getMemberImageUrl('model/biru3.png'),
     coverBg: '#0b244c',
     colorVariants: officialColorVariants,
     material: 'Milano Standard',
@@ -694,7 +695,7 @@ export default function StorePage() {
           >
             {/* Background image (default) */}
             <img
-              src="/images/members/model/storeheroimage4.jpeg"
+              src={getMemberImageUrl('model/storeheroimage4.jpeg')}
               alt="DLOB Store Hero"
               className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500 group-hover:opacity-0"
               style={{ imageRendering: 'auto' }}

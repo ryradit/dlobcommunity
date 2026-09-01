@@ -32,21 +32,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ faceX: 50, faceY: 18 });
     }
 
-    // Security: only allow paths inside /public/images/members/
-    const normalised = imagePath.replace(/\\/g, '/');
-    if (!normalised.startsWith('/images/members/')) {
-      return NextResponse.json({ faceX: 50, faceY: 18 });
-    }
+    let base64 = '';
+    let mimeType = 'image/jpeg';
 
-    const filePath = path.join(process.cwd(), 'public', normalised);
-    if (!existsSync(filePath)) {
-      return NextResponse.json({ faceX: 50, faceY: 18 });
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      const res = await fetch(imagePath);
+      if (!res.ok) {
+        return NextResponse.json({ faceX: 50, faceY: 18 });
+      }
+      const arrayBuffer = await res.arrayBuffer();
+      base64 = Buffer.from(arrayBuffer).toString('base64');
+      const contentType = res.headers.get('content-type');
+      if (contentType) mimeType = contentType;
+    } else {
+      const normalised = imagePath.replace(/\\/g, '/');
+      const filePath = path.join(process.cwd(), 'public', normalised);
+      if (!existsSync(filePath)) {
+        return NextResponse.json({ faceX: 50, faceY: 18 });
+      }
+      const ext = path.extname(filePath).toLowerCase();
+      mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+      const imageBuffer = readFileSync(filePath);
+      base64 = imageBuffer.toString('base64');
     }
-
-    const ext = path.extname(filePath).toLowerCase();
-    const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
-    const imageBuffer = readFileSync(filePath);
-    const base64 = imageBuffer.toString('base64');
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 

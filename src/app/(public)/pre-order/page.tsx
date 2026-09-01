@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Footer from '@/components/Footer';
 import SmartCropImage from '@/components/SmartCropImage';
+import { getMemberImageUrl } from '@/lib/membersStorage';
 
 export default function PreOrderPage() {
   const [formData, setFormData] = useState({
@@ -40,19 +41,19 @@ export default function PreOrderPage() {
       value: 'biru', 
       label: 'Biru Navy', 
       color: '#0b244c',
-      image: '/images/members/model/biru1.jpg'
+      image: getMemberImageUrl('model/biru1.jpg')
     },
     { 
       value: 'pink', 
       label: 'Pink', 
       color: '#c8a19c',
-      image: '/images/members/model/pink1.jpg'
+      image: getMemberImageUrl('model/pink1.jpg')
     },
     { 
       value: 'kuning', 
       label: 'Kuning', 
       color: '#FECB00',
-      image: '/images/members/model/kuning1.jpg'
+      image: getMemberImageUrl('model/kuning1.jpg')
     }
   ];
 

@@ -1,7 +1,6 @@
-'use client';
-
 import React from 'react';
 import SmartCropImage from '@/components/SmartCropImage';
+import { getMemberImageUrl } from '@/lib/membersStorage';
 
 interface Member {
   id: number;
@@ -15,7 +14,7 @@ interface HallOfFameSectionProps {
 }
 
 // DLOB Hall of Fame Members
-const hallOfFameMembers: Member[] = [
+const rawHallOfFameMembers: Member[] = [
   { id: 1, name: 'Wahyu', photo: '/images/members/wahyu.jpg' },
   { id: 2, name: 'Tian', photo: '/images/members/tian2.jpg' },
   { id: 3, name: 'Danif', photo: '/images/members/danif.jpg' },
@@ -82,8 +81,12 @@ const hallOfFameMembers: Member[] = [
   { id: 64, name: 'Daus', photo: null },
   { id: 65, name: 'Dimas Yogi', photo: null },
   { id: 66, name: 'Rizky Muslim', photo: null },
-  { id: 67, name: 'Yadie', photo: null },
 ];
+
+const hallOfFameMembers: Member[] = rawHallOfFameMembers.map((m) => ({
+  ...m,
+  photo: m.photo ? getMemberImageUrl(m.photo) : null,
+}));
 
 export default function HallOfFameSection({ showAll = false, className = '' }: HallOfFameSectionProps) {
   const displayMembers = showAll ? hallOfFameMembers : hallOfFameMembers.slice(0, 5);

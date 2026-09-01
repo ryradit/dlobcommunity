@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { X, Swords, Trophy, Users, Sparkles, Zap, TrendingUp, Target, Brain } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
+import { getMemberImageUrl } from '@/lib/membersStorage';
 
 interface Member {
   name: string;
@@ -143,7 +144,7 @@ export default function VersusGamePage() {
       const gameStats = convertRealStatsToGameStats(realStats);
       return {
         name: name.charAt(0).toUpperCase() + name.slice(1),
-        image: `/images/members/${name}.jpg`,
+        image: getMemberImageUrl(`${name}.jpg`),
         stats: gameStats,
         realStats,
       };
@@ -158,7 +159,7 @@ export default function VersusGamePage() {
 
     return {
       name: name.charAt(0).toUpperCase() + name.slice(1),
-      image: `/images/members/${name}.jpg`,
+      image: getMemberImageUrl(`${name}.jpg`),
       stats: {
         power: random(60, 95, 1),
         agility: random(60, 95, 2),
