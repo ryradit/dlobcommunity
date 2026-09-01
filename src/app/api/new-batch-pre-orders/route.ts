@@ -434,10 +434,10 @@ function buildReceiptHtml(p: {
 }
 
 async function sendReceiptEmail(data: any): Promise<void> {
-  const smtpUser = process.env.SMTP_USER;
+  const smtpUser = process.env.SMTP_USER || 'support@dlobcommunity.com';
   const smtpPass = process.env.SMTP_PASS;
-  if (!smtpUser || !smtpPass) {
-    throw new Error('SMTP credentials not configured in environment');
+  if (!smtpPass) {
+    throw new Error('SMTP_PASS credentials not configured in environment');
   }
   if (!data?.email) {
     throw new Error('Email address is missing');
