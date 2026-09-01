@@ -8,11 +8,11 @@ import SmartCropImage from '@/components/SmartCropImage';
 // Fonts: Bebas Neue (all-caps display) + Barlow Condensed Bold (has real lowercase)
 const JERSEY_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@700&display=swap';
 
-// ── Jersey back image map ─────────────────────────────────────
+// ── Jersey back image map (served from Supabase CDN) ─────────
 const JERSEY_BACK_IMAGES: Record<string, string> = {
-  biru:   '/images/jersey/jersey dlob back biru.png',
-  kuning: '/images/jersey/jersey dlob back kuning.png',
-  merah:  '/images/jersey/jersey dlob back merah.png',
+  biru:   'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/jersey-assets/jersey%20dlob%20back%20biru.png',
+  merah:  'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/jersey-assets/jersey%20dlob%20back%20merah.png',
+  kuning: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/jersey-assets/jersey%20dlob%20back%20kuning.png',
 };
 
 // Text colour per jersey upper panel
