@@ -382,10 +382,10 @@ function ItemCard({
             <input
               type="text"
               value={item.namaPunggung}
-              onChange={(e) => onChange({ namaPunggung: e.target.value.toUpperCase() })}
-              placeholder="Contoh: RYAN, KEVIN, ADIT"
-              maxLength={20}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm font-semibold tracking-wider uppercase focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+              onChange={(e) => onChange({ namaPunggung: e.target.value })}
+              placeholder="Contoh: Ryan 🏸, Kevin ⚡, Adit"
+              maxLength={30}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm font-semibold tracking-wider focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
             />
           )}
         </div>

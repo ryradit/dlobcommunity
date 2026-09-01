@@ -678,11 +678,18 @@ export default function StorePage() {
             style={{ minHeight: '85vh' }}
             onMouseEnter={() => {
               const video = document.getElementById('hero-video') as HTMLVideoElement;
-              if (video) video.play();
+              if (video) {
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch(() => {
+                    // Play was interrupted (e.g. quick hover-out) — safe to ignore
+                  });
+                }
+              }
             }}
             onMouseLeave={() => {
               const video = document.getElementById('hero-video') as HTMLVideoElement;
-              if (video) video.pause();
+              if (video && !video.paused) video.pause();
             }}
           >
             {/* Background image (default) */}
