@@ -47,6 +47,7 @@ interface OrderItem {
 interface Order {
   id: string;
   created_at: string;
+  order_number?: string | null;
   nama: string;
   no_wa: string;
   email?: string | null;
@@ -1144,6 +1145,11 @@ export default function RekapNewBatchPage() {
                       {/* 1. No & Date */}
                       <td className="py-4 px-4 align-top">
                         <span className="font-bold text-gray-900 dark:text-white">#{idx + 1}</span>
+                        {order.order_number && (
+                          <p className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 rounded-md px-1.5 py-0.5 mt-1 w-fit">
+                            {order.order_number}
+                          </p>
+                        )}
                         <p className="text-[11px] text-gray-500 dark:text-zinc-400 mt-0.5">
                           {formatDate(order.created_at)}
                         </p>

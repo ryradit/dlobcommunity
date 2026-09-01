@@ -12,6 +12,7 @@ interface ReceiptItem {
 
 interface ReceiptPayload {
   orderId: string;
+  orderNumber?: string;
   email: string;
   nama: string;
   no_wa: string;
@@ -84,8 +85,8 @@ function buildReceiptHtml(p: ReceiptPayload): string {
           <!-- Order Meta -->
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:12px;padding:14px 18px;margin-bottom:24px;border:1px solid #e5e7eb;">
             <tr>
-              <td style="font-size:12px;color:#6b7280;padding:3px 0;width:50%;">🆔 Order ID</td>
-              <td style="font-size:12px;color:#111827;font-weight:700;font-family:monospace;">#${p.orderId.slice(0, 8).toUpperCase()}</td>
+              <td style="font-size:12px;color:#6b7280;padding:3px 0;width:50%;">🆔 No. Order</td>
+              <td style="font-size:12px;color:#111827;font-weight:700;font-family:monospace;">${p.orderNumber || '#' + p.orderId.slice(0, 8).toUpperCase()}</td>
             </tr>
             <tr>
               <td style="font-size:12px;color:#6b7280;padding:3px 0;">📅 Tanggal</td>

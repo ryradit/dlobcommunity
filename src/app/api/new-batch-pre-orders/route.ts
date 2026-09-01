@@ -199,6 +199,30 @@ async function sendNewBatchOrderEmailNotification(order: {
   }
 }
 
+// ── Order Number Generator: dlb{YYYYMMDD}-{queue} (WIB) ─────
+async function generateOrderNumber(supabase: ReturnType<typeof getServiceClient>): Promise<string> {
+  // WIB = UTC+7
+  const wibMs  = Date.now() + 7 * 3600 * 1000;
+  const wibNow = new Date(wibMs);
+  const y = wibNow.getUTCFullYear();
+  const m = wibNow.getUTCMonth();
+  const d = wibNow.getUTCDate();
+  const dateStr = `${y}${String(m + 1).padStart(2, '0')}${String(d).padStart(2, '0')}`;
+
+  // WIB day boundary in UTC  (WIB midnight = UTC 17:00 prev day)
+  const wibDayStartUTC = new Date(Date.UTC(y, m, d)     - 7 * 3600 * 1000).toISOString();
+  const wibDayEndUTC   = new Date(Date.UTC(y, m, d + 1) - 7 * 3600 * 1000).toISOString();
+
+  const { count } = await supabase
+    .from('new_batch_orders')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', wibDayStartUTC)
+    .lt('created_at', wibDayEndUTC);
+
+  const queue = String((count ?? 0) + 1).padStart(2, '0');
+  return `dlb${dateStr}-${queue}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     let body: any;
@@ -238,6 +262,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
+    // Generate unique order number (dlbYYYYMMDD-NN)
+    const orderNumber = await generateOrderNumber(supabase);
+
     // Calculate totals
     const itemsWithPrice = items.map((item: any) => ({
       warna:               item.warna,
@@ -253,7 +280,7 @@ export async function POST(request: NextRequest) {
     // Insert order header
     const { data: order, error: orderError } = await supabase
       .from('new_batch_orders')
-      .insert([{ nama, no_wa: noWa, email: email || null, total_harga: totalHarga, jumlah_item: items.length }])
+      .insert([{ nama, no_wa: noWa, email: email || null, order_number: orderNumber, total_harga: totalHarga, jumlah_item: items.length }])
       .select()
       .single();
 
@@ -345,6 +372,7 @@ export async function PATCH(request: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: data.id,
+          orderNumber: data.order_number || data.id.slice(0, 8).toUpperCase(),
           email: data.email,
           nama: data.nama,
           no_wa: data.no_wa,
