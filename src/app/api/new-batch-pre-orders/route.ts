@@ -338,6 +338,130 @@ export async function GET() {
   }
 }
 
+// ── Receipt Email Builder ──────────────────────────────────────
+function buildReceiptHtml(p: {
+  orderId: string; orderNumber?: string; nama: string; no_wa: string;
+  total_harga: number; created_at: string;
+  items: Array<{ warna: string; ukuran: string; lengan: string; nama_punggung: string | null; tanpa_nama_punggung: boolean; harga: number }>;
+}): string {
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+  const cLabel = (w: string) => w === 'biru' ? 'Biru Navy' : w === 'kuning' ? 'Kuning' : 'Merah';
+  const cDot   = (w: string) => w === 'biru' ? '#0b244c' : w === 'kuning' ? '#FFC000' : '#cc0000';
+
+  const rows = p.items.map((it, i) => {
+    const back = it.tanpa_nama_punggung ? '<em style="color:#9ca3af;">Tanpa nama</em>'
+      : it.nama_punggung ? `<strong>${it.nama_punggung}</strong>` : '<em style="color:#9ca3af;">—</em>';
+    return `<tr style="background:${i % 2 === 0 ? '#f9fafb' : '#fff'};">
+      <td style="padding:9px 12px;font-size:12px;">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${cDot(it.warna)};margin-right:5px;vertical-align:middle;"></span>
+        <strong>${cLabel(it.warna)}</strong></td>
+      <td style="padding:9px 12px;font-size:12px;font-weight:700;">${it.ukuran}</td>
+      <td style="padding:9px 12px;font-size:12px;color:#4b5563;">${it.lengan === 'panjang' ? 'Lengan Panjang' : 'Lengan Pendek'}</td>
+      <td style="padding:9px 12px;font-size:12px;">${back}</td>
+      <td style="padding:9px 12px;font-size:12px;color:#059669;font-weight:700;text-align:right;">${fmt(it.harga)}</td>
+    </tr>`;
+  }).join('');
+
+  const orderDate = new Date(p.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  const orderNum  = p.orderNumber || ('#' + p.orderId.slice(0, 8).toUpperCase());
+
+  return `<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>Kwitansi Jersey DLOB</title></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <tr><td style="background:linear-gradient(135deg,#0b244c,#1a3a6b);padding:28px;text-align:center;">
+    <img src="https://dlobcommunity.com/dlob.png" alt="DLOB" style="width:56px;height:auto;margin-bottom:12px;filter:brightness(0) invert(1);">
+    <h1 style="margin:0;color:#fff;font-size:20px;font-weight:800;">DLOB Community</h1>
+    <p style="margin:4px 0 0;color:#93c5fd;font-size:12px;">Pre-Order Jersey New Batch</p>
+  </td></tr>
+  <tr><td style="background:#dcfce7;padding:14px 28px;text-align:center;border-bottom:2px dashed #bbf7d0;">
+    <p style="margin:0;color:#15803d;font-size:17px;font-weight:800;">✅ Pembayaran Lunas!</p>
+    <p style="margin:4px 0 0;color:#166534;font-size:12px;">Pesanan kamu telah dikonfirmasi dan akan segera diproses.</p>
+  </td></tr>
+  <tr><td style="padding:24px 28px;">
+    <p style="margin:0 0 18px;font-size:14px;color:#374151;">Halo <strong>${p.nama}</strong>! 👋<br>Berikut kwitansi digital pembayaran jersey Pre-Order DLOB New Batch kamu.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:12px;padding:12px 16px;margin-bottom:20px;border:1px solid #e5e7eb;">
+      <tr>
+        <td style="font-size:12px;color:#6b7280;padding:3px 0;width:50%;">🆔 No. Order</td>
+        <td style="font-size:12px;color:#111827;font-weight:700;font-family:monospace;">${orderNum}</td>
+      </tr>
+      <tr>
+        <td style="font-size:12px;color:#6b7280;padding:3px 0;">📅 Tanggal</td>
+        <td style="font-size:12px;color:#111827;font-weight:600;">${orderDate}</td>
+      </tr>
+      <tr>
+        <td style="font-size:12px;color:#6b7280;padding:3px 0;">📱 WhatsApp</td>
+        <td style="font-size:12px;color:#111827;font-weight:600;">${p.no_wa}</td>
+      </tr>
+    </table>
+    <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">Detail Pesanan</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:16px;">
+      <thead><tr style="background:#111827;">
+        <th style="padding:9px 12px;font-size:10px;color:#d1d5db;text-align:left;">Warna</th>
+        <th style="padding:9px 12px;font-size:10px;color:#d1d5db;text-align:left;">Ukuran</th>
+        <th style="padding:9px 12px;font-size:10px;color:#d1d5db;text-align:left;">Lengan</th>
+        <th style="padding:9px 12px;font-size:10px;color:#d1d5db;text-align:left;">Nama Punggung</th>
+        <th style="padding:9px 12px;font-size:10px;color:#d1d5db;text-align:right;">Harga</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0b244c;border-radius:12px;padding:14px 18px;margin-bottom:20px;">
+      <tr>
+        <td style="font-size:13px;color:#93c5fd;font-weight:600;">Total Pembayaran</td>
+        <td style="font-size:18px;color:#fff;font-weight:800;text-align:right;font-family:monospace;">${fmt(p.total_harga)}</td>
+      </tr>
+    </table>
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;margin-bottom:20px;">
+      <p style="margin:0;font-size:12px;color:#92400e;line-height:1.6;">
+        <strong>📦 Info Proses:</strong> Jersey akan diproses setelah semua pesanan terkumpul. Tim DLOB akan menghubungi kamu via WhatsApp untuk info pengiriman.
+      </p>
+    </div>
+    <div style="text-align:center;">
+      <a href="https://www.dlobcommunity.com" style="display:inline-block;background:#0b244c;color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:11px 26px;border-radius:999px;">🏸 Kunjungi DLOB Community</a>
+    </div>
+  </td></tr>
+  <tr><td style="padding:16px 28px;border-top:1px solid #e5e7eb;text-align:center;">
+    <p style="margin:0;font-size:11px;color:#9ca3af;">© ${new Date().getFullYear()} DLOB Community · <a href="https://www.dlobcommunity.com" style="color:#2563eb;text-decoration:none;">dlobcommunity.com</a></p>
+    <p style="margin:4px 0 0;font-size:11px;color:#d1d5db;">Email ini dikirim otomatis. Jangan balas email ini.</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+async function sendReceiptEmail(data: any): Promise<void> {
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  if (!smtpUser || !smtpPass || !data?.email) return;
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.dreamhost.com',
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: (process.env.SMTP_PORT || '465') === '465',
+    auth: { user: smtpUser, pass: smtpPass },
+  });
+
+  await transporter.sendMail({
+    from: `DLOB Community <${smtpUser}>`,
+    to: data.email,
+    subject: `✅ Kwitansi Pembayaran Jersey DLOB — ${data.nama}`,
+    html: buildReceiptHtml({
+      orderId:     data.id,
+      orderNumber: data.order_number,
+      nama:        data.nama,
+      no_wa:       data.no_wa,
+      total_harga: data.total_harga,
+      created_at:  data.created_at,
+      items:       data.new_batch_order_items || [],
+    }),
+  });
+
+  console.log(`[Jersey Receipt] ✅ Sent to ${data.email} — ${data.order_number || data.id}`);
+}
+
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
@@ -364,23 +488,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Auto-send receipt email when marked paid and email is available
+    // Auto-send receipt email directly (no self-referencing fetch)
     if (status === 'paid' && data?.email) {
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dlobcommunity.com';
-      fetch(`${baseUrl}/api/jersey-receipt-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: data.id,
-          orderNumber: data.order_number || data.id.slice(0, 8).toUpperCase(),
-          email: data.email,
-          nama: data.nama,
-          no_wa: data.no_wa,
-          total_harga: data.total_harga,
-          created_at: data.created_at,
-          items: data.new_batch_order_items || [],
-        }),
-      }).catch((err) => console.error('[Receipt Email Fire Error]:', err));
+      sendReceiptEmail(data).catch((err) =>
+        console.error('[Receipt Email Error]:', err?.message)
+      );
     }
 
     return NextResponse.json({ success: true, data });
