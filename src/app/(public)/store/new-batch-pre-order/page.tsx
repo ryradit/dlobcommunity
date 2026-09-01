@@ -5,6 +5,130 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, ChevronRight, Plus, Trash2, ShoppingBag, Copy, Expand, Sparkles, Info } from 'lucide-react';
 import SmartCropImage from '@/components/SmartCropImage';
 
+// Fonts: Bebas Neue (all-caps display) + Barlow Condensed Bold (has real lowercase)
+const JERSEY_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@700&display=swap';
+
+// ── Jersey back image map ─────────────────────────────────────
+const JERSEY_BACK_IMAGES: Record<string, string> = {
+  biru:   '/images/jersey/jersey dlob back biru.png',
+  kuning: '/images/jersey/jersey dlob back kuning.png',
+  merah:  '/images/jersey/jersey dlob back merah.png',
+};
+
+// Text colour per jersey upper panel
+const JERSEY_NAME_COLOR: Record<string, string> = {
+  biru:   '#bf8f09',
+  kuning: '#1a1a1a',
+  merah:  '#FFFFFF',
+};
+
+// Optional text stroke (WebkitTextStroke) per jersey
+const JERSEY_NAME_STROKE: Record<string, string> = {
+  biru:   '1px #000000',
+  kuning: 'none',
+  merah:  'none',
+};
+
+// ── JerseyNamePreview ─────────────────────────────────────────
+// Font scales down based on total visual length (spaces included for accuracy).
+function jerseyFontSize(name: string): string {
+  const len = name.length; // include spaces — more accurate visual width
+  if (len <= 4)  return '1.75rem';
+  if (len <= 5)  return '1.9rem';
+  if (len <= 6)  return '2.16rem';
+  if (len <= 8)  return '1.8rem';
+  if (len <= 10) return '1.5rem';
+  if (len <= 13) return '1.26rem';
+  return '1.02rem';
+}
+
+// Pick font based on whether name has any lowercase letters.
+// Bebas Neue is all-caps only; Barlow Condensed Bold has true lowercase glyphs.
+function jerseyFont(name: string): string {
+  const hasLower = /[a-z]/.test(name);
+  return hasLower
+    ? "'Barlow Condensed', 'Impact', sans-serif"
+    : "'Bebas Neue', 'Impact', 'Arial Black', sans-serif";
+}
+
+function JerseyNamePreview({ warna, name }: { warna: string; name: string }) {
+  const imgSrc = JERSEY_BACK_IMAGES[warna];
+  const textColor  = JERSEY_NAME_COLOR[warna]  ?? '#FFFFFF';
+  const textStroke  = JERSEY_NAME_STROKE[warna] ?? 'none';
+  const displayName = name.trim() || 'NAMA KAMU';
+  const isPlaceholder = !name.trim();
+  const fontSize   = jerseyFontSize(displayName);
+  const fontFamily  = jerseyFont(displayName);
+
+  if (!imgSrc) return null;
+
+  return (
+    <div className="mt-4 rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 shadow-sm">
+      <style>{`@import url('${JERSEY_FONTS_URL}');`}</style>
+
+      {/* Label */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-200 bg-white">
+        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">👕 Preview Nama Punggung</span>
+        <span className="text-[10px] text-gray-400 font-medium">— real-time</span>
+      </div>
+
+      {/* Jersey canvas */}
+      <div className="relative w-full max-w-[280px] mx-auto select-none py-2">
+        <img
+          src={imgSrc}
+          alt={`Jersey ${warna} back`}
+          className="w-full h-auto object-contain"
+          draggable={false}
+        />
+
+        {/*
+          Overlay is constrained to the jersey body silhouette:
+          - left/right 18%  → inside the shoulder width of all 3 jerseys
+          - top 8%, h 30%   → upper back coloured panel area
+          - overflow hidden  → hard-clips text so it never bleeds outside
+        */}
+        <div
+          className="absolute flex justify-center items-center pointer-events-none overflow-hidden"
+          style={{ left: '18%', right: '18%', top: '24%', height: '13%' }}
+        >
+          <span
+            style={{
+              fontFamily,
+              fontSize,
+              color: textColor,
+              WebkitTextStroke: textStroke,
+              opacity: isPlaceholder ? 0.3 : 1,
+              letterSpacing: '0.06em',
+              textShadow: warna === 'biru'
+                ? '0 1px 3px rgba(0,0,0,0.4)'
+                : textColor === '#FFFFFF'
+                ? '0 1px 6px rgba(0,0,0,0.6)'
+                : '0 1px 4px rgba(255,255,255,0.35)',
+              lineHeight: 1.15,
+              textAlign: 'center',
+              wordBreak: 'break-word',
+              whiteSpace: 'pre-line',
+              maxWidth: '100%',
+              transition: 'font-size 0.15s ease, opacity 0.15s ease',
+            }}
+          >
+            {displayName}
+          </span>
+        </div>
+      </div>
+
+      {/* Disclaimer */}
+      <div className="px-4 py-2.5 bg-amber-50 border-t border-amber-100 flex items-start gap-2">
+        <span className="text-amber-500 text-xs mt-0.5 shrink-0">⚠️</span>
+        <p className="text-[11px] text-amber-700 leading-relaxed">
+          <span className="font-bold">Hanya preview.</span> Tampilan nama, ukuran font, dan posisi sesungguhnya akan disesuaikan oleh vendor cetak dan mungkin berbeda dari yang ditampilkan di sini.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+
 // ── Constants & Size Data ────────────────────────────────────
 export type SizeCategory = 'dewasa' | 'kids' | 'balita';
 
@@ -379,14 +503,49 @@ function ItemCard({
             </label>
           </div>
           {!item.tanpaNamaPunggung && (
-            <input
-              type="text"
-              value={item.namaPunggung}
-              onChange={(e) => onChange({ namaPunggung: e.target.value })}
-              placeholder="Contoh: Ryan 🏸, Kevin ⚡, Adit"
-              maxLength={30}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm font-semibold tracking-wider focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-            />
+            <div className="space-y-1.5">
+              {/* Input + char counter */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={item.namaPunggung}
+                  onChange={(e) => onChange({ namaPunggung: e.target.value })}
+                  placeholder="Contoh: Budi, Siti, Eko"
+                  maxLength={15}
+                  className={`w-full px-4 py-3 border rounded-xl text-sm font-semibold tracking-wider focus:outline-none focus:ring-1 transition-colors pr-14 ${
+                    item.namaPunggung.length > 12
+                      ? 'border-amber-400 focus:border-amber-500 focus:ring-amber-400'
+                      : 'border-gray-300 focus:border-black focus:ring-black'
+                  }`}
+                />
+                {/* Character counter */}
+                <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono font-semibold ${
+                  item.namaPunggung.length > 12 ? 'text-amber-500' : 'text-gray-400'
+                }`}>
+                  {item.namaPunggung.length}/15
+                </span>
+              </div>
+
+              {/* Helper text */}
+              <p className="text-[11px] text-gray-400">
+                Gunakan nama panggilan atau singkatan (maks. 15 karakter)
+              </p>
+
+              {/* Soft warning when name is too long */}
+              {item.namaPunggung.length > 12 && (
+                <div className="flex items-start gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+                  <span className="text-amber-500 text-xs shrink-0 mt-0.5">⚠️</span>
+                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                    Nama terlalu panjang untuk dicetak di jersey. Pertimbangkan menggunakan nama panggilan atau singkatan.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Real-time Jersey Preview ── */}
+          {!item.tanpaNamaPunggung && item.warna && (
+            <JerseyNamePreview warna={item.warna} name={item.namaPunggung} />
           )}
         </div>
 
