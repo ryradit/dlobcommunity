@@ -674,7 +674,7 @@ export default function NewBatchPreOrderPage() {
               <div>
                 <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider">Rekening Pembayaran</p>
                 <p className="text-base font-bold text-gray-900 mt-0.5">BCA 1082386054</p>
-                <p className="text-xs text-gray-600">a.n. Ryan Radityatama</p>
+                <p className="text-xs text-gray-600">a.n. DLOB Community</p>
               </div>
               <button
                 type="button"
@@ -692,7 +692,7 @@ export default function NewBatchPreOrderPage() {
 
           <div className="space-y-3">
             <a
-              href={`https://wa.me/6281387643604?text=${encodeURIComponent(`Halo kak Ryan, saya ${nama} ingin konfirmasi pembayaran pre-order Jersey DLOB New Batch.\n\nTotal: ${formatRp(grandTotal)}\nNo. rekening: BCA 1082386054\n\n[lampirkan bukti transfer]`)}`}
+              href={`https://wa.me/6281387643604?text=${encodeURIComponent(`Halo Admin DLOB, saya ${nama} ingin konfirmasi pembayaran pre-order Jersey DLOB New Batch.\n\nTotal: ${formatRp(grandTotal)}\nNo. rekening: BCA 1082386054\n\n[lampirkan bukti transfer]`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm uppercase tracking-widest rounded-full flex items-center justify-center gap-2 transition-all shadow-md"
@@ -887,7 +887,7 @@ export default function NewBatchPreOrderPage() {
                   type="text"
                   value={nama}
                   onChange={(e) => setNama(e.target.value)}
-                  placeholder="Contoh: Ryan Radityatama"
+                  placeholder="Contoh: Budi Santoso"
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
                 />
