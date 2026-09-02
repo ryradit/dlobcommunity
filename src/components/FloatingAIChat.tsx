@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageCircle, X, Send, Loader2, Sparkles, Copy, Check, Dumbbell, HelpCircle, ExternalLink, Play } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { THEME } from '@/lib/theme';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -318,11 +319,11 @@ export default function FloatingAIChat() {
         onTouchStart={onTouchStart}
         onClick={() => { if (!dragState.current.moved) setIsOpen(!isOpen); }}
         style={{ left: pos.x, top: pos.y, touchAction: 'none' }}
-        className={`fixed z-50 p-4 rounded-full shadow-2xl transition-colors duration-300 backdrop-blur-xl cursor-grab active:cursor-grabbing ${
+        className={`fixed z-50 p-4 rounded-full shadow-2xl transition-all duration-300 backdrop-blur-xl cursor-grab active:cursor-grabbing ${
           isOpen
-            ? 'bg-linear-to-br from-red-500/80 to-red-600/80 hover:from-red-600/80 hover:to-red-700/80'
-            : 'bg-linear-to-br from-[#3e6461]/90 to-[#2d4a47]/90 hover:from-[#3e6461] hover:to-[#2d4a47]'
-        } border border-white/20`}
+            ? 'bg-red-600 hover:bg-red-700'
+            : THEME.btnFloatingChat
+        }`}
         aria-label="DLOB AI Assistant"
       >
         {isOpen ? (
@@ -353,10 +354,10 @@ export default function FloatingAIChat() {
           {/* Content */}
           <div className="relative flex flex-col h-full">
             {/* Header */}
-            <div className="relative bg-linear-to-br from-[#3e6461]/80 to-[#2d4a47]/80 backdrop-blur-xl border-b border-white/10 px-4 py-3 rounded-t-3xl transition-all duration-300">
+            <div className="relative bg-zinc-950 border-b border-white/10 px-4 py-3 rounded-t-3xl transition-all duration-300">
               <div className="flex items-center gap-3">
                 <div className="relative shrink-0">
-                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-xl border border-white/30 overflow-hidden">
+                  <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-xl border border-white/20 overflow-hidden">
                     <Image
                       src="/dlobai.png"
                       alt="DLOB AI"
@@ -365,7 +366,7 @@ export default function FloatingAIChat() {
                       className="object-contain"
                     />
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-[#3e6461]/80 animate-pulse" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-zinc-950 animate-pulse" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-white font-bold text-sm tracking-tight leading-tight">Dlob Agent</h3>
@@ -484,12 +485,12 @@ export default function FloatingAIChat() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Tanya apa saja tentang badminton, performa, atau DLOB..."
                   disabled={isLoading}
-                  className="flex-1 px-4 py-3 bg-white dark:bg-zinc-800/60 backdrop-blur-xl border border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-zinc-500 text-sm focus:outline-none focus:border-[#3e6461]/50 focus:ring-2 focus:ring-[#3e6461]/20 disabled:opacity-50 transition-all duration-300"
+                  className="flex-1 px-4 py-3 bg-white dark:bg-zinc-800/60 backdrop-blur-xl border border-gray-300 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-zinc-500 text-sm focus:outline-none focus:border-zinc-900 dark:focus:border-white/30 focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 disabled:opacity-50 transition-all duration-300"
                 />
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="p-3 bg-linear-to-br from-[#3e6461]/90 to-[#2d4a47]/90 hover:from-[#3e6461] hover:to-[#2d4a47] disabled:from-gray-400/60 dark:disabled:from-zinc-700/60 disabled:to-gray-400/60 dark:disabled:to-zinc-700/60 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 backdrop-blur-xl border border-white/10 disabled:border-gray-300 dark:disabled:border-white/5"
+                  className="p-3 bg-zinc-950 hover:bg-zinc-800 disabled:bg-zinc-400 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 backdrop-blur-xl border border-white/10"
                 >
                   <Send className="w-5 h-5" />
                 </button>

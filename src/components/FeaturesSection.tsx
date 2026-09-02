@@ -40,8 +40,8 @@ export default function FeaturesSection() {
           {/* Right - Content */}
           <div className="text-slate-900 space-y-8">
             <div>
-              <h3 className="text-[#3e6461] text-sm font-semibold mb-2 flex items-center gap-2">
-                <span className="w-12 h-1 bg-[#3e6461]"></span>
+              <h3 className="text-zinc-900 text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                <span className="w-8 h-[2px] bg-zinc-900"></span>
                 TENTANG KAMI
               </h3>
               <h2 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900">

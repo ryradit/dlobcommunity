@@ -84,7 +84,7 @@ export default function Navbar() {
                 ) : user ? (
                   <Link
                     href="/dashboard"
-                    className="px-4 py-2 rounded-full text-xs font-semibold text-white bg-[#3e6461] hover:bg-[#2d4a47] border border-teal-500/30 shadow-md transition-all active:scale-95"
+                    className="px-4 py-1.5 rounded-full text-xs font-bold text-zinc-950 bg-white hover:bg-zinc-100 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     Dashboard
                   </Link>
@@ -141,7 +141,7 @@ export default function Navbar() {
                     <Link
                       href="/dashboard"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block w-full py-2.5 rounded-xl text-center text-sm font-semibold text-white bg-[#3e6461] hover:bg-[#2d4a47] transition-colors"
+                      className="block w-full py-2.5 rounded-xl text-center text-sm font-bold text-zinc-950 bg-white hover:bg-zinc-100 transition-colors"
                     >
                       Dashboard
                     </Link>
@@ -217,7 +217,7 @@ export default function Navbar() {
             ) : user ? (
               <Link
                 href="/dashboard"
-                className="px-4 py-2 rounded-full text-xs font-semibold text-white bg-[#3e6461] hover:bg-[#2d4a47] border border-teal-500/30 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="px-4 py-1.5 rounded-full text-xs font-bold text-zinc-950 bg-white hover:bg-zinc-100 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 Dashboard
               </Link>
@@ -267,7 +267,7 @@ export default function Navbar() {
                 <Link
                   href="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-4 py-2.5 rounded-full text-base font-medium text-white bg-[#3e6461] hover:bg-[#2d4a47] text-center"
+                  className="block px-4 py-2.5 rounded-full text-base font-bold text-zinc-950 bg-white hover:bg-zinc-100 text-center"
                 >
                   Dashboard
                 </Link>
