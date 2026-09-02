@@ -70,13 +70,13 @@ const CtaCard = React.forwardRef<HTMLDivElement, CtaCardProps>(
         />
         
         {/* Animated gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461]/90 via-[#2d4a47]/80 to-[#1e4843]/90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-zinc-950/95 via-zinc-900/90 to-black/95" />
         
         {/* Animated blobs */}
         <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-[#4a7370] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-          <div className="absolute top-40 right-20 w-72 h-72 bg-[#2d5a56] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-          <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-[#3e6461] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-blob"></div>
+          <div className="absolute top-40 right-20 w-72 h-72 bg-purple-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
+          <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-cyan-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-blob animation-delay-4000"></div>
         </div>
 
         {/* Glassmorphism container */}

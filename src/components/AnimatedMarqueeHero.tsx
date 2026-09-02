@@ -19,7 +19,7 @@ const ActionButton = ({ children }: { children: React.ReactNode }) => (
   <motion.button
     whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
-    className="mt-8 px-8 py-3 rounded-full bg-[#1e4843] text-white font-semibold shadow-lg transition-colors hover:bg-[#162f2c] focus:outline-none focus:ring-2 focus:ring-[#1e4843] focus:ring-opacity-75"
+    className="mt-8 px-8 py-3 rounded-full bg-zinc-950 text-white font-semibold shadow-lg transition-all hover:bg-zinc-800 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-opacity-75"
   >
     {children}
   </motion.button>

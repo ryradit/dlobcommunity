@@ -935,8 +935,8 @@ export default function LeaderboardPage() {
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`px-3 sm:px-5 py-2.5 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 sm:gap-2 flex-shrink-0 hover:scale-[1.02] active:scale-[0.98] ${
                   activeTab === tab.id
-                    ? 'bg-[#3e6461] text-white shadow-lg shadow-teal-900/30'
-                    : 'bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-zinc-600'
+                    ? 'bg-zinc-950 dark:bg-white dark:text-zinc-950 text-white font-bold shadow-lg'
+                    : 'bg-gray-200 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-zinc-700'
                 }`}
               >
                 <span className="text-xs sm:text-sm">{tab.icon}</span>
@@ -948,7 +948,7 @@ export default function LeaderboardPage() {
 
           {/* Empty period state when period has 0 matches */}
           {periodMatchesCount === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-4 bg-teal-50/50 dark:bg-teal-950/20 rounded-2xl border border-dashed border-teal-300 dark:border-teal-800/40 text-center max-w-lg mx-auto my-6">
+            <div className="flex flex-col items-center justify-center py-16 px-4 bg-zinc-100/50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 text-center max-w-lg mx-auto my-6">
               <div className="text-5xl mb-3">⏳</div>
               <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
                 {currentPeriodConfig.title}
@@ -956,7 +956,7 @@ export default function LeaderboardPage() {
               <p className="text-xs sm:text-sm text-gray-600 dark:text-zinc-300 mb-4 max-w-sm">
                 Musim ini akan resmi dimulai pada <strong>{currentPeriodConfig.subtitle}</strong>. Pertandingan yang dicatat mulai tanggal tersebut akan otomatis masuk ke leaderboard periode ini!
               </p>
-              <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-[#3e6461] text-white shadow-md">
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-zinc-950 text-white shadow-md">
                 <span>🏸</span>
                 <span>Siapkan dirimu untuk perebutan podium musim depan!</span>
               </div>
@@ -1742,7 +1742,7 @@ export default function LeaderboardPage() {
               <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-zinc-700">
                 <button
                   onClick={() => setShowPointsInfo(false)}
-                  className="w-full px-4 py-3 bg-[#3e6461] hover:bg-[#2d4a47] text-white rounded-full font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] text-sm sm:text-base shadow-md"
+                  className="w-full px-4 py-3 bg-zinc-950 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-950 text-white rounded-full font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] text-sm sm:text-base shadow-md"
                 >
                   Mengerti
                 </button>

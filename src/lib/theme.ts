@@ -23,8 +23,16 @@ export const THEME = {
   // ─── Badges & Tags ───────────────────────────────────────────────────────
   
   /** Category badge / meta tag (Blog & Tips, Section chips) */
-  badge: 'px-4 py-1.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-900 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:border-white/10',
+  badge: 'px-4 py-1.5 rounded-full text-xs font-semibold bg-[#4382C8]/10 text-[#4382C8] border border-[#4382C8]/20 dark:bg-[#4382C8]/20 dark:text-blue-300 dark:border-blue-400/30',
 
   /** Section decorative line / underline accent */
-  accentBar: 'w-12 h-1 bg-zinc-950 rounded-full',
+  accentBar: 'w-12 h-1 bg-[#4382C8] rounded-full',
+
+  // ─── Glassmorphic Card & Section Designs (#4382C8) ────────────────────────
+  
+  /** Glassmorphic Card with brand blue styling */
+  cardGlass: 'backdrop-blur-xl bg-[#4382C8]/15 border border-[#4382C8]/30 shadow-xl rounded-3xl',
+  
+  /** Glassmorphic Section Background with brand blue gradient */
+  sectionGlass: 'bg-gradient-to-br from-[#4382C8] via-[#356ca8] to-[#1f4a7c] text-white',
 };

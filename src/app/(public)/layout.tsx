@@ -4,6 +4,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FloatingAIChat from "@/components/FloatingAIChat";
+import LoginPromptModal from "@/components/LoginPromptModal";
 import { usePathname } from 'next/navigation';
 
 export default function PublicLayout({
@@ -21,6 +22,7 @@ export default function PublicLayout({
         {children}
         <Footer />
         <FloatingAIChat />
+        <LoginPromptModal />
       </div>
     </AuthProvider>
   );

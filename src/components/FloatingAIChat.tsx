@@ -280,7 +280,7 @@ export default function FloatingAIChat() {
         const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(prefilledText)}`;
         return (
           <span key={index} className="inline-flex items-center gap-2 bg-gray-200 dark:bg-zinc-700/40 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 my-1 transition-all duration-300">
-            <span className="font-mono text-sm font-semibold text-[#3e6461]">{part}</span>
+            <span className="font-mono text-sm font-bold text-zinc-950 dark:text-zinc-100">{part}</span>
             <button
               onClick={() => copyToClipboard(part)}
               className="p-1 hover:bg-gray-300 dark:hover:bg-zinc-600/50 rounded transition-all group"
@@ -383,14 +383,14 @@ export default function FloatingAIChat() {
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {message.role === 'assistant' && (
-                      <div className="w-7 h-7 bg-linear-to-br from-[#3e6461]/30 to-[#2d4a47]/30 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-[#3e6461]/20 dark:border-white/10 shrink-0">
-                        <Sparkles className="w-4 h-4 text-[#3e6461]" />
+                      <div className="w-7 h-7 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-white/10 shrink-0">
+                        <Sparkles className="w-4 h-4 text-white" />
                       </div>
                     )}
                     <div
                       className={`max-w-[75%] p-3.5 rounded-2xl backdrop-blur-xl border transition-all duration-300 ${
                         message.role === 'user'
-                          ? 'bg-linear-to-br from-[#3e6461]/90 to-[#2d4a47]/90 text-white rounded-br-md border-[#3e6461]/30 shadow-lg'
+                          ? 'bg-zinc-950 text-white rounded-br-md border-white/10 shadow-lg'
                           : 'bg-gray-100 dark:bg-zinc-800/60 text-gray-900 dark:text-zinc-100 rounded-bl-md border-gray-200 dark:border-white/5'
                       }`}
                     >
@@ -446,11 +446,11 @@ export default function FloatingAIChat() {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="w-7 h-7 bg-linear-to-br from-[#3e6461]/30 to-[#2d4a47]/30 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-white/10 shrink-0">
-                    <Sparkles className="w-4 h-4 text-[#3e6461]" />
+                  <div className="w-7 h-7 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center mr-2 mt-1 border border-white/10 shrink-0">
+                    <Sparkles className="w-4 h-4 text-white" />
                   </div>
                   <div className="bg-zinc-800/60 backdrop-blur-xl text-zinc-100 p-3.5 rounded-2xl rounded-bl-md border border-white/5 transition-all duration-300">
-                    <Loader2 className="w-5 h-5 animate-spin text-[#3e6461]" />
+                    <Loader2 className="w-5 h-5 animate-spin text-white" />
                   </div>
                 </div>
               )}

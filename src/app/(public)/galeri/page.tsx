@@ -298,9 +298,9 @@ export default function GaleriPage() {
       />
 
       {/* Tabs Section */}
-      <section className="py-12 bg-linear-to-b from-slate-50 to-white">
+      <section className="py-10 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
-          <div className="flex flex-wrap gap-3 bg-gray-100 p-1.5 rounded-full">
+          <div className="flex flex-wrap gap-2 bg-slate-100 p-1.5 rounded-full border border-gray-200">
             {[
               { label: 'Semua', value: 'semua' },
               { label: 'Pertandingan', value: 'pertandingan' },
@@ -312,16 +312,15 @@ export default function GaleriPage() {
                 onClick={() => {
                   setActiveTab(tab.value as TabType);
                   setSelectedVideo(null);
-                  // Reset pagination for all tabs when switching
                   setSemuaPage(1);
                   setPertandinganPage(1);
                   setLatihanPage(1);
                   setSparringPage(1);
                 }}
-                className={`px-6 py-2.5 font-semibold rounded-full transition-all ${
+                className={`px-6 py-2.5 text-xs sm:text-sm font-bold rounded-full transition-all duration-200 ${
                   activeTab === tab.value
-                    ? 'bg-[#1e4843] text-white shadow-lg'
-                    : 'bg-transparent text-gray-700 hover:text-gray-900'
+                    ? 'bg-zinc-950 text-white shadow-md'
+                    : 'text-slate-600 hover:text-zinc-950 hover:bg-white/80'
                 }`}
               >
                 {tab.label}
@@ -339,7 +338,7 @@ export default function GaleriPage() {
             <>
               {loading && activeTab === 'pertandingan' ? (
                 <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3e6461] mx-auto"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-950 mx-auto"></div>
                   <p className="text-gray-600 mt-4">Memuat video...</p>
                 </div>
               ) : filteredItems.length === 0 ? (
@@ -354,7 +353,7 @@ export default function GaleriPage() {
                       onClick={() => setMobileGridCols(1)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
                         mobileGridCols === 1
-                          ? 'bg-[#1e4843] text-white shadow-lg'
+                          ? 'bg-zinc-950 text-white shadow-lg'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                       title="Tampilkan 1 kolom"
@@ -368,7 +367,7 @@ export default function GaleriPage() {
                       onClick={() => setMobileGridCols(2)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
                         mobileGridCols === 2
-                          ? 'bg-[#1e4843] text-white shadow-lg'
+                          ? 'bg-zinc-950 text-white shadow-lg'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                       title="Tampilkan 2 kolom"
@@ -386,7 +385,7 @@ export default function GaleriPage() {
                     {filteredItems.map((item) => (
                     <div
                       key={item.id}
-                      className="group rounded-2xl overflow-hidden hover:shadow-2xl transition-all cursor-pointer bg-white border border-gray-200 hover:border-[#3e6461]"
+                      className="group rounded-3xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer bg-white border border-gray-100 hover:border-[#4382C8]/30"
                       onClick={() => {
                         if (item.type === 'video') {
                           setSelectedVideo({
@@ -401,52 +400,47 @@ export default function GaleriPage() {
                       }}
                     >
                       {/* Image/Thumbnail Container */}
-                      <div className="relative bg-gray-100 h-64 flex items-center justify-center text-6xl overflow-hidden group-hover:scale-110 transition-transform">
+                      <div className="relative bg-slate-100 h-64 flex items-center justify-center text-6xl overflow-hidden">
                         {item.type === 'image' ? (
                           <>
                             <img 
                               src={item.thumbnail} 
                               alt={item.title} 
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               onLoad={() => {
                                 console.log('✓ Image loaded:', item.title, item.id);
                               }}
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
-                                console.warn('✗ Image failed to load:', item.title, item.id, 'Current URL:', img.src);
-                                
-                                // First fallback: try the direct thumbnail API
                                 if (!img.src.includes('thumbnail')) {
                                   img.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w400`;
-                                } 
-                                // Second fallback: try with different export format
-                                else if (!img.src.includes('export=download')) {
+                                } else if (!img.src.includes('export=download')) {
                                   img.src = `https://drive.google.com/uc?export=download&id=${item.id}`;
                                 }
                               }}
                             />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors" />
                           </>
                         ) : (
                           <>
-                            <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                              <div className="bg-white/90 backdrop-blur-sm rounded-full p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Play className="w-8 h-8 text-[#3e6461] fill-[#3e6461]" />
+                            <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                              <div className="bg-white/90 backdrop-blur-sm rounded-full p-4 group-hover:scale-110 transition-transform">
+                                <Play className="w-6 h-6 text-zinc-950 fill-zinc-950" />
                               </div>
                             </div>
                           </>
                         )}
                       </div>
 
-                      {/* Title */}
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 group-hover:text-[#3e6461] transition-colors line-clamp-2">
+                      {/* Title & Badge */}
+                      <div className="p-5 flex items-center justify-between gap-3">
+                        <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#4382C8] transition-colors line-clamp-1">
                           {item.title}
                         </h3>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {item.type === 'video' ? '🎬 Video' : '📸 Foto'}
-                        </p>
+                        <span className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#4382C8]/10 text-[#4382C8]">
+                          {item.type === 'video' ? 'Video' : 'Foto'}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -460,7 +454,7 @@ export default function GaleriPage() {
                         <button
                           onClick={() => handlePageChange(getCurrentPage() - 1)}
                           disabled={getCurrentPage() === 1}
-                          className="px-5 py-2.5 rounded-full border border-gray-300 hover:border-[#3e6461] hover:bg-[#3e6461]/5 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm"
+                          className="px-5 py-2.5 rounded-full border border-gray-300 hover:border-zinc-900 hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm"
                         >
                           ← Sebelumnya
                         </button>
@@ -492,8 +486,8 @@ export default function GaleriPage() {
                               onClick={() => handlePageChange(pageNum)}
                               className={`w-10 h-10 rounded-full transition-all flex items-center justify-center text-sm font-medium ${
                                 pageNum === currentPage
-                                  ? 'bg-[#1e4843] text-white font-semibold shadow-md scale-105'
-                                  : 'border border-gray-300 hover:border-[#3e6461] hover:bg-[#3e6461]/5'
+                                  ? 'bg-zinc-950 text-white font-bold shadow-md scale-105'
+                                  : 'border border-gray-300 hover:border-zinc-900 hover:bg-zinc-100'
                               }`}
                             >
                               {pageNum}
@@ -505,7 +499,7 @@ export default function GaleriPage() {
                         <button
                           onClick={() => handlePageChange(getCurrentPage() + 1)}
                           disabled={getCurrentPage() === getTotalPages()}
-                          className="px-5 py-2.5 rounded-full border border-gray-300 hover:border-[#3e6461] hover:bg-[#3e6461]/5 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm"
+                          className="px-5 py-2.5 rounded-full border border-gray-300 hover:border-zinc-900 hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm"
                         >
                           Selanjutnya →
                         </button>
@@ -566,8 +560,8 @@ export default function GaleriPage() {
       {/* Note about Google Drive Integration */}
       <section className="py-8 border-t border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-[#3e6461]/10 border border-[#3e6461]/20 rounded-xl p-6">
-            <p className="text-sm text-[#2d4a47]">
+          <div className="bg-zinc-100 border border-zinc-200 rounded-xl p-6">
+            <p className="text-sm text-zinc-800">
               ℹ️ Tab Latihan dan Sparring menampilkan foto dari Google Drive secara real-time.
             </p>
           </div>
@@ -652,12 +646,12 @@ export default function GaleriPage() {
             <a
               href={`https://drive.google.com/uc?export=download&id=${selectedImage.id}`}
               download={selectedImage.title}
-              className="absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2 bg-[#1e4843] hover:bg-[#162f2c] text-white rounded-lg transition-colors z-10"
+              className="absolute bottom-4 left-4 flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-full shadow-lg transition-all z-10"
               target="_blank"
               rel="noopener noreferrer"
             >
               <Download className="w-4 h-4" />
-              Download
+              Download Foto
             </a>
           </div>
         </div>

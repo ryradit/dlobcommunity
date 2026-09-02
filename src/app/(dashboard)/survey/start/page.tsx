@@ -210,8 +210,8 @@ export default function SurveyStartPage() {
   if (submitted) {
     return (
       <div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-20 h-20 bg-[#3e6461]/10 rounded-full flex items-center justify-center mb-6">
-          <Check className="w-10 h-10 text-[#3e6461]" />
+        <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
+          <Check className="w-10 h-10 text-zinc-950" />
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-3">Terima kasih! 🙏</h1>
         <p className="text-gray-500 max-w-sm mb-8 leading-relaxed">
@@ -224,7 +224,7 @@ export default function SurveyStartPage() {
               window.scrollTo({ top: 0, behavior: 'instant' });
             }
           }}
-          className="bg-[#3e6461] text-white px-8 py-3 rounded-2xl font-semibold hover:bg-[#2d4a47] transition-colors cursor-pointer"
+          className="bg-zinc-950 text-white px-8 py-3.5 rounded-full font-semibold hover:bg-zinc-800 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md cursor-pointer"
         >
           Kembali ke Beranda
         </button>
@@ -249,7 +249,7 @@ export default function SurveyStartPage() {
             fetchedRef.current = false;
             fetchNextQuestion([]);
           }}
-          className="bg-[#3e6461] text-white px-8 py-3 rounded-2xl font-semibold hover:bg-[#2d4a47] transition-colors"
+          className="bg-zinc-950 text-white px-8 py-3.5 rounded-full font-semibold hover:bg-zinc-800 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md"
         >
           Coba Lagi
         </button>
@@ -267,8 +267,8 @@ export default function SurveyStartPage() {
   if (isDone && !isLoadingNext) {
     return (
       <div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-20 h-20 bg-[#3e6461]/10 rounded-full flex items-center justify-center mb-6">
-          <Check className="w-10 h-10 text-[#3e6461]" />
+        <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
+          <Check className="w-10 h-10 text-zinc-950" />
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-3">Semua pertanyaan selesai!</h1>
         <p className="text-gray-500 max-w-sm mb-8 leading-relaxed">
@@ -277,7 +277,7 @@ export default function SurveyStartPage() {
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="bg-[#3e6461] text-white px-8 py-3 rounded-2xl font-semibold hover:bg-[#2d4a47] transition-colors flex items-center gap-2 disabled:opacity-60"
+          className="bg-zinc-950 text-white px-8 py-3.5 rounded-full font-semibold hover:bg-zinc-800 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 disabled:opacity-60 shadow-md"
         >
           {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           {isSubmitting ? 'Mengirim...' : 'Kirim Respons'}
@@ -290,7 +290,7 @@ export default function SurveyStartPage() {
   if (isLoadingNext && !current) {
     return (
       <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-4 text-gray-400">
-        <Loader2 className="w-10 h-10 animate-spin text-[#3e6461]" />
+        <Loader2 className="w-10 h-10 animate-spin text-zinc-950" />
         <p className="text-sm">Menyiapkan pertanyaan...</p>
       </div>
     );
@@ -304,7 +304,7 @@ export default function SurveyStartPage() {
       {/* Progress bar */}
       <div className="h-1 bg-gray-100 shrink-0">
         <div
-          className="h-full bg-[#3e6461] transition-all duration-500"
+          className="h-full bg-zinc-950 transition-all duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -321,7 +321,7 @@ export default function SurveyStartPage() {
         <div className="text-xs text-gray-400 font-medium">
           {totalShown} / maks {MAX_QUESTIONS}
         </div>
-        <div className="text-xs text-[#3e6461] font-semibold bg-[#3e6461]/10 px-2 py-1 rounded-full">
+        <div className="badge-brand">
           {current.sectionLabel}
         </div>
       </div>
@@ -347,7 +347,7 @@ export default function SurveyStartPage() {
               <p className="text-sm text-gray-400">{current.subtext}</p>
             )}
             {current.type === 'multiple' && (
-              <p className="text-xs text-[#3e6461] mt-1">Pilih semua yang sesuai</p>
+              <p className="text-xs text-zinc-900 font-semibold mt-1">Pilih semua yang sesuai</p>
             )}
           </div>
 
@@ -359,7 +359,7 @@ export default function SurveyStartPage() {
                 onChange={e => { setCurrentAnswer(e.target.value); if (current.id === 'q_1') setIsAnonymous(false); }}
                 placeholder={current.placeholder || 'Ketik jawabanmu di sini...'}
                 rows={4}
-                className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#3e6461]/30 focus:border-[#3e6461] resize-none placeholder:text-gray-400"
+                className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 resize-none placeholder:text-gray-400"
               />
               {current.id === 'q_1' && (
                 <button
@@ -367,8 +367,8 @@ export default function SurveyStartPage() {
                   onClick={() => { setCurrentAnswer('Anonim'); setIsAnonymous(true); }}
                   className={`text-sm px-4 py-2 rounded-full border transition-all ${
                     isAnonymous
-                      ? 'bg-[#3e6461] text-white border-[#3e6461]'
-                      : 'text-gray-400 border-gray-200 hover:border-[#3e6461]/40 hover:text-[#3e6461]'
+                      ? 'bg-zinc-950 text-white border-zinc-950'
+                      : 'text-gray-600 border-gray-200 hover:border-zinc-900 hover:text-zinc-900'
                   }`}
                 >
                   {isAnonymous ? '✓ Jawab sebagai Anonim' : 'Ingin anonim? Tidak apa-apa 👋'}
@@ -388,8 +388,8 @@ export default function SurveyStartPage() {
                     onClick={() => handleSingleSelect(opt.value)}
                     className={`w-full text-left px-5 py-3.5 rounded-full border text-sm font-medium transition-all hover:scale-[1.01] active:scale-[0.99] ${
                       selected
-                        ? 'bg-[#3e6461] text-white border-[#3e6461] shadow-sm'
-                        : 'bg-white text-gray-700 border-gray-200 hover:border-[#3e6461]/40 hover:bg-[#3e6461]/5'
+                        ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-zinc-900 hover:bg-zinc-50'
                     }`}
                   >
                     {opt.label}
@@ -410,8 +410,8 @@ export default function SurveyStartPage() {
                     onClick={() => toggleMulti(opt.value)}
                     className={`w-full text-left px-5 py-3.5 rounded-full border text-sm font-medium transition-all hover:scale-[1.01] active:scale-[0.99] ${
                       selected
-                        ? 'bg-[#3e6461] text-white border-[#3e6461] shadow-sm'
-                        : 'bg-white text-gray-700 border-gray-200 hover:border-[#3e6461]/40 hover:bg-[#3e6461]/5'
+                        ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-zinc-900 hover:bg-zinc-50'
                     }`}
                   >
                     <span className="flex items-center gap-3">
@@ -437,7 +437,7 @@ export default function SurveyStartPage() {
       {/* Bottom nav */}
       <div className="px-6 py-5 border-t border-gray-100 shrink-0">
         {isLoadingNext && current && (
-          <div className="flex items-center justify-center gap-2 text-[#3e6461] text-sm mb-3">
+          <div className="flex items-center justify-center gap-2 text-zinc-950 text-sm mb-3">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>Memuat pertanyaan berikutnya...</span>
           </div>
@@ -446,7 +446,7 @@ export default function SurveyStartPage() {
           <button
             onClick={handleNext}
             disabled={!canProceed() || isSubmitting || isLoadingNext}
-            className="w-full bg-[#3e6461] text-white py-4 rounded-full font-semibold flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-[#2d4a47] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
+            className="w-full bg-zinc-950 text-white py-4 rounded-full font-semibold flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-zinc-800 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
           >
             {isSubmitting ? (
               <Loader2 className="w-5 h-5 animate-spin" />

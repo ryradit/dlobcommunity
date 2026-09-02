@@ -126,10 +126,10 @@ export default function ArtikelDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-[#3e6461] border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-500">Memuat artikel...</p>
+          <div className="animate-spin w-10 h-10 border-4 border-[#4382C8] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-slate-500 text-sm font-medium">Memuat artikel...</p>
         </div>
       </div>
     );
@@ -140,16 +140,16 @@ export default function ArtikelDetailPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <main className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
           <Link 
             href="/artikel"
-            className="inline-flex items-center gap-2 text-[#3e6461] hover:text-[#2d4a47] font-semibold transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-zinc-950 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Kembali ke Artikel
+            Kembali ke Daftar Artikel
           </Link>
         </div>
       </header>
@@ -157,33 +157,33 @@ export default function ArtikelDetailPage() {
       {/* Article Header */}
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Category & Tags */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <span className="px-3 py-1 bg-[#3e6461]/10 text-[#3e6461] text-sm font-semibold rounded-full">
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-[#4382C8]/10 text-[#4382C8]">
             {article.category}
           </span>
           {article.tags && article.tags.map((tag, idx) => (
-            <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
+            <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-full">
               #{tag}
             </span>
           ))}
         </div>
 
         {/* Title */}
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 mb-6 leading-tight tracking-tight">
           {article.title}
         </h1>
 
         {/* Meta Info */}
-        <div className="flex flex-wrap items-center gap-6 text-gray-600 mb-8 pb-8 border-b border-gray-200">
+        <div className="flex flex-wrap items-center gap-6 text-slate-500 text-xs sm:text-sm mb-8 pb-8 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-[#3e6461] flex items-center justify-center text-white font-semibold">
+            <div className="w-8 h-8 rounded-full bg-zinc-950 flex items-center justify-center text-white text-xs font-black">
               {article.author_name?.charAt(0) || 'A'}
             </div>
-            <span className="font-medium">{article.author_name}</span>
+            <span className="font-bold text-gray-900">{article.author_name}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span className="text-sm">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-[#4382C8]" />
+            <span>
               {new Date(article.published_at).toLocaleDateString('id-ID', {
                 day: 'numeric',
                 month: 'long',
@@ -191,18 +191,18 @@ export default function ArtikelDetailPage() {
               })}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            <span className="text-sm">{article.read_time_minutes} menit baca</span>
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-[#4382C8]" />
+            <span>{article.read_time_minutes} menit baca</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4" />
-            <span className="text-sm">{article.views} views</span>
+          <div className="flex items-center gap-1.5">
+            <Eye className="w-3.5 h-3.5 text-[#4382C8]" />
+            <span>{article.views} pembaca</span>
           </div>
         </div>
 
         {/* Hero Image (Bagian Atas) */}
-        <div className="mb-12 rounded-2xl overflow-hidden">
+        <div className="mb-12 rounded-3xl overflow-hidden shadow-xl border border-gray-100">
           <img
             src={article.content.hero_image.url}
             alt={article.content.hero_image.alt}
@@ -213,7 +213,7 @@ export default function ArtikelDetailPage() {
         {/* Intro (Paragraf Pembuka) */}
         <div className="prose prose-lg max-w-none mb-12">
           <div 
-            className="text-gray-700 leading-relaxed text-lg"
+            className="text-slate-700 leading-relaxed text-base sm:text-lg"
             dangerouslySetInnerHTML={{ __html: article.content.intro.replace(/\n/g, '<br />') }}
           />
         </div>
@@ -222,26 +222,26 @@ export default function ArtikelDetailPage() {
         {article.content.sections.map((section, index) => (
           <section key={index} className="mb-12">
             {/* Sub-Heading */}
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-5 tracking-tight">
               {section.heading}
             </h2>
 
             {/* Section Content */}
             <div 
-              className="prose prose-lg max-w-none mb-8 text-gray-700 leading-relaxed"
+              className="prose prose-lg max-w-none mb-8 text-slate-700 leading-relaxed text-base sm:text-lg"
               dangerouslySetInnerHTML={{ __html: section.content.replace(/\n/g, '<br />') }}
             />
 
             {/* Section Image (Gambar Penjelas - Breaking the Wall) */}
             {section.image && (
-              <div className="my-8 rounded-xl overflow-hidden">
+              <div className="my-8 rounded-2xl overflow-hidden shadow-lg border border-gray-100">
                 <img
                   src={section.image.url}
                   alt={section.image.alt}
                   className="w-full h-auto object-cover"
                 />
                 {section.image.alt && (
-                  <p className="text-center text-sm text-gray-500 mt-3 italic">
+                  <p className="text-center text-xs text-slate-400 mt-3 italic">
                     {section.image.alt}
                   </p>
                 )}
@@ -251,10 +251,10 @@ export default function ArtikelDetailPage() {
         ))}
 
         {/* Conclusion (Kesimpulan) */}
-        <div className="bg-gradient-to-r from-[#3e6461]/5 to-[#2d4a47]/5 rounded-2xl p-8 mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Kesimpulan</h2>
+        <div className="bg-gradient-to-br from-[#4382C8]/10 to-transparent rounded-3xl p-8 mb-12 border border-[#4382C8]/20">
+          <h2 className="text-xl font-black text-gray-900 mb-3">Kesimpulan</h2>
           <div 
-            className="prose prose-lg max-w-none text-gray-700 leading-relaxed"
+            className="prose prose-lg max-w-none text-slate-700 leading-relaxed text-sm sm:text-base"
             dangerouslySetInnerHTML={{ __html: article.content.conclusion.replace(/\n/g, '<br />') }}
           />
         </div>
@@ -281,7 +281,7 @@ export default function ArtikelDetailPage() {
                   </p>
                   <Link
                     href="/register"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-[#1e4843] font-semibold rounded-xl hover:bg-gray-100 hover:gap-3 transition-all shadow-lg hover:shadow-xl"
+                    className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-zinc-950 font-bold rounded-full hover:bg-zinc-100 hover:gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
                   >
                     Bergabung Sekarang 
                     <span className="text-lg">→</span>

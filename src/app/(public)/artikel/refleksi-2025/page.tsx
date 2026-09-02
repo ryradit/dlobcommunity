@@ -194,7 +194,7 @@ export default function Refleksi2025Page() {
           </p>
           <Link 
             href="/galeri" 
-            className="inline-flex items-center gap-2 px-8 py-3 bg-[#1e4843] text-white font-semibold rounded-full hover:bg-[#162f2c] transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-zinc-950 hover:bg-zinc-800 text-white font-semibold rounded-full transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md"
           >
             Kunjungi Gallery →
           </Link>
@@ -214,7 +214,7 @@ export default function Refleksi2025Page() {
 
       {/* Bottom Navigation */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-gray-200">
-        <Link href="/artikel" className="inline-flex items-center gap-2 text-[#3e6461] hover:text-[#2d4a47] transition-colors font-semibold">
+        <Link href="/artikel" className="inline-flex items-center gap-2 text-zinc-900 hover:text-black transition-colors font-semibold">
           <ArrowLeft className="w-4 h-4" />
           Kembali ke Artikel
         </Link>

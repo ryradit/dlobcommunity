@@ -168,7 +168,7 @@ export default function HallOfFameSection({ showAll = false, className = '' }: H
         <div className="text-center mt-8">
           <a
             href="/hall-of-fame"
-            className="inline-flex items-center space-x-2 bg-[#1e4843] hover:bg-[#162f2c] text-white px-8 py-4 rounded-full font-semibold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-2xl"
+            className="inline-flex items-center space-x-2 bg-zinc-950 hover:bg-zinc-800 text-white px-8 py-4 rounded-full font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-2xl"
           >
             <span>Lihat Semua Member</span>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

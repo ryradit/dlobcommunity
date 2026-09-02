@@ -208,7 +208,7 @@ export default function SyaratLayananPage() {
             </div>
           </section>
 
-          <div className="bg-[#3e6461]/10 border border-[#3e6461]/30 rounded-lg p-4 mt-8">
+          <div className="bg-zinc-800/80 border border-white/10 rounded-xl p-4 mt-8">
             <p className="text-zinc-300 leading-relaxed text-sm">
               <strong className="text-white">Catatan Penting:</strong> Dengan mendaftar dan menggunakan Platform DLOB Community, 
               Anda mengakui telah membaca, memahami, dan menyetujui semua Syarat dan Ketentuan yang tercantum di atas.
@@ -219,7 +219,7 @@ export default function SyaratLayananPage() {
         <div className="text-center mt-8">
           <Link 
             href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] hover:from-[#3e6461]/90 hover:to-[#2d4a47]/90 rounded-lg transition-all"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold rounded-full transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md"
           >
             ← Kembali ke Beranda
           </Link>

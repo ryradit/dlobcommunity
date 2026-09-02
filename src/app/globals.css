@@ -97,8 +97,73 @@ body {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background-color: #f4f4f5;
-  color: #18181b;
-  border: 1px solid #e4e4e7;
+  background-color: rgba(67, 130, 200, 0.12);
+  color: #4382C8;
+  border: 1px solid rgba(67, 130, 200, 0.25);
+}
+
+/* Glassmorphic card design with #4382C8 */
+.glass-card-brand {
+  background: rgba(67, 130, 200, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(67, 130, 200, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+}
+
+/* Glassmorphic section design with #4382C8 */
+.glass-section-brand {
+  background: linear-gradient(135deg, #4382C8 0%, #2f69a8 50%, #1c4573 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Shimmer skeleton animation
+───────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+.animate-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #e4e4e7 40%,
+    #f0f0f0 80%,
+    #e4e4e7 100%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+
+/* Gradient radial utility */
+.bg-gradient-radial {
+  background-image: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+}
+
+/* Scale 108 utility for gallery hover */
+.group:hover .group-hover\:scale-108 {
+  transform: scale(1.08);
+}
+
+/* Smooth transition 400ms */
+.transition-400 {
+  transition-duration: 400ms;
+}
+
+/* No scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Duration 600ms for article images */
+.duration-600 {
+  transition-duration: 600ms;
 }
 

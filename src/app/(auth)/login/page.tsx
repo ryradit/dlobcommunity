@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 
 const portraits = [
   'IMG_1999.jpg', 'IMG_2035.jpg', 'IMG_2039.jpg', 'IMG_2046.jpg', 'IMG_2049.jpg',
@@ -180,6 +181,15 @@ export default function LoginPage() {
       )}
       
       <div className="w-full max-w-md mx-auto relative z-10">
+        {/* Back Button */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6 transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span>Kembali ke Beranda</span>
+        </Link>
+
         {/* Login Form Section */}
         <div className="w-full space-y-8 bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-white/20">
           <div>

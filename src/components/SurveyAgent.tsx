@@ -182,9 +182,9 @@ export default function SurveyAgent({
   return (
     <div className="flex flex-col h-full bg-white rounded-2xl shadow-xl overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#3e6461] to-[#1e4843] text-white px-6 py-4">
+      <div className="bg-zinc-950 text-white px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
             <Bot className="w-6 h-6" />
           </div>
           <div>
@@ -209,8 +209,8 @@ export default function SurveyAgent({
               {/* Avatar */}
               <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                 msg.role === 'ai' 
-                  ? 'bg-gradient-to-br from-[#3e6461] to-[#1e4843] text-white' 
-                  : 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
+                  ? 'bg-zinc-950 text-white' 
+                  : 'bg-zinc-700 text-white'
               }`}>
                 {msg.role === 'ai' ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
               </div>
@@ -220,7 +220,7 @@ export default function SurveyAgent({
                 <div className={`rounded-2xl px-4 py-3 ${
                   msg.role === 'ai'
                     ? 'bg-white shadow-md border border-slate-200'
-                    : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                    : 'bg-zinc-950 text-white shadow-md'
                 }`}>
                   <p className={`text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === 'ai' ? 'text-slate-800' : 'text-white'
@@ -246,7 +246,7 @@ export default function SurveyAgent({
             animate={{ opacity: 1 }}
             className="flex gap-3"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#3e6461] to-[#1e4843] text-white flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-zinc-950 text-white flex items-center justify-center">
               <Bot className="w-4 h-4" />
             </div>
             <div className="bg-white rounded-2xl px-4 py-3 shadow-md border border-slate-200">
@@ -288,12 +288,12 @@ export default function SurveyAgent({
               onKeyPress={handleKeyPress}
               placeholder="Ketik jawaban Anda..."
               disabled={isLoading}
-              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3e6461] focus:border-transparent disabled:opacity-50 text-slate-800 placeholder-slate-400"
+              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 disabled:opacity-50 text-slate-800 placeholder-slate-400"
             />
             <button
               onClick={handleSendMessage}
               disabled={isLoading || !inputValue.trim()}
-              className="px-6 py-3 bg-gradient-to-r from-[#3e6461] to-[#1e4843] text-white rounded-xl hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
+              className="px-6 py-3 bg-zinc-950 text-white rounded-xl hover:bg-zinc-800 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

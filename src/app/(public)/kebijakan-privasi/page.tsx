@@ -167,7 +167,7 @@ export default function KebijakanPrivasiPage() {
         <div className="text-center mt-8">
           <Link 
             href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] hover:from-[#3e6461]/90 hover:to-[#2d4a47]/90 rounded-lg transition-all"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold rounded-full transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md"
           >
             ← Kembali ke Beranda
           </Link>

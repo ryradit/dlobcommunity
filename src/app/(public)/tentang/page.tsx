@@ -1,532 +1,383 @@
+'use client';
+
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { Users, Shield, Zap, Sparkles, Heart, Award, ArrowRight, CheckCircle2 } from 'lucide-react';
 import HallOfFameSection from '@/components/HallOfFameSection';
 
-const timelineStyles = `
-  @keyframes flowDown {
-    0% {
-      background-position: 0 -1000px;
-    }
-    100% {
-      background-position: 0 1000px;
-    }
-  }
-  
-  .timeline-line {
-    animation: flowDown 3s linear infinite;
-    background: linear-gradient(180deg, #3e6461 0%, #2d4a47 50%, #3e6461 100%);
-    background-size: 100% 200%;
-    box-shadow: 0 0 20px rgba(62, 100, 97, 0.6);
-  }
-`;
+const fadeUp = {
+  hidden: { opacity: 0, y: 32 },
+  visible: (i: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
+  }),
+};
+
+const STATS = [
+  { number: '50+', label: 'Anggota Aktif', desc: 'Member terdaftar & aktif mabar' },
+  { number: '100+', label: 'Pertandingan', desc: 'Sesi sparring & latihan rutin' },
+  { number: '5+', label: 'Tahun Bersama', desc: 'Tumbuh solid sejak 2020' },
+  { number: '24/7', label: 'AI Analytics', desc: 'Statistik & leaderboard pintar' },
+];
+
+const TIMELINE = [
+  {
+    year: '2020',
+    title: 'Awal Dimulai di Tengah Pandemi',
+    desc: 'Di tengah pandemi COVID-19, sekelompok pecinta bulu tangkis berkumpul untuk membentuk wadah mabar yang aman dan terorganisir.',
+    img: '/images/dlob8.jpg',
+  },
+  {
+    year: '2021',
+    title: 'Solidaritas & Rutinitas Latihan',
+    desc: 'Jadwal latihan rutin mingguan mulai dibentuk. Anggota terus bertambah dengan semangat kebersamaan dan sportivitas yang tinggi.',
+    img: '/images/20210404_134623.jpg',
+  },
+  {
+    year: '2022',
+    title: 'Komunitas Semakin Solid',
+    desc: 'Pemain dari berbagai latar belakang dan tingkat keahlian berkumpul untuk mengasah kemampuan dan mempererat persahabatan di lapangan.',
+    img: '/images/20211027_205112.jpg',
+  },
+  {
+    year: '2023',
+    title: 'Membangun Ekosistem Terpadu',
+    desc: 'Kami mulai mendigitalkan sistem absensi, kas transparan, dan statistik pertandingan agar manajemen komunitas lebih rapi.',
+    img: '/images/20211027_205109.jpg',
+  },
+  {
+    year: '2024',
+    title: 'Modernisasi Platform DLOB',
+    desc: 'Meluncurkan platform internal terintegrasi dengan leaderboard otomatis, integrasi Google Drive untuk arsip, dan store merchandise resmi.',
+    img: '/images/dlob12.jpg',
+  },
+  {
+    year: '2025',
+    title: 'Inovasi AI & Analitik Cerdas',
+    desc: 'Mengintegrasikan teknologi AI untuk rekomendasi ukuran jersey, survei komunitas adaptif, dan analisis performa permainan pemain.',
+    img: '/images/dlob1.jpg',
+  },
+  {
+    year: '2026',
+    title: 'Masa Depan Komunitas Terdepan',
+    desc: 'Terus berkembang dengan standar baru komunitas olahraga: inklusif, terorganisir, transparan, dan menyenangkan bagi setiap member.',
+    img: '/images/dlob3.jpg',
+  },
+];
+
+const VALUES = [
+  {
+    num: '01',
+    title: 'Transparansi',
+    desc: 'Keterbukaan dalam jadwal, rekap iuran mabar, dan statistik pertandingan komunitas.',
+    icon: Shield,
+  },
+  {
+    num: '02',
+    title: 'Sportivitas & Keadilan',
+    desc: 'Setiap anggota mendapat kesempatan bermain yang setara tanpa memandang tingkat kemahiran.',
+    icon: Award,
+  },
+  {
+    num: '03',
+    title: 'Inovasi Digital',
+    desc: 'Pemanfaatan teknologi modern untuk mempermudah operasional komunitas bulu tangkis.',
+    icon: Zap,
+  },
+  {
+    num: '04',
+    title: 'Kebersamaan & Kekeluargaan',
+    desc: 'Lebih dari sekadar bermain badminton, kami membangun relasi persaudaraan yang erat.',
+    icon: Heart,
+  },
+];
 
 export default function TentangPage() {
-  const stats = [
-    { number: '50+', label: 'Anggota Aktif' },
-    { number: '100+', label: 'Turnamen Diikuti' },
-    { number: '95%', label: 'Kepuasan Anggota' },
-    { number: '24/7', label: 'Dukungan AI' },
-  ];
-
-  const features = [
-    {
-      title: 'Sistem Kehadiran Pintar',
-      description: 'Sistem check-in QR code dengan verifikasi GPS dan pembaruan real-time'
-    },
-    {
-      title: 'Manajemen Pembayaran',
-      description: 'Perhitungan biaya otomatis dengan berbagai metode pembayaran dan pelacakan transparan'
-    },
-    {
-      title: 'Penjadwalan Pertandingan',
-      description: 'Pemasangan pertandingan adil bertenaga AI dengan analitik kinerja dan papan peringkat'
-    },
-    {
-      title: 'Asisten AI',
-      description: 'Asisten cerdas bertenaga Gemini untuk wawasan komunitas dan rekomendasi'
-    },
-  ];
-
-  const values = [
-    {
-      title: 'Keadilan',
-      description: 'Pemasangan pertandingan bertenaga AI memastikan setiap orang bermain dengan pemain tingkat keterampilan serupa'
-    },
-    {
-      title: 'Transparansi',
-      description: 'Pelacakan pembayaran yang jelas, hasil pertandingan, dan statistik komunitas untuk visibilitas lengkap'
-    },
-    {
-      title: 'Pertumbuhan',
-      description: 'Analitik kinerja dan wawasan personal untuk membantu setiap pemain meningkatkan permainan mereka'
-    },
-    {
-      title: 'Komunitas',
-      description: 'Membangun persahabatan dan koneksi yang bertahan lama melalui cinta pada badminton'
-    },
-  ];
-
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <style>{timelineStyles}</style>
-      {/* Hero Section */}
-      <section className="bg-white py-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left - Content */}
-            <div className="space-y-8">
-              <div>
-                <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold">TENTANG KAMI</span>
-                <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mt-6 mb-6">
-                  Platform Badminton Terpadu
-                </h1>
+    <main className="min-h-screen bg-white">
+      {/* ─────────────────────────────────────────────────────────────
+          1. HERO SECTION
+      ───────────────────────────────────────────────────────────── */}
+      <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+        {/* Ambient glow */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-radial from-[#4382C8]/10 to-transparent rounded-full translate-x-1/3 -translate-y-1/4 pointer-events-none" />
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left Column */}
+            <motion.div
+              className="space-y-6 text-slate-900"
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+            >
+              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#4382C8]">
+                <span className="w-6 h-[2px] bg-[#4382C8]" />
+                Tentang DLOB
+              </span>
+              
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 leading-[1.05] tracking-tight">
+                Komunitas Badminton<br />
+                <span className="text-[#4382C8]">Modern & Terpadu</span>
+              </h1>
+
+              <div className="space-y-4 text-slate-600 text-base leading-relaxed">
+                <p>
+                  DLOB Community adalah komunitas bulu tangkis yang berkomitmen menciptakan lingkungan olahraga yang positif, kompetitif, dan penuh kebersamaan.
+                </p>
+                <p>
+                  Melalui platform internal ini, seluruh aktivitas mabar, jadwal rutin, dokumentasi foto/video, serta pencatatan skor dikelola secara terstruktur untuk kenyamanan seluruh anggota.
+                </p>
               </div>
 
-              <div className="space-y-4 text-gray-600">
-                <p className="text-lg leading-relaxed">
-                  DLOB Community menyediakan solusi lengkap untuk mengelola komunitas badminton Anda dengan mudah dan efisien.
-                </p>
-                <p className="text-lg leading-relaxed">
-                  Dari manajemen anggota hingga penyelenggaraan turnamen, semua terintegrasi dalam satu platform yang user-friendly dan didukung teknologi AI terdepan.
-                </p>
+              <div className="pt-2">
+                <Link
+                  href="/kontak"
+                  className="inline-flex items-center gap-3 bg-zinc-950 hover:bg-zinc-800 text-white px-8 py-3.5 rounded-full font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg text-sm"
+                >
+                  Bergabung Bersama Kami
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
+            </motion.div>
 
-              <Link href="/register" className="inline-flex items-center gap-3 bg-[#1e4843] hover:bg-[#162f2c] text-white px-8 py-4 rounded-full font-semibold transition-colors text-lg">
-                Mulai Sekarang
-              </Link>
-            </div>
-
-            {/* Right - Image */}
-            <div className="relative">
-              <div className="relative w-full aspect-square rounded-3xl overflow-hidden shadow-2xl">
+            {/* Right Column: Hero Image */}
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}
+            >
+              <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border border-white/60">
                 <Image
                   src="/images/dlob12.jpg"
-                  alt="DLOB Community"
+                  alt="DLOB Community Group"
                   fill
                   className="object-cover"
+                  priority
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                
+                {/* Floating Tag */}
+                <div className="absolute bottom-6 left-6 right-6 backdrop-blur-md bg-white/20 border border-white/30 rounded-2xl p-4 text-white">
+                  <p className="font-bold text-sm">GOR Badminton Wisma Harapan</p>
+                  <p className="text-xs text-white/80">Homebase resmi DLOB Badminton Community</p>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Mission & Vision */}
-      <section className="bg-white py-20">
+      {/* ─────────────────────────────────────────────────────────────
+          2. STATS BAR
+      ───────────────────────────────────────────────────────────── */}
+      <section className="py-12 bg-zinc-950 text-white border-y border-white/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">Visi & Misi Kami</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Membangun fondasi komunitas badminton yang adil, transparan, dan memberdayakan
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left - Mission Card */}
-            <div className="group lg:col-span-1">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-              <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300 h-full flex flex-col">
-                <span className="px-3 py-1 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-xs font-semibold w-fit mb-4">Misi Kami</span>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Merevolusi Manajemen Komunitas</h3>
-                <p className="text-gray-600 leading-relaxed flex-grow">
-                  Memberikan solusi lengkap untuk mengelola komunitas badminton dengan mudah, efisien, dan transparan melalui teknologi inovatif.
-                </p>
-              </div>
-            </div>
-
-            {/* Center - Image */}
-            <div className="lg:col-span-1">
-              <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-xl">
-                <Image
-                  src="/images/20210821_230808.jpg"
-                  alt="Tim DLOB"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Right - Vision Card */}
-            <div className="group lg:col-span-1">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-              <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300 h-full flex flex-col">
-                <span className="px-3 py-1 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-xs font-semibold w-fit mb-4">Visi Kami</span>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Dunia Badminton yang Adil</h3>
-                <p className="text-gray-600 leading-relaxed flex-grow">
-                  Menciptakan ekosistem di mana setiap pemain badminton memiliki akses ke komunitas yang adil dan didukung teknologi terdepan.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Core Values */}
-      <section className="bg-gradient-to-b from-slate-50 to-white py-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">Nilai Inti DLOB</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Prinsip-prinsip yang memandu setiap keputusan dan tindakan kami
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
-            {/* Left - Values Cards */}
-            <div className="space-y-6">
-              {[
-                {
-                  number: "01",
-                  title: "Transparansi",
-                  description: "Kejujuran dan keterbukaan dalam setiap aspek operasional platform kami"
-                },
-                {
-                  number: "02",
-                  title: "Keadilan",
-                  description: "Semua pemain mendapat kesempatan yang sama untuk berkembang dan bersaing"
-                },
-                {
-                  number: "03",
-                  title: "Inovasi",
-                  description: "Terus berinovasi untuk memberikan solusi terbaik bagi komunitas"
-                },
-                {
-                  number: "04",
-                  title: "Kolaborasi",
-                  description: "Bekerja sama membangun ekosistem badminton yang lebih kuat"
-                }
-              ].map((value, index) => (
-                <div key={index} className="group flex gap-6">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#3e6461] to-[#2d4a47] shadow-lg group-hover:shadow-2xl transition-shadow duration-300">
-                      <span className="text-2xl font-bold text-white">{value.number}</span>
-                    </div>
-                  </div>
-                  <div className="flex-grow pt-2">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{value.title}</h3>
-                    <p className="text-gray-600 leading-relaxed">{value.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Right - Image */}
-            <div className="relative h-96 rounded-3xl overflow-hidden shadow-xl">
-              <Image
-                src="/images/20210821_230459.jpg"
-                alt="Nilai Inti DLOB"
-                fill
-                className="object-cover"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Our Story */}
-      <section className="relative bg-gradient-to-b from-gray-50 to-white py-24 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center mb-16">
-            <div className="inline-block mb-4">
-              <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold">Perjalanan Kami</span>
-            </div>
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">Cerita DLOB</h2>
-          </div>
-
-          <div className="group">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-            <div className="relative bg-white rounded-3xl p-10 md:p-14 shadow-lg hover:shadow-2xl transition-shadow duration-300">
-              <p className="text-lg text-gray-700 leading-relaxed mb-8">
-                DLOB dimulai sebagai ide sederhana: bagaimana jika mengelola komunitas badminton bisa semenyenangkan bermain olahraga itu sendiri?
-              </p>
-              <p className="text-lg text-gray-700 leading-relaxed mb-8">
-                Didirikan oleh pemain badminton yang bersemangat yang mengalami tantangan pelacakan kehadiran manual, pengumpulan pembayaran, dan organisasi pertandingan yang adil, kami berangkat untuk membuat solusi yang akan menguntungkan seluruh komunitas.
-              </p>
-              
-              <div className="grid sm:grid-cols-2 gap-6 pt-8 border-t border-[#3e6461]/20">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-[#3e6461]/10">
-                      <span className="text-[#3e6461] font-bold">✓</span>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900">Komunitas Utama</h4>
-                    <p className="text-sm text-gray-600 mt-1">Didirikan oleh penggemar badminton</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-[#3e6461]/10">
-                      <span className="text-[#3e6461] font-bold">✓</span>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900">Pendekatan Komunitas</h4>
-                    <p className="text-sm text-gray-600 mt-1">Mengutamakan kebutuhan pengguna</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      <section className="relative bg-gradient-to-r from-[#3e6461] to-[#2d4a47] py-24 text-white overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Bergabung dengan Komunitas Kami</h2>
-            <p className="text-white/80 max-w-2xl mx-auto">
-              Ribuan pemain badminton telah mempercayai DLOB untuk mengelola komunitas mereka
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl md:text-5xl font-bold mb-2">{stat.number}</div>
-                <p className="text-white/80 text-sm md:text-base">{stat.label}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {STATS.map((stat, i) => (
+              <div key={i} className="text-center md:text-left border-l-2 border-[#4382C8] pl-4">
+                <p className="text-3xl md:text-4xl font-black text-white">{stat.number}</p>
+                <p className="text-sm font-bold text-white/90 mt-1">{stat.label}</p>
+                <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">{stat.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Perjalanan Timeline */}
-      <section className="relative bg-gradient-to-b from-white to-gray-50 py-24 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+      {/* ─────────────────────────────────────────────────────────────
+          3. VISION & MISSION CARDS
+      ───────────────────────────────────────────────────────────── */}
+      <section className="py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">Perjalanan Kami</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Dari mimpi sederhana hingga menjadi komunitas badminton terdepan, dengan ribuan turnamen dan puluhan ribu anggota yang bergabung
-            </p>
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#4382C8] mb-3">
+              <span className="w-6 h-[2px] bg-[#4382C8]" />
+              Fondasi Kami
+              <span className="w-6 h-[2px] bg-[#4382C8]" />
+            </span>
+            <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+              Visi & Misi DLOB
+            </h2>
           </div>
 
-          <div className="relative">
-            {/* Vertical Timeline Line */}
-            <div className="timeline-line hidden lg:block absolute left-1/2 transform -translate-x-1/2 w-1 h-full top-0"></div>
-
-            <div className="space-y-16">
-            {/* Year 2020 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl">
-                <Image
-                  src="/images/dlob8.jpg"
-                  alt="2020 - Awal Dimulai"
-                  fill
-                  className="object-cover"
-                />
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Vision */}
+            <div className="relative rounded-3xl p-8 sm:p-10 border border-[#4382C8]/20 bg-gradient-to-br from-[#4382C8]/5 to-transparent shadow-sm hover:shadow-xl transition-shadow">
+              <div className="w-12 h-12 rounded-2xl bg-[#4382C8] text-white flex items-center justify-center font-black text-xl mb-6 shadow-md shadow-[#4382C8]/20">
+                V
               </div>
-              <div className="group">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-                <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                  <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2020</span>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Masa Pandemi</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Di tengah pandemi COVID-19, kami memulai dengan visi untuk mempertemukan para pecinta badminton yang tersebar. Komunitas badminton membutuhkan tempat untuk terhubung dan berbagi passion mereka.
-                  </p>
-                </div>
-              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-3">Visi Kami</h3>
+              <p className="text-slate-600 leading-relaxed text-sm sm:text-base">
+                Menjadi komunitas bulu tangkis yang profesional, inklusif, dan menjadi teladan dalam pemanfaatan teknologi untuk kenyamanan dan kebersamaan seluruh anggota.
+              </p>
             </div>
 
-            {/* Year 2021 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="group order-2 lg:order-1">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-                <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                  <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2021</span>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Bertahan dan Tumbuh</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Meskipun pandemi masih berlangsung, kami terus membangun komunitas dengan para pemain badminton yang antusias. Setiap hari ada yang bergabung untuk berbagi passion mereka terhadap olahraga ini.
-                  </p>
-                </div>
+            {/* Mission */}
+            <div className="relative rounded-3xl p-8 sm:p-10 border border-zinc-200 bg-gradient-to-br from-slate-50 to-transparent shadow-sm hover:shadow-xl transition-shadow">
+              <div className="w-12 h-12 rounded-2xl bg-zinc-950 text-white flex items-center justify-center font-black text-xl mb-6 shadow-md">
+                M
               </div>
-              <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl order-1 lg:order-2">
-                <Image
-                  src="/images/20210404_134623.jpg"
-                  alt="2021 - Peluncuran Pertama"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Year 2022 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl">
-                <Image
-                  src="/images/20211027_205112.jpg"
-                  alt="2022 - Komunitas Berkembang"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="group">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-                <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                  <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2022</span>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Komunitas Berkembang</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Seiring berakhirnya pandemi, komunitas badminton kami semakin solid. Pemain dari berbagai latar belakang dan tingkat keahlian berkumpul untuk menjalani hobi mereka bersama-sama.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Year 2023 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="group order-2 lg:order-1">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-                <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                  <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2023</span>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Membangun Fondasi</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Kami terus mengembangkan cara untuk melayani komunitas badminton dengan lebih baik. Fokus kami adalah memahami kebutuhan pemain dan menciptakan solusi yang tepat untuk mereka.
-                  </p>
-                </div>
-              </div>
-              <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl order-1 lg:order-2">
-                <Image
-                  src="/images/20211027_205109.jpg"
-                  alt="2023 - Membangun Fondasi"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Year 2024 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl">
-                <Image
-                  src="/images/dlob12.jpg"
-                  alt="2024 - Ekspansi Regional"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="group">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-                <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                  <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2024</span>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Memperluas Jangkauan</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Dengan dukungan komunitas yang kuat, kami menjangkau lebih banyak pecinta badminton di berbagai daerah. Setiap pemain yang bergabung membawa energi baru dan perspektif unik.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Year 2025 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="group order-2 lg:order-1">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-                <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                  <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2025</span>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Momentum Berkelanjutan</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Perjalanan kami terus berlanjut dengan komitmen yang sama - melayani komunitas badminton dengan sepenuh hati. Kami belajar dari setiap tantangan dan terus berkembang bersama.
-                  </p>
-                </div>
-              </div>
-              <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl order-1 lg:order-2">
-                <Image
-                  src="/images/dlob1.jpg"
-                  alt="2025 - Era Baru"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Year 2026 */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="relative h-72 rounded-3xl overflow-hidden shadow-xl">
-                <Image
-                  src="/images/dlob3.jpg"
-                  alt="2026 - Masa Depan Cerah"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="group">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-                <div className="relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                  <span className="px-4 py-2 bg-[#3e6461]/15 text-[#3e6461] rounded-full text-sm font-semibold inline-block mb-4">2026</span>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Terus Berkembang</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Di tahun ini, kami masih fokus pada misi utama kami - membangun komunitas badminton yang kuat dan saling mendukung. Setiap anggota adalah bagian penting dari perjalanan ini.
-                  </p>
-                </div>
-              </div>
-            </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-3">Misi Kami</h3>
+              <ul className="space-y-2.5 text-slate-600 text-sm sm:text-base">
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#4382C8] shrink-0 mt-1" />
+                  <span>Menyediakan jadwal mabar dan sparring rutin yang tertata rapi.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#4382C8] shrink-0 mt-1" />
+                  <span>Mendorong peningkatan skill bermain melalui latihan terarah.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#4382C8] shrink-0 mt-1" />
+                  <span>Menjunjung tinggi transparansi operasional dan persaudaraan.</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Hall of Fame */}
-      <section className="bg-gray-50 py-20">
+      {/* ─────────────────────────────────────────────────────────────
+          4. CORE VALUES
+      ───────────────────────────────────────────────────────────── */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#4382C8] mb-3">
+              <span className="w-6 h-[2px] bg-[#4382C8]" />
+              Prinsip Kami
+              <span className="w-6 h-[2px] bg-[#4382C8]" />
+            </span>
+            <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+              Nilai Inti Komunitas
+            </h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {VALUES.map((val, idx) => {
+              const Icon = val.icon;
+              return (
+                <div
+                  key={idx}
+                  className="bg-white rounded-3xl p-6 border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col"
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <span className="text-2xl font-black text-[#4382C8]">{val.num}</span>
+                    <div className="w-10 h-10 rounded-xl bg-[#4382C8]/10 flex items-center justify-center text-[#4382C8]">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{val.title}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed grow">{val.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          5. TIMELINE JOURNEY
+      ───────────────────────────────────────────────────────────── */}
+      <section className="py-24 bg-white overflow-hidden">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-20">
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#4382C8] mb-3">
+              <span className="w-6 h-[2px] bg-[#4382C8]" />
+              Perjalanan Kami
+              <span className="w-6 h-[2px] bg-[#4382C8]" />
+            </span>
+            <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+              Jejak Langkah DLOB
+            </h2>
+            <p className="text-slate-500 text-sm sm:text-base mt-2 max-w-xl mx-auto">
+              Dari sesi mabar sederhana hingga menjadi komunitas bulu tangkis yang solid dan terintegrasi
+            </p>
+          </div>
+
+          <div className="space-y-12 relative before:absolute before:inset-0 before:left-4 sm:before:left-1/2 before:-translate-x-1/2 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-[#4382C8] before:via-blue-200 before:to-slate-100">
+            {TIMELINE.map((item, index) => {
+              const isEven = index % 2 === 0;
+              return (
+                <div
+                  key={item.year}
+                  className={`relative flex flex-col sm:flex-row items-center gap-8 ${
+                    isEven ? 'sm:flex-row-reverse' : ''
+                  }`}
+                >
+                  {/* Content card */}
+                  <div className="w-full sm:w-1/2 pl-10 sm:pl-0">
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-lg hover:shadow-2xl transition-shadow">
+                      <span className="inline-block px-3.5 py-1 rounded-full text-xs font-black bg-[#4382C8] text-white mb-3 shadow-sm">
+                        {item.year}
+                      </span>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+
+                  {/* Dot */}
+                  <div className="absolute left-4 sm:left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white border-4 border-[#4382C8] shadow-md flex items-center justify-center z-10">
+                    <div className="w-2 h-2 rounded-full bg-[#4382C8]" />
+                  </div>
+
+                  {/* Image */}
+                  <div className="w-full sm:w-1/2 pl-10 sm:pl-0">
+                    <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-md">
+                      <Image
+                        src={item.img}
+                        alt={item.title}
+                        fill
+                        className="object-cover hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          6. HALL OF FAME EMBED
+      ───────────────────────────────────────────────────────────── */}
+      <section className="bg-slate-50 py-20 border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <HallOfFameSection showAll={false} />
         </div>
       </section>
 
-      {/* Gallery Section */}
-      <section className="relative bg-white py-24 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">Galeri Momen Terbaik</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Saksikan momen-momen terbaik dari pertandingan dan latihan badminton kami yang penuh semangat
+      {/* ─────────────────────────────────────────────────────────────
+          7. CTA SECTION
+      ───────────────────────────────────────────────────────────── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/20 text-center p-10 sm:p-16">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#4382C8] via-[#2f6fae] to-[#1b4372]" />
+          <div className="absolute inset-0 bg-white/10 backdrop-blur-md" />
+
+          <div className="relative text-white max-w-2xl mx-auto space-y-6">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight drop-shadow-sm">
+              Tertarik Bergabung dengan DLOB?
+            </h2>
+            <p className="text-white/80 text-sm sm:text-base leading-relaxed font-medium">
+              Ayo rasakan serunya berolahraga bersama komunitas yang suportif dan penuh semangat kekeluargaan.
             </p>
+            <div className="pt-2">
+              <Link
+                href="/kontak"
+                className="inline-flex items-center gap-2 bg-zinc-950 hover:bg-zinc-800 text-white font-bold px-8 py-3.5 rounded-full text-sm shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                Hubungi Admin Kami
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              "/images/potrait/IMG_1999.jpg",
-              "/images/potrait/IMG_2039.jpg",
-              "/images/potrait/IMG_2046.jpg",
-              "/images/potrait/IMG_2035.jpg",
-              "/images/potrait/IMG_2049.jpg",
-              "/images/potrait/IMG_2129.jpg",
-            ].map((src, idx) => (
-              <div key={idx} className="group">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3e6461] to-[#2d4a47] rounded-3xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>
-                <div className="relative overflow-hidden rounded-3xl shadow-lg hover:shadow-2xl transition-shadow duration-300 h-64">
-                  <Image
-                    src={src}
-                    alt={`Gallery ${idx + 1}`}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                    <div className="p-6 text-white w-full">
-                      <p className="font-semibold">Momen Badminton</p>
-                      <p className="text-sm text-white/80">Dari koleksi DLOB</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="relative bg-gradient-to-r from-[#3e6461] to-[#2d4a47] text-white py-24 overflow-hidden">
-        <div className="absolute top-20 right-20 text-6xl opacity-20 rotate-45">🏸</div>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center">
-          <h2 className="text-5xl md:text-6xl font-bold mb-6">
-            Siap Bergabung dengan DLOB?
-          </h2>
-          <p className="text-xl text-white/90 mb-12 max-w-2xl mx-auto">
-            Jadilah bagian dari komunitas badminton terdepan dan rasakan perbedaannya
-          </p>
-          <Link href="/register">
-            <button className="inline-block bg-white text-[#3e6461] hover:bg-gray-100 font-bold py-5 px-12 rounded-full text-lg transition-colors shadow-xl hover:shadow-2xl">
-              Mulai Sekarang
-            </button>
-          </Link>
         </div>
       </section>
     </main>
