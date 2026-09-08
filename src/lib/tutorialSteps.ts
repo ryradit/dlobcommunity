@@ -324,33 +324,69 @@ export const MEMBER_PEMBAYARAN_TUTORIAL: TutorialStep[] = [
 export const MEMBER_SETTINGS_TUTORIAL: TutorialStep[] = [
   {
     element: '.member-settings-avatar',
-    title: '📸 Foto Profil',
-    description: 'Upload atau ubah foto profil Anda. Klik pada foto untuk mengganti gambar.',
+    title: '📸 Foto Profil & Identitas',
+    description: 'Upload atau ubah foto profil Anda dan lihat ringkasan status akun Anda.',
     position: 'bottom',
   },
   {
     element: '.member-settings-personal',
-    title: '👤 Info Personal',
-    description: 'Edit nama lengkap dan nomor telepon Anda. Pastikan data selalu terupdate!',
-    position: 'right',
+    title: '👤 Informasi Pribadi',
+    description: 'Kelola nama lengkap, email, dan nomor telepon aktif Anda untuk keperluan komunitas.',
+    position: 'bottom',
   },
   {
     element: '.member-settings-badminton',
     title: '🏸 Profil Badminton',
-    description: 'Atur level bermain, tangan dominan, dan pengalaman bermain Anda.',
-    position: 'right',
+    description: 'Atur level bermain, tangan dominan, dan pengalaman bermain Anda agar matchmaking sparring seimbang.',
+    position: 'bottom',
   },
   {
     element: '.member-settings-achievements',
-    title: '🏆 Prestasi',
-    description: 'Tambahkan prestasi badminton Anda: turnamen, tahun, dan peringkat yang diraih.',
-    position: 'right',
+    title: '🏆 Pencapaian Turnamen',
+    description: 'Dokumentasikan prestasi dan riwayat podium turnamen Anda bersama DLOB.',
+    position: 'bottom',
   },
   {
     element: '.member-settings-partner',
-    title: '🤝 Preferensi Partner',
-    description: 'Tulis preferensi partner bermain Anda dan tambahkan link Instagram untuk koneksi.',
-    position: 'right',
+    title: '🤝 Preferensi Partner & Sosial',
+    description: 'Tentukan gaya bermain partner idaman Anda dan tautkan akun Instagram.',
+    position: 'bottom',
+  },
+  {
+    element: '.member-settings-security',
+    title: '🔐 Keamanan & Metode Login',
+    description: 'Kelola autentikasi akun, ubah kata sandi, dan hubungkan akun Google untuk login cepat 1-klik.',
+    position: 'top',
+  },
+];
+
+/**
+ * Tutorial steps for Admin Settings page
+ */
+export const ADMIN_SETTINGS_TUTORIAL: TutorialStep[] = [
+  {
+    element: '.admin-settings-profile',
+    title: '👤 Profil Administrator',
+    description: 'Perbarui foto profil dan nama akun administrator Anda.',
+    position: 'bottom',
+  },
+  {
+    element: '.admin-settings-auth',
+    title: '🔐 Metode Login & Keamanan',
+    description: 'Kelola metode autentikasi (Email & Password / Google OAuth) dan ubah kata sandi akun admin Anda.',
+    position: 'bottom',
+  },
+  {
+    element: '.admin-settings-payment',
+    title: '💳 Rekening & QRIS Komunitas',
+    description: 'Atur nomor rekening transfer dan upload QRIS pembayaran yang akan dilihat oleh seluruh member.',
+    position: 'top',
+  },
+  {
+    element: '.admin-settings-notifications',
+    title: '🔔 Notifikasi Sistem',
+    description: 'Kontrol integrasi notifikasi WhatsApp dan Email otomatis saat jadwal atau pertandingan dibuat.',
+    position: 'top',
   },
 ];
 
@@ -525,7 +561,7 @@ export const ADMIN_SURVEY_TUTORIAL: TutorialStep[] = [
 /**
  * Get tutorial for a specific page
  */
-export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'keuangan' | 'members' | 'analitik' | 'team-optimizer' | 'artikel' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings' | 'member-training' | 'survey'): TutorialStep[] {
+export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'keuangan' | 'members' | 'analitik' | 'team-optimizer' | 'artikel' | 'member-dashboard' | 'member-analitik' | 'member-pembayaran' | 'member-settings' | 'member-training' | 'survey' | 'admin-settings'): TutorialStep[] {
   switch (page) {
     case 'dashboard':
       return ADMIN_DASHBOARD_TUTORIAL;
@@ -553,6 +589,8 @@ export function getTutorialSteps(page: 'dashboard' | 'pembayaran' | 'keuangan' |
       return MEMBER_TRAINING_TUTORIAL;
     case 'survey':
       return ADMIN_SURVEY_TUTORIAL;
+    case 'admin-settings':
+      return ADMIN_SETTINGS_TUTORIAL;
     default:
       return [];
   }

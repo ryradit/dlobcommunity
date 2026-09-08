@@ -1883,31 +1883,29 @@ export default function AdminPembayaranPage() {
           </button>
         </div>
 
-        {/* Monthly Recap */}
-        <div className="mb-8 bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-300 dark:border-blue-500/30 rounded-xl p-6 transition-colors duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 transition-colors duration-300">
-                  Rekap {selectedMonth.getMonth() === new Date().getMonth() && 
-                         selectedMonth.getFullYear() === new Date().getFullYear() 
-                         ? 'Bulan Ini' : 'Bulan'}
-                </h2>
-                <div className="flex items-center gap-3 mt-1">
-                  {/* Month Navigator */}
+        {/* Monthly Recap - Claude Minimalist Glassmorphism */}
+        <div className="mb-6 bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 className="text-sm font-semibold text-white mb-2">
+                Periode Rekapitulasi Pembayaran
+              </h2>
+              <div className="flex items-center gap-2">
+                {/* Month Navigator */}
+                <div className="flex items-center bg-zinc-900 border border-white/10 rounded-xl p-1">
                   <button
                     onClick={() => {
                       const prevMonth = new Date(selectedMonth);
                       prevMonth.setMonth(prevMonth.getMonth() - 1);
                       setSelectedMonth(prevMonth);
                     }}
-                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300"
+                    className="p-1 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
                     title="Bulan sebelumnya"
                   >
-                    <ChevronLeft className="w-5 h-5 text-gray-400 dark:text-zinc-400 transition-colors duration-300" />
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
                   
-                  <span className="text-sm font-medium text-gray-900 dark:text-white min-w-35 text-center transition-colors duration-300">
+                  <span className="text-xs font-semibold text-white px-3 min-w-32 text-center">
                     {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
                   </span>
                   
@@ -1917,104 +1915,105 @@ export default function AdminPembayaranPage() {
                       nextMonth.setMonth(nextMonth.getMonth() + 1);
                       setSelectedMonth(nextMonth);
                     }}
-                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300"
+                    className="p-1 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
                     title="Bulan berikutnya"
                   >
-                    <ChevronRight className="w-5 h-5 text-gray-400 dark:text-zinc-400 transition-colors duration-300" />
+                    <ChevronRight className="w-4 h-4" />
                   </button>
-
-                  {/* Current Month Button */}
-                  {(selectedMonth.getMonth() !== new Date().getMonth() || 
-                    selectedMonth.getFullYear() !== new Date().getFullYear()) && (
-                    <button
-                      onClick={() => setSelectedMonth(new Date())}
-                      className="px-3 py-1.5 text-xs bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-lg transition-colors"
-                    >
-                      Bulan Ini
-                    </button>
-                  )}
                 </div>
+
+                {/* Current Month Button */}
+                {(selectedMonth.getMonth() !== new Date().getMonth() || 
+                  selectedMonth.getFullYear() !== new Date().getFullYear()) && (
+                  <button
+                    onClick={() => setSelectedMonth(new Date())}
+                    className="px-2.5 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-zinc-300 rounded-xl transition-colors font-medium border border-white/10 cursor-pointer"
+                  >
+                    Bulan Ini
+                  </button>
+                )}
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Tingkat Penagihan</p>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-200 dark:bg-zinc-800 rounded-full h-2 w-32 transition-colors duration-300">
+
+            <div className="sm:text-right">
+              <p className="text-xs font-medium text-zinc-400 mb-1.5">Tingkat Penagihan</p>
+              <div className="flex items-center sm:justify-end gap-2">
+                <div className="bg-white/5 rounded-full h-2 w-28 overflow-hidden">
                   <div 
-                    className="bg-linear-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
+                    className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${collectionRate}%` }}
                   />
                 </div>
-                <span className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">{collectionRate}%</span>
+                <span className="text-sm font-bold text-white">{collectionRate}%</span>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg p-4 shadow-sm transition-colors duration-300">
-              <p className="text-xs text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Total Pendapatan</p>
-              <p className="text-xl font-bold text-green-600 dark:text-green-400 transition-colors duration-300">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
+              <p className="text-[11px] font-medium text-zinc-400 mb-1">Total Pendapatan Terkumpul</p>
+              <p className="text-xl font-bold text-emerald-400 tracking-tight">
                 Rp {monthlyRecap.totalRevenue.toLocaleString('id-ID')}
               </p>
             </div>
-            <div className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg p-4 shadow-sm transition-colors duration-300">
-              <p className="text-xs text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Menunggu Pembayaran</p>
-              <p className="text-xl font-bold text-amber-600 dark:text-yellow-400 transition-colors duration-300">
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
+              <p className="text-[11px] font-medium text-zinc-400 mb-1">Menunggu Konfirmasi</p>
+              <p className="text-xl font-bold text-amber-400 tracking-tight">
                 Rp {monthlyRecap.totalPending.toLocaleString('id-ID')}
               </p>
             </div>
-            <div className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg p-4 shadow-sm transition-colors duration-300">
-              <p className="text-xs text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Total Diharapkan</p>
-              <p className="text-xl font-bold text-blue-600 dark:text-blue-400 transition-colors duration-300">
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
+              <p className="text-[11px] font-medium text-zinc-400 mb-1">Total Diharapkan</p>
+              <p className="text-xl font-bold text-white tracking-tight">
                 Rp {monthlyRecap.totalExpected.toLocaleString('id-ID')}
               </p>
             </div>
-            <div className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg p-4 shadow-sm transition-colors duration-300">
-              <p className="text-xs text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Selisih</p>
-              <p className={`text-xl font-bold transition-colors duration-300 ${monthlyRecap.totalPending > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
+              <p className="text-[11px] font-medium text-zinc-400 mb-1">Selisih Belum Masuk</p>
+              <p className={`text-xl font-bold tracking-tight ${monthlyRecap.totalPending > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                 Rp {(monthlyRecap.totalExpected - monthlyRecap.totalRevenue).toLocaleString('id-ID')}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-black/30 border border-blue-200 dark:border-blue-500/20 rounded-lg p-4 shadow-sm transition-colors duration-300">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-blue-600 dark:text-blue-400 transition-colors duration-300">Pertandingan</h3>
-                <span className="text-xs text-gray-500 dark:text-zinc-500 transition-colors duration-300">{monthlyRecap.totalMatches} total</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2.5">
+                <h3 className="text-xs font-semibold text-zinc-300">Biaya Pertandingan (Shuttlecock + Kok)</h3>
+                <span className="text-[11px] text-zinc-500">{monthlyRecap.totalMatches} total match</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600 dark:text-zinc-400 transition-colors duration-300">Pendapatan</span>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">
+                  <span className="text-zinc-400">Terkumpul:</span>
+                  <span className="font-semibold text-white">
                     Rp {monthlyRecap.matchesRevenue.toLocaleString('id-ID')}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600 dark:text-zinc-400 transition-colors duration-300">Lunas</span>
-                  <span className="text-sm font-semibold text-green-400">
-                    {monthlyRecap.paidMatchesCount} / {monthlyRecap.totalMatches}
+                  <span className="text-zinc-400">Status Lunas:</span>
+                  <span className="font-semibold text-emerald-400">
+                    {monthlyRecap.paidMatchesCount} / {monthlyRecap.totalMatches} match
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-black/30 border border-purple-200 dark:border-purple-500/20 rounded-lg p-4 shadow-sm transition-colors duration-300">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-purple-600 dark:text-purple-400 transition-colors duration-300">Membership</h3>
-                <span className="text-xs text-gray-500 dark:text-zinc-500 transition-colors duration-300">{monthlyRecap.totalMemberships} total</span>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2.5">
+                <h3 className="text-xs font-semibold text-zinc-300">Iuran Bulanan (Membership)</h3>
+                <span className="text-[11px] text-zinc-500">{monthlyRecap.totalMemberships} member</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600 dark:text-zinc-400 transition-colors duration-300">Pendapatan</span>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white transition-colors duration-300">
+                  <span className="text-zinc-400">Terkumpul:</span>
+                  <span className="font-semibold text-white">
                     Rp {monthlyRecap.membershipsRevenue.toLocaleString('id-ID')}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600 dark:text-zinc-400 transition-colors duration-300">Lunas</span>
-                  <span className="text-sm font-semibold text-green-400">
-                    {monthlyRecap.paidMembershipsCount} / {monthlyRecap.totalMemberships}
+                  <span className="text-zinc-400">Status Lunas:</span>
+                  <span className="font-semibold text-emerald-400">
+                    {monthlyRecap.paidMembershipsCount} / {monthlyRecap.totalMemberships} member
                   </span>
                 </div>
               </div>

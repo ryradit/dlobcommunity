@@ -3,7 +3,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
+const genAI = new GoogleGenerativeAI(apiKey);
 // Use service role key to bypass RLS for server-side caching
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -74,23 +75,23 @@ export async function POST(request: NextRequest) {
 Analisis data performa bulu tangkis dan berikan 3-4 wawasan motivasi dalam format JSON.
 
 Statistik Anda:
-- Total Pertandingan: ${stats.totalMatches}
-- Win Rate: ${stats.winRate}%
-- Streak Saat Ini: ${stats.currentStreak.count} ${stats.currentStreak.type || 'none'}
-- Streak Menang Terpanjang: ${stats.longestWinStreak}
-- Streak Kalah Terpanjang: ${stats.longestLossStreak}
-- Skor Rata-rata: ${stats.averageScore}
-- Skor Tertinggi: ${stats.highestScore}
-- Margin Kemenangan Terbesar: ${stats.biggestWinMargin}
+- Total Pertandingan: ${stats.totalMatches || 0}
+- Win Rate: ${stats.winRate || 0}%
+- Streak Saat Ini: ${stats.currentStreak?.count || 0} ${stats.currentStreak?.type || 'none'}
+- Streak Menang Terpanjang: ${stats.longestWinStreak || 0}
+- Streak Kalah Terpanjang: ${stats.longestLossStreak || 0}
+- Skor Rata-rata: ${stats.averageScore || 0}
+- Skor Tertinggi: ${stats.highestScore || 0}
+- Margin Kemenangan Terbesar: ${stats.biggestWinMargin || 0}
 
 Partner Terbaik Anda:
-${partnerStats.slice(0, 3).map((p: any) => `- ${p.name}: ${p.winRate}% win rate (${p.matches} pertandingan)`).join('\n')}
+${(Array.isArray(partnerStats) ? partnerStats : []).slice(0, 3).map((p: any) => `- ${p.name}: ${p.winRate}% win rate (${p.matches} pertandingan)`).join('\n') || '- Belum ada data'}
 
 Lawan yang Anda Hadapi:
-${opponentStats.slice(0, 3).map((o: any) => `- ${o.name}: ${o.wins}M-${o.losses}K (${o.matches} pertandingan)`).join('\n')}
+${(Array.isArray(opponentStats) ? opponentStats : []).slice(0, 3).map((o: any) => `- ${o.name}: ${o.wins}M-${o.losses}K (${o.matches} pertandingan)`).join('\n') || '- Belum ada data'}
 
 Performa Terkini Anda (5 pertandingan terakhir):
-${recentMatches.map((m: any, i: number) => `Pertandingan ${i + 1}: ${m.isWinner ? 'Menang' : 'Kalah'} (${m.myScore}-${m.opponentScore})`).join('\n')}
+${(Array.isArray(recentMatches) ? recentMatches : []).map((m: any, i: number) => `Pertandingan ${i + 1}: ${m.isWinner ? 'Menang' : 'Kalah'} (${m.myScore}-${m.opponentScore})`).join('\n') || '- Belum ada pertandingan'}
 
 Respond dengan HANYA objek JSON (tanpa markdown):
 {

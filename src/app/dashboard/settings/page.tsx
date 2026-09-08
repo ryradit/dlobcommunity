@@ -2,20 +2,25 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Mail, Phone, Camera, Save, Loader2, Edit2, X, Award, Users, Instagram, Lock, Eye, EyeOff, HelpCircle, AlertTriangle } from 'lucide-react';
+import { 
+  User, Mail, Phone, Camera, Save, Loader2, Edit3, X, Award, 
+  Instagram, Lock, Eye, EyeOff, HelpCircle, AlertTriangle, 
+  ShieldCheck, CheckCircle2, ChevronRight, Trophy, Sparkles, Activity,
+  Maximize2
+} from 'lucide-react';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
 
 export default function SettingsPage() {
   const { user, updateProfile, uploadAvatar, refreshUser, updatePassword } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || '');
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Settings blocking state
@@ -28,11 +33,12 @@ export default function SettingsPage() {
   const [showBadmintonModal, setShowBadmintonModal] = useState(false);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [showPartnerModal, setShowPartnerModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   // Personal Info Form States
   const [editFullName, setEditFullName] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [profilePhone, setProfilePhone] = useState(''); // from profiles table
+  const [profilePhone, setProfilePhone] = useState('');
   const [isPersonalLoading, setIsPersonalLoading] = useState(false);
 
   // Badminton Profile Form States
@@ -51,11 +57,14 @@ export default function SettingsPage() {
   const [isPartnerLoading, setIsPartnerLoading] = useState(false);
 
   // Password Change States
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [isResetEmailSending, setIsResetEmailSending] = useState(false);
   const [isOAuthUser, setIsOAuthUser] = useState(false);
 
   // Account Linking States
@@ -67,7 +76,7 @@ export default function SettingsPage() {
   const tutorialSteps = getTutorialSteps('member-settings');
   const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('member-settings', tutorialSteps);
 
-  // Update avatar URL when user data changes
+  // Fetch phone from profiles table
   useEffect(() => {
     if (user?.id) {
       supabase.from('profiles').select('phone').eq('id', user.id).single()
@@ -75,6 +84,7 @@ export default function SettingsPage() {
     }
   }, [user?.id]);
 
+  // Update avatar URL when user data changes
   useEffect(() => {
     if (user?.user_metadata?.avatar_url) {
       const urlWithTimestamp = user.user_metadata.avatar_url.includes('?') 
@@ -82,7 +92,7 @@ export default function SettingsPage() {
         : `${user.user_metadata.avatar_url}?t=${Date.now()}`;
       setAvatarUrl(urlWithTimestamp);
     } else {
-      setAvatarUrl(''); // Clear avatar if none exists
+      setAvatarUrl('');
     }
   }, [user?.user_metadata?.avatar_url]);
 
@@ -112,8 +122,6 @@ export default function SettingsPage() {
 
         if (data?.identities) {
           setLinkedIdentities(data.identities);
-          
-          // Check if Google is linked
           const googleLinked = data.identities.some(
             (identity: any) => identity.provider === 'google'
           );
@@ -129,13 +137,11 @@ export default function SettingsPage() {
 
   // Detect returning from OAuth account linking
   useEffect(() => {
-    // Check URL for indication of successful account linking
     if (typeof window !== 'undefined' && user) {
       const url = new URL(window.location.href);
       const fromOAuth = url.searchParams.get('from_oauth');
       
       if (fromOAuth === 'true') {
-        // Refresh identities and show success message
         const checkAfterLink = async () => {
           const { data } = await supabase.auth.getUserIdentities();
           if (data?.identities) {
@@ -148,7 +154,7 @@ export default function SettingsPage() {
               setLinkedIdentities(data.identities);
               setMessage({ 
                 type: 'success', 
-                text: '✅ Akun Google berhasil dihubungkan! Anda sekarang bisa login dengan Google.' 
+                text: 'Akun Google berhasil dihubungkan! Anda sekarang bisa login cepat dengan Google.' 
               });
               setTimeout(() => setMessage(null), 5000);
             }
@@ -157,28 +163,21 @@ export default function SettingsPage() {
         };
         
         checkAfterLink();
-        
-        // Clean up URL
         url.searchParams.delete('from_oauth');
         window.history.replaceState({}, '', url.toString());
       }
     }
-  }, [user]); // Run when user is available
+  }, [user]);
 
   // Check if settings should be blocked
   useEffect(() => {
     const checkBlockStatus = async () => {
-      console.log('[Settings] ==> CHECKING BLOCK STATUS');
       if (!user) {
-        console.log('[Settings] No user');
         setCheckingBlockStatus(false);
         return;
       }
 
-      console.log('[Settings] User ID:', user.id);
-
       try {
-        // Check profile flags
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('using_temp_email, must_change_password, pending_email_verification')
@@ -186,48 +185,33 @@ export default function SettingsPage() {
           .single();
 
         if (error) {
-          console.error('[Settings] ❌ Error fetching profile:', error);
           setCheckingBlockStatus(false);
           return;
         }
 
-        console.log('[Settings] Profile data:', profile);
-        console.log('[Settings] using_temp_email:', profile?.using_temp_email);
-        console.log('[Settings] must_change_password:', profile?.must_change_password);
-        console.log('[Settings] pending_email_verification:', profile?.pending_email_verification);
-
-        // Check if using temp credentials
         if (profile?.using_temp_email || profile?.must_change_password) {
-          console.log('[Settings] 🔒 BLOCKING SETTINGS - temp credentials');
           setIsSettingsBlocked(true);
           setBlockReason('temp_credentials');
           setCheckingBlockStatus(false);
           return;
         }
 
-        // Check if email verification is pending (use DB flag — more reliable than session JWT)
         if (profile?.pending_email_verification === true) {
-          console.log('[Settings] 🔒 BLOCKING SETTINGS - unverified email');
           setIsSettingsBlocked(true);
           setBlockReason('unverified_email');
           setCheckingBlockStatus(false);
           return;
         }
 
-        // All checks passed
-        console.log('[Settings] ✅ SETTINGS UNLOCKED');
         setIsSettingsBlocked(false);
         setBlockReason(null);
         setCheckingBlockStatus(false);
       } catch (error) {
-        console.error('Error checking block status:', error);
         setCheckingBlockStatus(false);
       }
     };
 
     checkBlockStatus();
-    
-    // Re-check every 30 seconds to detect verification
     const interval = setInterval(checkBlockStatus, 30000);
     return () => clearInterval(interval);
   }, [user]);
@@ -237,7 +221,7 @@ export default function SettingsPage() {
     if (!file || !user) return;
 
     if (!file.type.startsWith('image/')) {
-      setMessage({ type: 'error', text: 'File harus berupa gambar' });
+      setMessage({ type: 'error', text: 'File harus berupa gambar (JPG, PNG)' });
       setTimeout(() => setMessage(null), 3000);
       return;
     }
@@ -262,8 +246,7 @@ export default function SettingsPage() {
       }
     } catch (error: any) {
       console.error('Avatar upload error:', error);
-      const errorMessage = error?.message || 'Gagal mengupload foto profil';
-      setMessage({ type: 'error', text: errorMessage });
+      setMessage({ type: 'error', text: error?.message || 'Gagal mengupload foto profil' });
       setTimeout(() => setMessage(null), 7000);
     } finally {
       setIsUploading(false);
@@ -289,38 +272,36 @@ export default function SettingsPage() {
       setIsPersonalLoading(true);
       setMessage(null);
 
-      // Timeout fallback
       const timeoutId = setTimeout(() => {
         setIsPersonalLoading(false);
         setShowPersonalModal(false);
         setMessage({ type: 'success', text: 'Informasi pribadi berhasil diperbarui!' });
         setTimeout(() => setMessage(null), 3000);
-        refreshUser(); // Refresh user data to show changes immediately
+        refreshUser();
       }, 5000);
 
-      const result = await updateProfile({
-        full_name: editFullName,
-        phone: editPhone,
+      await updateProfile({
+        full_name: editFullName.trim(),
+        phone: editPhone.trim() || undefined,
       });
 
-      clearTimeout(timeoutId);
+      if (editPhone.trim()) {
+        await supabase
+          .from('profiles')
+          .update({ phone: editPhone.trim() })
+          .eq('id', user.id);
+        setProfilePhone(editPhone.trim());
+      }
 
+      clearTimeout(timeoutId);
       setIsPersonalLoading(false);
-      
-      // Refresh user data immediately before closing modal
-      await refreshUser();
-      
-      // Small delay to ensure state update completes
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
       setShowPersonalModal(false);
-      setProfilePhone(editPhone); // update display immediately
       setMessage({ type: 'success', text: 'Informasi pribadi berhasil diperbarui!' });
       setTimeout(() => setMessage(null), 3000);
+      await refreshUser();
     } catch (error) {
-      console.error('Update error:', error);
       setIsPersonalLoading(false);
-      setMessage({ type: 'error', text: 'Terjadi kesalahan saat memperbarui informasi' });
+      setMessage({ type: 'error', text: 'Terjadi kesalahan saat memperbarui data' });
       setTimeout(() => setMessage(null), 5000);
     }
   };
@@ -329,7 +310,7 @@ export default function SettingsPage() {
   const openBadmintonModal = () => {
     setEditPlayingLevel(user?.user_metadata?.playing_level || 'beginner');
     setEditDominantHand(user?.user_metadata?.dominant_hand || 'right');
-    setEditYearsPlaying(user?.user_metadata?.years_playing || '');
+    setEditYearsPlaying(user?.user_metadata?.years_playing?.toString() || '');
     setShowBadmintonModal(true);
   };
 
@@ -342,38 +323,20 @@ export default function SettingsPage() {
       setIsBadmintonLoading(true);
       setMessage(null);
 
-      // Timeout fallback
-      const timeoutId = setTimeout(() => {
-        setIsBadmintonLoading(false);
-        setShowBadmintonModal(false);
-        setMessage({ type: 'success', text: 'Profil badminton berhasil diperbarui!' });
-        setTimeout(() => setMessage(null), 3000);
-        refreshUser(); // Refresh user data to show changes immediately
-      }, 5000);
-
-      const result = await updateProfile({
+      await updateProfile({
         playing_level: editPlayingLevel,
         dominant_hand: editDominantHand,
-        years_playing: editYearsPlaying,
+        years_playing: editYearsPlaying ? parseInt(editYearsPlaying) : undefined,
       });
 
-      clearTimeout(timeoutId);
-
-      setIsBadmintonLoading(false);
-      
-      // Refresh user data immediately before closing modal
       await refreshUser();
-      
-      // Small delay to ensure state update completes
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      setIsBadmintonLoading(false);
       setShowBadmintonModal(false);
       setMessage({ type: 'success', text: 'Profil badminton berhasil diperbarui!' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      console.error('Update error:', error);
       setIsBadmintonLoading(false);
-      setMessage({ type: 'error', text: 'Terjadi kesalahan saat memperbarui profil' });
+      setMessage({ type: 'error', text: 'Gagal memperbarui profil badminton' });
       setTimeout(() => setMessage(null), 5000);
     }
   };
@@ -381,20 +344,17 @@ export default function SettingsPage() {
   // Open Achievements Modal
   const openAchievementsModal = () => {
     const achievementsData = user?.user_metadata?.achievements;
-    let achievements = [];
-    
     if (Array.isArray(achievementsData)) {
-      achievements = achievementsData;
+      setEditAchievements([...achievementsData]);
     } else if (typeof achievementsData === 'string') {
       try {
-        achievements = JSON.parse(achievementsData);
+        setEditAchievements(JSON.parse(achievementsData));
       } catch (e) {
-        console.error('Failed to parse achievements:', e);
-        achievements = [];
+        setEditAchievements([]);
       }
+    } else {
+      setEditAchievements([]);
     }
-    
-    setEditAchievements(achievements);
     setShowAchievementsModal(true);
   };
 
@@ -407,41 +367,27 @@ export default function SettingsPage() {
       setIsAchievementsLoading(true);
       setMessage(null);
 
-      // Timeout fallback
-      const timeoutId = setTimeout(() => {
-        setIsAchievementsLoading(false);
-        setShowAchievementsModal(false);
-        setMessage({ type: 'success', text: 'Pencapaian berhasil diperbarui!' });
-        setTimeout(() => setMessage(null), 3000);
-        refreshUser(); // Refresh user data to show changes immediately
-      }, 5000);
+      const filteredAchievements = editAchievements.filter(
+        a => a.tournament.trim() && a.place.trim()
+      );
 
-      const result = await updateProfile({
-        achievements: JSON.stringify(editAchievements),
+      await updateProfile({
+        achievements: filteredAchievements,
       });
 
-      clearTimeout(timeoutId);
-
-      setIsAchievementsLoading(false);
-      
-      // Refresh user data immediately before closing modal
       await refreshUser();
-      
-      // Small delay to ensure state update completes
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      setIsAchievementsLoading(false);
       setShowAchievementsModal(false);
-      setMessage({ type: 'success', text: 'Pencapaian berhasil diperbarui!' });
+      setMessage({ type: 'success', text: 'Pencapaian turnamen berhasil disimpan!' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      console.error('Update error:', error);
       setIsAchievementsLoading(false);
-      setMessage({ type: 'error', text: 'Terjadi kesalahan saat memperbarui pencapaian' });
+      setMessage({ type: 'error', text: 'Gagal menyimpan pencapaian' });
       setTimeout(() => setMessage(null), 5000);
     }
   };
 
-  // Open Partner Preferences Modal
+  // Open Partner Modal
   const openPartnerModal = () => {
     setEditPartnerPreferences(user?.user_metadata?.partner_preferences || '');
     setEditInstagramUrl(user?.user_metadata?.instagram_url || '');
@@ -457,37 +403,19 @@ export default function SettingsPage() {
       setIsPartnerLoading(true);
       setMessage(null);
 
-      // Timeout fallback
-      const timeoutId = setTimeout(() => {
-        setIsPartnerLoading(false);
-        setShowPartnerModal(false);
-        setMessage({ type: 'success', text: 'Preferensi partner berhasil diperbarui!' });
-        setTimeout(() => setMessage(null), 3000);
-        refreshUser(); // Refresh user data to show changes immediately
-      }, 5000);
-
-      const result = await updateProfile({
-        partner_preferences: editPartnerPreferences,
-        instagram_url: editInstagramUrl,
+      await updateProfile({
+        partner_preferences: editPartnerPreferences.trim() || undefined,
+        instagram_url: editInstagramUrl.trim() || undefined,
       });
 
-      clearTimeout(timeoutId);
-
-      setIsPartnerLoading(false);
-      
-      // Refresh user data immediately before closing modal
       await refreshUser();
-      
-      // Small delay to ensure state update completes
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      setIsPartnerLoading(false);
       setShowPartnerModal(false);
       setMessage({ type: 'success', text: 'Preferensi partner berhasil diperbarui!' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      console.error('Update error:', error);
       setIsPartnerLoading(false);
-      setMessage({ type: 'error', text: 'Terjadi kesalahan saat memperbarui preferensi' });
+      setMessage({ type: 'error', text: 'Gagal memperbarui preferensi partner' });
       setTimeout(() => setMessage(null), 5000);
     }
   };
@@ -503,27 +431,67 @@ export default function SettingsPage() {
   };
 
   const getDominantHandLabel = (hand: string) => {
-    return hand === 'right' ? 'Kanan' : 'Kiri';
+    return hand === 'right' ? 'Tangan Kanan' : 'Tangan Kiri';
+  };
+
+  // Password strength calculation
+  const getPasswordStrength = (pass: string) => {
+    if (!pass) return { score: 0, label: '', color: '', textColor: '' };
+    let score = 0;
+    if (pass.length >= 6) score++;
+    if (pass.length >= 8) score++;
+    if (/[0-9]/.test(pass) && /[a-zA-Z]/.test(pass)) score++;
+    if (/[^a-zA-Z0-9]/.test(pass)) score++;
+
+    if (score <= 1) return { score: 1, label: 'Lemah', color: 'bg-rose-500', textColor: 'text-rose-600 dark:text-rose-400' };
+    if (score <= 2) return { score: 2, label: 'Sedang', color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400' };
+    return { score: 3, label: 'Kuat', color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' };
+  };
+
+  // Handle Send Reset Email Link
+  const handleSendResetEmail = async () => {
+    if (!user?.email) return;
+    try {
+      setIsResetEmailSending(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/settings`,
+      });
+      if (error) throw error;
+      setMessage({ type: 'success', text: `Link reset kata sandi berhasil dikirim ke ${user.email}. Silakan periksa inbox atau spam Anda.` });
+      setTimeout(() => setMessage(null), 6000);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message || 'Gagal mengirim email reset kata sandi' });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setIsResetEmailSending(false);
+    }
   };
 
   // Handle Change Password
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Security check: require current password if user has email/password login
+    if (!isOAuthUser && !currentPassword) {
+      setMessage({ type: 'error', text: 'Mohon masukkan kata sandi Anda saat ini untuk verifikasi keamanan' });
+      setTimeout(() => setMessage(null), 4000);
+      return;
+    }
+
     if (!newPassword || !confirmPassword) {
-      setMessage({ type: 'error', text: 'Mohon isi semua field password' });
+      setMessage({ type: 'error', text: 'Mohon isi semua kolom kata sandi' });
       setTimeout(() => setMessage(null), 3000);
       return;
     }
 
     if (newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'Password minimal 6 karakter' });
+      setMessage({ type: 'error', text: 'Kata sandi baru minimal 6 karakter' });
       setTimeout(() => setMessage(null), 3000);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setMessage({ type: 'error', text: 'Password tidak cocok' });
+      setMessage({ type: 'error', text: 'Konfirmasi kata sandi tidak cocok' });
       setTimeout(() => setMessage(null), 3000);
       return;
     }
@@ -532,15 +500,29 @@ export default function SettingsPage() {
       setIsPasswordLoading(true);
       setMessage(null);
 
+      // Re-authenticate with current password to ensure legitimate account owner
+      if (!isOAuthUser && user?.email) {
+        const { error: verifyError } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPassword,
+        });
+
+        if (verifyError) {
+          throw new Error('Kata sandi saat ini tidak cocok. Silakan coba lagi.');
+        }
+      }
+
       await updatePassword(newPassword);
 
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setMessage({ type: 'success', text: 'Password berhasil diperbarui!' });
-      setTimeout(() => setMessage(null), 3000);
+      setShowPasswordModal(false);
+      setMessage({ type: 'success', text: '✅ Kata sandi berhasil diverifikasi dan diperbarui!' });
+      setTimeout(() => setMessage(null), 4000);
     } catch (error: any) {
       console.error('Update password error:', error);
-      setMessage({ type: 'error', text: error?.message || 'Gagal memperbarui password' });
+      setMessage({ type: 'error', text: error?.message || 'Gagal memperbarui kata sandi' });
       setTimeout(() => setMessage(null), 5000);
     } finally {
       setIsPasswordLoading(false);
@@ -553,19 +535,14 @@ export default function SettingsPage() {
       setIsLinkingGoogle(true);
       setMessage(null);
 
-      const { data, error } = await supabase.auth.linkIdentity({
+      const { error } = await supabase.auth.linkIdentity({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/settings`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/settings&from_oauth=true`,
         },
       });
 
-      if (error) {
-        throw error;
-      }
-
-      // The user will be redirected to Google OAuth
-      // After successful link, they'll be redirected back to settings page
+      if (error) throw error;
     } catch (error: any) {
       console.error('Link Google error:', error);
       setMessage({ 
@@ -579,38 +556,30 @@ export default function SettingsPage() {
 
   // Handle Unlink Google Account
   const handleUnlinkGoogle = async () => {
-    if (!confirm('Apakah Anda yakin ingin memutuskan hubungan dengan akun Google? Anda masih bisa login dengan email & password.')) {
+    if (!confirm('Putuskan hubungan akun Google? Anda masih bisa login menggunakan email & password.')) {
       return;
     }
 
     try {
       setMessage(null);
-
-      // Find the Google identity
       const googleIdentity = linkedIdentities.find(
         (identity: any) => identity.provider === 'google'
       );
 
       if (!googleIdentity) {
-        setMessage({ type: 'error', text: 'Akun Google tidak ditemukan' });
-        setTimeout(() => setMessage(null), 3000);
-        return;
+        throw new Error('Identitas Google tidak ditemukan');
       }
 
       const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
-
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setHasGoogleLinked(false);
       setMessage({ 
         type: 'success', 
-        text: 'Akun Google berhasil diputuskan. Anda masih bisa login dengan email & password.' 
+        text: 'Akun Google berhasil diputuskan.' 
       });
       setTimeout(() => setMessage(null), 5000);
 
-      // Refresh identities
       const { data } = await supabase.auth.getUserIdentities();
       if (data?.identities) {
         setLinkedIdentities(data.identities);
@@ -619,491 +588,589 @@ export default function SettingsPage() {
       console.error('Unlink Google error:', error);
       setMessage({ 
         type: 'error', 
-        text: error?.message || 'Gagal memutuskan hubungan dengan akun Google' 
+        text: error?.message || 'Gagal memutuskan akun Google' 
       });
       setTimeout(() => setMessage(null), 5000);
     }
   };
 
+  // Parse user achievements
+  const userAchievements: Array<{ year: string; tournament: string; place: string }> = (() => {
+    const raw = user?.user_metadata?.achievements;
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      try { return JSON.parse(raw); } catch { return []; }
+    }
+    return [];
+  })();
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
-      <div>
-        <ProfileCompletionWarning />
+    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 py-6 lg:py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+      <div className="max-w-5xl mx-auto space-y-6">
         
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4">
+        <ProfileCompletionWarning />
+
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-zinc-200/80 dark:border-zinc-800">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Pengaturan Profil</h1>
-            <p className="text-gray-600 dark:text-zinc-400 font-medium">Kelola informasi profil dan preferensi akun Anda</p>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Pengaturan Profil
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Kelola identitas, preferensi bermain, dan keamanan akun member Anda
+            </p>
           </div>
-          
-          <button
-            onClick={toggleTutorial}
-            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
-            title="Tampilkan panduan fitur"
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTutorial}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 shadow-2xs transition-all"
+              title="Tampilkan panduan fitur"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-[#4382C8]" />
+              <span>Panduan Fitur</span>
+            </button>
+          </div>
         </div>
 
-        {/* Success/Error Messages */}
+        {/* Global Toast / Alert */}
         {message && (
-          <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-500/20 border border-green-500/50 text-green-400' : 'bg-red-500/20 border border-red-500/50 text-red-400'}`}>
-            {message.text}
+          <div
+            className={`p-4 rounded-xl border text-sm flex items-center justify-between gap-3 transition-all ${
+              message.type === 'success'
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300'
+                : 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800/40 text-rose-800 dark:text-rose-300'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              {message.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+              )}
+              <span className="font-medium">{message.text}</span>
+            </div>
+            <button
+              onClick={() => setMessage(null)}
+              className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column */}
-          <div className="space-y-6">
-            {/* Profile Picture Card */}
-            <div className="member-settings-avatar bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Foto Profil</h2>
-              <div className="flex flex-col items-center">
-                <div className="relative group mb-4">
-                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/10 bg-linear-to-br from-blue-500 via-purple-500 to-pink-500">
-                    {avatarUrl ? (
-                      <Image
-                        key={avatarUrl}
-                        src={avatarUrl}
-                        alt="Profile"
-                        width={128}
-                        height={128}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-blue-500 via-purple-500 to-pink-500">
-                        <span className="text-5xl font-bold text-white">
-                          {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => !isSettingsBlocked && fileInputRef.current?.click()}
-                    disabled={isUploading || isSettingsBlocked}
-                    className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={isSettingsBlocked ? 'Lengkapi profil terlebih dahulu' : 'Ubah foto profil'}
-                  >
-                    {isUploading ? (
-                      <Loader2 className="w-5 h-5 text-white animate-spin" />
-                    ) : (
-                      <Camera className="w-5 h-5 text-white" />
-                    )}
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
-                </div>
-                <p className="text-sm text-gray-500 dark:text-zinc-400 text-center font-medium">
-                  Klik ikon kamera untuk mengubah foto profil<br />
-                  Maksimal 5MB (JPG, PNG)
-                </p>
+        {/* Hero Identity Card (Claude Design style: clean hero with subtle stats) */}
+        <div className="member-settings-avatar bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+            
+            {/* Avatar with Camera Trigger */}
+            <div className="relative group shrink-0">
+              <div 
+                onClick={() => {
+                  if (avatarUrl) {
+                    setZoomImage({ 
+                      url: avatarUrl, 
+                      title: `Foto Profil ${user?.user_metadata?.full_name || 'Member'}` 
+                    });
+                  }
+                }}
+                className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60 shadow-xs flex items-center justify-center relative ${
+                  avatarUrl ? 'cursor-zoom-in group/avatar' : ''
+                }`}
+                title={avatarUrl ? 'Klik untuk memperbesar foto' : undefined}
+              >
+                {avatarUrl ? (
+                  <>
+                    <Image
+                      key={avatarUrl}
+                      src={avatarUrl}
+                      alt="Foto Profil"
+                      width={112}
+                      height={112}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover/avatar:scale-105"
+                      unoptimized
+                    />
+                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
+                      <Maximize2 className="w-5 h-5 text-white drop-shadow-md" />
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-3xl font-bold text-zinc-400 dark:text-zinc-500 uppercase">
+                    {user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
+                  </span>
+                )}
+              </div>
+
+              <button
+                onClick={() => !isSettingsBlocked && fileInputRef.current?.click()}
+                disabled={isUploading || isSettingsBlocked}
+                className="absolute bottom-0 right-0 p-2 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-white dark:border-zinc-900"
+                title={isSettingsBlocked ? 'Lengkapi profil terlebih dahulu' : 'Ganti foto profil'}
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+            </div>
+
+            {/* User Meta Information */}
+            <div className="flex-1 text-center sm:text-left space-y-2">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  {user?.user_metadata?.full_name || 'Member DLOB'}
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#4382C8]" />
+                  Member Komunitas
+                </span>
+              </div>
+
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                {user?.email}
+              </p>
+
+              {/* Quick Badminton Tags */}
+              <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/60 text-zinc-600 dark:text-zinc-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#4382C8]" />
+                  {getPlayingLevelLabel(user?.user_metadata?.playing_level || 'beginner')}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/60 text-zinc-600 dark:text-zinc-300">
+                  {getDominantHandLabel(user?.user_metadata?.dominant_hand || 'right')}
+                </span>
+                {user?.user_metadata?.years_playing && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/60 text-zinc-600 dark:text-zinc-300">
+                    {user.user_metadata.years_playing} Tahun Pengalaman
+                  </span>
+                )}
               </div>
             </div>
+
+          </div>
+        </div>
+
+        {/* 2-Column Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          {/* LEFT COLUMN: Personal Info & Badminton Profile */}
+          <div className="space-y-6">
 
             {/* Personal Information Card */}
-            <div 
-              className={`member-settings-personal bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 group shadow-sm transition-colors ${
-                isSettingsBlocked 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:border-blue-400 dark:hover:border-blue-500/30 cursor-pointer'
-              }`} 
-              onClick={() => !isSettingsBlocked && openPersonalModal()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Informasi Pribadi</h2>
-                <Edit2 className={`w-5 h-5 transition-colors ${
-                  isSettingsBlocked 
-                    ? 'text-gray-300 dark:text-zinc-600' 
-                    : 'text-gray-400 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                }`} />
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Nama Lengkap</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.full_name || 'Belum diisi'}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Email</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.email || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Nomor Telepon</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.phone || profilePhone || 'Belum diisi'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            {/* Badminton Profile Card */}
-            <div 
-              className={`member-settings-badminton bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 group shadow-sm transition-colors ${
-                isSettingsBlocked 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:border-green-400 dark:hover:border-green-500/30 cursor-pointer'
-              }`} 
-              onClick={() => !isSettingsBlocked && openBadmintonModal()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Profil Badminton</h2>
-                <Edit2 className={`w-5 h-5 transition-colors ${
-                  isSettingsBlocked 
-                    ? 'text-gray-300 dark:text-zinc-600' 
-                    : 'text-gray-400 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                }`} />
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Level Bermain</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{getPlayingLevelLabel(user?.user_metadata?.playing_level || 'beginner')}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Tangan Dominan</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{getDominantHandLabel(user?.user_metadata?.dominant_hand || 'right')}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Lama Bermain</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.years_playing ? `${user.user_metadata.years_playing} tahun` : 'Belum diisi'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Achievements Card */}
-            <div 
-              className={`member-settings-achievements bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 group shadow-sm transition-colors ${
-                isSettingsBlocked 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:border-yellow-400 dark:hover:border-yellow-500/30 cursor-pointer'
-              }`} 
-              onClick={() => !isSettingsBlocked && openAchievementsModal()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pencapaian Turnamen</h2>
-                <Edit2 className={`w-5 h-5 transition-colors ${
-                  isSettingsBlocked 
-                    ? 'text-gray-300 dark:text-zinc-600' 
-                    : 'text-gray-400 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                }`} />
-              </div>
-              <div className="space-y-3">
-                {(() => {
-                  const achievementsData = user?.user_metadata?.achievements;
-                  let achievements = [];
-                  
-                  if (Array.isArray(achievementsData)) {
-                    achievements = achievementsData;
-                  } else if (typeof achievementsData === 'string') {
-                    try {
-                      achievements = JSON.parse(achievementsData);
-                    } catch (e) {
-                      console.error('Failed to parse achievements:', e);
-                    }
-                  }
-                  
-                  return achievements.length > 0 ? (
-                    achievements.map((achievement: any, index: number) => (
-                      <div key={index} className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-lg p-3">
-                        <div className="flex items-start gap-3">
-                          <Award className="w-5 h-5 text-yellow-500 dark:text-yellow-400 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-gray-900 dark:text-white font-semibold">{achievement.tournament}</p>
-                            <p className="text-sm text-gray-500 dark:text-zinc-400">{achievement.place} • {achievement.year}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-400 dark:text-zinc-500 text-center py-4">Belum ada pencapaian</p>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* Partner Preferences Card */}
-            <div 
-              className={`member-settings-partner bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 group shadow-sm transition-colors ${
-                isSettingsBlocked 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:border-purple-400 dark:hover:border-purple-500/30 cursor-pointer'
-              }`} 
-              onClick={() => !isSettingsBlocked && openPartnerModal()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Preferensi Partner</h2>
-                <Edit2 className={`w-5 h-5 transition-colors ${
-                  isSettingsBlocked 
-                    ? 'text-gray-300 dark:text-zinc-600' 
-                    : 'text-gray-400 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                }`} />
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Preferensi</label>
-                  <p className="text-gray-900 dark:text-white font-medium">{user?.user_metadata?.partner_preferences || 'Belum diisi'}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 dark:text-zinc-400 font-semibold block mb-1">Instagram</label>
-                  <p className="text-gray-900 dark:text-white font-semibold">{user?.user_metadata?.instagram_url || 'Belum diisi'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Change Password Card */}
-            <div className={`bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300 ${isSettingsBlocked ? 'opacity-50' : ''}`}>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Ubah Password</h2>
-              
-              {isSettingsBlocked && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                  <p className="text-sm text-red-400">
-                    🔒 Lengkapi profil terlebih dahulu untuk mengubah password
-                  </p>
-                </div>
-              )}
-              
-              {isOAuthUser && !isSettingsBlocked && (
-                <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                  <p className="text-sm text-blue-400">
-                    ℹ️ Anda login dengan Google. Membuat password akan memungkinkan Anda login dengan email & password selain Google OAuth.
-                  </p>
-                </div>
-              )}
-              
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-zinc-400 mb-2">
-                    Password Baru
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-zinc-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      disabled={isSettingsBlocked}
-                      className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      placeholder="Minimal 6 karakter"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
+            <div className="member-settings-personal bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <User className="w-4 h-4 text-[#4382C8]" />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-zinc-400 mb-2">
-                    Konfirmasi Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-zinc-400" />
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isSettingsBlocked}
-                      className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      placeholder="Ulangi password baru"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                      Informasi Pribadi
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Data kontak dan identitas diri
+                    </p>
                   </div>
                 </div>
 
                 <button
-                  type="submit"
-                  disabled={isPasswordLoading || !newPassword || !confirmPassword || isSettingsBlocked}
-                  className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  onClick={() => !isSettingsBlocked && openPersonalModal()}
+                  disabled={isSettingsBlocked}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {isPasswordLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Menyimpan...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Ubah Password
-                    </>
-                  )}
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Ubah</span>
                 </button>
-              </form>
+              </div>
+
+              <div className="space-y-3.5 text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between py-1.5 border-b border-zinc-50 dark:border-zinc-800/40">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Nama Lengkap</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5 sm:mt-0">
+                    {user?.user_metadata?.full_name || 'Belum diisi'}
+                  </span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between py-1.5 border-b border-zinc-50 dark:border-zinc-800/40">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Alamat Email</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5 sm:mt-0">
+                    {user?.email || '-'}
+                  </span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between py-1.5">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Nomor Telepon / WA</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5 sm:mt-0">
+                    {user?.user_metadata?.phone || profilePhone || 'Belum diisi'}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* Linked Accounts / Authentication Methods Card */}
-            {!isSettingsBlocked ? (
-              <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
-                <h2 className="text-xl font-bold text-white mb-4">Metode Login</h2>
-                <p className="text-sm text-zinc-400 mb-6">
-                  Kelola cara Anda masuk ke akun ini. Anda bisa menggunakan email & password, Google, atau keduanya.
-                </p>
-
-                <div className="space-y-3">
-                  {/* Email/Password Method */}
-                  <div className="flex items-center justify-between p-4 bg-zinc-800/50 border border-white/10 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-500/20 rounded-lg">
-                        <Mail className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">Email & Password</p>
-                        <p className="text-sm text-gray-500 dark:text-zinc-400">{user?.email}</p>
-                      </div>
-                    </div>
-                    <span className="px-3 py-1 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-300 dark:border-transparent rounded-full text-sm font-bold">
-                      Aktif
-                    </span>
+            {/* Badminton Profile Card */}
+            <div className="member-settings-badminton bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <Activity className="w-4 h-4 text-[#4382C8]" />
                   </div>
-
-                  {/* Google OAuth Method */}
-                  <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-500/20 rounded-lg">
-                        <svg className="w-5 h-5" viewBox="0 0 24 24">
-                          <path fill="#EA4335" d="M5.26620003,9.76452941 C6.19878754,6.93863203 8.85444915,4.90909091 12,4.90909091 C13.6909091,4.90909091 15.2181818,5.50909091 16.4181818,6.49090909 L19.9090909,3 C17.7818182,1.14545455 15.0545455,0 12,0 C7.27006974,0 3.1977497,2.69829785 1.23999023,6.65002441 L5.26620003,9.76452941 Z"/>
-                          <path fill="#34A853" d="M16.0407269,18.0125889 C14.9509167,18.7163016 13.5660892,19.0909091 12,19.0909091 C8.86648613,19.0909091 6.21911939,17.076871 5.27698177,14.2678769 L1.23746264,17.3349879 C3.19279051,21.2936293 7.26500293,24 12,24 C14.9328362,24 17.7353462,22.9573905 19.834192,20.9995801 L16.0407269,18.0125889 Z"/>
-                          <path fill="#4A90E2" d="M19.834192,20.9995801 C22.0291676,18.9520994 23.4545455,15.903663 23.4545455,12 C23.4545455,11.2909091 23.3454545,10.5818182 23.1818182,9.90909091 L12,9.90909091 L12,14.4545455 L18.4363636,14.4545455 C18.1187732,16.013626 17.2662994,17.2212117 16.0407269,18.0125889 L19.834192,20.9995801 Z"/>
-                          <path fill="#FBBC05" d="M5.27698177,14.2678769 C5.03832634,13.556323 4.90909091,12.7937589 4.90909091,12 C4.90909091,11.2182781 5.03443647,10.4668121 5.26620003,9.76452941 L1.23999023,6.65002441 C0.43658717,8.26043162 0,10.0753848 0,12 C0,13.9195484 0.444780743,15.7301709 1.23746264,17.3349879 L5.27698177,14.2678769 Z"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-gray-900 dark:text-white font-semibold">Google</p>
-                        <p className="text-sm text-gray-500 dark:text-zinc-400">
-                          {hasGoogleLinked ? 'Terhubung' : 'Belum terhubung'}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {hasGoogleLinked ? (
-                      <button
-                        onClick={handleUnlinkGoogle}
-                        className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Putuskan
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleLinkGoogle}
-                        disabled={isLinkingGoogle}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        {isLinkingGoogle ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Menghubungkan...
-                          </>
-                        ) : (
-                          'Hubungkan'
-                        )}
-                      </button>
-                    )}
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                      Profil Badminton
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Parameter matchmaking & skill
+                    </p>
                   </div>
                 </div>
 
-                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg">
-                  <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">
-                    💡 Tips: Dengan menghubungkan Google, Anda bisa login menggunakan email & password <strong>atau</strong> tombol "Sign in with Google" di halaman login.
+                <button
+                  onClick={() => !isSettingsBlocked && openBadmintonModal()}
+                  disabled={isSettingsBlocked}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Ubah</span>
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between py-1.5 border-b border-zinc-50 dark:border-zinc-800/40">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Level Bermain</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5 sm:mt-0">
+                    {getPlayingLevelLabel(user?.user_metadata?.playing_level || 'beginner')}
+                  </span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between py-1.5 border-b border-zinc-50 dark:border-zinc-800/40">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Tangan Dominan</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5 sm:mt-0">
+                    {getDominantHandLabel(user?.user_metadata?.dominant_hand || 'right')}
+                  </span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between py-1.5">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Lama Bermain</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5 sm:mt-0">
+                    {user?.user_metadata?.years_playing ? `${user.user_metadata.years_playing} Tahun` : 'Belum diisi'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Partner Preferences & Social Card */}
+            <div className="member-settings-partner bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <Instagram className="w-4 h-4 text-[#4382C8]" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                      Preferensi Partner & Sosial
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Gaya bermain & koneksi Instagram
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => !isSettingsBlocked && openPartnerModal()}
+                  disabled={isSettingsBlocked}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Ubah</span>
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-sm">
+                <div>
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block mb-1">
+                    Gaya Bermain / Preferensi Partner
+                  </span>
+                  <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed bg-zinc-50 dark:bg-zinc-800/40 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                    {user?.user_metadata?.partner_preferences || 'Belum menulis preferensi partner.'}
                   </p>
                 </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Instagram</span>
+                  {user?.user_metadata?.instagram_url ? (
+                    <a
+                      href={user.user_metadata.instagram_url.startsWith('http') ? user.user_metadata.instagram_url : `https://${user.user_metadata.instagram_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold text-[#4382C8] hover:underline inline-flex items-center gap-1"
+                    >
+                      <span>Lihat Profil</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">Belum ditautkan</span>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 opacity-50">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Metode Login</h2>
-                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-yellow-400 font-medium mb-2">🔒 Fitur Terkunci</p>
-                      <p className="text-sm text-yellow-300">
-                        Fitur pengelolaan metode login (termasuk menghubungkan akun Google) akan tersedia setelah Anda:
-                      </p>
-                      <ol className="text-sm text-yellow-300 mt-2 ml-4 list-decimal space-y-1">
-                        <li>Memperbarui email ke alamat email sebenarnya</li>
-                        <li>Memverifikasi email tersebut</li>
-                        <li>Mengubah password default</li>
-                      </ol>
-                      <p className="text-sm text-yellow-400 mt-3">
-                        Silakan lengkapi profil Anda terlebih dahulu untuk membuka fitur ini.
-                      </p>
+            </div>
+
+          </div>
+
+          {/* RIGHT COLUMN: Achievements & Security / Login Methods */}
+          <div className="space-y-6">
+
+            {/* Tournament Achievements Card */}
+            <div className="member-settings-achievements bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <Trophy className="w-4 h-4 text-[#4382C8]" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                      Pencapaian Turnamen
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Riwayat podium & gelar juara
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => !isSettingsBlocked && openAchievementsModal()}
+                  disabled={isSettingsBlocked}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Kelola</span>
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {userAchievements.length > 0 ? (
+                  userAchievements.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Award className="w-4 h-4 text-[#4382C8] shrink-0" />
+                        <div>
+                          <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                            {item.tournament}
+                          </p>
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                            Tahun {item.year}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                        {item.place}
+                      </span>
                     </div>
+                  ))
+                ) : (
+                  <div className="py-6 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
+                      Belum ada pencapaian yang dicatat
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Login Methods & Security Card */}
+            <div className="member-settings-security bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs space-y-6 transition-all">
+              <div className="pb-4 border-b border-zinc-100 dark:border-zinc-800/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+                    <ShieldCheck className="w-4 h-4 text-[#4382C8]" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                      Metode Login & Keamanan
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Koneksi akun Google dan kata sandi
+                    </p>
                   </div>
                 </div>
               </div>
-            )}
+
+              {/* Linked Auth Methods */}
+              <div className="space-y-3">
+                {/* Email / Password Status */}
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center border border-zinc-200/60 dark:border-zinc-700">
+                      <Mail className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Email & Password</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{user?.email}</p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                    Aktif
+                  </span>
+                </div>
+
+                {/* Google OAuth Status */}
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center border border-zinc-200/60 dark:border-zinc-700">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M5.26620003,9.76452941 C6.19878754,6.93863203 8.85444915,4.90909091 12,4.90909091 C13.6909091,4.90909091 15.2181818,5.50909091 16.4181818,6.49090909 L19.9090909,3 C17.7818182,1.14545455 15.0545455,0 12,0 C7.27006974,0 3.1977497,2.69829785 1.23999023,6.65002441 L5.26620003,9.76452941 Z"/>
+                        <path fill="#34A853" d="M16.0407269,18.0125889 C14.9509167,18.7163016 13.5660892,19.0909091 12,19.0909091 C8.86648613,19.0909091 6.21911939,17.076871 5.27698177,14.2678769 L1.23746264,17.3349879 C3.19279051,21.2936293 7.26500293,24 12,24 C14.9328362,24 17.7353462,22.9573905 19.834192,20.9995801 L16.0407269,18.0125889 Z"/>
+                        <path fill="#4A90E2" d="M19.834192,20.9995801 C22.0291676,18.9520994 23.4545455,15.903663 23.4545455,12 C23.4545455,11.2909091 23.3454545,10.5818182 23.1818182,9.90909091 L12,9.90909091 L12,14.4545455 L18.4363636,14.4545455 C18.1187732,16.013626 17.2662994,17.2212117 16.0407269,18.0125889 L19.834192,20.9995801 Z"/>
+                        <path fill="#FBBC05" d="M5.27698177,14.2678769 C5.03832634,13.556323 4.90909091,12.7937589 4.90909091,12 C4.90909091,11.2182781 5.03443647,10.4668121 5.26620003,9.76452941 L1.23999023,6.65002441 C0.43658717,8.26043162 0,10.0753848 0,12 C0,13.9195484 0.444780743,15.7301709 1.23746264,17.3349879 L5.27698177,14.2678769 Z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Google OAuth</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        {hasGoogleLinked ? 'Akun terhubung' : 'Belum terhubung'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {hasGoogleLinked ? (
+                    <button
+                      onClick={handleUnlinkGoogle}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-950/40 transition-colors"
+                    >
+                      Putuskan
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleLinkGoogle}
+                      disabled={isLinkingGoogle}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-zinc-950 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {isLinkingGoogle ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Menghubungkan...</span>
+                        </>
+                      ) : (
+                        <span>Hubungkan</span>
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Password Item */}
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center border border-zinc-200/60 dark:border-zinc-700">
+                      <Lock className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Kata Sandi Akun</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        {isOAuthUser ? 'Login Google aktif • Sandi opsional' : 'Tersimpan & terenkripsi'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setNewPassword('');
+                      setConfirmPassword('');
+                      setShowPasswordModal(true);
+                    }}
+                    disabled={isSettingsBlocked}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-40"
+                  >
+                    Ubah Sandi
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
           </div>
+
         </div>
+
       </div>
 
-      {/* Personal Info Modal */}
+      {/* MODALS (Claude Design style: clean, soft backdrop blur, refined form controls) */}
+
+      {/* 1. Personal Info Modal */}
       {showPersonalModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Informasi Pribadi</h3>
-              <button onClick={() => setShowPersonalModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white transition-colors">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  Ubah Informasi Pribadi
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Pastikan nomor telepon terhubung ke WhatsApp
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPersonalModal(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleSavePersonalInfo} className="space-y-4">
+
+            <form onSubmit={handleSavePersonalInfo} className="p-5 space-y-4">
               <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Nama Lengkap</label>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Nama Lengkap
+                </label>
                 <input
                   type="text"
                   value={editFullName}
                   onChange={(e) => setEditFullName(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="Nama lengkap Anda"
                   required
+                  placeholder="Nama lengkap Anda"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10 transition-all"
                 />
               </div>
+
               <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Nomor Telepon</label>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Nomor Telepon / WhatsApp
+                </label>
                 <input
                   type="tel"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="+62 812 3456 7890"
+                  placeholder="Contoh: 081234567890"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10 transition-all"
                 />
               </div>
-              <div className="flex gap-3 mt-6">
+
+              <div className="flex gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowPersonalModal(false)}
-                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isPersonalLoading}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isPersonalLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Menyimpan...
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menyimpan...</span>
                     </>
                   ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Simpan
-                    </>
+                    <span>Simpan Perubahan</span>
                   )}
                 </button>
               </div>
@@ -1112,75 +1179,92 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Badminton Profile Modal */}
+      {/* 2. Badminton Profile Modal */}
       {showBadmintonModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Profil Badminton</h3>
-              <button onClick={() => setShowBadmintonModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white transition-colors">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  Ubah Profil Badminton
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Digunakan untuk perhitungan tim dan matchmaking
+                </p>
+              </div>
+              <button
+                onClick={() => setShowBadmintonModal(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleSaveBadmintonProfile} className="space-y-4">
+
+            <form onSubmit={handleSaveBadmintonProfile} className="p-5 space-y-4">
               <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Level Bermain</label>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Level Bermain
+                </label>
                 <select
                   value={editPlayingLevel}
                   onChange={(e) => setEditPlayingLevel(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10 transition-all"
                 >
-                  <option value="beginner">Pemula</option>
-                  <option value="intermediate">Menengah</option>
-                  <option value="advanced">Mahir</option>
+                  <option value="beginner">Pemula (Beginner)</option>
+                  <option value="intermediate">Menengah (Intermediate)</option>
+                  <option value="advanced">Mahir (Advanced)</option>
                   <option value="professional">Profesional</option>
                 </select>
               </div>
+
               <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Tangan Dominan</label>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Tangan Dominan
+                </label>
                 <select
                   value={editDominantHand}
                   onChange={(e) => setEditDominantHand(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10 transition-all"
                 >
                   <option value="right">Kanan</option>
-                  <option value="left">Kiri</option>
+                  <option value="left">Kiri (Kidal)</option>
                 </select>
               </div>
+
               <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Lama Bermain (Tahun)</label>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Pengalaman Bermain (Tahun)
+                </label>
                 <input
                   type="number"
                   value={editYearsPlaying}
                   onChange={(e) => setEditYearsPlaying(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="Contoh: 5"
                   min="0"
+                  placeholder="Contoh: 3"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10 transition-all"
                 />
               </div>
-              <div className="flex gap-3 mt-6">
+
+              <div className="flex gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowBadmintonModal(false)}
-                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isBadmintonLoading}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isBadmintonLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Menyimpan...
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menyimpan...</span>
                     </>
                   ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Simpan
-                    </>
+                    <span>Simpan Perubahan</span>
                   )}
                 </button>
               </div>
@@ -1189,118 +1273,133 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Achievements Modal */}
+      {/* 3. Achievements Modal */}
       {showAchievementsModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Pencapaian Turnamen</h3>
-              <button onClick={() => setShowAchievementsModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white transition-colors">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  Kelola Pencapaian Turnamen
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Tambahkan riwayat prestasi dan gelar juara Anda
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAchievementsModal(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleSaveAchievements} className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold">Daftar Pencapaian</label>
+
+            <form onSubmit={handleSaveAchievements} className="p-5 overflow-y-auto space-y-4 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                  Daftar Prestasi
+                </span>
                 <button
                   type="button"
                   onClick={() => setEditAchievements([...editAchievements, { year: new Date().getFullYear().toString(), tournament: '', place: '' }])}
-                  className="text-sm px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition-colors"
                 >
-                  + Tambah
+                  + Tambah Baris
                 </button>
               </div>
+
               <div className="space-y-3">
                 {editAchievements.length === 0 ? (
-                  <p className="text-sm text-gray-400 dark:text-zinc-500 text-center py-4 border border-dashed border-gray-300 dark:border-zinc-700 rounded-lg">
-                    Belum ada pencapaian. Klik "Tambah" untuk menambahkan.
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center py-6 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                    Belum ada data. Klik "+ Tambah Baris" untuk menambahkan prestasi.
                   </p>
                 ) : (
-                  editAchievements.map((achievement, index) => (
-                    <div key={index} className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-lg p-4 space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mb-1 block">Tahun</label>
+                  editAchievements.map((item, index) => (
+                    <div
+                      key={index}
+                      className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-800 rounded-xl space-y-2.5"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                        <div className="sm:col-span-3">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase block mb-1">Tahun</label>
                           <input
                             type="number"
-                            value={achievement.year}
+                            value={item.year}
                             onChange={(e) => {
-                              const newAchievements = [...editAchievements];
-                              newAchievements[index].year = e.target.value;
-                              setEditAchievements(newAchievements);
+                              const arr = [...editAchievements];
+                              arr[index].year = e.target.value;
+                              setEditAchievements(arr);
                             }}
-                            className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="2024"
-                            min="1900"
-                            max={new Date().getFullYear()}
+                            className="w-full px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8]"
+                            placeholder="2025"
                           />
                         </div>
-                        <div>
-                          <label className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mb-1 block">Nama Turnamen</label>
+
+                        <div className="sm:col-span-5">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase block mb-1">Nama Turnamen</label>
                           <input
                             type="text"
-                            value={achievement.tournament}
+                            value={item.tournament}
                             onChange={(e) => {
-                              const newAchievements = [...editAchievements];
-                              newAchievements[index].tournament = e.target.value;
-                              setEditAchievements(newAchievements);
+                              const arr = [...editAchievements];
+                              arr[index].tournament = e.target.value;
+                              setEditAchievements(arr);
                             }}
-                            className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="Turnamen ABC"
+                            className="w-full px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8]"
+                            placeholder="Contoh: DLOB Cup Season 3"
                           />
                         </div>
-                        <div>
-                          <label className="text-xs text-gray-500 dark:text-zinc-400 font-semibold mb-1 block">Peringkat</label>
+
+                        <div className="sm:col-span-4">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase block mb-1">Peringkat / Juara</label>
                           <input
                             type="text"
-                            value={achievement.place}
+                            value={item.place}
                             onChange={(e) => {
-                              const newAchievements = [...editAchievements];
-                              newAchievements[index].place = e.target.value;
-                              setEditAchievements(newAchievements);
+                              const arr = [...editAchievements];
+                              arr[index].place = e.target.value;
+                              setEditAchievements(arr);
                             }}
-                            className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="Juara 1"
+                            className="w-full px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8]"
+                            placeholder="Contoh: Juara 1"
                           />
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newAchievements = editAchievements.filter((_, i) => i !== index);
-                          setEditAchievements(newAchievements);
-                        }}
-                        className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                      >
-                        Hapus
-                      </button>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setEditAchievements(editAchievements.filter((_, i) => i !== index))}
+                          className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 dark:hover:text-rose-400"
+                        >
+                          Hapus
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
               </div>
-              <div className="flex gap-3 mt-6">
+
+              <div className="flex gap-2.5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setShowAchievementsModal(false)}
-                  className="flex-1 px-4 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isAchievementsLoading}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isAchievementsLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Menyimpan...
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menyimpan...</span>
                     </>
                   ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Simpan
-                    </>
+                    <span>Simpan Pencapaian</span>
                   )}
                 </button>
               </div>
@@ -1309,63 +1408,320 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Partner Preferences Modal */}
+      {/* 4. Partner Preferences Modal */}
       {showPartnerModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Preferensi Partner</h3>
-              <button onClick={() => setShowPartnerModal(false)} className="text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-white transition-colors">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  Ubah Preferensi & Sosial
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Gaya bermain partner dan tautan profil sosial
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPartnerModal(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleSavePartnerPreferences} className="space-y-4">
+
+            <form onSubmit={handleSavePartnerPreferences} className="p-5 space-y-4">
               <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Preferensi Partner</label>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Preferensi Partner Bermain
+                </label>
                 <textarea
                   value={editPartnerPreferences}
                   onChange={(e) => setEditPartnerPreferences(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors min-h-25 resize-none"
-                  placeholder="Contoh: Suka bermain doubles, prefer partner yang agresif"
+                  rows={3}
+                  placeholder="Contoh: Suka bermain ganda dengan partner yang aktif smash dari belakang..."
+                  className="w-full px-3.5 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10 transition-all resize-none"
                 />
               </div>
+
               <div>
-                <label className="text-sm text-gray-600 dark:text-zinc-300 font-semibold mb-2 block">Instagram</label>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Link / Username Instagram
+                </label>
                 <input
-                  type="url"
+                  type="text"
                   value={editInstagramUrl}
                   onChange={(e) => setEditInstagramUrl(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                  placeholder="https://instagram.com/username"
+                  placeholder="https://instagram.com/username atau @username"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10 transition-all"
                 />
               </div>
-              <div className="flex gap-3 mt-6">
+
+              <div className="flex gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowPartnerModal(false)}
-                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-lg font-semibold transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isPartnerLoading}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isPartnerLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Menyimpan...
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menyimpan...</span>
                     </>
                   ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Simpan
-                    </>
+                    <span>Simpan Perubahan</span>
                   )}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Change Password Modal (Claude Design style: strength meter & realtime matching) */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  Ubah Kata Sandi
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Amankan akun Anda dengan kata sandi yang kuat
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="p-5 space-y-4">
+              {/* Current Password (Required for non-pure-OAuth accounts) */}
+              {!isOAuthUser ? (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                      Kata Sandi Saat Ini
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleSendResetEmail}
+                      disabled={isResetEmailSending}
+                      className="text-[11px] font-medium text-[#4382C8] hover:underline disabled:opacity-50"
+                    >
+                      {isResetEmailSending ? 'Mengirim...' : 'Lupa kata sandi?'}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Masukkan kata sandi lama Anda"
+                      required
+                      className="w-full pl-10 pr-10 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                    >
+                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 rounded-xl text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-[#4382C8]" />
+                  <span>
+                    Akun Anda terhubung dengan Google. Anda dapat langsung menentukan kata sandi baru untuk login mandiri dengan email & password.
+                  </span>
+                </div>
+              )}
+
+              {/* New Password */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Kata Sandi Baru
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Minimal 6 karakter"
+                    className="w-full pl-10 pr-10 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Password Strength Meter */}
+                {newPassword.length > 0 && (() => {
+                  const strength = getPasswordStrength(newPassword);
+                  return (
+                    <div className="mt-2.5 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-500">Kekuatan Kata Sandi:</span>
+                        <span className={`font-semibold ${strength.textColor}`}>
+                          {strength.label}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5 h-1.5">
+                        <div className={`rounded-full ${strength.score >= 1 ? strength.color : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                        <div className={`rounded-full ${strength.score >= 2 ? strength.color : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                        <div className={`rounded-full ${strength.score >= 3 ? strength.color : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Konfirmasi Kata Sandi Baru
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Ketik ulang kata sandi baru"
+                    className={`w-full pl-10 pr-10 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 border rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none transition-all ${
+                      confirmPassword.length > 0 && newPassword === confirmPassword
+                        ? 'border-emerald-500 focus:ring-2 focus:ring-emerald-500/10'
+                        : confirmPassword.length > 0 && newPassword !== confirmPassword
+                        ? 'border-rose-400 focus:ring-2 focus:ring-rose-400/10'
+                        : 'border-zinc-200 dark:border-zinc-700/80 focus:border-[#4382C8] focus:ring-2 focus:ring-[#4382C8]/10'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Realtime Match Indicator */}
+                {confirmPassword.length > 0 && (
+                  <div className="mt-1.5 text-[11px]">
+                    {newPassword === confirmPassword ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Kata sandi cocok
+                      </span>
+                    ) : (
+                      <span className="text-rose-500 dark:text-rose-400 flex items-center gap-1 font-medium">
+                        <AlertTriangle className="w-3.5 h-3.5" /> Kata sandi belum cocok
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Forgot password link */}
+              <div className="pt-1 flex items-center justify-between text-xs">
+                <span className="text-zinc-500">Lupa kata sandi lama?</span>
+                <button
+                  type="button"
+                  onClick={handleSendResetEmail}
+                  disabled={isResetEmailSending}
+                  className="font-semibold text-[#4382C8] hover:underline disabled:opacity-50"
+                >
+                  {isResetEmailSending ? 'Mengirim email...' : 'Kirim link reset ke email'}
+                </button>
+              </div>
+
+              <div className="flex gap-2.5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPasswordLoading || (!isOAuthUser && !currentPassword) || !newPassword || !confirmPassword || newPassword !== confirmPassword}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {isPasswordLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Memperbarui...</span>
+                    </>
+                  ) : (
+                    <span>Perbarui Kata Sandi</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Image Zoom Modal */}
+      {zoomImage && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setZoomImage(null)}
+        >
+          <div 
+            className="relative max-w-lg w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between pb-3 mb-3 border-b border-zinc-100 dark:border-zinc-800">
+              <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                {zoomImage.title}
+              </span>
+              <button
+                onClick={() => setZoomImage(null)}
+                className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="relative w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-xl bg-zinc-50 dark:bg-zinc-950 p-2 border border-zinc-100 dark:border-zinc-800">
+              <Image
+                src={zoomImage.url}
+                alt={zoomImage.title}
+                width={600}
+                height={600}
+                className="max-h-[65vh] w-auto h-auto object-contain rounded-lg shadow-sm"
+                unoptimized
+              />
+            </div>
+
+            <div className="w-full pt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setZoomImage(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

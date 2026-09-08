@@ -186,123 +186,122 @@ export default function AdminAnalitikPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 p-4 lg:p-8 transition-colors duration-300">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-zinc-700"></div>
-        </div>
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-zinc-700 border-t-white"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div>
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4">
+        <div className="mb-6 flex items-start justify-between gap-4 pb-4 border-b border-white/5">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-300">Analitik Pertandingan</h1>
-            <p className="text-gray-600 dark:text-zinc-400 font-medium transition-colors duration-300">Kelola informasi dan hasil pertandingan</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">Analitik & Rekap Pertandingan</h1>
+            <p className="text-xs text-zinc-400 mt-1">Kelola skor, susunan pasangan pemain, dan rekap pertandingan per bulan</p>
           </div>
           
           <button
             onClick={toggleTutorial}
-            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+            className="p-2 rounded-xl bg-zinc-900/80 hover:bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
             title="Tampilkan panduan fitur"
           >
-            <HelpCircle className="w-5 h-5" />
+            <HelpCircle className="w-4 h-4" />
           </button>
         </div>
 
         {/* Monthly Summary Card */}
-        <div className="analitik-monthly-summary bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/5 rounded-xl p-6 mb-6 shadow-sm transition-colors duration-300">
-          <div className="flex items-center justify-between mb-6">
+        <div className="analitik-monthly-summary bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 mb-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 transition-colors duration-300">
-                Rekap {selectedMonth.getMonth() === new Date().getMonth() && 
-                       selectedMonth.getFullYear() === new Date().getFullYear() 
-                       ? 'Bulan Ini' : 'Bulan'}
+              <h2 className="text-sm font-semibold text-white mb-2">
+                Pilih Periode Pertandingan
               </h2>
-              <div className="flex items-center gap-3 mt-1">
+              <div className="flex items-center gap-2">
                 {/* Month Navigator */}
-                <button
-                  onClick={() => {
-                    const prevMonth = new Date(selectedMonth);
-                    prevMonth.setMonth(prevMonth.getMonth() - 1);
-                    setSelectedMonth(prevMonth);
-                    setSelectedMatch(null);
-                  }}
-                  className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300"
-                  title="Bulan sebelumnya"
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-zinc-400 transition-colors duration-300" />
-                </button>
-                
-                <span className="text-sm font-semibold text-gray-900 dark:text-white min-w-45 text-center transition-colors duration-300">
-                  {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                </span>
-                
-                <button
-                  onClick={() => {
-                    const nextMonth = new Date(selectedMonth);
-                    nextMonth.setMonth(nextMonth.getMonth() + 1);
-                    setSelectedMonth(nextMonth);
-                    setSelectedMatch(null);
-                  }}
-                  className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300"
-                  title="Bulan berikutnya"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-600 dark:text-zinc-400 transition-colors duration-300" />
-                </button>
+                <div className="flex items-center bg-zinc-900 border border-white/10 rounded-xl p-1">
+                  <button
+                    onClick={() => {
+                      const prevMonth = new Date(selectedMonth);
+                      prevMonth.setMonth(prevMonth.getMonth() - 1);
+                      setSelectedMonth(prevMonth);
+                      setSelectedMatch(null);
+                    }}
+                    className="p-1 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                    title="Bulan sebelumnya"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  
+                  <span className="text-xs font-semibold text-white px-3 min-w-32 text-center">
+                    {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                  </span>
+                  
+                  <button
+                    onClick={() => {
+                      const nextMonth = new Date(selectedMonth);
+                      nextMonth.setMonth(nextMonth.getMonth() + 1);
+                      setSelectedMonth(nextMonth);
+                      setSelectedMatch(null);
+                    }}
+                    className="p-1 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                    title="Bulan berikutnya"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {/* Current Month Button */}
                 {(selectedMonth.getMonth() !== new Date().getMonth() || 
                   selectedMonth.getFullYear() !== new Date().getFullYear()) && (
                   <button
                     onClick={() => setSelectedMonth(new Date())}
-                    className="px-3 py-1.5 text-xs bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-lg transition-colors duration-300 font-medium border border-gray-300 dark:border-white/10"
+                    className="px-2.5 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-zinc-300 rounded-xl transition-colors font-medium border border-white/10 cursor-pointer"
                   >
                     Bulan Ini
                   </button>
                 )}
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm font-semibold text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Tingkat Penyelesaian</p>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-200 dark:bg-zinc-800 rounded-full h-2 w-32 border border-gray-300 dark:border-transparent transition-colors duration-300">
+            
+            <div className="sm:text-right">
+              <p className="text-xs font-medium text-zinc-400 mb-1.5">Tingkat Penyelesaian</p>
+              <div className="flex items-center sm:justify-end gap-2">
+                <div className="bg-white/5 rounded-full h-2 w-28 overflow-hidden">
                   <div 
-                    className="bg-gray-700 dark:bg-zinc-600 h-2 rounded-full transition-all duration-500"
+                    className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${monthlyStats.completionRate}%` }}
                   />
                 </div>
-                <span className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">{monthlyStats.completionRate}%</span>
+                <span className="text-sm font-bold text-white">{monthlyStats.completionRate}%</span>
               </div>
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-gray-100 dark:bg-black/20 border-2 border-gray-200 dark:border-white/5 rounded-lg p-4 transition-colors duration-300">
-              <p className="text-xs font-bold text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Total Pertandingan</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
+              <p className="text-[11px] font-medium text-zinc-400 mb-1">Total Pertandingan</p>
+              <p className="text-xl font-bold text-white tracking-tight">
                 {monthlyStats.totalMatches}
               </p>
             </div>
-            <div className="bg-gray-100 dark:bg-black/20 border-2 border-gray-200 dark:border-white/5 rounded-lg p-4 transition-colors duration-300">
-              <p className="text-xs font-bold text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Selesai</p>
-              <p className="text-xl font-bold text-gray-700 dark:text-zinc-400 transition-colors duration-300">
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
+              <p className="text-[11px] font-medium text-zinc-400 mb-1">Pertandingan Selesai</p>
+              <p className="text-xl font-bold text-emerald-400 tracking-tight">
                 {monthlyStats.completedMatches}
               </p>
             </div>
-            <div className="bg-gray-100 dark:bg-black/20 border-2 border-gray-200 dark:border-white/5 rounded-lg p-4 transition-colors duration-300">
-              <p className="text-xs font-bold text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Berlangsung</p>
-              <p className="text-xl font-bold text-gray-700 dark:text-zinc-400 transition-colors duration-300">
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
+              <p className="text-[11px] font-medium text-zinc-400 mb-1">Berlangsung</p>
+              <p className="text-xl font-bold text-amber-400 tracking-tight">
                 {monthlyStats.activeMatches}
               </p>
             </div>
-            <div className="bg-gray-100 dark:bg-black/20 border-2 border-gray-200 dark:border-white/5 rounded-lg p-4 transition-colors duration-300">
-              <p className="text-xs font-bold text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Total Pemain</p>
-              <p className="text-xl font-bold text-gray-700 dark:text-zinc-400 transition-colors duration-300">
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
+              <p className="text-[11px] font-medium text-zinc-400 mb-1">Slot Partisipasi</p>
+              <p className="text-xl font-bold text-sky-400 tracking-tight">
                 {monthlyStats.totalMatches * 4}
               </p>
             </div>
@@ -312,54 +311,53 @@ export default function AdminAnalitikPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Match List */}
           <div className="analitik-matches-list lg:col-span-1">
-            <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/5 rounded-xl p-6 shadow-sm transition-colors duration-300">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 transition-colors duration-300">
-                <TrendingUp className="w-5 h-5 text-gray-600 dark:text-zinc-400 transition-colors duration-300" />
-                Daftar Pertandingan
+            <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-sm">
+              <h2 className="text-sm font-semibold text-white mb-3.5 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-zinc-400" />
+                <span>Daftar Pertandingan</span>
+                <span className="ml-auto text-xs text-zinc-500 font-normal">({matches.length})</span>
               </h2>
               
               {matches.length === 0 ? (
-                <div className="text-center py-12">
-                  <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-zinc-700 transition-colors duration-300" />
-                  <p className="text-gray-500 dark:text-zinc-500 font-medium transition-colors duration-300">Tidak ada pertandingan</p>
-                  <p className="text-xs text-gray-400 dark:text-zinc-600 mt-1 transition-colors duration-300">
-                    di bulan {selectedMonth.toLocaleDateString('id-ID', { month: 'long' })}
+                <div className="text-center py-10">
+                  <Calendar className="w-8 h-8 mx-auto mb-2 text-zinc-600" />
+                  <p className="text-xs text-zinc-400 font-medium">Tidak ada pertandingan</p>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">
+                    di {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-150 overflow-y-auto">
+                <div className="space-y-2 max-h-140 overflow-y-auto pr-1">
                   {matches.map((match) => (
                     <button
                       key={match.id}
                       onClick={() => selectMatch(match)}
-                      className={`w-full text-left p-4 rounded-lg transition-all duration-300 border-2 ${
+                      className={`w-full text-left p-3.5 rounded-xl transition-all border cursor-pointer ${
                         selectedMatch?.id === match.id
-                          ? 'bg-gray-100 dark:bg-zinc-800 border-gray-400 dark:border-zinc-700 text-gray-900 dark:text-white shadow-sm'
-                          : 'bg-gray-50 dark:bg-zinc-800/30 border-gray-200 dark:border-white/5 text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800/50 hover:border-gray-300'
+                          ? 'bg-white/10 border-white/30 text-white shadow-xs'
+                          : 'bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/10'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="font-bold">Match #{match.match_number}</p>
-                          <p className="text-xs text-gray-500 dark:text-zinc-500 flex items-center gap-1 mt-1 transition-colors duration-300">
-                            <Calendar className="w-3 h-3" />
-                            {match.match_date 
-                              ? new Date(match.match_date).toLocaleDateString('id-ID', { 
-                                  weekday: 'short', 
-                                  day: 'numeric', 
-                                  month: 'short' 
-                                })
-                              : new Date(match.created_at).toLocaleDateString('id-ID')
-                            }
-                          </p>
-                        </div>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-bold text-white">Match #{match.match_number}</p>
                         {match.winner && (
-                          <Trophy className="w-4 h-4 text-gray-500 dark:text-zinc-500 transition-colors duration-300" />
+                          <Trophy className="w-3.5 h-3.5 text-amber-400" />
                         )}
                       </div>
+                      <p className="text-[11px] text-zinc-400 flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-zinc-500" />
+                        {match.match_date 
+                          ? new Date(match.match_date).toLocaleDateString('id-ID', { 
+                              weekday: 'short', 
+                              day: 'numeric', 
+                              month: 'short' 
+                            })
+                          : new Date(match.created_at).toLocaleDateString('id-ID')
+                        }
+                      </p>
                       {match.winner && (
-                        <div className="mt-2 text-xs">
-                          <span className="px-2 py-1 bg-green-100 dark:bg-zinc-700 text-green-700 dark:text-zinc-400 rounded text-xs font-semibold border border-green-300 dark:border-transparent transition-colors duration-300">
+                        <div className="mt-2">
+                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-semibold">
                             Selesai
                           </span>
                         </div>
@@ -374,13 +372,13 @@ export default function AdminAnalitikPage() {
           {/* Match Details */}
           <div className="analitik-match-stats lg:col-span-2">
             {selectedMatch ? (
-              <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/5 rounded-xl p-6 shadow-sm transition-colors duration-300">
-                <div className="flex items-center justify-between mb-6">
+              <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm">
+                <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/10">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
+                    <h2 className="text-lg font-bold text-white tracking-tight">
                       Pertandingan #{selectedMatch.match_number}
                     </h2>
-                    <p className="text-sm font-medium text-gray-600 dark:text-zinc-500 mt-1 transition-colors duration-300">
+                    <p className="text-xs text-zinc-400 mt-0.5">
                       {selectedMatch.match_date 
                         ? new Date(selectedMatch.match_date).toLocaleDateString('id-ID', { 
                             weekday: 'long', 
@@ -395,60 +393,59 @@ export default function AdminAnalitikPage() {
                   {!editMode ? (
                     <button
                       onClick={() => setEditMode(true)}
-                      className="analitik-edit-scores px-4 py-2 bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-900 dark:text-white rounded-lg transition-colors duration-300 flex items-center gap-2 border-2 border-gray-300 dark:border-white/5 font-semibold"
+                      className="analitik-edit-scores px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-white/10 font-medium cursor-pointer"
                     >
-                      <Edit className="w-4 h-4" />
-                      Edit
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>Edit Skor & Pemain</span>
                     </button>
                   ) : (
                     <div className="flex gap-2">
                       <button
                         onClick={() => setEditMode(false)}
-                        className="px-4 py-2 bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-900 dark:text-white rounded-lg transition-colors duration-300 flex items-center gap-2 border-2 border-gray-300 dark:border-white/5 font-semibold"
+                        className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-xl text-xs transition-colors border border-white/10 cursor-pointer"
                       >
-                        <X className="w-4 h-4" />
                         Batal
                       </button>
                       <button
                         onClick={saveMatchInfo}
-                        className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg hover:bg-gray-800 dark:hover:bg-zinc-200 transition-colors duration-300 flex items-center gap-2 font-bold border-2 border-gray-900 dark:border-white"
+                        className="px-3.5 py-1.5 bg-white text-zinc-900 hover:bg-zinc-200 rounded-xl text-xs transition-colors flex items-center gap-1.5 font-semibold cursor-pointer shadow-xs"
                       >
-                        <Save className="w-4 h-4" />
-                        Simpan
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Simpan</span>
                       </button>
                     </div>
                   )}
                 </div>
 
                 {/* Players List */}
-                <div className="analitik-member-selection mb-6 pb-6 border-b-2 border-gray-200 dark:border-white/5 transition-colors duration-300">
-                  <h3 className="text-sm font-bold text-gray-600 dark:text-zinc-400 mb-3 transition-colors duration-300">Pemain:</h3>
-                  <div className="flex flex-wrap gap-2">
+                <div className="analitik-member-selection mb-5 pb-5 border-b border-white/10">
+                  <h3 className="text-xs font-semibold text-zinc-400 mb-2">Pemain Terdaftar Dalam Match:</h3>
+                  <div className="flex flex-wrap gap-1.5">
                     {getAvailablePlayers().map((player, idx) => (
-                      <span key={idx} className="px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-lg text-sm border-2 border-gray-200 dark:border-white/5 font-medium transition-colors duration-300">
+                      <span key={idx} className="px-2.5 py-1 bg-white/5 text-zinc-300 rounded-lg text-xs border border-white/10 font-medium">
                         {player}
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Team 1 */}
-                  <div className="bg-gray-100 dark:bg-zinc-800/50 border-2 border-gray-300 dark:border-white/5 rounded-xl p-6 transition-colors duration-300">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 transition-colors duration-300">
-                      <Users className="w-5 h-5 text-gray-600 dark:text-zinc-400 transition-colors duration-300" />
-                      Tim 1
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+                    <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-zinc-400" />
+                      <span>Tim 1</span>
                     </h3>
                     
                     {editMode ? (
                       <>
                         <div className="space-y-3 mb-4">
                           <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-zinc-400 mb-1 transition-colors duration-300">Pemain 1</label>
+                            <label className="block text-xs font-medium text-zinc-300 mb-1">Pemain 1</label>
                             <select
                               value={formData.team1_player1}
                               onChange={(e) => setFormData({...formData, team1_player1: e.target.value})}
-                              className="w-full bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-gray-900 dark:text-white font-medium transition-colors duration-300"
+                              className="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
                             >
                               <option value="">Pilih pemain</option>
                               {getAvailablePlayers().map((player, idx) => (
@@ -457,11 +454,11 @@ export default function AdminAnalitikPage() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-zinc-400 mb-1 transition-colors duration-300">Pemain 2</label>
+                            <label className="block text-xs font-medium text-zinc-300 mb-1">Pemain 2</label>
                             <select
                               value={formData.team1_player2}
                               onChange={(e) => setFormData({...formData, team1_player2: e.target.value})}
-                              className="w-full bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-gray-900 dark:text-white font-medium transition-colors duration-300"
+                              className="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
                             >
                               <option value="">Pilih pemain</option>
                               {getAvailablePlayers().map((player, idx) => (
@@ -471,53 +468,53 @@ export default function AdminAnalitikPage() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 dark:text-zinc-400 mb-1 transition-colors duration-300">Skor</label>
+                          <label className="block text-xs font-medium text-zinc-300 mb-1">Skor Akhir</label>
                           <input
                             type="number"
                             min="0"
                             max="42"
                             value={formData.team1_score}
                             onChange={(e) => setFormData({...formData, team1_score: parseInt(e.target.value) || 0})}
-                            className="w-full bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-2xl font-bold text-center transition-colors duration-300"
+                            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-white text-2xl font-bold text-center focus:outline-hidden focus:ring-1 focus:ring-zinc-400 font-mono"
                           />
                         </div>
                       </>
                     ) : (
                       <>
-                        <div className="space-y-2 mb-4">
-                          <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">{formData.team1_player1 || 'Belum diatur'}</p>
-                          <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">{formData.team1_player2 || 'Belum diatur'}</p>
+                        <div className="space-y-1.5 mb-4 text-xs">
+                          <p className="text-zinc-200 font-medium">• {formData.team1_player1 || 'Belum diatur'}</p>
+                          <p className="text-zinc-200 font-medium">• {formData.team1_player2 || 'Belum diatur'}</p>
                         </div>
-                        <div className="text-center">
-                          <p className="text-5xl font-bold text-gray-900 dark:text-white transition-colors duration-300">{formData.team1_score}</p>
-                          <p className="text-sm font-semibold text-gray-500 dark:text-zinc-500 mt-1 transition-colors duration-300">poin</p>
+                        <div className="text-center py-2 bg-zinc-900/60 rounded-xl border border-white/5">
+                          <p className="text-4xl font-bold text-white font-mono tracking-tight">{formData.team1_score}</p>
+                          <p className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold mt-0.5">Poin</p>
                         </div>
                       </>
                     )}
                     
                     {formData.team1_score > formData.team2_score && (
-                      <div className="mt-4 px-3 py-2 bg-green-100 dark:bg-zinc-700 border-2 border-green-300 dark:border-zinc-600 text-green-700 dark:text-zinc-300 rounded-lg text-center font-bold text-sm transition-colors duration-300">
-                        Pemenang
+                      <div className="mt-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-center font-semibold text-xs">
+                        🏆 Pemenang
                       </div>
                     )}
                   </div>
 
                   {/* Team 2 */}
-                  <div className="bg-gray-100 dark:bg-zinc-800/50 border-2 border-gray-300 dark:border-white/5 rounded-xl p-6 transition-colors duration-300">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 transition-colors duration-300">
-                      <Users className="w-5 h-5 text-gray-600 dark:text-zinc-400 transition-colors duration-300" />
-                      Tim 2
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+                    <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-zinc-400" />
+                      <span>Tim 2</span>
                     </h3>
                     
                     {editMode ? (
                       <>
                         <div className="space-y-3 mb-4">
                           <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-zinc-400 mb-1 transition-colors duration-300">Pemain 1</label>
+                            <label className="block text-xs font-medium text-zinc-300 mb-1">Pemain 1</label>
                             <select
                               value={formData.team2_player1}
                               onChange={(e) => setFormData({...formData, team2_player1: e.target.value})}
-                              className="w-full bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-gray-900 dark:text-white font-medium transition-colors duration-300"
+                              className="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
                             >
                               <option value="">Pilih pemain</option>
                               {getAvailablePlayers().map((player, idx) => (
@@ -526,11 +523,11 @@ export default function AdminAnalitikPage() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-zinc-400 mb-1 transition-colors duration-300">Pemain 2</label>
+                            <label className="block text-xs font-medium text-zinc-300 mb-1">Pemain 2</label>
                             <select
                               value={formData.team2_player2}
                               onChange={(e) => setFormData({...formData, team2_player2: e.target.value})}
-                              className="w-full bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-gray-900 dark:text-white font-medium transition-colors duration-300"
+                              className="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
                             >
                               <option value="">Pilih pemain</option>
                               {getAvailablePlayers().map((player, idx) => (
@@ -540,48 +537,48 @@ export default function AdminAnalitikPage() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 dark:text-zinc-400 mb-1 transition-colors duration-300">Skor</label>
+                          <label className="block text-xs font-medium text-zinc-300 mb-1">Skor Akhir</label>
                           <input
                             type="number"
                             min="0"
                             max="42"
                             value={formData.team2_score}
                             onChange={(e) => setFormData({...formData, team2_score: parseInt(e.target.value) || 0})}
-                            className="w-full bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-2xl font-bold text-center transition-colors duration-300"
+                            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-white text-2xl font-bold text-center focus:outline-hidden focus:ring-1 focus:ring-zinc-400 font-mono"
                           />
                         </div>
                       </>
                     ) : (
                       <>
-                        <div className="space-y-2 mb-4">
-                          <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">{formData.team2_player1 || 'Belum diatur'}</p>
-                          <p className="text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">{formData.team2_player2 || 'Belum diatur'}</p>
+                        <div className="space-y-1.5 mb-4 text-xs">
+                          <p className="text-zinc-200 font-medium">• {formData.team2_player1 || 'Belum diatur'}</p>
+                          <p className="text-zinc-200 font-medium">• {formData.team2_player2 || 'Belum diatur'}</p>
                         </div>
-                        <div className="text-center">
-                          <p className="text-5xl font-bold text-gray-900 dark:text-white transition-colors duration-300">{formData.team2_score}</p>
-                          <p className="text-sm font-semibold text-gray-500 dark:text-zinc-500 mt-1 transition-colors duration-300">poin</p>
+                        <div className="text-center py-2 bg-zinc-900/60 rounded-xl border border-white/5">
+                          <p className="text-4xl font-bold text-white font-mono tracking-tight">{formData.team2_score}</p>
+                          <p className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold mt-0.5">Poin</p>
                         </div>
                       </>
                     )}
                     
                     {formData.team2_score > formData.team1_score && (
-                      <div className="mt-4 px-3 py-2 bg-green-100 dark:bg-zinc-700 border-2 border-green-300 dark:border-zinc-600 text-green-700 dark:text-zinc-300 rounded-lg text-center font-bold text-sm transition-colors duration-300">
-                        Pemenang
+                      <div className="mt-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-center font-semibold text-xs">
+                        🏆 Pemenang
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Game Info */}
-                <div className="mt-6 bg-gray-100 dark:bg-zinc-800/30 border-2 border-gray-200 dark:border-white/5 rounded-xl p-4 transition-colors duration-300">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="mt-5 bg-white/5 border border-white/10 rounded-xl p-4">
+                  <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
-                      <p className="text-gray-600 dark:text-zinc-500 font-semibold transition-colors duration-300">Target Skor</p>
-                      <p className="text-gray-900 dark:text-white font-bold transition-colors duration-300">42 poin</p>
+                      <p className="text-zinc-400 mb-0.5">Target Skor Maksimal</p>
+                      <p className="text-white font-semibold">42 poin</p>
                     </div>
                     <div>
-                      <p className="text-gray-600 dark:text-zinc-500 font-semibold transition-colors duration-300">Status</p>
-                      <p className="text-gray-900 dark:text-white font-bold transition-colors duration-300">
+                      <p className="text-zinc-400 mb-0.5">Status Pertandingan</p>
+                      <p className="text-white font-semibold">
                         {formData.team1_score !== formData.team2_score && (formData.team1_score > 0 || formData.team2_score > 0) ? 'Selesai' : 'Berlangsung'}
                       </p>
                     </div>
@@ -589,9 +586,9 @@ export default function AdminAnalitikPage() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/5 rounded-xl p-12 text-center shadow-sm transition-colors duration-300">
-                <TrendingUp className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-zinc-700 transition-colors duration-300" />
-                <p className="text-gray-500 dark:text-zinc-500 font-semibold transition-colors duration-300">Pilih pertandingan untuk melihat detail</p>
+              <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-12 text-center shadow-sm">
+                <TrendingUp className="w-10 h-10 mx-auto mb-3 text-zinc-600" />
+                <p className="text-xs text-zinc-400 font-medium">Pilih salah satu pertandingan dari daftar sebelah kiri untuk melihat rincian skor & pemain</p>
               </div>
             )}
           </div>

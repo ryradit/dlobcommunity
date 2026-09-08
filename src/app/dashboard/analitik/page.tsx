@@ -656,20 +656,40 @@ export default function AnalitikPage() {
         <div className="mb-8 space-y-6">
           {/* AI Performance Insights */}
           {aiInsights.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Brain className="w-6 h-6 text-purple-500 dark:text-purple-400" />
-                  AI Performance Insights
-                </h2>
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-2xs transition-all">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-5 border-b border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0">
+                    <Brain className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                        AI Performance Insights
+                      </h2>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/40">
+                        <Sparkles className="w-3 h-3" />
+                        <span>AI Powered</span>
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      Analisis cerdas pola permainan, mental bertanding, dan rekomendasi taktis
+                    </p>
+                  </div>
+                </div>
+
                 <button
                   onClick={() => setShowAIHelpModal(true)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                  title="Pelajari lebih lanjut"
+                  className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                  title="Pelajari cara AI menganalisis data Anda"
                 >
-                  <Info className="w-5 h-5 text-purple-400" />
+                  <Info className="w-3.5 h-3.5 text-purple-500" />
+                  <span>Tentang AI</span>
                 </button>
               </div>
+
+              {/* Insights Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {aiInsights.map((insight, idx) => {
                   const IconComponent = insight.icon === 'trophy' ? Trophy :
@@ -680,24 +700,52 @@ export default function AnalitikPage() {
                                        insight.icon === 'alert' ? AlertCircle :
                                        Target;
                   
-                  const colorClass = insight.type === 'positive'
-                    ? 'bg-green-500/10 border-green-500/20 dark:bg-green-500/10 dark:border-green-500/20'
-                    : insight.type === 'negative'
-                    ? 'bg-red-500/10 border-red-500/20 dark:bg-red-500/10 dark:border-red-500/20'
-                    : 'bg-blue-500/10 border-blue-500/20 dark:bg-blue-500/10 dark:border-blue-500/20';
+                  // Style configurations per insight type
+                  const isPos = insight.type === 'positive';
+                  const isNeg = insight.type === 'negative';
 
-                  const iconColor = insight.type === 'positive' ? 'text-green-500 dark:text-green-400' :
-                                   insight.type === 'negative' ? 'text-red-500 dark:text-red-400' :
-                                   'text-blue-500 dark:text-blue-400';
+                  const badgeText = isPos ? 'Pencapaian Positif' : isNeg ? 'Evaluasi & Solusi' : 'Wawasan Strategis';
+                  
+                  const borderAccent = isPos 
+                    ? 'border-l-4 border-l-emerald-500' 
+                    : isNeg 
+                    ? 'border-l-4 border-l-rose-500' 
+                    : 'border-l-4 border-l-sky-500';
+
+                  const iconBoxStyle = isPos 
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                    : isNeg 
+                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20' 
+                    : 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20';
+
+                  const badgeStyle = isPos 
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/40' 
+                    : isNeg 
+                    ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border-rose-200/60 dark:border-rose-800/40' 
+                    : 'bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400 border-sky-200/60 dark:border-sky-800/40';
 
                   return (
-                    <div key={idx} className={`${colorClass} border rounded-lg p-4`}>
-                      <div className="flex items-start gap-3">
-                        <IconComponent className={`w-5 h-5 ${iconColor} mt-1 shrink-0`} />
-                        <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{insight.title}</h3>
-                          <p className="text-sm text-gray-600 dark:text-zinc-300">{insight.description}</p>
+                    <div 
+                      key={idx} 
+                      className={`bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 ${borderAccent} rounded-xl p-4 sm:p-5 flex flex-col justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all shadow-2xs`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2.5">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${badgeStyle}`}>
+                            {badgeText}
+                          </span>
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${iconBoxStyle}`}>
+                            <IconComponent className="w-3.5 h-3.5" />
+                          </div>
                         </div>
+
+                        <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-2 leading-snug">
+                          {insight.title}
+                        </h3>
+
+                        <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed font-normal">
+                          {insight.description}
+                        </p>
                       </div>
                     </div>
                   );
@@ -708,32 +756,105 @@ export default function AnalitikPage() {
 
           {/* Smart Partner Recommendations */}
           {partnerRecommendations.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 transition-colors duration-300">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <UserCheck className="w-6 h-6 text-blue-500 dark:text-blue-400" />
-                Smart Partner Recommendations
-              </h2>
-              <div className="space-y-3">
-                {partnerRecommendations.map((rec, idx) => (
-                  <div key={idx} className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/10 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Crown className={`w-5 h-5 ${idx === 0 ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-400 dark:text-zinc-400'}`} />
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{rec.partner}</h3>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          rec.confidence === 'high' ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-300 dark:border-transparent' :
-                          rec.confidence === 'medium' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-transparent' :
-                          'bg-gray-100 dark:bg-zinc-500/20 text-gray-600 dark:text-zinc-400 border border-gray-300 dark:border-transparent'
-                        }`}>
-                          {rec.confidence === 'high' ? 'Highly Recommended' : 
-                           rec.confidence === 'medium' ? 'Recommended' : 'Consider'}
-                        </span>
-                      </div>
-                      <span className="text-lg font-bold text-green-400">{rec.winRate}%</span>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-zinc-300">{rec.reason}</p>
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-2xs transition-all">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4 mb-5 border-b border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0">
+                    <UserCheck className="w-5 h-5" />
                   </div>
-                ))}
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                      Rekomendasi Partner Terbaik
+                    </h2>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      Kandidat partner dengan sinergi kemenangan tertinggi untuk pertandingan berikutnya
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recommendations List */}
+              <div className="space-y-3">
+                {partnerRecommendations.map((rec, idx) => {
+                  const isTopRank = idx === 0;
+                  const rankColor = idx === 0 
+                    ? 'text-amber-500 bg-amber-500/10 border-amber-500/20' 
+                    : idx === 1 
+                    ? 'text-zinc-400 bg-zinc-200/60 dark:bg-zinc-700/40 border-zinc-300 dark:border-zinc-600' 
+                    : 'text-amber-700 dark:text-amber-600 bg-amber-700/10 border-amber-700/20';
+
+                  const badgeColor = rec.confidence === 'high'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/40'
+                    : rec.confidence === 'medium'
+                    ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/40'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700';
+
+                  const badgeLabel = rec.confidence === 'high' 
+                    ? 'Sangat Disarankan' 
+                    : rec.confidence === 'medium' 
+                    ? 'Disarankan' 
+                    : 'Potensial';
+
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/40 border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                        isTopRank 
+                          ? 'border-amber-500/30 shadow-xs ring-1 ring-amber-500/10' 
+                          : 'border-zinc-200/80 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
+                      }`}
+                    >
+                      {/* Left: Avatar/Rank & Partner Info */}
+                      <div className="flex items-start gap-3.5 flex-1">
+                        {/* Rank Badge */}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border font-bold text-sm shrink-0 mt-0.5 ${rankColor}`}>
+                          <Crown className="w-5 h-5" />
+                        </div>
+
+                        {/* Partner Details */}
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">
+                              {rec.partner}
+                            </h3>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeColor}`}>
+                              {badgeLabel}
+                            </span>
+                            {isTopRank && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                Best Synergy #1
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                            {rec.reason}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: Win Rate Display */}
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-200/60 dark:border-zinc-800">
+                        <div className="text-left sm:text-right">
+                          <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium block">
+                            Win Rate
+                          </span>
+                          <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                            {rec.winRate}%
+                          </span>
+                        </div>
+
+                        {/* Visual Progress Bar */}
+                        <div className="w-24 sm:w-28 h-1.5 bg-zinc-200 dark:bg-zinc-700/80 rounded-full overflow-hidden mt-1">
+                          <div 
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                            style={{ width: `${rec.winRate}%` }} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1368,7 +1489,7 @@ export default function AnalitikPage() {
                   Apa itu AI Performance Insights?
                 </h4>
                 <p className="text-gray-600 dark:text-zinc-300 leading-relaxed">
-                  AI Performance Insights adalah fitur analisis cerdas yang menggunakan kecerdasan buatan (Google Gemini AI) 
+                  AI Performance Insights adalah fitur analisis cerdas yang menggunakan kecerdasan buatan (AI) 
                   untuk menganalisis performa bulu tangkis Anda secara mendalam. Sistem ini memberikan wawasan personal, 
                   saran strategis, dan rekomendasi yang disesuaikan dengan pola bermain Anda.
                 </p>
@@ -1387,7 +1508,7 @@ export default function AnalitikPage() {
                   </li>
                   <li className="flex gap-3">
                     <span className="shrink-0 w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 flex items-center justify-center text-sm font-semibold">2</span>
-                    <span><strong className="text-gray-900 dark:text-white">Analisis AI:</strong> Google Gemini AI menganalisis pola performa dan mengidentifikasi kekuatan serta area yang perlu ditingkatkan</span>
+                    <span><strong className="text-gray-900 dark:text-white">Analisis AI:</strong> Sistem AI cerdas menganalisis pola performa dan mengidentifikasi kekuatan serta area yang perlu ditingkatkan</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="shrink-0 w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 flex items-center justify-center text-sm font-semibold">3</span>

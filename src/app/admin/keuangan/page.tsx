@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { TrendingUp, TrendingDown, DollarSign, Plus, Edit2, Trash2, X, Save, Calendar, ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Plus, Edit2, Trash2, X, Save, Calendar, ChevronLeft, ChevronRight, HelpCircle, Download } from 'lucide-react';
 import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
@@ -206,6 +206,32 @@ export default function KeuanganPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (pengeluaranList.length === 0) {
+      alert('Tidak ada data pengeluaran untuk diekspor.');
+      return;
+    }
+
+    const monthStr = selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    const headers = ['Tanggal', 'Kategori', 'Nama Pengeluaran', 'Catatan', 'Jumlah (IDR)'];
+    const rows = pengeluaranList.map(item => [
+      item.tanggal,
+      categories.find(c => c.value === item.category)?.label || item.category,
+      `"${item.nama.replace(/"/g, '""')}"`,
+      `"${(item.catatan || '').replace(/"/g, '""')}"`,
+      item.jumlah,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `pengeluaran_${selectedMonth.getFullYear()}_${selectedMonth.getMonth() + 1}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -216,74 +242,83 @@ export default function KeuanganPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-zinc-950 transition-colors duration-300">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white"></div>
+      <div className="flex items-center justify-center min-h-screen bg-zinc-950">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-zinc-700 border-t-white"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 p-4 sm:p-6 lg:p-8 transition-colors duration-300">
-      <div className="space-y-6">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Keuangan</h1>
-              <div className="flex items-center gap-3 mt-2">
-                {/* Month Navigator */}
-                <div className="keuangan-month-navigator flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      const prevMonth = new Date(selectedMonth);
-                      prevMonth.setMonth(prevMonth.getMonth() - 1);
-                      setSelectedMonth(prevMonth);
-                    }}
-                    className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300"
-                    title="Bulan sebelumnya"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-zinc-400 transition-colors duration-300" />
-                  </button>
-                  
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white min-w-35 text-center transition-colors duration-300">
-                    {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                  </span>
-                  
-                  <button
-                    onClick={() => {
-                      const nextMonth = new Date(selectedMonth);
-                      nextMonth.setMonth(nextMonth.getMonth() + 1);
-                      setSelectedMonth(nextMonth);
-                    }}
-                    className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300"
-                    title="Bulan berikutnya"
-                  >
-                    <ChevronRight className="w-5 h-5 text-gray-600 dark:text-zinc-400 transition-colors duration-300" />
-                  </button>
-                </div>
-
-                {/* Current Month Button */}
-                {(selectedMonth.getMonth() !== new Date().getMonth() || 
-                  selectedMonth.getFullYear() !== new Date().getFullYear()) && (
-                  <button
-                    onClick={() => setSelectedMonth(new Date())}
-                    className="px-3 py-1.5 text-xs bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-lg transition-colors duration-300 font-medium border border-gray-300 dark:border-white/10"
-                  >
-                    Bulan Ini
-                  </button>
-                )}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/5">
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Keuangan & Pembukuan</h1>
+            <div className="flex items-center gap-3 mt-2">
+              {/* Month Navigator */}
+              <div className="keuangan-month-navigator flex items-center bg-zinc-900/60 border border-white/10 rounded-xl p-1 backdrop-blur-md">
+                <button
+                  onClick={() => {
+                    const prevMonth = new Date(selectedMonth);
+                    prevMonth.setMonth(prevMonth.getMonth() - 1);
+                    setSelectedMonth(prevMonth);
+                  }}
+                  className="p-1.5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                  title="Bulan sebelumnya"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                
+                <span className="text-xs font-semibold text-white px-3 min-w-32 text-center">
+                  {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                </span>
+                
+                <button
+                  onClick={() => {
+                    const nextMonth = new Date(selectedMonth);
+                    nextMonth.setMonth(nextMonth.getMonth() + 1);
+                    setSelectedMonth(nextMonth);
+                  }}
+                  className="p-1.5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                  title="Bulan berikutnya"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
+
+              {/* Current Month Button */}
+              {(selectedMonth.getMonth() !== new Date().getMonth() || 
+                selectedMonth.getFullYear() !== new Date().getFullYear()) && (
+                <button
+                  onClick={() => setSelectedMonth(new Date())}
+                  className="px-2.5 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-zinc-300 rounded-xl transition-colors font-medium border border-white/10 cursor-pointer"
+                >
+                  Bulan Ini
+                </button>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              className="px-3.5 py-2 bg-zinc-900/60 hover:bg-white/5 border border-white/10 text-zinc-300 hover:text-white text-xs font-medium rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Ekspor CSV Data Pengeluaran"
+            >
+              <Download className="w-4 h-4" />
+              <span>Ekspor CSV</span>
+            </button>
+
             <button
               onClick={toggleTutorial}
-              className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
+              className="p-2 rounded-xl bg-zinc-900/60 hover:bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
               title="Tampilkan panduan fitur"
             >
-              <HelpCircle className="w-5 h-5" />
+              <HelpCircle className="w-4 h-4" />
             </button>
+
             <button
               onClick={() => {
                 setEditingId(null);
@@ -296,10 +331,10 @@ export default function KeuanganPage() {
                 });
                 setShowAddModal(true);
               }}
-              className="keuangan-add-button px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg hover:bg-gray-800 dark:hover:bg-zinc-100 transition-colors duration-300 font-semibold flex items-center gap-2 border border-gray-900 dark:border-white shadow-sm"
+              className="keuangan-add-button px-4 py-2 bg-white text-zinc-900 rounded-xl hover:bg-zinc-200 transition-colors text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <Plus className="w-4 h-4" />
-              Tambah Pengeluaran
+              <span>Catat Pengeluaran</span>
             </button>
           </div>
         </div>
@@ -307,35 +342,35 @@ export default function KeuanganPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Pendapatan */}
-          <div className="keuangan-card-pendapatan bg-white dark:bg-zinc-900 border-2 border-green-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="keuangan-card-pendapatan bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-sm">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Pendapatan</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
+                <p className="text-xs font-medium text-zinc-400 mb-1">Total Pendapatan</p>
+                <p className="text-2xl font-bold text-white tracking-tight">
                   {formatCurrency(summary?.total_pendapatan || 0)}
                 </p>
               </div>
-              <div className="p-3 bg-green-100 dark:bg-green-500/10 rounded-lg transition-colors duration-300">
-                <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-500 transition-colors duration-300" />
+              <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
               </div>
             </div>
-            <p className="text-xs font-medium text-gray-500 dark:text-zinc-500 mt-4 transition-colors duration-300">Dari pembayaran terkonfirmasi</p>
+            <p className="text-[11px] text-zinc-500 mt-3">Dari pembayaran terkonfirmasi</p>
           </div>
 
           {/* Pengeluaran */}
-          <div className="keuangan-card-pengeluaran bg-white dark:bg-zinc-900 border-2 border-red-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="keuangan-card-pengeluaran bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-sm">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Pengeluaran</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
+                <p className="text-xs font-medium text-zinc-400 mb-1">Total Pengeluaran</p>
+                <p className="text-2xl font-bold text-white tracking-tight">
                   {formatCurrency(summary?.total_pengeluaran || 0)}
                 </p>
               </div>
-              <div className="p-3 bg-red-100 dark:bg-red-500/10 rounded-lg transition-colors duration-300">
-                <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-500 transition-colors duration-300" />
+              <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                <TrendingDown className="w-5 h-5 text-rose-400" />
               </div>
             </div>
-            <div className="flex gap-2 mt-4 text-xs font-medium text-gray-500 dark:text-zinc-500 transition-colors duration-300">
+            <div className="flex gap-2 mt-3 text-[11px] text-zinc-400">
               <span>Sewa: {formatCurrency(summary?.pengeluaran_sewa || 0)}</span>
               <span>•</span>
               <span>Shuttle: {formatCurrency(summary?.pengeluaran_shuttlecock || 0)}</span>
@@ -343,19 +378,23 @@ export default function KeuanganPage() {
           </div>
 
           {/* Keuntungan */}
-          <div className="keuangan-card-keuntungan bg-white dark:bg-zinc-900 border-2 border-blue-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="keuangan-card-keuntungan bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-sm">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-600 dark:text-zinc-400 mb-1 transition-colors duration-300">Keuntungan</p>
-                <p className={`text-2xl font-bold ${(summary?.keuntungan || 0) >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'} transition-colors duration-300`}>
+                <p className="text-xs font-medium text-zinc-400 mb-1">Margin / Laba Bersih</p>
+                <p className={`text-2xl font-bold tracking-tight ${(summary?.keuntungan || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {formatCurrency(summary?.keuntungan || 0)}
                 </p>
               </div>
-              <div className={`p-3 ${(summary?.keuntungan || 0) >= 0 ? 'bg-green-100 dark:bg-green-500/10' : 'bg-red-100 dark:bg-red-500/10'} rounded-lg transition-colors duration-300`}>
-                <DollarSign className={`w-5 h-5 ${(summary?.keuntungan || 0) >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'} transition-colors duration-300`} />
+              <div className={`p-2.5 rounded-xl border ${
+                (summary?.keuntungan || 0) >= 0 
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+              }`}>
+                <DollarSign className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-xs font-medium text-gray-500 dark:text-zinc-500 mt-4 transition-colors duration-300">
+            <p className="text-[11px] text-zinc-500 mt-3">
               {summary && summary.total_pendapatan > 0
                 ? `${((summary.keuntungan / summary.total_pendapatan) * 100).toFixed(1)}% margin`
                 : 'Belum ada data'}
@@ -363,34 +402,35 @@ export default function KeuanganPage() {
           </div>
         </div>
 
-        {/* Pengeluaran List */}
-        <div className="keuangan-expense-table bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm transition-colors duration-300">
-          <div className="p-6 border-b-2 border-gray-300 dark:border-zinc-800 transition-colors duration-300">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">Rincian Pengeluaran</h2>
+        {/* Pengeluaran List Table */}
+        <div className="keuangan-expense-table bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-white">Rincian Pengeluaran</h2>
+            <span className="text-xs text-zinc-400">{pengeluaranList.length} transaksi</span>
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-100 dark:bg-zinc-900/50 border-b-2 border-gray-300 dark:border-zinc-800 transition-colors duration-300">
+            <table className="w-full min-w-160">
+              <thead className="bg-zinc-900/90 border-b border-white/10 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 dark:text-zinc-400 uppercase tracking-wider transition-colors duration-300">Tanggal</th>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 dark:text-zinc-400 uppercase tracking-wider transition-colors duration-300">Kategori</th>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 dark:text-zinc-400 uppercase tracking-wider transition-colors duration-300">Nama</th>
-                  <th className="text-right px-6 py-3 text-xs font-bold text-gray-700 dark:text-zinc-400 uppercase tracking-wider transition-colors duration-300">Jumlah</th>
-                  <th className="text-center px-6 py-3 text-xs font-bold text-gray-700 dark:text-zinc-400 uppercase tracking-wider transition-colors duration-300">Aksi</th>
+                  <th className="text-left px-6 py-3.5">Tanggal</th>
+                  <th className="text-left px-6 py-3.5">Kategori</th>
+                  <th className="text-left px-6 py-3.5">Nama Pengeluaran</th>
+                  <th className="text-right px-6 py-3.5">Jumlah</th>
+                  <th className="text-center px-6 py-3.5">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y-2 divide-gray-200 dark:divide-zinc-800 transition-colors duration-300">
+              <tbody className="divide-y divide-white/5">
                 {pengeluaranList.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-zinc-500 font-medium transition-colors duration-300">
+                    <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 text-sm">
                       Belum ada pengeluaran bulan ini
                     </td>
                   </tr>
                 ) : (
                   pengeluaranList.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors duration-300">
-                      <td className="px-6 py-4 text-sm font-medium text-gray-700 dark:text-zinc-300 transition-colors duration-300">
+                    <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                      <td className="px-6 py-4 text-xs font-mono text-zinc-300">
                         {new Date(item.tanggal).toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'short',
@@ -398,40 +438,40 @@ export default function KeuanganPage() {
                         })}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-colors duration-300 ${
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
                           item.category === 'court_rent' 
-                            ? 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/20'
+                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                             : item.category === 'shuttlecock'
-                            ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-500/20'
-                            : 'bg-gray-200 dark:bg-zinc-700/50 text-gray-700 dark:text-zinc-400 border-gray-300 dark:border-zinc-600/20'
+                            ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                            : 'bg-zinc-800 text-zinc-300 border-white/10'
                         }`}>
                           {categories.find(c => c.value === item.category)?.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium transition-colors duration-300">
+                      <td className="px-6 py-4 text-sm text-white font-medium">
                         {item.nama}
                         {item.catatan && (
-                          <p className="text-xs text-gray-500 dark:text-zinc-500 mt-0.5 transition-colors duration-300">{item.catatan}</p>
+                          <p className="text-xs text-zinc-400 mt-0.5">{item.catatan}</p>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-white text-right font-bold transition-colors duration-300">
+                      <td className="px-6 py-4 text-sm text-white text-right font-semibold font-mono">
                         {formatCurrency(item.jumlah)}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => handleEdit(item)}
-                            className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg transition-colors duration-300"
+                            className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
                             title="Edit"
                           >
-                            <Edit2 className="w-4 h-4 text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-300" />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDelete(item.id)}
-                            className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg transition-colors duration-300"
+                            className="p-1.5 hover:bg-rose-500/10 rounded-lg text-zinc-400 hover:text-rose-400 transition-colors cursor-pointer"
                             title="Hapus"
                           >
-                            <Trash2 className="w-4 h-4 text-gray-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-300" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -445,10 +485,10 @@ export default function KeuanganPage() {
 
       {/* Add/Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-zinc-800 rounded-xl max-w-md w-full p-6 shadow-2xl transition-colors duration-300">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 className="text-base font-semibold text-white">
                 {editingId ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}
               </h3>
               <button
@@ -456,22 +496,22 @@ export default function KeuanganPage() {
                   setShowAddModal(false);
                   setEditingId(null);
                 }}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300"
+                className="p-1 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5 text-gray-600 dark:text-zinc-400 transition-colors duration-300" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3 text-sm">
               {/* Category */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2 transition-colors duration-300">
+                <label className="block text-xs font-medium text-zinc-300 mb-1">
                   Kategori
                 </label>
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-gray-400 dark:focus:ring-white/20 focus:border-transparent transition-colors duration-300"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/10 rounded-xl text-white text-sm focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
                   required
                 >
                   {categories.map(cat => (
@@ -484,7 +524,7 @@ export default function KeuanganPage() {
 
               {/* Nama */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2 transition-colors duration-300">
+                <label className="block text-xs font-medium text-zinc-300 mb-1">
                   Nama Pengeluaran
                 </label>
                 <input
@@ -492,15 +532,15 @@ export default function KeuanganPage() {
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
                   placeholder="Contoh: Sewa Lapangan Februari"
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 font-medium focus:ring-2 focus:ring-gray-400 dark:focus:ring-white/20 focus:border-transparent transition-colors duration-300"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500 text-sm focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
                   required
                 />
               </div>
 
               {/* Jumlah */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2 transition-colors duration-300">
-                  Jumlah
+                <label className="block text-xs font-medium text-zinc-300 mb-1">
+                  Jumlah (IDR)
                 </label>
                 <input
                   type="number"
@@ -509,11 +549,11 @@ export default function KeuanganPage() {
                   placeholder="0"
                   min="0"
                   step="1000"
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 font-medium focus:ring-2 focus:ring-gray-400 dark:focus:ring-white/20 focus:border-transparent transition-colors duration-300"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500 text-sm focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
                   required
                 />
                 {formData.jumlah && (
-                  <p className="text-sm font-medium text-gray-600 dark:text-zinc-400 mt-1 transition-colors duration-300">
+                  <p className="text-xs text-zinc-400 mt-1 font-mono">
                     {formatCurrency(parseFloat(formData.jumlah))}
                   </p>
                 )}
@@ -521,50 +561,50 @@ export default function KeuanganPage() {
 
               {/* Tanggal */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2 transition-colors duration-300">
+                <label className="block text-xs font-medium text-zinc-300 mb-1">
                   Tanggal
                 </label>
                 <input
                   type="date"
                   value={formData.tanggal}
                   onChange={(e) => setFormData({ ...formData, tanggal: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-gray-400 dark:focus:ring-white/20 focus:border-transparent transition-colors duration-300"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/10 rounded-xl text-white text-sm focus:outline-hidden focus:ring-1 focus:ring-zinc-400"
                   required
                 />
               </div>
 
               {/* Catatan */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2 transition-colors duration-300">
+                <label className="block text-xs font-medium text-zinc-300 mb-1">
                   Catatan (Opsional)
                 </label>
                 <textarea
                   value={formData.catatan}
                   onChange={(e) => setFormData({ ...formData, catatan: e.target.value })}
                   placeholder="Catatan tambahan..."
-                  rows={3}
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border-2 border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 font-medium focus:ring-2 focus:ring-gray-400 dark:focus:ring-white/20 focus:border-transparent resize-none transition-colors duration-300"
+                  rows={2}
+                  className="w-full px-3 py-2 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500 text-sm focus:outline-hidden focus:ring-1 focus:ring-zinc-400 resize-none"
                 />
               </div>
 
               {/* Buttons */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-2 pt-2 border-t border-white/10 justify-end">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
                     setEditingId(null);
                   }}
-                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-zinc-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-zinc-700 transition-colors duration-300 font-semibold border-2 border-gray-300 dark:border-zinc-700"
+                  className="px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg hover:bg-gray-800 dark:hover:bg-zinc-100 transition-colors duration-300 font-semibold flex items-center justify-center gap-2 border-2 border-gray-900 dark:border-white"
+                  className="px-4 py-2 text-xs font-medium text-white bg-zinc-700 hover:bg-zinc-600 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <Save className="w-4 h-4" />
-                  {editingId ? 'Perbarui' : 'Simpan'}
+                  <span>{editingId ? 'Perbarui' : 'Simpan'}</span>
                 </button>
               </div>
             </form>

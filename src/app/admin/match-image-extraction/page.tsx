@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Image as ImageIcon, Loader2, CheckCircle, XCircle, AlertCircle, ChevronDown, Save, Award } from 'lucide-react';
+import { Upload, Image as ImageIcon, Loader2, CheckCircle, XCircle, AlertCircle, ChevronDown, Save, Award, RefreshCw, UserPlus, Sparkles, History, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
 
@@ -41,6 +41,8 @@ type PlayerValidation = {
   };
 };
 
+const STORAGE_KEY = 'dlob_match_image_extraction_draft';
+
 export default function MatchImageExtractionPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedResponse | null>(null);
@@ -53,6 +55,15 @@ export default function MatchImageExtractionPage() {
   const [showSuggestions, setShowSuggestions] = useState<{[key: string]: boolean}>({});
   const [matchDate, setMatchDate] = useState<string>('');
   const [creatingPlayer, setCreatingPlayer] = useState<{[key: string]: boolean}>({});
+  const [isValidatingPlayers, setIsValidatingPlayers] = useState(false);
+  const [isBulkCreatingTemp, setIsBulkCreatingTemp] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftData, setDraftData] = useState<{
+    extractedData: ExtractedResponse;
+    matchDate: string;
+    selectedImage: string | null;
+    savedAt: string;
+  } | null>(null);
   const [notifStatus, setNotifStatus] = useState<'idle' | 'sending' | 'done'>('idle');
   const [notifSummary, setNotifSummary] = useState<string>('');
 
@@ -117,6 +128,70 @@ export default function MatchImageExtractionPage() {
       });
   }, [matchDate]);
 
+  // Check draft on mount
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.extractedData?.matches?.length > 0) {
+          setHasDraft(true);
+          setDraftData(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse draft from sessionStorage', e);
+    }
+  }, []);
+
+  // Save draft to sessionStorage whenever extractedData or matchDate changes
+  useEffect(() => {
+    if (extractedData && extractedData.matches.length > 0) {
+      try {
+        sessionStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            extractedData,
+            matchDate,
+            // Only store image if not excessively large (< 2MB) to prevent quota issues
+            selectedImage: selectedImage && selectedImage.length < 2000000 ? selectedImage : null,
+            savedAt: new Date().toISOString(),
+          })
+        );
+      } catch {
+        try {
+          sessionStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
+              extractedData,
+              matchDate,
+              savedAt: new Date().toISOString(),
+            })
+          );
+        } catch {}
+      }
+    }
+  }, [extractedData, matchDate, selectedImage]);
+
+  const handleRestoreDraft = () => {
+    if (!draftData) return;
+    setExtractedData(draftData.extractedData);
+    setMatchDate(draftData.matchDate || '');
+    if (draftData.selectedImage) {
+      setSelectedImage(draftData.selectedImage);
+    }
+    setHasDraft(false);
+    validateAllPlayers(draftData.extractedData.matches);
+  };
+
+  const handleDiscardDraft = () => {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    setHasDraft(false);
+    setDraftData(null);
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -125,6 +200,7 @@ export default function MatchImageExtractionPage() {
         setSelectedImage(event.target?.result as string);
         setExtractedData(null);
         setError('');
+        handleDiscardDraft();
       };
       reader.readAsDataURL(file);
     }
@@ -139,6 +215,7 @@ export default function MatchImageExtractionPage() {
         setSelectedImage(event.target?.result as string);
         setExtractedData(null);
         setError('');
+        handleDiscardDraft();
       };
       reader.readAsDataURL(file);
     }
@@ -213,27 +290,157 @@ export default function MatchImageExtractionPage() {
   };
 
   const validateAllPlayers = async (matches: MatchData[]) => {
-    const validationResults: PlayerValidation = {};
-    
-    for (let i = 0; i < matches.length; i++) {
-      const match = matches[i];
-      validationResults[i] = {};
-      
-      // Validate all 4 players
+    setIsValidatingPlayers(true);
+    try {
       const playerFields: PlayerField[] = ['team1_player1', 'team1_player2', 'team2_player1', 'team2_player2'];
       
-      for (const playerKey of playerFields) {
-        const playerName = match[playerKey];
-        if (playerName && playerName.trim()) {
-          const validation = await validatePlayerName(playerName);
-          if (validation) {
-            validationResults[i][playerKey] = validation;
+      // Collect unique names to avoid repeated network calls
+      const uniqueNames = new Set<string>();
+      matches.forEach(m => {
+        playerFields.forEach(f => {
+          const val = m[f]?.trim();
+          if (val) uniqueNames.add(val);
+        });
+      });
+
+      const nameMap = new Map<string, ValidationState | null>();
+      await Promise.all(
+        Array.from(uniqueNames).map(async (name) => {
+          const val = await validatePlayerName(name);
+          nameMap.set(name, val);
+        })
+      );
+
+      const validationResults: PlayerValidation = {};
+      for (let i = 0; i < matches.length; i++) {
+        const match = matches[i];
+        validationResults[i] = {};
+        for (const playerKey of playerFields) {
+          const playerName = match[playerKey]?.trim();
+          if (playerName) {
+            const validation = nameMap.get(playerName);
+            if (validation) {
+              validationResults[i][playerKey] = validation;
+            }
           }
         }
       }
+      
+      setPlayerValidation(validationResults);
+    } finally {
+      setIsValidatingPlayers(false);
     }
-    
-    setPlayerValidation(validationResults);
+  };
+
+  // Get unique player names that are not exact matches
+  const getUnmatchedPlayers = (): { name: string; count: number; hasSuggestions: boolean }[] => {
+    if (!extractedData) return [];
+    const playerMap = new Map<string, { count: number; hasSuggestions: boolean }>();
+    const fields: PlayerField[] = ['team1_player1', 'team1_player2', 'team2_player1', 'team2_player2'];
+
+    extractedData.matches.forEach((match, i) => {
+      fields.forEach(f => {
+        const name = match[f]?.trim();
+        if (!name) return;
+        const validation = playerValidation[i]?.[f];
+        // If not exact match
+        if (!validation || !validation.isExactMatch) {
+          const current = playerMap.get(name) || { count: 0, hasSuggestions: false };
+          playerMap.set(name, {
+            count: current.count + 1,
+            hasSuggestions: current.hasSuggestions || Boolean(validation?.suggestions && validation.suggestions.length > 0)
+          });
+        }
+      });
+    });
+
+    return Array.from(playerMap.entries()).map(([name, data]) => ({
+      name,
+      count: data.count,
+      hasSuggestions: data.hasSuggestions,
+    }));
+  };
+
+  const handleRevalidateAll = async () => {
+    if (!extractedData || extractedData.matches.length === 0) return;
+    await validateAllPlayers(extractedData.matches);
+  };
+
+  const handleBulkCreateAllTemp = async () => {
+    const unmatched = getUnmatchedPlayers();
+    if (unmatched.length === 0) return;
+
+    const namesToCreate = unmatched.map(u => u.name);
+    const confirmed = confirm(
+      `Buat akun temp untuk ${namesToCreate.length} pemain baru berikut?\n\n` +
+      namesToCreate.join(', ') +
+      `\n\nSetelah dibuat, semua slot pertandingan untuk pemain ini akan otomatis terhubung.`
+    );
+    if (!confirmed) return;
+
+    setIsBulkCreatingTemp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      const createdNames: string[] = [];
+      const failedNames: string[] = [];
+
+      for (const name of namesToCreate) {
+        try {
+          const res = await fetch('/api/admin/create-temp-member', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ full_name: name }),
+          });
+          const data = await res.json();
+          if (res.ok && !data.error) {
+            createdNames.push(name);
+          } else {
+            failedNames.push(`${name} (${data.error || 'gagal'})`);
+          }
+        } catch {
+          failedNames.push(name);
+        }
+      }
+
+      // Propagate all successfully created names across playerValidation
+      if (extractedData && createdNames.length > 0) {
+        const createdSet = new Set(createdNames.map(n => n.toLowerCase()));
+        const playerFields: PlayerField[] = ['team1_player1', 'team1_player2', 'team2_player1', 'team2_player2'];
+
+        setPlayerValidation(prev => {
+          const next = { ...prev };
+          extractedData.matches.forEach((m, idx) => {
+            playerFields.forEach(f => {
+              const pName = m[f]?.trim().toLowerCase();
+              if (pName && createdSet.has(pName)) {
+                if (!next[idx]) next[idx] = {};
+                next[idx] = {
+                  ...next[idx],
+                  [f]: { isExactMatch: true, suggestions: [] }
+                };
+              }
+            });
+          });
+          return next;
+        });
+      }
+
+      if (failedNames.length > 0) {
+        alert(`Berhasil membuat ${createdNames.length} akun temp.\n\nGagal (${failedNames.length}):\n${failedNames.join('\n')}`);
+      } else {
+        alert(`✅ Berhasil membuat ${createdNames.length} akun temp! Semua pertandingan telah terhubung.`);
+      }
+    } catch (err) {
+      console.error('Bulk create temp members error:', err);
+      alert('Terjadi kesalahan saat membuat akun temp massal');
+    } finally {
+      setIsBulkCreatingTemp(false);
+    }
   };
 
   const applySuggestion = (matchIndex: number, field: PlayerField, suggestion: MemberSuggestion) => {
@@ -472,6 +679,11 @@ export default function MatchImageExtractionPage() {
         }
         
         // Reset form
+        try {
+          sessionStorage.removeItem(STORAGE_KEY);
+        } catch {}
+        setHasDraft(false);
+        setDraftData(null);
         setExtractedData(null);
         setSelectedImage(null);
         setMatchDate('');
@@ -494,6 +706,7 @@ export default function MatchImageExtractionPage() {
 
   const createTempPlayerAccount = async (matchIndex: number, field: PlayerField, name: string) => {
     if (!name.trim()) return;
+    const cleanName = name.trim();
     const key = `${matchIndex}-${field}`;
     setCreatingPlayer(prev => ({ ...prev, [key]: true }));
     try {
@@ -504,18 +717,39 @@ export default function MatchImageExtractionPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ full_name: name.trim() }),
+        body: JSON.stringify({ full_name: cleanName }),
       });
       const data = await res.json();
       if (data.error) { alert(data.error); return; }
-      // Mark as exact match now
-      setPlayerValidation(prev => ({
-        ...prev,
-        [matchIndex]: {
-          ...prev[matchIndex],
-          [field]: { isExactMatch: true, suggestions: [] },
-        },
-      }));
+      
+      // Auto-propagate exact match to ALL matches containing this name
+      setPlayerValidation(prev => {
+        const next = { ...prev };
+        if (extractedData) {
+          const playerFields: PlayerField[] = ['team1_player1', 'team1_player2', 'team2_player1', 'team2_player2'];
+          extractedData.matches.forEach((m, idx) => {
+            playerFields.forEach(f => {
+              if (m[f]?.trim().toLowerCase() === cleanName.toLowerCase()) {
+                if (!next[idx]) next[idx] = {};
+                next[idx] = {
+                  ...next[idx],
+                  [f]: { isExactMatch: true, suggestions: [] },
+                };
+              }
+            });
+          });
+        } else {
+          if (!next[matchIndex]) next[matchIndex] = {};
+          next[matchIndex] = {
+            ...next[matchIndex],
+            [field]: { isExactMatch: true, suggestions: [] },
+          };
+        }
+        return next;
+      });
+    } catch (err) {
+      console.error('Create temp member error:', err);
+      alert('Gagal membuat akun temp');
     } finally {
       setCreatingPlayer(prev => ({ ...prev, [key]: false }));
     }
@@ -668,6 +902,40 @@ export default function MatchImageExtractionPage() {
           </div>
         </div>
 
+        {/* Draft Restoration Banner */}
+        {hasDraft && draftData && !extractedData && (
+          <div className="mb-6 bg-purple-500/10 border border-purple-400/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+            <div className="flex items-start gap-3">
+              <History className="text-purple-400 shrink-0 mt-0.5" size={20} />
+              <div>
+                <h3 className="text-white font-semibold text-sm">Draf Sesi Sebelumnya Ditemukan</h3>
+                <p className="text-xs text-purple-200 mt-0.5">
+                  Ditemukan data {draftData.extractedData?.matches?.length || 0} pertandingan yang belum disimpan
+                  {draftData.matchDate ? ` untuk tanggal ${draftData.matchDate}` : ''}. Ingin dipulihkan?
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={handleRestoreDraft}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold shadow transition-colors"
+              >
+                <RefreshCw size={13} />
+                Pulihkan Draf
+              </button>
+              <button
+                type="button"
+                onClick={handleDiscardDraft}
+                className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-purple-300 hover:text-white border border-white/10 rounded-lg text-xs transition-colors"
+              >
+                <Trash2 size={13} />
+                Buang
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column: Upload & Preview */}
           <div className="space-y-6">
@@ -776,29 +1044,100 @@ export default function MatchImageExtractionPage() {
                 {/* Validation Summary */}
                 {Object.keys(playerValidation).length > 0 && (() => {
                   const summary = getValidationSummary();
+                  const unmatched = getUnmatchedPlayers();
                   return (
-                    <div className="bg-slate-800/50 rounded-lg p-3 mb-4 grid grid-cols-3 gap-2">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="text-green-400" size={16} />
-                        <div>
-                          <div className="text-xs text-green-300">Cocok</div>
-                          <div className="text-white font-semibold">{summary.exactMatches}</div>
+                    <div className="space-y-3 mb-4">
+                      {/* Summary box & Revalidate button */}
+                      <div className="bg-slate-800/60 rounded-lg p-3 border border-white/10">
+                        <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                          <span className="text-xs text-purple-200 font-semibold">Status Validasi Pemain</span>
+                          <button
+                            type="button"
+                            onClick={handleRevalidateAll}
+                            disabled={isValidatingPlayers}
+                            className="flex items-center gap-1.5 text-xs text-purple-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-2.5 py-1 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
+                            title="Cek ulang status seluruh pemain ke database"
+                          >
+                            <RefreshCw size={12} className={isValidatingPlayers ? 'animate-spin text-purple-400' : ''} />
+                            {isValidatingPlayers ? 'Memvalidasi...' : 'Cek Ulang Database'}
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="text-green-400 shrink-0" size={16} />
+                            <div>
+                              <div className="text-[11px] text-green-300">Cocok</div>
+                              <div className="text-white font-semibold text-sm">{summary.exactMatches}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="text-yellow-400 shrink-0" size={16} />
+                            <div>
+                              <div className="text-[11px] text-yellow-300">Saran</div>
+                              <div className="text-white font-semibold text-sm">{summary.withSuggestions}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <XCircle className="text-red-400 shrink-0" size={16} />
+                            <div>
+                              <div className="text-[11px] text-red-300">Tidak Ada</div>
+                              <div className="text-white font-semibold text-sm">{summary.noMatches}</div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="text-yellow-400" size={16} />
-                        <div>
-                          <div className="text-xs text-yellow-300">Saran</div>
-                          <div className="text-white font-semibold">{summary.withSuggestions}</div>
+
+                      {/* Unmatched Players Banner & 1-Click Bulk Temp Account Creation */}
+                      {unmatched.length > 0 && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 space-y-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-amber-300 font-semibold text-sm">
+                              <UserPlus size={16} />
+                              <span>{unmatched.length} Pemain Belum Terdaftar</span>
+                            </div>
+                            <span className="text-[11px] text-amber-300/70">
+                              {unmatched.reduce((acc, curr) => acc + curr.count, 0)} posisi match
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-amber-200/80">
+                            Pemain ini belum ada di database. Anda dapat membuat akun temp untuk semuanya sekaligus:
+                          </p>
+
+                          <div className="flex flex-wrap gap-1.5">
+                            {unmatched.map(p => (
+                              <span
+                                key={p.name}
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-400/20 text-amber-200 border border-amber-400/30"
+                              >
+                                {p.name}
+                                <span className="text-[10px] opacity-75">({p.count}x)</span>
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={handleBulkCreateAllTemp}
+                              disabled={isBulkCreatingTemp || isValidatingPlayers}
+                              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium text-xs rounded-lg shadow transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                              {isBulkCreatingTemp ? (
+                                <>
+                                  <Loader2 size={13} className="animate-spin" />
+                                  Sedang Membuat {unmatched.length} Akun Temp...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles size={14} />
+                                  Buat Akun Temp untuk Semua Pemain Baru Ini ({unmatched.length})
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <XCircle className="text-red-400" size={16} />
-                        <div>
-                          <div className="text-xs text-red-300">Tidak Ada</div>
-                          <div className="text-white font-semibold">{summary.noMatches}</div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })()}

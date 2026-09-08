@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Zap, TrendingUp, Calendar, Shield, Activity, UserPlus, Edit, Award, Target, DollarSign, TrendingDown, Bell, HelpCircle, ShoppingBag, ChevronRight } from 'lucide-react';
+import { Users, Zap, TrendingUp, Calendar, Shield, Activity, UserPlus, Edit, Award, Target, DollarSign, TrendingDown, Bell, HelpCircle, ShoppingBag, ChevronRight, QrCode, X, ExternalLink, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import { StatCardSkeleton, ActivityItemSkeleton } from '@/components/LoadingSkeletons';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -63,8 +64,31 @@ export default function AdminDashboardPage() {
   const [revenueChange, setRevenueChange] = useState(0);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
 
+  // QRIS shortcut modal state
+  const [showQrisModal, setShowQrisModal] = useState(false);
+  const [qrisImageUrl, setQrisImageUrl] = useState<string | null>(null);
+  const [qrisLoading, setQrisLoading] = useState(false);
+
   const tutorialSteps = getTutorialSteps('dashboard');
   const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-dashboard', tutorialSteps);
+
+  // Fetch QRIS image for quick shortcut
+  useEffect(() => {
+    let isMounted = true;
+    setQrisLoading(true);
+    fetch('/api/payment-info')
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted && data?.qrisImageUrl) {
+          setQrisImageUrl(data.qrisImageUrl);
+        }
+      })
+      .catch(err => console.error('Failed to fetch QRIS image:', err))
+      .finally(() => {
+        if (isMounted) setQrisLoading(false);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -462,56 +486,70 @@ export default function AdminDashboardPage() {
       label: 'Total Anggota',
       value: loading ? '...' : stats.totalMembers.toLocaleString(),
       icon: Users,
-      color: 'from-blue-500 to-blue-600',
+      accent: 'blue',
     },
     {
       label: 'Admin',
       value: loading ? '...' : stats.totalAdmins.toLocaleString(),
       icon: Shield,
-      color: 'from-red-500 to-red-600',
+      accent: 'zinc',
     },
     {
       label: 'Pengguna Aktif',
       value: loading ? '...' : stats.activeProjects.toLocaleString(),
       icon: Zap,
-      color: 'from-purple-500 to-purple-600',
+      accent: 'purple',
     },
     {
       label: 'Pembayaran Menunggu',
       value: loading ? '...' : pendingPaymentsCount.toLocaleString(),
       icon: Bell,
-      color: 'from-amber-500 to-orange-600',
+      accent: 'amber',
       badge: pendingPaymentsCount > 0,
     },
     {
       label: 'Total Pengguna',
       value: loading ? '...' : stats.events.toLocaleString(),
       icon: TrendingUp,
-      color: 'from-green-500 to-emerald-600',
+      accent: 'emerald',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-red-400" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Dashboard Admin
-            </h1>
+            <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-white">
+              <Shield className="w-6 h-6 text-zinc-300" />
+            </div>
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                Dashboard Admin
+              </h1>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Selamat datang kembali, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
+              </p>
+            </div>
           </div>
-          <button
-            onClick={toggleTutorial}
-            className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 transition-colors"
-            title="Tampilkan panduan fitur"
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowQrisModal(true)}
+              className="p-2 rounded-xl bg-zinc-900/80 hover:bg-white/5 border border-white/10 text-emerald-400 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+              title="Shortcut Tampilkan QRIS Komunitas"
+            >
+              <QrCode className="w-4 h-4" />
+              <span className="hidden sm:inline">QRIS</span>
+            </button>
+            <button
+              onClick={toggleTutorial}
+              className="p-2 rounded-xl bg-zinc-900/80 hover:bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              title="Tampilkan panduan fitur"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-        <p className="text-gray-600 dark:text-zinc-400">
-          Selamat datang kembali, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! Kelola komunitas Anda dari sini.
-        </p>
       </div>
 
       {/* Live System & API Status Monitor */}
@@ -522,28 +560,28 @@ export default function AdminDashboardPage() {
         user?.user_metadata?.full_name?.toLowerCase().includes('ryan radityatama') ||
         user?.user_metadata?.name?.toLowerCase().includes('ryan radityatama') ||
         user?.email === 'ryradit@gmail.com') && (
-        <div className="p-5 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+        <div className="mb-8 p-5 rounded-2xl bg-zinc-900/60 backdrop-blur-xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-emerald-500 text-black shadow-md">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-gray-900 dark:text-white text-sm">
+                <h3 className="font-semibold text-white text-sm">
                   Rekapitulasi Pre-Order Jersey New Batch 2026
                 </h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   Owner Exclusive
                 </span>
               </div>
-              <p className="text-xs text-gray-600 dark:text-zinc-400 mt-0.5">
+              <p className="text-xs text-zinc-400 mt-0.5">
                 Pantau total jersey terpesan, matriks konveksi/vendor, dan kelola status pemesanan.
               </p>
             </div>
           </div>
           <Link
             href="/admin/rekap-new-batch"
-            className="px-5 py-2.5 rounded-full text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-950/20 transition-all flex items-center justify-center gap-1.5 shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-900 hover:bg-zinc-200 transition-all flex items-center justify-center gap-1.5 shrink-0"
           >
             <span>Buka Rekapitulasi</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -551,9 +589,9 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      {/* Stat Cards - Claude Minimalist Style */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         {loading ? (
-          // Show skeleton loading states
           [...Array(5)].map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
           statsDisplay.map((stat) => {
@@ -561,35 +599,34 @@ export default function AdminDashboardPage() {
             const isPendingPayments = stat.label === 'Pembayaran Menunggu';
             const hasPendingItems = (stat as any).badge && pendingPaymentsCount > 0;
             
-            // Determine which className to add
             let customClass = '';
             if (stat.label === 'Total Anggota') customClass = 'stat-card-members';
             else if (stat.label === 'Pembayaran Menunggu') customClass = 'stat-card-pending-payments';
             
             const card = (
               <div
-                className={`bg-white dark:bg-zinc-900 border rounded-xl p-6 transition-all shadow-sm dark:shadow-none ${customClass} ${
+                className={`bg-zinc-900/60 backdrop-blur-xl border rounded-2xl p-4 sm:p-5 transition-all shadow-sm ${customClass} ${
                   isPendingPayments && hasPendingItems
-                    ? 'border-amber-500/30 hover:border-amber-500/50 shadow-lg shadow-amber-500/10 cursor-pointer'
-                    : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
+                    ? 'border-amber-500/30 hover:border-amber-500/50 bg-amber-500/5 cursor-pointer'
+                    : 'border-white/10 hover:border-white/20'
                 }`}
               >
-                <div className={`inline-flex p-3 rounded-xl bg-linear-to-br ${stat.color} mb-4 ${
-                  isPendingPayments && hasPendingItems ? 'animate-pulse' : ''
-                }`}>
-                  <Icon className="w-6 h-6 text-white" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`p-2 rounded-xl border ${
+                    isPendingPayments && hasPendingItems
+                      ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse'
+                      : 'bg-white/5 border-white/10 text-zinc-300'
+                  }`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
                   {hasPendingItems && (
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                    <span className="text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                      Menunggu
                     </span>
                   )}
                 </div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stat.value}</div>
-                <div className="text-sm text-gray-600 dark:text-zinc-400">{stat.label}</div>
-                {isPendingPayments && hasPendingItems && (
-                  <p className="text-xs text-amber-400 mt-2 font-medium">Klik untuk melihat</p>
-                )}
+                <div className="text-2xl font-bold text-white tracking-tight mb-1">{stat.value}</div>
+                <div className="text-xs text-zinc-400">{stat.label}</div>
               </div>
             );
             
@@ -606,43 +643,43 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
-      {/* Revenue Growth Chart - Stock Style */}
+      {/* Revenue Growth Chart */}
       <div className="mt-8">
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none revenue-chart">
+        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm revenue-chart">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-linear-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/20">
-                <DollarSign className="w-6 h-6 text-white" />
+              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <DollarSign className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Revenue Growth</h2>
-                <p className="text-sm text-gray-600 dark:text-zinc-400">Monthly revenue from Jan 2026</p>
+                <h2 className="text-base font-semibold text-white">Pertumbuhan Pendapatan</h2>
+                <p className="text-xs text-zinc-400">Pendapatan bulanan riil terkonfirmasi (Jan 2026 - Sekarang)</p>
               </div>
             </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-linear-to-br from-green-500/10 to-emerald-600/10 border border-green-500/20 rounded-lg p-4">
-              <p className="text-sm text-green-400 mb-1 font-medium">Total Revenue</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">Rp {totalRevenue.toLocaleString('id-ID')}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+              <p className="text-xs text-zinc-400 mb-1">Total Pendapatan Terkumpul</p>
+              <p className="text-2xl font-bold text-white tracking-tight">Rp {totalRevenue.toLocaleString('id-ID')}</p>
             </div>
-            <div className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/5 rounded-lg p-4">
-              <p className="text-sm text-gray-600 dark:text-zinc-400 mb-1">Month-over-Month</p>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+              <p className="text-xs text-zinc-400 mb-1">Perubahan MoM</p>
               <div className="flex items-center gap-2">
-                <p className={`text-3xl font-bold ${revenueChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={`text-2xl font-bold tracking-tight ${revenueChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}%
                 </p>
                 {revenueChange >= 0 ? (
-                  <TrendingUp className="w-6 h-6 text-green-400" />
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
                 ) : (
-                  <TrendingDown className="w-6 h-6 text-red-400" />
+                  <TrendingDown className="w-5 h-5 text-rose-400" />
                 )}
               </div>
             </div>
-            <div className="bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-white/5 rounded-lg p-4">
-              <p className="text-sm text-gray-600 dark:text-zinc-400 mb-1">Data Points</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{revenueData.length} Months</p>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+              <p className="text-xs text-zinc-400 mb-1">Data Periode</p>
+              <p className="text-2xl font-bold text-white tracking-tight">{revenueData.length} Bulan</p>
             </div>
           </div>
 
@@ -660,7 +697,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="h-96 bg-gray-50 dark:bg-zinc-950/50 rounded-lg p-4 border border-gray-200 dark:border-white/5">
+            <div className="h-96 bg-zinc-950/40 rounded-xl p-4 border border-white/5">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={revenueData}
@@ -668,56 +705,53 @@ export default function AdminDashboardPage() {
                 >
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
-                      <stop offset="50%" stopColor="#10b981" stopOpacity={0.2} />
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />
                       <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid 
                     strokeDasharray="3 3" 
-                    stroke="#d1d5db" 
-                    className="dark:stroke-zinc-800"
+                    stroke="rgba(255,255,255,0.05)" 
                     vertical={false}
                   />
                   <XAxis 
                     dataKey="label" 
-                    stroke="#9ca3af"
-                    className="dark:stroke-zinc-600"
-                    tick={{ fill: '#6b7280', fontSize: 11 }}
-                    tickLine={{ stroke: '#d1d5db' }}
-                    axisLine={{ stroke: '#d1d5db' }}
+                    stroke="#71717a"
+                    tick={{ fill: '#71717a', fontSize: 11 }}
+                    tickLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
                     angle={-45}
                     textAnchor="end"
                     height={70}
                   />
                   <YAxis 
-                    stroke="#9ca3af"
-                    className="dark:stroke-zinc-600"
-                    tick={{ fill: '#6b7280', fontSize: 11 }}
-                    tickLine={{ stroke: '#d1d5db' }}
-                    axisLine={{ stroke: '#d1d5db' }}
+                    stroke="#71717a"
+                    tick={{ fill: '#71717a', fontSize: 11 }}
+                    tickLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
                     tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
                   />
                   <Tooltip 
                     contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                      padding: '12px'
+                      backgroundColor: '#18181b',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                      padding: '10px 14px',
+                      color: '#ffffff'
                     }}
                     labelStyle={{ 
-                      color: '#111827', 
-                      fontWeight: 'bold',
+                      color: '#a1a1aa', 
+                      fontSize: '12px',
                       marginBottom: '4px'
                     }}
                     formatter={(value: any) => [
-                      <span className="text-green-600 font-bold" key="value">
+                      <span className="text-emerald-400 font-semibold" key="value">
                         Rp {value.toLocaleString('id-ID')}
                       </span>, 
-                      'Revenue'
+                      'Pendapatan'
                     ]}
-                    cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '5 5' }}
+                    cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }}
                   />
                   <Area 
                     type="monotone" 
@@ -749,19 +783,19 @@ export default function AdminDashboardPage() {
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Activity Feed */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none activity-feed">
+        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm activity-feed">
           <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-5 h-5 text-purple-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Aktivitas Sistem</h2>
+            <Activity className="w-4 h-4 text-purple-400" />
+            <h2 className="text-sm font-semibold text-white">Aktivitas Sistem</h2>
           </div>
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => <ActivityItemSkeleton key={i} />)}
             </div>
           ) : activities.length === 0 ? (
-            <p className="text-gray-500 dark:text-zinc-400">Tidak ada aktivitas terbaru.</p>
+            <p className="text-xs text-zinc-500">Tidak ada aktivitas terbaru.</p>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-2.5 max-h-96 overflow-y-auto">
               {activities.map((activity) => {
                 const Icon = activity.icon;
                 const timeAgo = getTimeAgo(activity.timestamp);
@@ -769,25 +803,27 @@ export default function AdminDashboardPage() {
                 
                 const content = (
                   <div
-                    className={`flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-zinc-800/50 transition-colors ${
-                      isPaymentPending ? 'hover:bg-amber-100 dark:hover:bg-amber-900/20 cursor-pointer border border-amber-500/20' : 'hover:bg-gray-100 dark:hover:bg-zinc-800'
+                    className={`flex items-start gap-3 p-3 rounded-xl bg-white/5 border transition-colors ${
+                      isPaymentPending 
+                        ? 'hover:bg-amber-500/10 border-amber-500/30 cursor-pointer' 
+                        : 'hover:bg-white/10 border-white/5'
                     }`}
                   >
-                    <div className={`p-2 rounded-lg bg-gray-100 dark:bg-zinc-900 ${activity.color} ${
+                    <div className={`p-2 rounded-lg bg-white/5 ${activity.color} ${
                       isPaymentPending ? 'animate-pulse' : ''
                     }`}>
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 dark:text-white">
-                        <span className="font-semibold">{activity.user}</span>
+                      <p className="text-xs text-zinc-200">
+                        <span className="font-semibold text-white">{activity.user}</span>
                         {activity.type === 'registration' && ' bergabung ke sistem'}
                         {activity.type === 'update' && ' memperbarui profil'}
                         {activity.type === 'payment_pending' && (
-                          <span className="text-amber-400"> mengirim bukti pembayaran - Menunggu konfirmasi</span>
+                          <span className="text-amber-400 font-medium"> mengirim bukti pembayaran</span>
                         )}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-zinc-500 mt-1">{timeAgo}</p>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">{timeAgo}</p>
                     </div>
                   </div>
                 );
@@ -807,43 +843,39 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Performance Chart */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none top-performers">
+        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm top-performers">
           <div className="flex items-center gap-2 mb-4">
-            <Award className="w-5 h-5 text-yellow-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Performa Terbaik</h2>
+            <Award className="w-4 h-4 text-amber-400" />
+            <h2 className="text-sm font-semibold text-white">Performa Terbaik</h2>
           </div>
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => <ActivityItemSkeleton key={i} />)}
             </div>
           ) : topPerformers.length === 0 ? (
-            <p className="text-gray-500 dark:text-zinc-400">Belum ada data performa.</p>
+            <p className="text-xs text-zinc-500">Belum ada data performa.</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               {topPerformers.map((member, index) => {
                 const isWin = member.type === 'win';
                 const percentage = (member.streak / 10) * 100;
                 return (
-                  <div key={member.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
+                  <div key={member.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-500 dark:text-zinc-500 text-sm w-6">#{index + 1}</span>
-                        <span className="text-gray-900 dark:text-white font-medium">{member.name}</span>
+                        <span className="text-zinc-500 text-xs w-4">#{index + 1}</span>
+                        <span className="text-zinc-200 font-medium">{member.name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-bold ${
-                          isWin ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {member.streak} {isWin ? 'Menang' : 'Kalah'} Beruntun
-                        </span>
-                      </div>
+                      <span className={`text-xs font-semibold ${
+                        isWin ? 'text-emerald-400' : 'text-rose-400'
+                      }`}>
+                        {member.streak} {isWin ? 'Menang' : 'Kalah'} Beruntun
+                      </span>
                     </div>
-                    <div className="relative h-2 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="relative h-1.5 bg-white/5 rounded-full overflow-hidden">
                       <div
                         className={`absolute left-0 top-0 h-full rounded-full transition-all ${
-                          isWin 
-                            ? 'bg-linear-to-r from-green-500 to-emerald-400' 
-                            : 'bg-linear-to-r from-red-500 to-rose-400'
+                          isWin ? 'bg-emerald-500' : 'bg-rose-500'
                         }`}
                         style={{ width: `${percentage}%` }}
                       />
@@ -856,36 +888,34 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Most Active Players */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none active-players">
+        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm active-players">
           <div className="flex items-center gap-2 mb-4">
-            <Target className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pemain Paling Aktif</h2>
+            <Target className="w-4 h-4 text-sky-400" />
+            <h2 className="text-sm font-semibold text-white">Pemain Paling Aktif</h2>
           </div>
           {loading ? (
-            <p className="text-gray-500 dark:text-zinc-400">Memuat data...</p>
+            <p className="text-xs text-zinc-500">Memuat data...</p>
           ) : mostActivePlayers.length === 0 ? (
-            <p className="text-gray-500 dark:text-zinc-400">Belum ada data pertandingan.</p>
+            <p className="text-xs text-zinc-500">Belum ada data pertandingan.</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               {mostActivePlayers.map((player, index) => {
                 const maxMatches = mostActivePlayers[0]?.matches || 10;
                 const percentage = (player.matches / maxMatches) * 100;
                 return (
-                  <div key={player.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
+                  <div key={player.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-500 dark:text-zinc-500 text-sm w-6">#{index + 1}</span>
-                        <span className="text-gray-900 dark:text-white font-medium">{player.name}</span>
+                        <span className="text-zinc-500 text-xs w-4">#{index + 1}</span>
+                        <span className="text-zinc-200 font-medium">{player.name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-cyan-400">
-                          {player.matches} Pertandingan
-                        </span>
-                      </div>
+                      <span className="text-xs font-semibold text-sky-400">
+                        {player.matches} Pertandingan
+                      </span>
                     </div>
-                    <div className="relative h-2 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="relative h-1.5 bg-white/5 rounded-full overflow-hidden">
                       <div
-                        className="absolute left-0 top-0 h-full rounded-full transition-all bg-linear-to-r from-cyan-500 to-blue-400"
+                        className="absolute left-0 top-0 h-full rounded-full transition-all bg-sky-500"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -896,6 +926,106 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </div>
+
+      {/* QRIS Shortcut Modal */}
+      {showQrisModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setShowQrisModal(false)}
+        >
+          <div 
+            className="relative max-w-md w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="w-full flex items-center justify-between pb-3.5 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                  <QrCode className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                    QRIS Komunitas DLOB
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Shortcut cepat kode pembayaran member
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowQrisModal(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="w-full py-4 flex flex-col items-center justify-center">
+              {qrisLoading ? (
+                <div className="py-12 flex flex-col items-center gap-2 text-zinc-400">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span className="text-xs">Memuat barcode QRIS...</span>
+                </div>
+              ) : qrisImageUrl ? (
+                <div className="flex flex-col items-center space-y-3 w-full">
+                  <div className="bg-white p-3 rounded-2xl border border-zinc-200 shadow-sm max-w-[280px] w-full flex items-center justify-center">
+                    <Image
+                      src={qrisImageUrl}
+                      alt="QRIS Komunitas"
+                      width={280}
+                      height={280}
+                      className="w-full h-auto object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>QRIS Siap Dipindai Member</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center space-y-2">
+                  <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 flex items-center justify-center mx-auto">
+                    <QrCode className="w-6 h-6" />
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs">
+                    Belum ada gambar QRIS yang diupload untuk komunitas.
+                  </p>
+                  <Link
+                    href="/admin/settings"
+                    onClick={() => setShowQrisModal(false)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4382C8] hover:underline pt-1"
+                  >
+                    <span>Upload di Pengaturan Admin</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="w-full pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-2">
+              <Link
+                href="/admin/settings"
+                onClick={() => setShowQrisModal(false)}
+                className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 inline-flex items-center gap-1"
+              >
+                <span>Kelola di Pengaturan</span>
+                <ExternalLink className="w-3 h-3" />
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setShowQrisModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tutorial Overlay */}
       <TutorialOverlay

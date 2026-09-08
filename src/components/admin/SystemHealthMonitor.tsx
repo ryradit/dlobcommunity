@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Activity, CheckCircle2, AlertTriangle, XCircle, RefreshCw, Cpu, Database, Mail, MessageSquare, HardDrive, ShieldCheck } from 'lucide-react';
+import { Activity, CheckCircle2, AlertTriangle, XCircle, RefreshCw, Cpu, Database, Mail, MessageSquare, HardDrive, ShieldCheck, ChevronDown } from 'lucide-react';
 
 interface ServiceHealth {
   name?: string;
@@ -40,6 +40,7 @@ export default function SystemHealthMonitor() {
   const [healthData, setHealthData] = useState<HealthResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastChecked, setLastChecked] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false); // Minimized by default
 
   const fetchHealth = async () => {
     setLoading(true);
@@ -97,24 +98,27 @@ export default function SystemHealthMonitor() {
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-sm dark:shadow-none mb-8">
+    <div className={`bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm dark:shadow-none mb-8 transition-all ${isExpanded ? 'p-6' : 'p-4 sm:p-5'}`}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100 dark:border-white/5">
+      <div 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer select-none transition-colors ${isExpanded ? 'pb-5 border-b border-gray-100 dark:border-white/5' : ''}`}
+      >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-linear-to-br from-teal-500/20 to-[#3e6461]/20 border border-teal-500/30 text-[#3e6461] dark:text-teal-400">
+          <div className="p-2.5 rounded-xl bg-linear-to-br from-teal-500/20 to-[#3e6461]/20 border border-teal-500/30 text-[#3e6461] dark:text-teal-400 shrink-0">
             <Activity className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
               Status API, Quota &amp; Layanan Eksternal
               {healthData?.status === 'healthy' && (
-                <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" title="Semua Sistem Operasional" />
               )}
               {healthData?.status === 'degraded' && (
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" title="Layanan Mengalami Penurunan" />
               )}
               {healthData?.status === 'down' && (
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" title="Layanan Down" />
               )}
             </h2>
             <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
@@ -123,25 +127,47 @@ export default function SystemHealthMonitor() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 self-end sm:self-center" onClick={(e) => e.stopPropagation()}>
+          {/* Quick status pill when minimized */}
+          {!isExpanded && healthData && (
+            <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>{healthData.status === 'healthy' ? 'Sistem Normal' : healthData.status}</span>
+            </span>
+          )}
+
           {lastChecked && (
-            <span className="text-xs text-gray-400 dark:text-zinc-500">
+            <span className="text-xs text-gray-400 dark:text-zinc-500 hidden sm:inline">
               Pembaruan: {lastChecked}
             </span>
           )}
+
           <button
             onClick={fetchHealth}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            title="Refresh status diagnostik"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>{loading ? 'Mengecek...' : 'Cek Status'}</span>
+            <span className="hidden sm:inline">{loading ? 'Mengecek...' : 'Cek Status'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-300 transition-colors flex items-center justify-center"
+            title={isExpanded ? 'Minimize / Kecilkan' : 'Maximize / Tampilkan detail'}
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
           </button>
         </div>
       </div>
 
-      {/* Grid of 5 services */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-5">
+      {/* Collapsible Content */}
+      {isExpanded && (
+        <div className="animate-in fade-in duration-200">
+          {/* Grid of 5 services */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-5">
         {/* Gemini AI Card */}
         <div className="bg-gray-50 dark:bg-zinc-800/40 border border-gray-200/70 dark:border-white/5 rounded-xl p-4 flex flex-col justify-between">
           <div>
@@ -307,6 +333,8 @@ export default function SystemHealthMonitor() {
               </div>
             ))}
           </div>
+        </div>
+      )}
         </div>
       )}
     </div>
