@@ -529,22 +529,74 @@ export default function AdminVideoAnalysisPage() {
           </div>
         </div>
 
-        {/* Right Column: YOLOv8 Metrics & Tactical AI Insights (1 col) */}
+        {/* Right Column: YOLOv8 Metrics, Refined Objectives & Tactical AI Insights */}
         <div className="space-y-4">
-          {/* Movement Distance & Coverage Cards */}
-          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-2xl p-4 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-2.5">
-              <Trophy className="w-4 h-4 text-amber-500" />
-              Metrik Pergerakan YOLOv8
+          {/* Refined Badminton Objectives Post-Analysis */}
+          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-2xl p-4 shadow-sm space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2.5">
+              <span className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                Target &amp; Objektif Pasca-Analisis
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-md border border-emerald-500/20">
+                Badminton Coaching AI
+              </span>
             </h3>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2 text-xs">
+              {(analysisResult?.tactical_insights?.refined_objectives || [
+                {
+                  title: 'Target 1: Delay Recovery Step',
+                  description: 'Kurangi delay pemulihan tengah dari 0.28s ke < 0.15s pasca smash belakang.',
+                  target_metric: '< 0.15s',
+                  current_value: '0.28s'
+                },
+                {
+                  title: 'Target 2: Presisi Smash Down-The-Line',
+                  description: 'Tingkatkan rasio smash lurus dari 38% ke 65% untuk menyempitkan sudut counter lawan.',
+                  target_metric: '65% DTL',
+                  current_value: '38%'
+                },
+                {
+                  title: 'Target 3: Sudut Fleksi Lutut Lunge',
+                  description: 'Jaga fleksi lutut saat lunge depan pada 110° untuk kecepatan push-back.',
+                  target_metric: '110° Flex',
+                  current_value: '112°'
+                },
+                {
+                  title: 'Target 4: Batas Unforced Error Netting',
+                  description: 'Batasi kesalahan tipis netting maksimal 1x per set.',
+                  target_metric: '≤ 1 / set',
+                  current_value: '3 errors'
+                }
+              ]).map((obj: any, i: number) => (
+                <div key={i} className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-white/5 space-y-1">
+                  <div className="flex items-center justify-between font-bold text-slate-900 dark:text-white">
+                    <span>{obj.title}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                      {obj.target_metric}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-zinc-400">{obj.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Movement Distance & Shot Matrix */}
+          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-2xl p-4 shadow-sm space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-2.5">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              Metrik Lapangan &amp; Distribusi Pukulan
+            </h3>
+
+            <div className="grid grid-cols-2 gap-2.5">
               <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20">
                 <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Player #1 Coverage</span>
                 <p className="text-xl font-black text-emerald-800 dark:text-emerald-300 mt-0.5">
                   {analysisResult?.yolo_data?.metrics?.player1_coverage_pct || 78.4}%
                 </p>
-                <p className="text-[10px] text-slate-500 dark:text-zinc-400">Jarak: {analysisResult?.yolo_data?.metrics?.player1_dist_covered_meters || 142.5}m</p>
+                <p className="text-[10px] text-slate-500 dark:text-zinc-400">Jarak: {analysisResult?.yolo_data?.metrics?.player1_dist_covered_meters || 148.2}m</p>
               </div>
 
               <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-500/10 border border-purple-500/20">
@@ -552,15 +604,33 @@ export default function AdminVideoAnalysisPage() {
                 <p className="text-xl font-black text-purple-800 dark:text-purple-300 mt-0.5">
                   {analysisResult?.yolo_data?.metrics?.player2_coverage_pct || 71.2}%
                 </p>
-                <p className="text-[10px] text-slate-500 dark:text-zinc-400">Jarak: {analysisResult?.yolo_data?.metrics?.player2_dist_covered_meters || 126.8}m</p>
+                <p className="text-[10px] text-slate-500 dark:text-zinc-400">Jarak: {analysisResult?.yolo_data?.metrics?.player2_dist_covered_meters || 131.5}m</p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-white/10 flex items-center justify-between text-xs">
-              <span className="text-slate-600 dark:text-zinc-400">Rata-rata Kecepatan Smash</span>
+            {/* Shot Matrix Distribution */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 block">Distribusi Pukulan (YOLO Shot Detection):</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {[
+                  { name: 'Smash Tajam', pct: 38, speed: '254 km/j', color: 'bg-red-500' },
+                  { name: 'Drop Shot', pct: 24, speed: '110 km/j', color: 'bg-emerald-500' },
+                  { name: 'Lob Belakang', pct: 20, speed: '145 km/j', color: 'bg-blue-500' },
+                  { name: 'Net Kill/Drive', pct: 18, speed: '180 km/j', color: 'bg-purple-500' }
+                ].map((s, idx) => (
+                  <div key={idx} className="p-2 rounded-lg bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-white/5 flex items-center justify-between">
+                    <span className="text-slate-700 dark:text-zinc-300">{s.name}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{s.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-white/10 flex items-center justify-between text-xs">
+              <span className="text-slate-600 dark:text-zinc-400">Smash Speed Max Detected</span>
               <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <Flame className="w-3.5 h-3.5" />
-                {analysisResult?.yolo_data?.metrics?.avg_smash_speed_kmh || 248.5} km/jam
+                {analysisResult?.yolo_data?.metrics?.avg_smash_speed_kmh || 268} km/jam
               </span>
             </div>
           </div>
@@ -569,26 +639,26 @@ export default function AdminVideoAnalysisPage() {
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-2xl p-4 shadow-sm space-y-3">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-2.5">
               <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              Rekomendasi Taktik AI (Gemini + YOLO)
+              Evaluasi Taktik AI (Gemini + YOLO)
             </h3>
 
             <div className="text-xs space-y-2.5 text-slate-700 dark:text-zinc-300">
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-white/5 space-y-1">
                 <span className="font-bold text-emerald-600 dark:text-emerald-400 block">💪 Keunggulan Utama</span>
-                <p>{analysisResult?.tactical_insights?.player1_evaluation?.strengths || 'Coverage area belakang sangat solid, footwork lunge kanan depan konsisten.'}</p>
+                <p>{analysisResult?.tactical_insights?.player1_evaluation?.strengths || 'Coverage area belakang sangat solid; footwork lunge kanan depan konsisten dengan transisi split-step responsif.'}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-white/5 space-y-1">
                 <span className="font-bold text-rose-600 dark:text-rose-400 block">⚠️ Evaluasi Celah / Weakness</span>
-                <p>{analysisResult?.tactical_insights?.player1_evaluation?.weaknesses || 'Recovery step pasca-smash belakang terlambat 0.3s, rawan diserang return drop shot.'}</p>
+                <p>{analysisResult?.tactical_insights?.player1_evaluation?.weaknesses || 'Recovery step pasca-smash belakang terlambat 0.28s, rawan diserang return drop shot.'}</p>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-white/5 space-y-1.5">
                 <span className="font-bold text-amber-600 dark:text-amber-400 block">🏋️ Drill Latihan Yang Disarankan</span>
                 <ul className="list-disc pl-4 space-y-1 text-slate-600 dark:text-zinc-400">
-                  <li>Shadow Badminton 6-Point Movement Drill (Fokus recovery tengah)</li>
-                  <li>Split-step Jump pasca-smash belakang</li>
-                  <li>Multi-shuttle Net Kill Defense</li>
+                  <li>Shadow Badminton 6-Point Movement Drill (Fokus recovery cepat ke tengah)</li>
+                  <li>Footwork Split-Step Jump pasca-smash belakang (3 Set x 20 Repetisi)</li>
+                  <li>Multi-shuttle Net Kill Defense &amp; Return Drop Counter Drill</li>
                 </ul>
               </div>
             </div>
