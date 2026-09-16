@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, Users, Shield, Sparkles, Dumbbell, FileText, TrendingUp, Sun, Moon, ChevronLeft, ChevronRight, MessageSquare, Trophy, ShoppingBag } from 'lucide-react';
+import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, Users, Shield, Sparkles, Dumbbell, FileText, TrendingUp, Sun, Moon, ChevronLeft, ChevronRight, MessageSquare, Trophy, ShoppingBag, Video } from 'lucide-react';
 import Image from 'next/image';
 import ViewSwitcher from './ViewSwitcher';
 import BranchBadge from './BranchBadge';
@@ -79,10 +79,11 @@ export default function DashboardSidebar({ isAdmin = false, branchSlug = 'pusat'
     { label: 'Analitik', href: `${prefix}/admin/analitik`, icon: BarChart3 },
     { label: 'Racik Tim Pintar', href: `${prefix}/admin/team-optimizer`, icon: Sparkles },
     { label: 'Statistik Member', href: `${prefix}/admin/member-statistik`, icon: Trophy },
+    ...(isOwner ? [{ label: 'Analisis Video AI', href: `${prefix}/admin/video-analysis`, icon: Video }] : []),
     { label: 'Pengaturan', href: `${prefix}/admin/settings`, icon: Settings },
   ];
 
-  // ── DLOB Pusat admin menu (unchanged from before) ──
+  // ── DLOB Pusat admin menu ──
   const adminMenuItems = isCikupa ? cikupaAdminMenuItems : [
     { label: 'Dashboard', href: '/admin', icon: Shield },
     { label: 'Kelola Anggota', href: '/admin/members', icon: Users },
@@ -94,6 +95,7 @@ export default function DashboardSidebar({ isAdmin = false, branchSlug = 'pusat'
     { label: 'AI Artikel Generator', href: '/admin/artikel', icon: FileText },
     { label: 'Racik Tim Pintar', href: '/admin/team-optimizer', icon: Sparkles },
     { label: 'Statistik Member', href: '/admin/member-statistik', icon: Trophy },
+    ...(isOwner ? [{ label: 'Analisis Video AI', href: '/admin/video-analysis', icon: Video }] : []),
     { label: 'Pengaturan', href: '/admin/settings', icon: Settings },
   ];
 
