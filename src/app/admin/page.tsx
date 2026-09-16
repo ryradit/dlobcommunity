@@ -534,18 +534,18 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-white">
-              <Shield className="w-6 h-6 text-zinc-300" />
+            <div className="p-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-slate-900 dark:text-white shadow-xs">
+              <Shield className="w-6 h-6 text-slate-700 dark:text-zinc-300" />
             </div>
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Dashboard Admin
               </h1>
-              <p className="text-xs text-zinc-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 Selamat datang kembali, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
               </p>
             </div>
@@ -553,7 +553,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowQrisModal(true)}
-              className="p-2 rounded-xl bg-zinc-900/80 hover:bg-white/5 border border-white/10 text-emerald-400 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+              className="p-2 rounded-xl bg-white dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-white/5 border border-gray-200 dark:border-white/10 text-emerald-700 dark:text-emerald-400 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer shadow-xs"
               title="Shortcut Tampilkan QRIS Komunitas"
             >
               <QrCode className="w-4 h-4" />
@@ -561,7 +561,7 @@ export default function AdminDashboardPage() {
             </button>
             <button
               onClick={toggleTutorial}
-              className="p-2 rounded-xl bg-zinc-900/80 hover:bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-white dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-white/5 border border-gray-200 dark:border-white/10 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer shadow-xs"
               title="Tampilkan panduan fitur"
             >
               <HelpCircle className="w-4 h-4" />
@@ -575,28 +575,28 @@ export default function AdminDashboardPage() {
 
       {/* Super Admin: Cross-branch DLBC overview */}
       {isSuperAdmin && branchStats !== null && (
-        <div className="mb-6 p-4 rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur-xl">
+        <div className="mb-6 p-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-900/60 backdrop-blur-xl shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <p className="text-xs font-bold text-zinc-300">DLOB Cikupa (DLBC)</p>
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <p className="text-xs font-bold text-slate-700 dark:text-zinc-300">DLOB Cikupa (DLBC)</p>
               <BranchBadge branchId="dlob-cikupa" branchName="DLBC" accentColor="#10B981" size="sm" />
             </div>
             <Link
               href="/cikupa/admin"
-              className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
+              className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors flex items-center gap-1"
             >
               Buka Admin DLBC <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-              <p className="text-xs text-zinc-500 mb-1">Anggota Aktif</p>
-              <p className="text-xl font-black text-white">{branchStats.cikupaMembers}</p>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-1">Anggota Aktif</p>
+              <p className="text-xl font-black text-slate-900 dark:text-white">{branchStats.cikupaMembers}</p>
             </div>
-            <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-              <p className="text-xs text-zinc-500 mb-1">Tagihan Pending</p>
-              <p className="text-xl font-black text-amber-400">{branchStats.cikupaPending}</p>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mb-1">Tagihan Pending</p>
+              <p className="text-xl font-black text-amber-600 dark:text-amber-400">{branchStats.cikupaPending}</p>
             </div>
           </div>
         </div>
@@ -607,28 +607,28 @@ export default function AdminDashboardPage() {
         user?.user_metadata?.full_name?.toLowerCase().includes('ryan radityatama') ||
         user?.user_metadata?.name?.toLowerCase().includes('ryan radityatama') ||
         user?.email === 'ryradit@gmail.com') && (
-        <div className="mb-8 p-5 rounded-2xl bg-zinc-900/60 backdrop-blur-xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+        <div className="mb-8 p-5 rounded-2xl bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-gray-200 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
           <div className="flex items-center gap-3.5">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-white text-sm">
+                <h3 className="font-semibold text-slate-900 dark:text-white text-sm">
                   Rekapitulasi Pre-Order Jersey New Batch 2026
                 </h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                   Owner Exclusive
                 </span>
               </div>
-              <p className="text-xs text-zinc-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 Pantau total jersey terpesan, matriks konveksi/vendor, dan kelola status pemesanan.
               </p>
             </div>
           </div>
           <Link
             href="/admin/rekap-new-batch"
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-900 hover:bg-zinc-200 transition-all flex items-center justify-center gap-1.5 shrink-0"
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 transition-all flex items-center justify-center gap-1.5 shrink-0"
           >
             <span>Buka Rekapitulasi</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -636,7 +636,7 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Stat Cards - Claude Minimalist Style */}
+      {/* Stat Cards - Minimalist Style */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         {loading ? (
           [...Array(5)].map((_, i) => <StatCardSkeleton key={i} />)
@@ -652,28 +652,28 @@ export default function AdminDashboardPage() {
             
             const card = (
               <div
-                className={`bg-zinc-900/60 backdrop-blur-xl border rounded-2xl p-4 sm:p-5 transition-all shadow-sm ${customClass} ${
+                className={`bg-white dark:bg-zinc-900/60 backdrop-blur-xl border rounded-2xl p-4 sm:p-5 transition-all shadow-xs ${customClass} ${
                   isPendingPayments && hasPendingItems
-                    ? 'border-amber-500/30 hover:border-amber-500/50 bg-amber-500/5 cursor-pointer'
-                    : 'border-white/10 hover:border-white/20'
+                    ? 'border-amber-500/30 hover:border-amber-500/50 bg-amber-50 dark:bg-amber-500/5 cursor-pointer'
+                    : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
                 }`}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className={`p-2 rounded-xl border ${
                     isPendingPayments && hasPendingItems
-                      ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse'
-                      : 'bg-white/5 border-white/10 text-zinc-300'
+                      ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400 animate-pulse'
+                      : 'bg-slate-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-slate-700 dark:text-zinc-300'
                   }`}>
                     <Icon className="w-4 h-4" />
                   </div>
                   {hasPendingItems && (
-                    <span className="text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-semibold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
                       Menunggu
                     </span>
                   )}
                 </div>
-                <div className="text-2xl font-bold text-white tracking-tight mb-1">{stat.value}</div>
-                <div className="text-xs text-zinc-400">{stat.label}</div>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-1">{stat.value}</div>
+                <div className="text-xs text-slate-500 dark:text-zinc-400">{stat.label}</div>
               </div>
             );
             
@@ -692,59 +692,59 @@ export default function AdminDashboardPage() {
 
       {/* Revenue Growth Chart */}
       <div className="mt-8">
-        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm revenue-chart">
+        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-5 sm:p-6 shadow-xs revenue-chart">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
                 <DollarSign className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-white">Pertumbuhan Pendapatan</h2>
-                <p className="text-xs text-zinc-400">Pendapatan bulanan riil terkonfirmasi (Jan 2026 - Sekarang)</p>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white">Pertumbuhan Pendapatan</h2>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">Pendapatan bulanan riil terkonfirmasi (Jan 2026 - Sekarang)</p>
               </div>
             </div>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <p className="text-xs text-zinc-400 mb-1">Total Pendapatan Terkumpul</p>
-              <p className="text-2xl font-bold text-white tracking-tight">Rp {totalRevenue.toLocaleString('id-ID')}</p>
+            <div className="bg-slate-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl p-4">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mb-1">Total Pendapatan Terkumpul</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Rp {totalRevenue.toLocaleString('id-ID')}</p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <p className="text-xs text-zinc-400 mb-1">Perubahan MoM</p>
+            <div className="bg-slate-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl p-4">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mb-1">Perubahan MoM</p>
               <div className="flex items-center gap-2">
-                <p className={`text-2xl font-bold tracking-tight ${revenueChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                <p className={`text-2xl font-bold tracking-tight ${revenueChange >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                   {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}%
                 </p>
                 {revenueChange >= 0 ? (
-                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <TrendingDown className="w-5 h-5 text-rose-400" />
+                  <TrendingDown className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                 )}
               </div>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <p className="text-xs text-zinc-400 mb-1">Data Periode</p>
-              <p className="text-2xl font-bold text-white tracking-tight">{revenueData.length} Bulan</p>
+            <div className="bg-slate-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl p-4">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mb-1">Data Periode</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{revenueData.length} Bulan</p>
             </div>
           </div>
 
           {/* Stock-Style Chart */}
           {loading ? (
             <div className="h-96 flex items-center justify-center">
-              <div className="text-gray-500 dark:text-zinc-500">Loading chart...</div>
+              <div className="text-slate-500 dark:text-zinc-500">Loading chart...</div>
             </div>
           ) : revenueData.length === 0 ? (
             <div className="h-96 flex items-center justify-center">
               <div className="text-center">
-                <DollarSign className="w-12 h-12 text-gray-400 dark:text-zinc-600 mx-auto mb-2" />
-                <p className="text-gray-500 dark:text-zinc-500">No revenue data available</p>
-                <p className="text-gray-400 dark:text-zinc-600 text-sm">Data will appear from January 2026 onwards</p>
+                <DollarSign className="w-12 h-12 text-slate-400 dark:text-zinc-600 mx-auto mb-2" />
+                <p className="text-slate-500 dark:text-zinc-500">No revenue data available</p>
+                <p className="text-slate-400 dark:text-zinc-600 text-sm">Data will appear from January 2026 onwards</p>
               </div>
             </div>
           ) : (
-            <div className="h-96 bg-zinc-950/40 rounded-xl p-4 border border-white/5">
+            <div className="h-96 bg-slate-50/50 dark:bg-zinc-950/40 rounded-xl p-4 border border-gray-100 dark:border-white/5">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={revenueData}
@@ -758,42 +758,42 @@ export default function AdminDashboardPage() {
                   </defs>
                   <CartesianGrid 
                     strokeDasharray="3 3" 
-                    stroke="rgba(255,255,255,0.05)" 
+                    stroke="rgba(148,163,184,0.15)" 
                     vertical={false}
                   />
                   <XAxis 
                     dataKey="label" 
-                    stroke="#71717a"
-                    tick={{ fill: '#71717a', fontSize: 11 }}
-                    tickLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    stroke="#94a3b8"
+                    tick={{ fill: '#94a3b8', fontSize: 11 }}
+                    tickLine={{ stroke: 'rgba(148,163,184,0.2)' }}
+                    axisLine={{ stroke: 'rgba(148,163,184,0.2)' }}
                     angle={-45}
                     textAnchor="end"
                     height={70}
                   />
                   <YAxis 
-                    stroke="#71717a"
-                    tick={{ fill: '#71717a', fontSize: 11 }}
-                    tickLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    stroke="#94a3b8"
+                    tick={{ fill: '#94a3b8', fontSize: 11 }}
+                    tickLine={{ stroke: 'rgba(148,163,184,0.2)' }}
+                    axisLine={{ stroke: 'rgba(148,163,184,0.2)' }}
                     tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
                   />
                   <Tooltip 
                     contentStyle={{
-                      backgroundColor: '#18181b',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      backgroundColor: 'var(--tooltip-bg, #ffffff)',
+                      border: '1px solid #e2e8f0',
                       borderRadius: '12px',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
                       padding: '10px 14px',
-                      color: '#ffffff'
+                      color: '#0f172a'
                     }}
                     labelStyle={{ 
-                      color: '#a1a1aa', 
+                      color: '#64748b', 
                       fontSize: '12px',
                       marginBottom: '4px'
                     }}
                     formatter={(value: any) => [
-                      <span className="text-emerald-400 font-semibold" key="value">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold" key="value">
                         Rp {value.toLocaleString('id-ID')}
                       </span>, 
                       'Pendapatan'
@@ -830,17 +830,17 @@ export default function AdminDashboardPage() {
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Activity Feed */}
-        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm activity-feed">
+        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-5 sm:p-6 shadow-xs activity-feed">
           <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-4 h-4 text-purple-400" />
-            <h2 className="text-sm font-semibold text-white">Aktivitas Sistem</h2>
+            <Activity className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Aktivitas Sistem</h2>
           </div>
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => <ActivityItemSkeleton key={i} />)}
             </div>
           ) : activities.length === 0 ? (
-            <p className="text-xs text-zinc-500">Tidak ada aktivitas terbaru.</p>
+            <p className="text-xs text-slate-500 dark:text-zinc-500">Tidak ada aktivitas terbaru.</p>
           ) : (
             <div className="space-y-2.5 max-h-96 overflow-y-auto">
               {activities.map((activity) => {
@@ -850,27 +850,27 @@ export default function AdminDashboardPage() {
                 
                 const content = (
                   <div
-                    className={`flex items-start gap-3 p-3 rounded-xl bg-white/5 border transition-colors ${
+                    className={`flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border transition-colors ${
                       isPaymentPending 
-                        ? 'hover:bg-amber-500/10 border-amber-500/30 cursor-pointer' 
-                        : 'hover:bg-white/10 border-white/5'
+                        ? 'hover:bg-amber-50 dark:hover:bg-amber-500/10 border-amber-500/30 cursor-pointer' 
+                        : 'hover:bg-slate-100 dark:hover:bg-white/10 border-gray-100 dark:border-white/5'
                     }`}
                   >
-                    <div className={`p-2 rounded-lg bg-white/5 ${activity.color} ${
+                    <div className={`p-2 rounded-lg bg-slate-100 dark:bg-white/5 ${activity.color} ${
                       isPaymentPending ? 'animate-pulse' : ''
                     }`}>
                       <Icon className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-zinc-200">
-                        <span className="font-semibold text-white">{activity.user}</span>
+                      <p className="text-xs text-slate-700 dark:text-zinc-200">
+                        <span className="font-semibold text-slate-900 dark:text-white">{activity.user}</span>
                         {activity.type === 'registration' && ' bergabung ke sistem'}
                         {activity.type === 'update' && ' memperbarui profil'}
                         {activity.type === 'payment_pending' && (
-                          <span className="text-amber-400 font-medium"> mengirim bukti pembayaran</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-medium"> mengirim bukti pembayaran</span>
                         )}
                       </p>
-                      <p className="text-[11px] text-zinc-500 mt-0.5">{timeAgo}</p>
+                      <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">{timeAgo}</p>
                     </div>
                   </div>
                 );
@@ -890,17 +890,17 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Performance Chart */}
-        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm top-performers">
+        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-5 sm:p-6 shadow-xs top-performers">
           <div className="flex items-center gap-2 mb-4">
-            <Award className="w-4 h-4 text-amber-400" />
-            <h2 className="text-sm font-semibold text-white">Performa Terbaik</h2>
+            <Award className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Performa Terbaik</h2>
           </div>
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => <ActivityItemSkeleton key={i} />)}
             </div>
           ) : topPerformers.length === 0 ? (
-            <p className="text-xs text-zinc-500">Belum ada data performa.</p>
+            <p className="text-xs text-slate-500 dark:text-zinc-500">Belum ada data performa.</p>
           ) : (
             <div className="space-y-3.5">
               {topPerformers.map((member, index) => {
@@ -910,16 +910,16 @@ export default function AdminDashboardPage() {
                   <div key={member.id} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="text-zinc-500 text-xs w-4">#{index + 1}</span>
-                        <span className="text-zinc-200 font-medium">{member.name}</span>
+                        <span className="text-slate-400 dark:text-zinc-500 text-xs w-4">#{index + 1}</span>
+                        <span className="text-slate-800 dark:text-zinc-200 font-medium">{member.name}</span>
                       </div>
                       <span className={`text-xs font-semibold ${
-                        isWin ? 'text-emerald-400' : 'text-rose-400'
+                        isWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                       }`}>
                         {member.streak} {isWin ? 'Menang' : 'Kalah'} Beruntun
                       </span>
                     </div>
-                    <div className="relative h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className="relative h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
                       <div
                         className={`absolute left-0 top-0 h-full rounded-full transition-all ${
                           isWin ? 'bg-emerald-500' : 'bg-rose-500'
@@ -935,15 +935,15 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Most Active Players */}
-        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm active-players">
+        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-5 sm:p-6 shadow-xs active-players">
           <div className="flex items-center gap-2 mb-4">
-            <Target className="w-4 h-4 text-sky-400" />
-            <h2 className="text-sm font-semibold text-white">Pemain Paling Aktif</h2>
+            <Target className="w-4 h-4 text-sky-500 dark:text-sky-400" />
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Pemain Paling Aktif</h2>
           </div>
           {loading ? (
-            <p className="text-xs text-zinc-500">Memuat data...</p>
+            <p className="text-xs text-slate-500 dark:text-zinc-500">Memuat data...</p>
           ) : mostActivePlayers.length === 0 ? (
-            <p className="text-xs text-zinc-500">Belum ada data pertandingan.</p>
+            <p className="text-xs text-slate-500 dark:text-zinc-500">Belum ada data pertandingan.</p>
           ) : (
             <div className="space-y-3.5">
               {mostActivePlayers.map((player, index) => {
@@ -953,14 +953,14 @@ export default function AdminDashboardPage() {
                   <div key={player.id} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="text-zinc-500 text-xs w-4">#{index + 1}</span>
-                        <span className="text-zinc-200 font-medium">{player.name}</span>
+                        <span className="text-slate-400 dark:text-zinc-500 text-xs w-4">#{index + 1}</span>
+                        <span className="text-slate-800 dark:text-zinc-200 font-medium">{player.name}</span>
                       </div>
-                      <span className="text-xs font-semibold text-sky-400">
+                      <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
                         {player.matches} Pertandingan
                       </span>
                     </div>
-                    <div className="relative h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className="relative h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
                       <div
                         className="absolute left-0 top-0 h-full rounded-full transition-all bg-sky-500"
                         style={{ width: `${percentage}%` }}

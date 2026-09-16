@@ -280,16 +280,16 @@ export default function CikupaAdminPage() {
   return (
     <div className="space-y-6 pb-20">
       {/* Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/80 backdrop-blur-md border border-white/10 p-5 rounded-2xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-gray-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              <Shield className="w-6 h-6 text-emerald-400" />
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <Shield className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
               Admin Dashboard DLBC
             </h1>
             <BranchBadge branchId={BRANCH_ID} />
           </div>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-slate-500 dark:text-zinc-400">
             Pusat komando & monitoring operasional cabang Cikupa
           </p>
         </div>
@@ -298,7 +298,7 @@ export default function CikupaAdminPage() {
           <BranchSelector />
           <button
             onClick={() => setShowQrisModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs font-bold rounded-xl border border-emerald-500/30 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-xl border border-emerald-500/30 transition-colors"
           >
             <QrCode className="w-3.5 h-3.5" />
             QRIS DLBC
@@ -309,66 +309,66 @@ export default function CikupaAdminPage() {
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href="/cikupa/admin/members" className="group">
-          <div className="p-5 rounded-2xl border bg-zinc-900/60 border-white/10 group-hover:border-emerald-500/40 transition-all relative overflow-hidden">
+          <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-white/10 group-hover:border-emerald-500/40 transition-all relative overflow-hidden shadow-sm">
             <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-zinc-400">Anggota DLBC</span>
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Anggota DLBC</span>
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <Users className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-white">{stats.totalMembers}</div>
-            <p className="text-xs text-emerald-400 mt-2 font-semibold flex items-center gap-1">
+            <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.totalMembers}</div>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 font-semibold flex items-center gap-1">
               Kelola anggota <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </p>
           </div>
         </Link>
 
         <Link href="/cikupa/admin/pembayaran" className="group">
-          <div className="p-5 rounded-2xl border bg-zinc-900/60 border-white/10 group-hover:border-amber-500/40 transition-all relative overflow-hidden">
+          <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-white/10 group-hover:border-amber-500/40 transition-all relative overflow-hidden shadow-sm">
             <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-zinc-400">Menunggu Bayar</span>
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Menunggu Bayar</span>
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
                 <Bell className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-amber-400">{stats.pendingPayments}</div>
-            <p className="text-xs text-amber-400 mt-2 font-semibold flex items-center gap-1">
+            <div className="text-2xl font-black text-amber-600 dark:text-amber-400">{stats.pendingPayments}</div>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-semibold flex items-center gap-1">
               Validasi bayar <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </p>
           </div>
         </Link>
 
         <Link href="/cikupa/admin/analitik" className="group">
-          <div className="p-5 rounded-2xl border bg-zinc-900/60 border-white/10 group-hover:border-blue-500/40 transition-all relative overflow-hidden">
+          <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-white/10 group-hover:border-blue-500/40 transition-all relative overflow-hidden shadow-sm">
             <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-blue-500/10 rounded-full blur-xl pointer-events-none" />
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-zinc-400">Pertandingan DLBC</span>
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Pertandingan DLBC</span>
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
                 <Award className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-white">{stats.totalMatches}</div>
-            <p className="text-xs text-blue-400 mt-2 font-semibold flex items-center gap-1">
+            <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.totalMatches}</div>
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-semibold flex items-center gap-1">
               Skor & Analitik <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </p>
           </div>
         </Link>
 
         <Link href="/cikupa/admin/keuangan" className="group">
-          <div className="p-5 rounded-2xl border bg-zinc-900/60 border-white/10 group-hover:border-purple-500/40 transition-all relative overflow-hidden">
+          <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-white/10 group-hover:border-purple-500/40 transition-all relative overflow-hidden shadow-sm">
             <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-purple-500/10 rounded-full blur-xl pointer-events-none" />
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-zinc-400">Kas Masuk Bulan Ini</span>
-              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Kas Masuk Bulan Ini</span>
+              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
                 <TrendingUp className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-xl font-black text-white">
+            <div className="text-xl font-black text-slate-900 dark:text-white">
               Rp {totalRevenue.toLocaleString('id-ID')}
             </div>
-            <p className="text-xs text-purple-400 mt-2 font-semibold flex items-center gap-1">
+            <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 font-semibold flex items-center gap-1">
               Buku Kas DLBC <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </p>
           </div>
@@ -376,27 +376,27 @@ export default function CikupaAdminPage() {
       </div>
 
       {/* Revenue Chart Section */}
-      <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 shadow-xl">
+      <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2">
           <div>
-            <h2 className="text-lg font-black text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
               Tren Pendapatan DLBC (6 Bulan Terakhir)
             </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
               Pertumbuhan pemasukan match & membership cabang Cikupa
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-xs text-zinc-400">Bulan Ini</div>
-              <div className="text-base font-black text-emerald-400">
+              <div className="text-xs text-slate-500 dark:text-zinc-400">Bulan Ini</div>
+              <div className="text-base font-black text-emerald-600 dark:text-emerald-400">
                 Rp {totalRevenue.toLocaleString('id-ID')}
               </div>
             </div>
             <span className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-0.5 ${
-              revenueChange >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+              revenueChange >= 0 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
             }`}>
               {revenueChange >= 0 ? '+' : ''}{revenueChange}%
             </span>
@@ -412,21 +412,22 @@ export default function CikupaAdminPage() {
                   <stop offset="95%" stopColor={ACCENT} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-              <XAxis dataKey="month" stroke="#71717a" fontSize={11} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#88888820" />
+              <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
               <YAxis 
-                stroke="#71717a" 
+                stroke="#94a3b8" 
                 fontSize={11} 
                 tickLine={false} 
                 tickFormatter={v => `Rp ${(v / 1000).toFixed(0)}k`} 
               />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: '#18181b', 
-                  borderColor: '#27272a',
+                  backgroundColor: 'var(--tooltip-bg, #ffffff)', 
+                  borderColor: '#e2e8f0',
                   borderRadius: '12px',
-                  color: '#fff',
-                  fontSize: '12px'
+                  color: '#0f172a',
+                  fontSize: '12px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}
                 formatter={(val: any) => [`Rp ${Number(val).toLocaleString('id-ID')}`, 'Pendapatan']}
               />
@@ -446,39 +447,39 @@ export default function CikupaAdminPage() {
       {/* Grid: Live Activity Feed + Top Performers + Most Active */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Live Activity Feed */}
-        <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 shadow-xl lg:col-span-2">
+        <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-black text-white flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-500 dark:text-emerald-400 animate-pulse" />
               Aktivitas Terkini DLBC
             </h3>
-            <span className="text-[11px] text-zinc-500 font-medium">Real-time Cikupa</span>
+            <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">Real-time Cikupa</span>
           </div>
 
           <div className="space-y-3">
             {activities.length === 0 ? (
-              <div className="text-center py-10 text-zinc-500 text-xs">
+              <div className="text-center py-10 text-slate-500 dark:text-zinc-500 text-xs">
                 Belum ada aktivitas tercatat di cabang Cikupa
               </div>
             ) : (
               activities.map(act => {
                 const Icon = act.icon;
                 return (
-                  <div key={act.id} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/40 border border-white/5">
+                  <div key={act.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-gray-100 dark:border-white/5">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg bg-zinc-800 ${act.color}`}>
+                      <div className={`p-2 rounded-lg bg-slate-100 dark:bg-zinc-800 ${act.color}`}>
                         <Icon className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white">{act.user}</p>
-                        <p className="text-[11px] text-zinc-400">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white">{act.user}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-zinc-400">
                           {act.type === 'registration' && 'Pendaftaran Akun Anggota'}
                           {act.type === 'payment_pending' && 'Menunggu Konfirmasi Bukti'}
                           {act.type === 'update' && 'Pembaruan Profil'}
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] text-zinc-500">
+                    <span className="text-[10px] text-slate-400 dark:text-zinc-500">
                       {new Date(act.timestamp).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -491,29 +492,29 @@ export default function CikupaAdminPage() {
         {/* Top Performers & Most Active Players */}
         <div className="space-y-5">
           {/* Top Performers */}
-          <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 shadow-xl">
+          <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black text-white flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-amber-400" />
+              <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 Win Streak Tertinggi DLBC
               </h3>
             </div>
 
             <div className="space-y-2.5">
               {topPerformers.length === 0 ? (
-                <p className="text-xs text-zinc-500 py-4 text-center">Belum ada streak tercatat</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-500 py-4 text-center">Belum ada streak tercatat</p>
               ) : (
                 topPerformers.map((p, idx) => (
-                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-800/50 border border-white/5">
+                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5">
                     <div className="flex items-center gap-2.5">
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                        idx === 0 ? 'bg-amber-400 text-black' : idx === 1 ? 'bg-zinc-300 text-black' : 'bg-amber-700 text-white'
+                        idx === 0 ? 'bg-amber-400 text-black' : idx === 1 ? 'bg-slate-300 dark:bg-zinc-300 text-black' : 'bg-amber-700 text-white'
                       }`}>
                         {idx + 1}
                       </span>
-                      <span className="text-xs font-bold text-white">{p.name}</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{p.name}</span>
                     </div>
-                    <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
                       🔥 {p.streak} Win
                     </span>
                   </div>
@@ -523,22 +524,22 @@ export default function CikupaAdminPage() {
           </div>
 
           {/* Most Active */}
-          <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 shadow-xl">
+          <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black text-white flex items-center gap-2">
-                <Award className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <Award className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                 Pemain Paling Aktif DLBC
               </h3>
             </div>
 
             <div className="space-y-2">
               {mostActivePlayers.length === 0 ? (
-                <p className="text-xs text-zinc-500 py-4 text-center">Belum ada data match</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-500 py-4 text-center">Belum ada data match</p>
               ) : (
                 mostActivePlayers.map((p, idx) => (
-                  <div key={p.id} className="flex items-center justify-between text-xs py-1.5 border-b border-white/5 last:border-0">
-                    <span className="text-zinc-300 font-semibold">{p.name}</span>
-                    <span className="font-bold text-emerald-400">{p.matches} Match</span>
+                  <div key={p.id} className="flex items-center justify-between text-xs py-1.5 border-b border-gray-100 dark:border-white/5 last:border-0">
+                    <span className="text-slate-700 dark:text-zinc-300 font-semibold">{p.name}</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{p.matches} Match</span>
                   </div>
                 ))
               )}
@@ -548,91 +549,91 @@ export default function CikupaAdminPage() {
       </div>
 
       {/* Quick Action Navigation Grid */}
-      <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 shadow-xl">
-        <h3 className="text-sm font-black text-white mb-3 flex items-center gap-2">
-          <Zap className="w-4 h-4 text-emerald-400" />
+      <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+        <h3 className="text-sm font-black text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+          <Zap className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           Aksi Cepat Admin DLBC
         </h3>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Link
             href="/cikupa/admin/pembayaran"
-            className="p-3.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
           >
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <CreditCard className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-zinc-200">Input Match & Kasir</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Input Match & Kasir</span>
           </Link>
 
           <Link
             href="/cikupa/admin/members"
-            className="p-3.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
           >
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <Users className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-zinc-200">Kelola Anggota</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Kelola Anggota</span>
           </Link>
 
           <Link
             href="/cikupa/admin/team-optimizer"
-            className="p-3.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
           >
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <Sparkles className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-zinc-200">Racik Tim Pintar</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Racik Tim Pintar</span>
           </Link>
 
           <Link
             href="/cikupa/admin/member-statistik"
-            className="p-3.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
           >
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <Trophy className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-zinc-200">Statistik Member</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Statistik Member</span>
           </Link>
 
           <Link
             href="/cikupa/admin/analitik"
-            className="p-3.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
           >
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <BarChart3 className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-zinc-200">Skor & Analitik</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Skor & Analitik</span>
           </Link>
 
           <Link
             href="/cikupa/admin/keuangan"
-            className="p-3.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
           >
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <TrendingUp className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-zinc-200">Buku Kas DLBC</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Buku Kas DLBC</span>
           </Link>
 
           <button
             onClick={() => setShowPrintModal(true)}
-            className="p-3.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
           >
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <Printer className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-zinc-200">Cetak Lembar Sesi</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Cetak Lembar Sesi</span>
           </button>
 
           <button
             onClick={() => setShowQrisModal(true)}
-            className="p-3.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
           >
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <QrCode className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-zinc-200">Barcode QRIS</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Barcode QRIS</span>
           </button>
         </div>
       </div>
@@ -642,40 +643,40 @@ export default function CikupaAdminPage() {
 
       {/* QRIS Modal */}
       {showQrisModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl text-center space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-2xl text-center space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black text-white flex items-center gap-2">
-                <QrCode className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <QrCode className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                 QRIS Resmi DLBC (Cikupa)
               </h3>
               <button
                 onClick={() => setShowQrisModal(false)}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white"
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-zinc-800/80 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center min-h-[220px]">
+            <div className="bg-slate-50 dark:bg-zinc-800/80 p-4 rounded-xl border border-gray-200 dark:border-white/5 flex flex-col items-center justify-center min-h-[220px]">
               {qrisLoading ? (
-                <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+                <Loader2 className="w-8 h-8 text-emerald-500 dark:text-emerald-400 animate-spin" />
               ) : qrisImageUrl ? (
-                <div className="bg-white p-3 rounded-xl border border-white/10">
+                <div className="bg-white p-3 rounded-xl border border-gray-200 dark:border-white/10">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={qrisImageUrl} alt="QRIS DLBC" className="max-h-64 object-contain mx-auto" />
                 </div>
               ) : (
                 <div className="text-center py-4 space-y-3">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
                     <AlertTriangle className="w-6 h-6" />
                   </div>
                   <div>
-                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-1">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 mb-1">
                       Belum Dikonfigurasi
                     </span>
-                    <h4 className="text-xs font-bold text-white">QRIS DLBC Belum Aktif</h4>
-                    <p className="text-[11px] text-zinc-400 mt-1 max-w-[240px] mx-auto leading-relaxed">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">QRIS DLBC Belum Aktif</h4>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 max-w-[240px] mx-auto leading-relaxed">
                       Metode QRIS khusus DLBC Cikupa belum dikonfigurasi. Member saat ini melakukan pembayaran via Bank Transfer / Tunai.
                     </p>
                   </div>
@@ -683,7 +684,7 @@ export default function CikupaAdminPage() {
                     href="/cikupa/admin/settings"
                     onClick={() => setShowQrisModal(false)}
                     aria-label="Konfigurasi QRIS di Pengaturan"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-500/30 transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-500/30 transition-all"
                   >
                     <span>Konfigurasi QRIS di Pengaturan</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -692,13 +693,13 @@ export default function CikupaAdminPage() {
               )}
             </div>
 
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-slate-500 dark:text-zinc-400">
               {qrisImageUrl ? 'Gunakan barcode ini untuk verifikasi pembayaran pemain cabang Cikupa' : 'Upload QRIS cabang Cikupa melalui Pengaturan Admin DLBC'}
             </p>
 
             <button
               onClick={() => setShowQrisModal(false)}
-              className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-colors"
+              className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-900 dark:text-white text-xs font-bold rounded-xl transition-colors"
             >
               Tutup
             </button>
