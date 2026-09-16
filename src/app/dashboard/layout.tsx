@@ -8,22 +8,33 @@ import FloatingAIChat from '@/components/FloatingAIChat';
 import ProfileCompletionWarning from '@/components/ProfileCompletionWarning';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, viewAs, loading } = useAuth();
+  const { user, isAdmin, isBranchAdmin, userBranchId, viewAs, loading, canSwitchBranch, isSuperAdmin, isNeutral } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  
+
   useEffect(() => {
-    // Redirect unauthenticated visitors to login
     const timer = setTimeout(() => {
       if (!loading && !user) {
+        // Not logged in → go to login
         router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
-      } else if (!loading && isAdmin && viewAs === 'admin') {
-        router.replace('/admin');
+      } else if (!loading && user && isNeutral && pathname !== '/dashboard/choose-branch') {
+        // Neutral user (no branch assigned yet) → must choose branch first
+        router.replace('/dashboard/choose-branch');
+      } else if (!loading && viewAs === 'admin') {
+        const email = user?.email?.toLowerCase().trim();
+        if (isBranchAdmin && !isSuperAdmin && email !== 'dlob.official.tng@gmail.com') {
+          router.replace('/cikupa/admin');
+        } else {
+          router.replace('/admin');
+        }
+      } else if (!loading && !isAdmin && userBranchId === 'dlob-cikupa' && !canSwitchBranch && !isSuperAdmin) {
+        // Dedicated DLBC member → redirect to DLBC dashboard
+        router.replace('/cikupa/dashboard');
       }
-    }, 200);
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [user, isAdmin, viewAs, loading, router, pathname]);
+  }, [user, isAdmin, isBranchAdmin, userBranchId, viewAs, loading, router, pathname, canSwitchBranch, isSuperAdmin, isNeutral]);
 
   // Always show content immediately for fast perceived performance
   return (

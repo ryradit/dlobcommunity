@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const { imageBase64 } = await request.json();
+    const { imageBase64, branchId } = await request.json();
 
     if (!imageBase64) {
       return NextResponse.json(
@@ -29,7 +29,78 @@ export async function POST(request: NextRequest) {
     // Gemini 2.5 Flash Lite supports both text and vision
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
-    const prompt = `You are a badminton match data extraction assistant. Extract structured match information from this image.
+    const isDlbc = branchId === 'dlob-cikupa';
+
+    // Specialized prompt for DLBC (Cikupa) matrix attendance sheet
+    const dlbcPrompt = `You are a badminton match data extraction assistant specialized for DLBC (DLOB Cikupa) session forms.
+Extract structured information from this printed matrix table image.
+
+THE TABLE STRUCTURE:
+- Header contains:
+  1. "NO" (Row numbers 1 to 24)
+  2. "NAMA" (Member/Player name in each row)
+  3. "Pemakaian Kock" with subcolumns: "Match 1", "Match 2", "Match 3", "Match 4", "Match 5", "Match 6", "Match 7", "Match 8", "Match 9", "Match 10"
+  4. "Total Pemakaian Kock" with subcolumns: "Pcs", "Rp"
+  5. "Lapangan" with subcolumn: "Rp"
+  6. "TOTAL" (Rupiah sum of Kock + Lapangan)
+  7. "Keterangan" (Notes / Payment status)
+- Bottom row: "GRAND TOTAL"
+
+EXTRACTION GOALS:
+1. Reconstruct doubles badminton matches from the "Match 1" to "Match 10" columns:
+   - For each Match column (e.g., Match 1, Match 2...): Look down the rows to find which 4 players have marks, numbers (shuttlecock counts), or ticks in that Match column.
+   - Pair the 4 players into 2 teams:
+     team1_player1 = Player 1
+     team1_player2 = Player 2
+     team2_player1 = Player 3
+     team2_player2 = Player 4
+   - If shuttlecock amount for the match is marked or implied, use it (default "4" if 4 players played).
+   - Set court_number to "1" (or court indicated).
+2. ALSO extract each player's row summary from the matrix table:
+   - "no": row number
+   - "name": player name (read clearly, trim extra marks)
+   - "matches_played": list of match numbers they played (e.g., [1, 3])
+   - "kok_pcs": number of shuttlecocks from "Pcs" column (or 0 if empty)
+   - "kok_rp": rupiah from "Rp" column (or 0 if empty)
+   - "lapangan_rp": rupiah from "Lapangan" column (or 0 if empty)
+   - "total": total rupiah from "TOTAL" column
+   - "keterangan": text from "Keterangan" column
+
+Return ONLY a valid JSON object matching this exact structure:
+{
+  "matches": [
+    {
+      "team1_player1": "Player A",
+      "team1_player2": "Player B",
+      "team2_player1": "Player C",
+      "team2_player2": "Player D",
+      "court_number": "1",
+      "shuttlecock_amount": "4"
+    }
+  ],
+  "matrix_players": [
+    {
+      "no": 1,
+      "name": "Budi",
+      "matches_played": [1, 2],
+      "kok_pcs": 2,
+      "kok_rp": 6000,
+      "lapangan_rp": 18000,
+      "total": 24000,
+      "keterangan": "Lunas"
+    }
+  ],
+  "total_matches": 1,
+  "confidence": 85
+}
+
+CRITICAL RULES:
+- Read handwritten names carefully and keep capitalization clean.
+- Ignore blank/empty rows.
+- Return ONLY the JSON object, no other text.`;
+
+    // Standard prompt for DLOB Pusat 4-column whiteboard/sheet
+    const pusatPrompt = `You are a badminton match data extraction assistant. Extract structured match information from this image.
 
 IMPORTANT: This image contains MULTIPLE MATCH ROWS (typically 15-20 matches). Extract ALL matches, not just one!
 
@@ -66,6 +137,8 @@ CRITICAL PARSING RULES:
 - If data is unclear for a field, use empty string
 - Confidence indicates overall extraction quality
 - Return ONLY the JSON object, no other text`;
+
+    const prompt = isDlbc ? dlbcPrompt : pusatPrompt;
 
     const imageParts = [
       {

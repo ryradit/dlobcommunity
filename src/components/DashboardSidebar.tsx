@@ -8,18 +8,25 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home, Users, Shield, Sparkles, Dumbbell, FileText, TrendingUp, Sun, Moon, ChevronLeft, ChevronRight, MessageSquare, Trophy, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import ViewSwitcher from './ViewSwitcher';
+import BranchBadge from './BranchBadge';
+import BranchSelector from './BranchSelector';
 
 interface DashboardSidebarProps {
   isAdmin?: boolean;
+  /** 'pusat' (default) | 'cikupa' — controls which branch routes to use */
+  branchSlug?: 'pusat' | 'cikupa';
 }
 
-export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarProps) {
+export default function DashboardSidebar({ isAdmin = false, branchSlug = 'pusat' }: DashboardSidebarProps) {
+  const isCikupa = branchSlug === 'cikupa';
+  // Route prefix — empty for pusat, '/cikupa' for cikupa
+  const prefix = isCikupa ? '/cikupa' : '';
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const pathname = usePathname();
-  const { signOut, user } = useAuth();
+  const { signOut, user, isSuperAdmin, canSwitchBranch } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [avatarUrl, setAvatarUrl] = useState<string>('');
 
@@ -63,104 +70,39 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
     user?.user_metadata?.name?.toLowerCase().includes('ryan radityatama') ||
     user?.email === 'ryradit@gmail.com';
 
-  const adminMenuItems = [
-    {
-      label: 'Dashboard',
-      href: '/admin',
-      icon: Shield,
-    },
-    {
-      label: 'Kelola Anggota',
-      href: '/admin/members',
-      icon: Users,
-    },
-    {
-      label: 'Pembayaran',
-      href: '/admin/pembayaran',
-      icon: CreditCard,
-    },
-    {
-      label: 'Keuangan',
-      href: '/admin/keuangan',
-      icon: TrendingUp,
-    },
-    ...(isOwner
-      ? [
-          {
-            label: 'Rekap New Batch',
-            href: '/admin/rekap-new-batch',
-            icon: ShoppingBag,
-          },
-        ]
-      : []),
-    {
-      label: 'Analitik',
-      href: '/admin/analitik',
-      icon: BarChart3,
-    },
-    {
-      label: 'Survey Member',
-      href: '/admin/survey',
-      icon: MessageSquare,
-    },
-    {
-      label: 'AI Artikel Generator',
-      href: '/admin/artikel',
-      icon: FileText,
-    },
-    {
-      label: 'Racik Tim Pintar',
-      href: '/admin/team-optimizer',
-      icon: Sparkles,
-    },
-    {
-      label: 'Statistik Member',
-      href: '/admin/member-statistik',
-      icon: Trophy,
-    },
-    {
-      label: 'Pengaturan',
-      href: '/admin/settings',
-      icon: Settings,
-    },
+  // ── DLBC admin menu (branch-scoped) ──
+  const cikupaAdminMenuItems = [
+    { label: 'Dashboard', href: `${prefix}/admin`, icon: Shield },
+    { label: 'Kelola Anggota', href: `${prefix}/admin/members`, icon: Users },
+    { label: 'Pembayaran', href: `${prefix}/admin/pembayaran`, icon: CreditCard },
+    { label: 'Keuangan', href: `${prefix}/admin/keuangan`, icon: TrendingUp },
+    { label: 'Analitik', href: `${prefix}/admin/analitik`, icon: BarChart3 },
+    { label: 'Racik Tim Pintar', href: `${prefix}/admin/team-optimizer`, icon: Sparkles },
+    { label: 'Statistik Member', href: `${prefix}/admin/member-statistik`, icon: Trophy },
+    { label: 'Pengaturan', href: `${prefix}/admin/settings`, icon: Settings },
+  ];
+
+  // ── DLOB Pusat admin menu (unchanged from before) ──
+  const adminMenuItems = isCikupa ? cikupaAdminMenuItems : [
+    { label: 'Dashboard', href: '/admin', icon: Shield },
+    { label: 'Kelola Anggota', href: '/admin/members', icon: Users },
+    { label: 'Pembayaran', href: '/admin/pembayaran', icon: CreditCard },
+    { label: 'Keuangan', href: '/admin/keuangan', icon: TrendingUp },
+    ...(isOwner ? [{ label: 'Rekap New Batch', href: '/admin/rekap-new-batch', icon: ShoppingBag }] : []),
+    { label: 'Analitik', href: '/admin/analitik', icon: BarChart3 },
+    { label: 'Survey Member', href: '/admin/survey', icon: MessageSquare },
+    { label: 'AI Artikel Generator', href: '/admin/artikel', icon: FileText },
+    { label: 'Racik Tim Pintar', href: '/admin/team-optimizer', icon: Sparkles },
+    { label: 'Statistik Member', href: '/admin/member-statistik', icon: Trophy },
+    { label: 'Pengaturan', href: '/admin/settings', icon: Settings },
   ];
 
   const memberMenuItems = [
-    {
-      label: 'Dashboard',
-      href: '/dashboard',
-      icon: LayoutDashboard,
-    },
-    {
-      label: 'Pembayaran',
-      href: '/dashboard/pembayaran',
-      icon: CreditCard,
-    },
-    {
-      label: 'Analitik',
-      href: '/dashboard/analitik',
-      icon: BarChart3,
-    },
-    // {
-    //   label: 'Training Coach',
-    //   href: '/dashboard/training-coach',
-    //   icon: Trophy,
-    // },
-    {
-      label: 'Training Center',
-      href: '/dashboard/training',
-      icon: Dumbbell,
-    },
-    // {
-    //   label: 'Coaching AI',
-    //   href: '/dashboard/coaching',
-    //   icon: MessageSquare,
-    // },
-    {
-      label: 'Pengaturan Profil',
-      href: '/dashboard/settings',
-      icon: Settings,
-    },
+    { label: 'Dashboard', href: `${prefix}/dashboard`, icon: LayoutDashboard },
+    { label: 'Pembayaran', href: `${prefix}/dashboard/pembayaran`, icon: CreditCard },
+    { label: 'Analitik', href: `${prefix}/dashboard/analitik`, icon: BarChart3 },
+    { label: 'Training Center', href: `${prefix}/dashboard/training`, icon: Dumbbell },
+    { label: 'Pengaturan Profil', href: `${prefix}/dashboard/settings`, icon: Settings },
   ];
 
   const menuItems = isAdmin ? adminMenuItems : memberMenuItems;
@@ -206,15 +148,16 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
         } ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Header Section with Logo + Collapse Toggle — desktop only */}
-        <div className="hidden lg:flex p-3 border-b border-gray-200 dark:border-white/10 shrink-0 transition-colors duration-300 relative items-center justify-center">
+        <div className={`hidden lg:flex p-3 border-b border-gray-200 dark:border-white/10 shrink-0 transition-colors duration-300 relative items-center ${isCollapsed ? 'justify-center' : 'justify-start gap-2'}`}>
           <Image
             src="/dlob.png"
             alt="DLOB"
-            width={isCollapsed ? 32 : 48}
-            height={isCollapsed ? 32 : 48}
-            className="object-contain dark:invert transition-all duration-300"
-            style={{ width: 'auto', height: 'auto', maxWidth: isCollapsed ? '32px' : '48px', maxHeight: isCollapsed ? '32px' : '48px' }}
+            width={isCollapsed ? 32 : 36}
+            height={isCollapsed ? 32 : 36}
+            className="object-contain dark:invert transition-all duration-300 flex-shrink-0"
+            style={{ width: 'auto', height: 'auto', maxWidth: isCollapsed ? '32px' : '36px', maxHeight: isCollapsed ? '32px' : '36px' }}
           />
+          {!isCollapsed && <BranchBadge size="sm" />}
           {/* Desktop collapse toggle — only visible when expanded */}
           {!isCollapsed && (
             <button
@@ -270,7 +213,7 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
                 </div>
               </div>
               <Link
-                href={isAdmin ? "/admin/settings" : "/dashboard/settings"}
+                href={isAdmin ? `${prefix}/admin/settings` : `${prefix}/dashboard/settings`}
                 onClick={() => setIsOpen(false)}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/15 text-gray-900 dark:text-white transition-all text-xs font-medium border border-gray-300 dark:border-white/10"
               >
@@ -286,6 +229,11 @@ export default function DashboardSidebar({ isAdmin = false }: DashboardSidebarPr
           <div className="px-4 pb-3 shrink-0">
             <ViewSwitcher />
           </div>
+        )}
+
+        {/* Branch Selector — super admin, dual-branch admin, or multi-branch members */}
+        {!isCollapsed && (
+          <BranchSelector className="mx-3 mb-3 shrink-0" />
         )}
 
         {/* Navigation Menu */}

@@ -91,8 +91,13 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Protect /dashboard and /admin routes if no session
-  if (path.startsWith('/dashboard') || path.startsWith('/admin')) {
+  // Protect /dashboard, /admin, /cikupa/dashboard, and /cikupa/admin routes if no session
+  if (
+    path.startsWith('/dashboard') ||
+    path.startsWith('/admin') ||
+    path.startsWith('/cikupa/dashboard') ||
+    path.startsWith('/cikupa/admin')
+  ) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       const loginUrl = new URL('/login', request.url);

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(
@@ -6,7 +6,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const DEFAULT_BANK_INFO = {
+const DEFAULT_PUSAT_BANK_INFO = {
   holderName: 'Septian Dwiyo Rifalda',
   banks: [
     { name: 'Permata Bank', number: '9937 296 220' },
@@ -23,26 +23,49 @@ const DEFAULT_BANK_INFO = {
   ],
 };
 
-export async function GET() {
+const DEFAULT_DLBC_BANK_INFO = {
+  holderName: '',
+  banks: [] as { name: string; number: string }[],
+  ewallets: [] as { name: string; number: string }[],
+};
+
+export async function GET(request: NextRequest) {
+  let isDlbc = false;
   try {
+    const { searchParams } = new URL(request.url);
+    const branch = searchParams.get('branch') || searchParams.get('branch_id') || 'dlob-pusat';
+    isDlbc = branch === 'dlob-cikupa' || branch === 'cikupa';
+
+    const bankKey = isDlbc ? 'bank_accounts_dlob-cikupa' : 'bank_accounts';
+    const qrisKey = isDlbc ? 'qris_image_url_dlob-cikupa' : 'qris_image_url';
+
     const { data } = await supabaseAdmin
       .from('app_settings')
       .select('key, value')
-      .in('key', ['bank_accounts', 'qris_image_url']);
+      .in('key', [bankKey, qrisKey]);
 
     const rows = data ?? [];
-    const bankRow = rows.find(r => r.key === 'bank_accounts');
-    const qrisRow = rows.find(r => r.key === 'qris_image_url');
+    const bankRow = rows.find(r => r.key === bankKey);
+    const qrisRow = rows.find(r => r.key === qrisKey);
 
-    let bankInfo = DEFAULT_BANK_INFO;
+    const defaultBank = isDlbc ? DEFAULT_DLBC_BANK_INFO : DEFAULT_PUSAT_BANK_INFO;
+    let bankInfo = defaultBank;
     if (bankRow?.value) {
-      try { bankInfo = JSON.parse(bankRow.value); } catch { /* use default */ }
+      try { 
+        const parsed = JSON.parse(bankRow.value);
+        if (parsed && typeof parsed === 'object') {
+          bankInfo = parsed;
+        }
+      } catch { /* use default */ }
     }
 
     const qrisImageUrl = qrisRow?.value || null;
 
     return NextResponse.json({ bankInfo, qrisImageUrl });
   } catch {
-    return NextResponse.json({ bankInfo: DEFAULT_BANK_INFO, qrisImageUrl: null });
+    return NextResponse.json({
+      bankInfo: isDlbc ? DEFAULT_DLBC_BANK_INFO : DEFAULT_PUSAT_BANK_INFO,
+      qrisImageUrl: null,
+    });
   }
 }

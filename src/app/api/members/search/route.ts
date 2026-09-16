@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { name } = await request.json();
+    const { name, branchId } = await request.json();
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
@@ -66,10 +66,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch all members
+    // Fetch all members (with branch_id for priority)
     const { data: members, error } = await supabase
       .from('profiles')
-      .select('id, full_name, email')
+      .select('id, full_name, email, branch_id')
       .order('full_name');
 
     if (error) {
@@ -88,10 +88,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Find exact match
-    const exactMatch = members.find(
-      (m) => m.full_name.toLowerCase().trim() === name.toLowerCase().trim()
+    // Find exact match (prefer matching branch if multiple)
+    const trimmedName = name.toLowerCase().trim();
+    let exactMatch = members.find(
+      (m) => m.full_name?.toLowerCase().trim() === trimmedName && (!branchId || m.branch_id === branchId)
     );
+    if (!exactMatch) {
+      exactMatch = members.find(
+        (m) => m.full_name?.toLowerCase().trim() === trimmedName
+      );
+    }
 
     if (exactMatch) {
       return NextResponse.json({

@@ -66,6 +66,13 @@ const TIMELINE = [
     desc: 'Terus berkembang dengan standar baru komunitas olahraga: inklusif, terorganisir, transparan, dan menyenangkan bagi setiap member.',
     img: '/images/dlob3.jpg',
   },
+  {
+    year: '2026+',
+    title: 'Satu Keluarga: DLOB & DLBC Bersatu',
+    desc: 'PB 11 — kini dikenal sebagai DLBC Cikupa — resmi bergabung dalam ekosistem DLOB. Dua cabang, satu semangat: memperluas jangkauan komunitas bulu tangkis yang inklusif dan solid di wilayah Tangerang.',
+    img: '/images/dlbc.jpeg',
+    imgPosition: 'center 15%',
+  },
 ];
 
 const VALUES = [
@@ -334,6 +341,7 @@ export default function TentangPage() {
                         alt={item.title}
                         fill
                         className="object-cover hover:scale-105 transition-transform duration-500"
+                        style={{ objectPosition: (item as any).imgPosition || 'center' }}
                       />
                     </div>
                   </div>

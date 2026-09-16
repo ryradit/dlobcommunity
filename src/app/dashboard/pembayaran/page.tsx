@@ -241,6 +241,7 @@ export default function PembayaranPage() {
                 )
               `)
               .eq('member_name', name)
+              .or('branch_id.is.null,branch_id.eq.dlob-pusat')
               .order('created_at', { ascending: false });
             return result;
           },
@@ -263,6 +264,7 @@ export default function PembayaranPage() {
               .from('memberships')
               .select('*')
               .eq('member_name', name)
+              .or('branch_id.is.null,branch_id.eq.dlob-pusat')
               .eq('month', currentMonth)
               .eq('year', currentYear)
               .maybeSingle();

@@ -7,22 +7,37 @@ import DashboardSidebar from '@/components/DashboardSidebar';
 import FloatingAIChat from '@/components/FloatingAIChat';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, viewAs, loading } = useAuth();
+  const { user, isSuperAdmin, isBranchAdmin, userBranchId, viewAs, loading, isAdmin, canSwitchBranch } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // Non-blocking redirect - only after 500ms to avoid flash
     const timer = setTimeout(() => {
       if (!loading && !user) {
         router.replace('/login');
-      } else if (!loading && (!isAdmin || viewAs === 'member')) {
-        router.replace('/dashboard');
+      } else if (!loading) {
+        const email = user?.email?.toLowerCase().trim();
+        const isEdi = email === 'edi@temp.dlob.local';
+        const isDualAdmin = isSuperAdmin || email === 'dlob.official.tng@gmail.com';
+        const isAllowedPusatAdmin =
+          isDualAdmin ||
+          email === 'septianrifalda@gmail.com' ||
+          email === 'danif@temp.dlob.local' ||
+          (isAdmin && !isBranchAdmin);
+
+        if (viewAs === 'member') {
+          router.replace('/dashboard');
+        } else if (isEdi || (isBranchAdmin && !isDualAdmin)) {
+          // Edi or DLBC-only admin gets redirected to DLBC admin
+          router.replace('/cikupa/admin');
+        } else if (!isAllowedPusatAdmin) {
+          router.replace('/dashboard');
+        }
       }
-    }, 500);
+    }, 400);
 
     return () => clearTimeout(timer);
-  }, [user, isAdmin, viewAs, loading, router]);
+  }, [user, isSuperAdmin, isBranchAdmin, userBranchId, viewAs, loading, router, isAdmin, canSwitchBranch]);
 
   // Always show content immediately for fast perceived performance
   return (

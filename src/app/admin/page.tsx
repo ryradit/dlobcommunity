@@ -14,6 +14,7 @@ import TutorialOverlay from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
 import SystemHealthMonitor from '@/components/admin/SystemHealthMonitor';
+import BranchBadge from '@/components/BranchBadge';
 
 interface AdminStats {
   totalMembers: number;
@@ -46,7 +47,7 @@ interface RevenueData {
 }
 
 export default function AdminDashboardPage() {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const pathname = usePathname();
   const [stats, setStats] = useState<AdminStats>({
     totalMembers: 0,
@@ -63,6 +64,8 @@ export default function AdminDashboardPage() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [revenueChange, setRevenueChange] = useState(0);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+  // Cross-branch stats (super admin only)
+  const [branchStats, setBranchStats] = useState<{ cikupaMembers: number; cikupaPending: number } | null>(null);
 
   // QRIS shortcut modal state
   const [showQrisModal, setShowQrisModal] = useState(false);
@@ -71,6 +74,21 @@ export default function AdminDashboardPage() {
 
   const tutorialSteps = getTutorialSteps('dashboard');
   const { isActive: isTutorialActive, closeTutorial, toggleTutorial } = useTutorial('admin-dashboard', tutorialSteps);
+
+  // Fetch cross-branch stats for super admin
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    (async () => {
+      const [membersRes, pendingRes] = await Promise.all([
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('branch_id', 'dlob-cikupa').eq('is_active', true),
+        supabase.from('match_members').select('id', { count: 'exact', head: true }).eq('branch_id', 'dlob-cikupa').eq('payment_status', 'pending'),
+      ]);
+      setBranchStats({
+        cikupaMembers: membersRes.count ?? 0,
+        cikupaPending: pendingRes.count ?? 0,
+      });
+    })();
+  }, [isSuperAdmin]);
 
   // Fetch QRIS image for quick shortcut
   useEffect(() => {
@@ -554,6 +572,35 @@ export default function AdminDashboardPage() {
 
       {/* Live System & API Status Monitor */}
       <SystemHealthMonitor />
+
+      {/* Super Admin: Cross-branch DLBC overview */}
+      {isSuperAdmin && branchStats !== null && (
+        <div className="mb-6 p-4 rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur-xl">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <p className="text-xs font-bold text-zinc-300">DLOB Cikupa (DLBC)</p>
+              <BranchBadge branchId="dlob-cikupa" branchName="DLBC" accentColor="#10B981" size="sm" />
+            </div>
+            <Link
+              href="/cikupa/admin"
+              className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
+            >
+              Buka Admin DLBC <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+              <p className="text-xs text-zinc-500 mb-1">Anggota Aktif</p>
+              <p className="text-xl font-black text-white">{branchStats.cikupaMembers}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+              <p className="text-xs text-zinc-500 mb-1">Tagihan Pending</p>
+              <p className="text-xl font-black text-amber-400">{branchStats.cikupaPending}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Super Admin / Owner Exclusive: New Batch Recap Highlight */}
       {(user?.email?.toLowerCase().includes('ryradit') ||

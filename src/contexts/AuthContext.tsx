@@ -5,14 +5,19 @@ import { User, Session, AuthResponse } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
-type UserRole = 'admin' | 'member';
+type UserRole = 'admin' | 'member' | 'branch_admin';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   role: UserRole;
-  isAdmin: boolean;
+  isAdmin: boolean;        // true for both 'admin' and 'branch_admin'
   isMember: boolean;
+  isSuperAdmin: boolean;   // true only for role = 'admin' (owner / Adit)
+  isBranchAdmin: boolean;  // true only for role = 'branch_admin' (or dual admin)
+  canSwitchBranch: boolean; // true for dual-branch users
+  userBranchId: string | null; // the branch this user belongs to (null = neutral/unassigned)
+  isNeutral: boolean;       // true when branch_id = null and NOT a dual-branch user
   viewAs: 'admin' | 'member';
   loading: boolean;
   switchView: (view: 'admin' | 'member') => void;
@@ -34,6 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>('member');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMember, setIsMember] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isBranchAdmin, setIsBranchAdmin] = useState(false);
+  const [canSwitchBranch, setCanSwitchBranch] = useState(false);
+  const [userBranchId, setUserBranchId] = useState<string | null>(null);
+  const [isNeutral, setIsNeutral] = useState(false);
   const [viewAs, setViewAs] = useState<'admin' | 'member'>('member');
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -81,25 +91,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, branch_id, email, can_switch_branch')
         .eq('id', userId)
         .single();
       
-      const userRole = profile?.role === 'admin' ? 'admin' : 'member';
-      
-      // Set flags for dual role support
-      if (userRole === 'admin') {
+      const rawRole = profile?.role ?? 'member';
+      const userEmail = (user?.email || profile?.email || '').toLowerCase().trim();
+      const isAdit = userEmail === 'ryradit@gmail.com' || userEmail.includes('ryradit');
+      const isWahyu = userEmail === 'dlob.official.tng@gmail.com';
+      const isSeptian = userEmail === 'septianrifalda@gmail.com';
+      const isDanif = userEmail === 'danif@temp.dlob.local';
+      const isEdi = userEmail === 'edi@temp.dlob.local';
+
+      // Data-driven: read can_switch_branch from DB.
+      // Falls back to hardcoded list for known accounts in case the migration
+      // hasn't been applied yet, or the column doesn't exist yet.
+      const dbCanSwitch = profile?.can_switch_branch === true;
+      const hardcodedCanSwitch = isAdit || isWahyu || isEdi;
+      const canSwitch = dbCanSwitch || hardcodedCanSwitch;
+      setCanSwitchBranch(canSwitch);
+
+      let userRole: UserRole = 'member';
+      if (isAdit) {
+        userRole = 'admin';
         setIsAdmin(true);
-        setIsMember(true); // Admins can access both
-      } else {
-        setIsAdmin(false);
+        setIsSuperAdmin(true);
+        setIsBranchAdmin(false);
         setIsMember(true);
+        setUserBranchId('dlob-pusat');
+      } else if (isWahyu) {
+        // Wahyu is dual admin: part of Admin DLOB & Admin DLBC, can switch between both
+        userRole = 'admin';
+        setIsAdmin(true);
+        setIsSuperAdmin(false);
+        setIsBranchAdmin(true);
+        setIsMember(true);
+        setUserBranchId(profile?.branch_id ?? 'dlob-cikupa');
+      } else if (isSeptian || isDanif) {
+        // Admin DLOB Pusat only (cannot switch to DLBC)
+        userRole = 'admin';
+        setIsAdmin(true);
+        setIsSuperAdmin(false);
+        setIsBranchAdmin(false);
+        setIsMember(true);
+        setUserBranchId('dlob-pusat');
+      } else if (isEdi || rawRole === 'branch_admin') {
+        // Admin DLBC only (cannot access DLOB Pusat)
+        userRole = 'branch_admin';
+        setIsAdmin(true);
+        setIsSuperAdmin(false);
+        setIsBranchAdmin(true);
+        setIsMember(true);
+        setUserBranchId('dlob-cikupa');
+      } else if (rawRole === 'admin') {
+        userRole = 'admin';
+        setIsAdmin(true);
+        setIsSuperAdmin(false);
+        setIsBranchAdmin(false);
+        setIsMember(true);
+        setUserBranchId(profile?.branch_id ?? 'dlob-pusat');
+      } else {
+        userRole = 'member';
+        setIsAdmin(false);
+        setIsSuperAdmin(false);
+        setIsBranchAdmin(false);
+        setIsMember(true);
+        const branchId = profile?.branch_id ?? null;
+        setUserBranchId(branchId);
+        // Neutral = no branch assigned yet and not a dual-branch user
+        setIsNeutral(branchId === null && !canSwitch);
       }
       
       return userRole;
     } catch (error) {
       console.error('Error fetching user role:', error);
       setIsAdmin(false);
+      setIsSuperAdmin(false);
+      setIsBranchAdmin(false);
+      setCanSwitchBranch(false);
+      setIsNeutral(false);
       setIsMember(true);
       return 'member';
     }
@@ -143,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setRole(userRole);
                 
                 // Restore view preference
-                if (userRole === 'admin') {
+                if (userRole === 'admin' || userRole === 'branch_admin') {
                   const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
                   setViewAs(savedView || 'admin');
                 } else {
@@ -216,7 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (mounted) {
                 setRole(userRole);
                 
-                if (userRole === 'admin') {
+                if (userRole === 'admin' || userRole === 'branch_admin') {
                   const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
                   setViewAs(savedView || 'admin');
                 } else {
@@ -243,7 +313,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setRole('member');
           setIsAdmin(false);
+          setIsSuperAdmin(false);
+          setIsBranchAdmin(false);
           setIsMember(true);
+          setUserBranchId('dlob-pusat');
           setViewAs('member');
         }
       } else if (event === 'USER_UPDATED') {
@@ -350,7 +423,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ADDITIONAL CHECK: Check profiles table for pending_email_verification flag
       const { data: profile } = await supabase
         .from('profiles')
-        .select('pending_email_verification')
+        .select('pending_email_verification, branch_id')
         .eq('id', data.user.id)
         .single();
       
@@ -386,9 +459,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userRole = await fetchUserRole(data.user.id);
       setRole(userRole);
       
-      // Redirect based on role
-      if (userRole === 'admin') {
+      // Redirect based on role and branch
+      const userBranch = profile?.branch_id || data.user.user_metadata?.branch_id;
+      if (userRole === 'branch_admin') {
+        router.replace('/cikupa/admin');
+      } else if (userRole === 'admin') {
         router.replace('/admin');
+      } else if (userBranch === 'dlob-cikupa') {
+        router.replace('/cikupa/dashboard');
       } else {
         router.replace('/dashboard');
       }
@@ -562,7 +640,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, isAdmin, isMember, viewAs, loading, switchView, signUp, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, refreshUser, updatePassword }}>
+    <AuthContext.Provider value={{ user, session, role, isAdmin, isMember, isSuperAdmin, isBranchAdmin, canSwitchBranch, userBranchId, isNeutral, viewAs, loading, switchView, signUp, signIn, signInWithGoogle, signOut, updateProfile, uploadAvatar, refreshUser, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

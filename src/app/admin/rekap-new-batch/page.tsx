@@ -944,7 +944,7 @@ export default function RekapNewBatchPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-              Super Admin Exclusive
+              Internal Admin
             </span>
             <span className="text-xs text-gray-500 dark:text-zinc-400">• Ryan Radityatama</span>
           </div>

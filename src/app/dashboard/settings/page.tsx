@@ -6,7 +6,7 @@ import {
   User, Mail, Phone, Camera, Save, Loader2, Edit3, X, Award, 
   Instagram, Lock, Eye, EyeOff, HelpCircle, AlertTriangle, 
   ShieldCheck, CheckCircle2, ChevronRight, Trophy, Sparkles, Activity,
-  Maximize2
+  Maximize2, MapPin, Shuffle, ArrowRightLeft
 } from 'lucide-react';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -16,12 +16,18 @@ import { getTutorialSteps } from '@/lib/tutorialSteps';
 import { supabase } from '@/lib/supabase';
 
 export default function SettingsPage() {
-  const { user, updateProfile, uploadAvatar, refreshUser, updatePassword } = useAuth();
+  const { user, updateProfile, uploadAvatar, refreshUser, updatePassword, isNeutral, canSwitchBranch, userBranchId } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || '');
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Branch change state
+  const [showBranchModal, setShowBranchModal] = useState(false);
+  const [branchChoice, setBranchChoice] = useState<'dlob-pusat' | 'dlob-cikupa' | 'both' | null>(null);
+  const [branchLoading, setBranchLoading] = useState(false);
+  const [branchPending, setBranchPending] = useState(false);
   
   // Settings blocking state
   const [isSettingsBlocked, setIsSettingsBlocked] = useState(false);
@@ -983,6 +989,166 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
+
+            {/* Branch Settings Card */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                    <ArrowRightLeft className="w-4 h-4 text-[#4382C8]" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">Cabang Komunitas</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Ubah atau pilih cabang yang Anda ikuti</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowBranchModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Ubah</span>
+                </button>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Status Cabang</span>
+                  {isNeutral ? (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40">
+                      Belum Dipilih
+                    </span>
+                  ) : canSwitchBranch ? (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border border-purple-200/60 dark:border-purple-800/40">
+                      Dua Cabang
+                    </span>
+                  ) : userBranchId === 'dlob-cikupa' ? (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                      DLBC Cikupa
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40">
+                      DLOB Pusat
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Branch Modal */}
+            {showBranchModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Ubah Cabang</h2>
+                    <button onClick={() => { setShowBranchModal(false); setBranchChoice(null); setBranchPending(false); }} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {branchPending ? (
+                    <div className="text-center space-y-3 py-4">
+                      <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto">
+                        <Shuffle className="w-6 h-6 text-purple-400" />
+                      </div>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Permintaan dua cabang dikirim. Menunggu persetujuan Admin.
+                      </p>
+                      <button
+                        onClick={() => { setShowBranchModal(false); setBranchChoice(null); setBranchPending(false); }}
+                        className="w-full py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                      >
+                        Tutup
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setBranchChoice('dlob-pusat')}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            branchChoice === 'dlob-pusat'
+                              ? 'border-blue-500 bg-blue-500/10'
+                              : 'border-zinc-200 dark:border-zinc-700 hover:border-blue-500/50'
+                          }`}
+                        >
+                          <div className="text-lg mb-1">🏸</div>
+                          <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">DLOB Pusat</p>
+                          <p className="text-[11px] text-zinc-500">Komunitas Utama</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBranchChoice('dlob-cikupa')}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            branchChoice === 'dlob-cikupa'
+                              ? 'border-emerald-500 bg-emerald-500/10'
+                              : 'border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50'
+                          }`}
+                        >
+                          <MapPin className="w-5 h-5 text-emerald-500 mb-1" />
+                          <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">DLBC Cikupa</p>
+                          <p className="text-[11px] text-zinc-500">Cabang Cikupa</p>
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setBranchChoice('both')}
+                        className={`w-full p-3 rounded-xl border-2 text-left flex items-center gap-3 transition-all ${
+                          branchChoice === 'both'
+                            ? 'border-purple-500 bg-purple-500/10'
+                            : 'border-zinc-200 dark:border-zinc-700 hover:border-purple-500/50'
+                        }`}
+                      >
+                        <Shuffle className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Keduanya</p>
+                          <p className="text-[11px] text-zinc-500">Perlu persetujuan Admin</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={!branchChoice || branchLoading}
+                        onClick={async () => {
+                          if (!branchChoice) return;
+                          setBranchLoading(true);
+                          try {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            const res = await fetch('/api/profile/set-branch', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', authorization: `Bearer ${session?.access_token}` },
+                              body: JSON.stringify({ choice: branchChoice }),
+                            });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error);
+                            if (data.status === 'pending') {
+                              setBranchPending(true);
+                            } else {
+                              setShowBranchModal(false);
+                              setBranchChoice(null);
+                              setMessage({ type: 'success', text: `Cabang diubah ke ${branchChoice === 'dlob-pusat' ? 'DLOB Pusat' : 'DLBC Cikupa'}. Harap muat ulang halaman.` });
+                              setTimeout(() => window.location.reload(), 1500);
+                            }
+                          } catch (e: any) {
+                            setMessage({ type: 'error', text: e?.message || 'Gagal mengubah cabang' });
+                          } finally {
+                            setBranchLoading(false);
+                          }
+                        }}
+                        className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
+                          branchChoice && !branchLoading
+                            ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:opacity-90'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed'
+                        }`}
+                      >
+                        {branchLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Login Methods & Security Card */}
             <div className="member-settings-security bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs space-y-6 transition-all">

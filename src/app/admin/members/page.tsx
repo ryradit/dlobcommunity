@@ -4,7 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { usePathname } from 'next/navigation';
-import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle, Ban, X, FlaskConical, Info, MoreVertical, ArrowRight, Plus, Edit, Download, MessageSquare, SlidersHorizontal, ChevronLeft, ChevronRight, RefreshCw, Sparkles } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Users, Search, UserCog, Trash2, Shield, User, Mail, Calendar, CheckCircle, XCircle, AlertCircle, Phone, Eye, Award, Target, Hand, Clock, Instagram, Crown, HelpCircle, Ban, X, FlaskConical, Info, MoreVertical, ArrowRight, Plus, Edit, Download, MessageSquare, SlidersHorizontal, ChevronLeft, ChevronRight, RefreshCw, Sparkles, Building2 } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import Image from 'next/image';
 import TutorialOverlay from '@/components/TutorialOverlay';
@@ -29,10 +30,40 @@ interface Member {
   has_membership?: boolean;
   is_payment_exempt?: boolean;
   is_test_account?: boolean;
+  branch_id?: string;
 }
 
 export default function AdminMembersPage() {
   const pathname = usePathname();
+  const { user, isSuperAdmin, isBranchAdmin } = useAuth();
+
+  // Hierarchy check: determines if current user can delete target member
+  const canDeleteMember = (target: Member) => {
+    if (!user) return false;
+    if (user.id === target.id) return false;
+
+    const targetEmail = (target.email || '').toLowerCase().trim();
+    const callerEmail = (user.email || '').toLowerCase().trim();
+    const isCallerSuperAdmin = isSuperAdmin || callerEmail.includes('ryradit');
+
+    // Wahyu is Admin for both DLOB & DLBC — protected from deletion
+    if (targetEmail === 'dlob.official.tng@gmail.com') return false;
+
+    // Super Admin is protected
+    if (targetEmail.includes('ryradit') || targetEmail === 'ryradit@gmail.com') return false;
+
+    // Branch Admin (e.g. Edi) cannot delete Admin or Branch Admin
+    if (!isCallerSuperAdmin && (isBranchAdmin || callerEmail === 'edi@temp.dlob.local')) {
+      if (target.role === 'admin' || target.role === 'branch_admin') return false;
+    }
+
+    return true;
+  };
+
+  const userEmail = (user?.email || '').toLowerCase().trim();
+  // Only Super Admin (Adit) and Dual Admin (Wahyu) are granted permission to view all branches
+  const canViewAllBranches = isSuperAdmin || userEmail.includes('ryradit') || userEmail === 'dlob.official.tng@gmail.com';
+
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -121,7 +152,8 @@ export default function AdminMembersPage() {
   };
 
   // Filter & Sorting & Pagination states
-  const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'member'>('all');
+  const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'branch_admin' | 'member'>('all');
+  const [filterBranch, setFilterBranch] = useState<'all' | 'dlob-pusat' | 'dlob-cikupa'>('dlob-pusat');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterMembership, setFilterMembership] = useState<'all' | 'paid' | 'unpaid' | 'vip'>('all');
   const [filterType, setFilterType] = useState<'all' | 'real' | 'temp'>('all');
@@ -134,7 +166,8 @@ export default function AdminMembersPage() {
   const [newMemberForm, setNewMemberForm] = useState({
     full_name: '',
     phone: '',
-    role: 'member' as 'member' | 'admin',
+    role: 'member' as 'member' | 'admin' | 'branch_admin',
+    branch_id: 'dlob-pusat' as 'dlob-pusat' | 'dlob-cikupa',
     playing_level: 'intermediate' as string,
   });
   const [creatingMemberLoading, setCreatingMemberLoading] = useState(false);
@@ -240,22 +273,22 @@ export default function AdminMembersPage() {
         throw new Error(data.error || 'Gagal membuat anggota');
       }
 
-      // If phone or playing level was provided, update profile
-      if (newMemberForm.phone.trim() || newMemberForm.playing_level) {
-        await supabase
-          .from('profiles')
-          .update({
-            phone: newMemberForm.phone.trim() || null,
-            playing_level: newMemberForm.playing_level || null,
-            role: newMemberForm.role,
-          })
-          .eq('id', data.id);
-      }
+      // Update profile with role, branch_id, phone, playing_level
+      await supabase
+        .from('profiles')
+        .update({
+          phone: newMemberForm.phone.trim() || null,
+          playing_level: newMemberForm.playing_level || null,
+          role: newMemberForm.role,
+          branch_id: newMemberForm.branch_id,
+        })
+        .eq('id', data.id);
 
       setNewMemberForm({
         full_name: '',
         phone: '',
         role: 'member',
+        branch_id: 'dlob-pusat',
         playing_level: 'intermediate',
       });
       setShowAddMemberModal(false);
@@ -301,7 +334,7 @@ export default function AdminMembersPage() {
 
   useEffect(() => {
     fetchMembers();
-  }, [pathname]);
+  }, [pathname, canViewAllBranches]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -342,12 +375,18 @@ export default function AdminMembersPage() {
       const [profilesResult, membershipsResult] = await Promise.allSettled([
         // Fetch profiles with caching
         cachedQuery(
-          'admin-profiles-list',
+          canViewAllBranches ? 'admin-profiles-list-all' : 'admin-profiles-list-pusat',
           async () => {
-            const result = await supabase
+            let query = supabase
               .from('profiles')
               .select('*')
               .order('created_at', { ascending: false });
+
+            if (!canViewAllBranches) {
+              query = query.or('branch_id.eq.dlob-pusat,branch_id.is.null');
+            }
+
+            const result = await query;
             return result;
           },
           30000 // 30 seconds cache
@@ -447,6 +486,16 @@ export default function AdminMembersPage() {
   }
 
   async function handleToggleStatus(member: Member) {
+    const targetEmail = (member.email || '').toLowerCase().trim();
+    if (targetEmail === 'dlob.official.tng@gmail.com') {
+      alert('⚠️ Hirarki Akses: Akun Wahyu adalah Admin DLOB & DLBC dan tidak dapat dinonaktifkan.');
+      return;
+    }
+    if (targetEmail.includes('ryradit') || targetEmail === 'ryradit@gmail.com') {
+      alert('⚠️ Hirarki Akses: Akun Super Admin tidak dapat dinonaktifkan.');
+      return;
+    }
+
     setActionLoading(true);
     try {
       const { error } = await supabase
@@ -466,22 +515,66 @@ export default function AdminMembersPage() {
     }
   }
 
-  async function handleToggleRole(member: Member) {
+  async function handleAssignRoleAndBranch(
+    member: Member,
+    newRole: 'admin' | 'branch_admin' | 'member',
+    newBranchId: 'dlob-pusat' | 'dlob-cikupa'
+  ) {
+    if (!isSuperAdmin) {
+      alert('Hanya Admin yang berhak mengatur peran admin dan cabang.');
+      return;
+    }
+
+    const roleLabel = newRole === 'admin'
+      ? 'Admin (DLOB Pusat)'
+      : newRole === 'branch_admin'
+        ? 'Admin Cabang DLBC (Cikupa)'
+        : `Member (${newBranchId === 'dlob-cikupa' ? 'DLBC Cikupa' : 'DLOB Pusat'})`;
+
+    const confirmMsg = `Ubah peran "${member.full_name || member.email}" menjadi:\n\n👉 ${roleLabel}\n\nLanjutkan?`;
+    if (!confirm(confirmMsg)) return;
+
     setActionLoading(true);
     try {
-      const newRole = member.role === 'admin' ? 'member' : 'admin';
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', member.id);
-
-      if (!error) {
-        await fetchMembers();
-        setShowManageModal(false);
-        setSelectedMember(null);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Sesi autentikasi tidak ditemukan. Silakan login kembali.');
       }
-    } catch (error) {
-      console.error('Error updating role:', error);
+
+      const res = await fetch('/api/admin/members/update-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          memberId: member.id,
+          role: newRole,
+          branch_id: newBranchId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Gagal mengubah peran anggota');
+      }
+
+      queryCache.clear();
+      await fetchMembers();
+
+      if (selectedMember && selectedMember.id === member.id) {
+        setSelectedMember({
+          ...selectedMember,
+          role: newRole,
+          branch_id: newBranchId,
+        });
+      }
+
+      setShowManageModal(false);
+      alert(`✅ Sukses! ${member.full_name || member.email} sekarang adalah ${roleLabel}.`);
+    } catch (error: any) {
+      console.error('Error updating role & branch:', error);
+      alert('Gagal mengubah peran: ' + (error?.message || 'Unknown error'));
     } finally {
       setActionLoading(false);
     }
@@ -490,12 +583,27 @@ export default function AdminMembersPage() {
   async function handleDeleteMember() {
     if (!selectedMember) return;
     
+    // Front-line hierarchy guard
+    const targetEmail = (selectedMember.email || '').toLowerCase().trim();
+    if (targetEmail === 'dlob.official.tng@gmail.com') {
+      alert('⚠️ Hirarki Akses: Akun Wahyu adalah Admin DLOB & DLBC dan tidak dapat dihapus oleh Admin Cabang (Edi).');
+      setShowDeleteModal(false);
+      return;
+    }
+    if (targetEmail.includes('ryradit') || targetEmail === 'ryradit@gmail.com') {
+      alert('⚠️ Hirarki Akses: Akun Super Admin tidak dapat dihapus.');
+      setShowDeleteModal(false);
+      return;
+    }
+
     setActionLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/members/delete', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`,
         },
         body: JSON.stringify({ memberId: selectedMember.id }),
       });
@@ -508,6 +616,7 @@ export default function AdminMembersPage() {
         await fetchMembers();
         setShowDeleteModal(false);
         setSelectedMember(null);
+        alert('✅ Akun anggota berhasil dihapus.');
       } else {
         console.error('Error deleting member:', data.error);
         alert(data.error || 'Gagal menghapus anggota');
@@ -662,20 +771,39 @@ export default function AdminMembersPage() {
   async function handleToggleTestLabel(member: Member) {
     const newValue = !member.is_test_account;
     const confirmMsg = newValue
-      ? `Tandai "${member.full_name}" sebagai akun tes?`
+      ? `Tandai "${member.full_name}" sebagai akun tes?\n\nAkun tes akan disembunyikan dari leaderboard dan analitik publik.`
       : `Hapus label tes dari "${member.full_name}"?`;
     if (!confirm(confirmMsg)) return;
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_test_account: newValue })
-        .eq('id', member.id);
-      if (error) throw error;
-      queryCache.invalidate('admin-profiles-list');
+      setActionLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/members/toggle-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ memberId: member.id, is_test_account: newValue }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Gagal mengubah label tes');
+      }
+
+      queryCache.clear();
       await fetchMembers();
+
+      if (selectedMember && selectedMember.id === member.id) {
+        setSelectedMember({ ...selectedMember, is_test_account: newValue });
+      }
+
+      alert(`✅ Berhasil ${newValue ? 'menandai' : 'menghapus label'} akun tes untuk "${member.full_name}".`);
     } catch (error) {
       console.error('Error toggling test label:', error);
       alert('Gagal mengubah label tes: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setActionLoading(false);
     }
   }
 
@@ -781,7 +909,16 @@ export default function AdminMembersPage() {
 
         // Role filter
         if (filterRole === 'admin' && member.role !== 'admin') return false;
-        if (filterRole === 'member' && member.role === 'admin') return false;
+        if (filterRole === 'branch_admin' && member.role !== 'branch_admin') return false;
+        if (filterRole === 'member' && (member.role === 'admin' || member.role === 'branch_admin')) return false;
+
+        // Branch filter: DLOB admin can ONLY see DLOB Pusat members
+        const mBranch = member.branch_id || 'dlob-pusat';
+        if (!canViewAllBranches) {
+          if (mBranch === 'dlob-cikupa') return false;
+        } else if (filterBranch !== 'all') {
+          if (mBranch !== filterBranch) return false;
+        }
 
         // Status filter
         if (filterStatus === 'active' && !member.is_active) return false;
@@ -806,7 +943,7 @@ export default function AdminMembersPage() {
         if (sortBy === 'date_asc') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         return 0;
       });
-  }, [members, searchTerm, hideTestAccounts, filterRole, filterStatus, filterMembership, filterType, sortBy]);
+  }, [members, searchTerm, hideTestAccounts, filterRole, filterBranch, filterStatus, filterMembership, filterType, sortBy, canViewAllBranches]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedMembers.length / pageSize));
   const paginatedMembers = React.useMemo(() => {
@@ -817,16 +954,35 @@ export default function AdminMembersPage() {
   // Reset page to 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterRole, filterStatus, filterMembership, filterType, sortBy, pageSize]);
+  }, [searchTerm, filterRole, filterBranch, filterStatus, filterMembership, filterType, sortBy, pageSize]);
 
   const realMembers = members.filter(m => !m.is_test_account);
 
+  // Scoped stats based on filterBranch
+  const scopedMembers = !canViewAllBranches
+    ? realMembers.filter(m => (m.branch_id || 'dlob-pusat') !== 'dlob-cikupa')
+    : filterBranch === 'all'
+    ? realMembers
+    : realMembers.filter(m => (m.branch_id || 'dlob-pusat') === filterBranch);
+
   const stats = {
-    total: realMembers.length,
-    active: realMembers.filter(m => m.is_active).length,
-    admins: realMembers.filter(m => m.role === 'admin').length,
-    tempCount: members.filter(m => m.email?.endsWith('@temp.dlob.local')).length,
+    total: scopedMembers.length,
+    active: scopedMembers.filter(m => m.is_active).length,
+    admins: scopedMembers.filter(m => m.role === 'admin' || m.role === 'branch_admin').length,
+    branchAdmins: scopedMembers.filter(m => m.role === 'branch_admin').length,
+    dlbcCount: realMembers.filter(m => m.branch_id === 'dlob-cikupa').length,
+    tempCount: members.filter(m => {
+      const mBranch = m.branch_id || 'dlob-pusat';
+      const matchBranch = !canViewAllBranches ? mBranch !== 'dlob-cikupa' : (filterBranch === 'all' || mBranch === filterBranch);
+      return matchBranch && m.email?.endsWith('@temp.dlob.local');
+    }).length,
   };
+
+  const activeMembershipCount = members.filter(m => {
+    const mBranch = m.branch_id || 'dlob-pusat';
+    const matchBranch = !canViewAllBranches ? mBranch !== 'dlob-cikupa' : (filterBranch === 'all' || mBranch === filterBranch);
+    return matchBranch && m.has_membership && !m.is_test_account;
+  }).length;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
@@ -1023,7 +1179,7 @@ export default function AdminMembersPage() {
               Status Membership: {new Date(currentMonthYear.year, currentMonthYear.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
             </span>
             <span className="text-xs text-zinc-400">
-              ({members.filter(m => m.has_membership && !m.is_test_account).length} member aktif bulan ini)
+              ({activeMembershipCount} member aktif bulan ini)
             </span>
           </div>
           <p className="text-xs text-zinc-400 mt-0.5">
@@ -1056,9 +1212,28 @@ export default function AdminMembersPage() {
               className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-white/20"
             >
               <option value="all">Semua Peran</option>
-              <option value="admin">Admin</option>
+              <option value="admin">Admin DLOB</option>
+              <option value="branch_admin">Admin Cabang DLBC</option>
               <option value="member">Member</option>
             </select>
+
+            {/* Branch Filter - Only visible to Super Admin (Adit) and Dual Admin (Wahyu) */}
+            {canViewAllBranches ? (
+              <select
+                value={filterBranch}
+                onChange={(e) => setFilterBranch(e.target.value as any)}
+                className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-white/20"
+              >
+                <option value="dlob-pusat">DLOB Pusat</option>
+                <option value="dlob-cikupa">DLBC (Cikupa)</option>
+                <option value="all">Semua Cabang</option>
+              </select>
+            ) : (
+              <div className="px-3 py-2 bg-zinc-900/80 border border-blue-500/30 rounded-xl text-xs text-blue-400 font-semibold flex items-center gap-1.5 cursor-default select-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                DLOB Pusat
+              </div>
+            )}
 
             {/* Status Filter */}
             <select
@@ -1112,12 +1287,13 @@ export default function AdminMembersPage() {
         <div className="flex flex-wrap items-center justify-between text-xs text-zinc-400 pt-1 border-t border-white/5">
           <div className="flex items-center gap-3">
             <span>Ditemukan: <strong className="text-white">{filteredAndSortedMembers.length}</strong> anggota</span>
-            {(searchTerm || filterRole !== 'all' || filterStatus !== 'all' || filterMembership !== 'all' || filterType !== 'all') && (
+            {(searchTerm || filterRole !== 'all' || (canViewAllBranches && filterBranch !== 'dlob-pusat') || filterStatus !== 'all' || filterMembership !== 'all' || filterType !== 'all') && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchTerm('');
                   setFilterRole('all');
+                  if (canViewAllBranches) setFilterBranch('dlob-pusat');
                   setFilterStatus('all');
                   setFilterMembership('all');
                   setFilterType('all');
@@ -1247,12 +1423,27 @@ export default function AdminMembersPage() {
                     </td>
                     <td className="px-4 sm:px-6 py-3.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
-                          member.role === 'admin' 
-                            ? 'bg-red-500/10 text-red-400 border-red-500/20' 
-                            : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                        }`}>
-                          {member.role === 'admin' ? 'Admin' : 'Member'}
+                        {member.role === 'admin' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                            <Shield size={11} className="text-purple-400 shrink-0" />
+                            Admin
+                          </span>
+                        ) : member.role === 'branch_admin' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            <Shield size={11} className="text-emerald-400 shrink-0" />
+                            Admin DLBC
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-blue-500/10 text-blue-400 border-blue-500/20">
+                            Member
+                          </span>
+                        )}
+                        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${
+                          member.branch_id === 'dlob-cikupa'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            : 'bg-zinc-800 text-zinc-400 border-white/10'
+                        }`} title={member.branch_id === 'dlob-cikupa' ? 'Cabang DLBC (Cikupa)' : 'Cabang DLOB Pusat'}>
+                          {member.branch_id === 'dlob-cikupa' ? 'DLBC' : 'Pusat'}
                         </span>
                         {member.has_membership && (
                           <span 
@@ -1392,18 +1583,42 @@ export default function AdminMembersPage() {
                               </button>
 
                               {/* Delete Account */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedMember(member);
-                                  setShowDeleteModal(true);
-                                  setOpenDropdownId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-red-500/10 text-red-400 cursor-pointer border-t border-white/10"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                Hapus Akun
-                              </button>
+                              {canDeleteMember(member) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedMember(member);
+                                    setShowDeleteModal(true);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-red-500/10 text-red-400 cursor-pointer border-t border-white/10"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Hapus Akun
+                                </button>
+                              ) : (
+                                <div
+                                  className="w-full px-3 py-2 text-left text-[11px] flex items-center gap-2 text-zinc-500 border-t border-white/10 cursor-not-allowed select-none bg-zinc-950/40"
+                                  title={
+                                    (member.email || '').toLowerCase().trim() === 'dlob.official.tng@gmail.com'
+                                      ? 'Akun Wahyu (Admin DLOB & DLBC) dilindungi dari penghapusan'
+                                      : (member.email || '').toLowerCase().trim().includes('ryradit')
+                                      ? 'Akun Super Admin dilindungi'
+                                      : user?.id === member.id
+                                      ? 'Tidak dapat menghapus akun Anda sendiri'
+                                      : 'Hirarki: Anda tidak memiliki wewenang untuk menghapus akun ini'
+                                  }
+                                >
+                                  <Shield className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                  <span className="truncate">
+                                    {(member.email || '').toLowerCase().trim() === 'dlob.official.tng@gmail.com'
+                                      ? 'Terlindungi (Admin DLOB/DLBC)'
+                                      : user?.id === member.id
+                                      ? 'Akun Anda'
+                                      : 'Akses Dibatasi (Hirarki)'}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1591,29 +1806,206 @@ export default function AdminMembersPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Shield className="w-5 h-5 text-purple-400" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white transition-colors duration-300">Peran</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white transition-colors duration-300">Hak Akses & Cabang</span>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                    selectedMember.role === 'admin'
-                      ? 'bg-red-500/20 text-red-400'
-                      : 'bg-blue-500/20 text-blue-400'
-                  }`}>
-                    {selectedMember.role === 'admin' ? 'Admin' : 'Member'}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      selectedMember.role === 'admin'
+                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                        : selectedMember.role === 'branch_admin'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    }`}>
+                      {selectedMember.role === 'admin'
+                        ? 'Admin'
+                        : selectedMember.role === 'branch_admin'
+                        ? 'Admin DLBC'
+                        : 'Member'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-zinc-800 text-zinc-300 border border-white/10">
+                      {selectedMember.branch_id === 'dlob-cikupa' ? 'DLBC Cikupa' : 'DLOB Pusat'}
+                    </span>
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleToggleRole(selectedMember)}
-                  disabled={actionLoading}
-                  className={`w-full px-4 py-2.5 rounded-lg font-medium transition-colors ${
-                    selectedMember.role === 'admin'
-                      ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30'
-                      : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border border-purple-500/30'
-                  } disabled:opacity-50`}
-                >
-                  {actionLoading ? 'Memproses...' : selectedMember.role === 'admin' ? 'Jadikan Member' : 'Jadikan Admin'}
-                </button>
+
+                <p className="text-xs text-zinc-400 mb-3">
+                  Anda dapat memberikan hak akses admin atau mengatur anggota sebagai member reguler.
+                </p>
+
+                <div className="space-y-2">
+                  {/* Option 1: Admin (DLOB Pusat) */}
+                  <button
+                    type="button"
+                    disabled={actionLoading || selectedMember.role === 'admin'}
+                    onClick={() => handleAssignRoleAndBranch(selectedMember, 'admin', 'dlob-pusat')}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedMember.role === 'admin'
+                        ? 'bg-purple-500/10 border-purple-500/40 text-purple-300 cursor-default ring-1 ring-purple-500/30'
+                        : 'bg-zinc-800/60 hover:bg-purple-950/40 border-white/10 hover:border-purple-500/40 text-zinc-200'
+                    } disabled:opacity-60`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
+                        <Shield className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                          Admin (DLOB Pusat)
+                          {selectedMember.role === 'admin' && (
+                            <span className="text-[10px] bg-purple-500/30 text-purple-200 px-1.5 py-0.2 rounded">Aktif</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-zinc-400">Akses admin DLOB Pusat</div>
+                      </div>
+                    </div>
+                    {selectedMember.role !== 'admin' && (
+                      <span className="text-xs font-medium text-purple-400 hover:underline shrink-0 ml-2">Jadikan Admin</span>
+                    )}
+                  </button>
+
+                  {/* Option 2: Admin Cabang DLBC (Cikupa) - Only visible to multi-branch admins */}
+                  {canViewAllBranches && (
+                    <button
+                      type="button"
+                      disabled={actionLoading || (selectedMember.role === 'branch_admin' && selectedMember.branch_id === 'dlob-cikupa')}
+                      onClick={() => handleAssignRoleAndBranch(selectedMember, 'branch_admin', 'dlob-cikupa')}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        selectedMember.role === 'branch_admin' && selectedMember.branch_id === 'dlob-cikupa'
+                          ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 cursor-default ring-1 ring-emerald-500/30'
+                          : 'bg-zinc-800/60 hover:bg-emerald-950/40 border-white/10 hover:border-emerald-500/40 text-zinc-200'
+                      } disabled:opacity-60`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+                          <Shield className="w-4 h-4 text-emerald-400" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                            Admin Cabang DLBC (Cikupa)
+                            {selectedMember.role === 'branch_admin' && selectedMember.branch_id === 'dlob-cikupa' && (
+                              <span className="text-[10px] bg-emerald-500/30 text-emerald-200 px-1.5 py-0.2 rounded">Aktif</span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-zinc-400">Akses admin portal DLBC Cikupa (/cikupa/admin)</div>
+                        </div>
+                      </div>
+                      {!(selectedMember.role === 'branch_admin' && selectedMember.branch_id === 'dlob-cikupa') && (
+                        <span className="text-xs font-medium text-emerald-400 hover:underline shrink-0 ml-2">Jadikan Admin</span>
+                      )}
+                    </button>
+                  )}
+
+                  {/* Option 3: Member DLOB Pusat */}
+                  <button
+                    type="button"
+                    disabled={actionLoading || (selectedMember.role === 'member' && (!selectedMember.branch_id || selectedMember.branch_id === 'dlob-pusat'))}
+                    onClick={() => handleAssignRoleAndBranch(selectedMember, 'member', 'dlob-pusat')}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedMember.role === 'member' && (!selectedMember.branch_id || selectedMember.branch_id === 'dlob-pusat')
+                        ? 'bg-blue-500/10 border-blue-500/40 text-blue-300 cursor-default ring-1 ring-blue-500/30'
+                        : 'bg-zinc-800/60 hover:bg-blue-950/40 border-white/10 hover:border-blue-500/40 text-zinc-200'
+                    } disabled:opacity-60`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+                        <User className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                          Member Reguler (DLOB Pusat)
+                          {selectedMember.role === 'member' && (!selectedMember.branch_id || selectedMember.branch_id === 'dlob-pusat') && (
+                            <span className="text-[10px] bg-blue-500/30 text-blue-200 px-1.5 py-0.2 rounded">Aktif</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-zinc-400">Anggota biasa di DLOB Pusat (/dashboard)</div>
+                      </div>
+                    </div>
+                    {!(selectedMember.role === 'member' && (!selectedMember.branch_id || selectedMember.branch_id === 'dlob-pusat')) && (
+                      <span className="text-xs font-medium text-blue-400 hover:underline shrink-0 ml-2">Set Member</span>
+                    )}
+                  </button>
+
+                  {/* Option 4: Member DLBC Cikupa - Only visible to multi-branch admins */}
+                  {canViewAllBranches && (
+                    <button
+                      type="button"
+                      disabled={actionLoading || (selectedMember.role === 'member' && selectedMember.branch_id === 'dlob-cikupa')}
+                      onClick={() => handleAssignRoleAndBranch(selectedMember, 'member', 'dlob-cikupa')}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        selectedMember.role === 'member' && selectedMember.branch_id === 'dlob-cikupa'
+                          ? 'bg-amber-500/10 border-amber-500/40 text-amber-300 cursor-default ring-1 ring-amber-500/30'
+                          : 'bg-zinc-800/60 hover:bg-amber-950/40 border-white/10 hover:border-amber-500/40 text-zinc-200'
+                      } disabled:opacity-60`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                            Member Reguler (DLBC Cikupa)
+                            {selectedMember.role === 'member' && selectedMember.branch_id === 'dlob-cikupa' && (
+                              <span className="text-[10px] bg-amber-500/30 text-amber-200 px-1.5 py-0.2 rounded">Aktif</span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-zinc-400">Anggota biasa di DLBC Cikupa (/cikupa/dashboard)</div>
+                        </div>
+                      </div>
+                      {!(selectedMember.role === 'member' && selectedMember.branch_id === 'dlob-cikupa') && (
+                        <span className="text-xs font-medium text-amber-400 hover:underline shrink-0 ml-2">Set Member</span>
+                      )}
+                    </button>
+                  )}
+                {/* Option 5: Dual-Branch Member (Keduanya) - Super Admin only */}
+                {canViewAllBranches && (
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={async () => {
+                      if (!confirm(`Setujui akses DUA CABANG untuk "${selectedMember?.full_name || selectedMember?.email}"?\n\nMereka bisa berpindah antara DLOB Pusat dan DLBC Cikupa.`)) return;
+                      setActionLoading(true);
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const res = await fetch('/api/admin/members/update-role', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                          body: JSON.stringify({ memberId: selectedMember?.id, role: 'member', branch_id: selectedMember?.branch_id || 'dlob-pusat', can_switch_branch: true }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error);
+                        queryCache.clear();
+                        await fetchMembers();
+                        setShowManageModal(false);
+                        alert(`✅ Akses dua cabang disetujui untuk ${selectedMember?.full_name || selectedMember?.email}.`);
+                      } catch (e: any) {
+                        alert('Gagal: ' + e?.message);
+                      } finally {
+                        setActionLoading(false);
+                      }
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all bg-zinc-800/60 hover:bg-purple-950/40 border-white/10 hover:border-purple-500/40 text-zinc-200"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
+                        <span className="text-sm">🔀</span>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                          Member Dua Cabang
+                          {(selectedMember as any)?.pending_dual_branch && (
+                            <span className="text-[10px] bg-amber-500/30 text-amber-200 px-1.5 py-0.5 rounded animate-pulse">Pending</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-zinc-400">Bisa akses DLOB Pusat + DLBC Cikupa</div>
+                      </div>
+                    </div>
+                    <span className="text-xs font-medium text-purple-400 shrink-0 ml-2">Setujui</span>
+                  </button>
+                )}
+
               </div>
             </div>
+          </div>
 
             <button
               onClick={() => {
@@ -1642,15 +2034,23 @@ export default function AdminMembersPage() {
               </div>
             </div>
 
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
-              <p className="text-sm text-red-400 mb-2">
-                Anda akan menghapus anggota:
-              </p>
-              <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold transition-colors duration-300">
-                <User className="w-4 h-4" />
-                {selectedMember.full_name || selectedMember.email}
+            {!canDeleteMember(selectedMember) ? (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 mb-6">
+                <p className="text-sm text-amber-400 font-medium">
+                  ⚠️ Akun ini ({selectedMember.full_name || selectedMember.email}) dilindungi oleh aturan hirarki dan tidak dapat dihapus oleh peran Anda.
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+                <p className="text-sm text-red-400 mb-2">
+                  Anda akan menghapus anggota:
+                </p>
+                <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold transition-colors duration-300">
+                  <User className="w-4 h-4" />
+                  {selectedMember.full_name || selectedMember.email}
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
@@ -1664,7 +2064,7 @@ export default function AdminMembersPage() {
               </button>
               <button
                 onClick={handleDeleteMember}
-                disabled={actionLoading}
+                disabled={actionLoading || !canDeleteMember(selectedMember)}
                 className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium disabled:opacity-50"
               >
                 {actionLoading ? 'Menghapus...' : 'Hapus'}
@@ -1823,31 +2223,43 @@ export default function AdminMembersPage() {
                 </div>
               )}
 
-              {/* Role */}
+              {/* Role & Branch */}
               <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-200 dark:border-white/10 transition-colors duration-300">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
                     <Shield className="w-5 h-5 text-purple-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-500 dark:text-zinc-500 mb-0.5 transition-colors duration-300">Peran</p>
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                      selectedMember.role === 'admin' 
-                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
-                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                    }`}>
-                      {selectedMember.role === 'admin' ? (
-                        <>
-                          <Shield className="w-3.5 h-3.5" />
-                          Admin
-                        </>
-                      ) : (
-                        <>
-                          <User className="w-3.5 h-3.5" />
-                          Anggota
-                        </>
-                      )}
-                    </span>
+                    <p className="text-xs text-gray-500 dark:text-zinc-500 mb-1 transition-colors duration-300">Peran & Cabang</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                        selectedMember.role === 'admin' 
+                          ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                          : selectedMember.role === 'branch_admin'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                      }`}>
+                        {selectedMember.role === 'admin' ? (
+                          <>
+                            <Shield className="w-3.5 h-3.5 text-purple-400" />
+                            Admin
+                          </>
+                        ) : selectedMember.role === 'branch_admin' ? (
+                          <>
+                            <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                            Admin Cabang DLBC
+                          </>
+                        ) : (
+                          <>
+                            <User className="w-3.5 h-3.5 text-blue-400" />
+                            Anggota
+                          </>
+                        )}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-zinc-800 text-zinc-300 border border-white/10">
+                        {selectedMember.branch_id === 'dlob-cikupa' ? 'DLBC Cikupa' : 'DLOB Pusat'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2471,17 +2883,43 @@ export default function AdminMembersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-300 mb-1">Role</label>
+                  <label className="block text-xs font-medium text-zinc-300 mb-1">Peran (Role)</label>
                   <select
                     value={newMemberForm.role}
-                    onChange={(e) => setNewMemberForm({ ...newMemberForm, role: e.target.value as 'admin' | 'member' })}
+                    onChange={(e) => {
+                      const r = e.target.value as 'admin' | 'branch_admin' | 'member';
+                      setNewMemberForm({
+                        ...newMemberForm,
+                        role: r,
+                        branch_id: r === 'branch_admin' ? 'dlob-cikupa' : newMemberForm.branch_id,
+                      });
+                    }}
                     className="w-full px-3 py-2 bg-zinc-800/80 border border-white/10 rounded-xl text-white focus:outline-hidden focus:ring-1 focus:ring-zinc-400 text-sm"
                   >
                     <option value="member">Member</option>
-                    <option value="admin">Admin</option>
+                    <option value="admin">Admin DLOB</option>
+                    {canViewAllBranches && <option value="branch_admin">Admin Cabang DLBC</option>}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-300 mb-1">Cabang</label>
+                  {canViewAllBranches ? (
+                    <select
+                      value={newMemberForm.branch_id}
+                      onChange={(e) => setNewMemberForm({ ...newMemberForm, branch_id: e.target.value as 'dlob-pusat' | 'dlob-cikupa' })}
+                      className="w-full px-3 py-2 bg-zinc-800/80 border border-white/10 rounded-xl text-white focus:outline-hidden focus:ring-1 focus:ring-zinc-400 text-sm"
+                    >
+                      <option value="dlob-pusat">DLOB Pusat</option>
+                      <option value="dlob-cikupa">DLBC (Cikupa)</option>
+                    </select>
+                  ) : (
+                    <div className="w-full px-3 py-2 bg-zinc-800/40 border border-white/10 rounded-xl text-zinc-400 text-sm flex items-center gap-1.5 cursor-not-allowed">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                      DLOB Pusat
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-zinc-300 mb-1">Skill Level</label>

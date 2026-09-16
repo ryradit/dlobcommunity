@@ -74,10 +74,9 @@ export async function GET(request: NextRequest) {
       })
       .slice(0, limit)
       .map((file: any) => {
-        // For HEIC and other formats, use Google's export/view URL which auto-converts
-        const imageUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
-        // Use smaller size for thumbnail to load faster as blur background
-        const thumbnailUrl = `https://drive.google.com/uc?export=view&id=${file.id}&sz=w200`;
+        // Use high-speed Google CDN (lh3.googleusercontent.com) with automatic optimization
+        const imageUrl = `https://lh3.googleusercontent.com/d/${file.id}=w1600`;
+        const thumbnailUrl = `https://lh3.googleusercontent.com/d/${file.id}=w600`;
         
         return {
           id: file.id,
@@ -86,6 +85,7 @@ export async function GET(request: NextRequest) {
           type: 'image',
           url: imageUrl,
           category,
+          createdTime: file.createdTime,
         };
       });
 

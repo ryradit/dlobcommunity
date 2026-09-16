@@ -7,6 +7,7 @@ import { AnimatedMarqueeHero } from '@/components/AnimatedMarqueeHero';
 import { getMemberImageUrl } from '@/lib/membersStorage';
 
 type TabType = 'semua' | 'pertandingan' | 'latihan' | 'sparring';
+type BranchFilter = 'all' | 'dlob' | 'dlbc';
 
 interface GalleryItem {
   id: string;
@@ -15,6 +16,8 @@ interface GalleryItem {
   type: 'image' | 'video';
   url: string;
   category: 'pertandingan' | 'latihan' | 'sparring';
+  branch?: 'dlob' | 'dlbc' | 'all';
+  createdTime?: string;
 }
 
 interface YouTubeVideo {
@@ -26,10 +29,12 @@ interface YouTubeVideo {
 
 export default function GaleriPage() {
   const [activeTab, setActiveTab] = useState<TabType>('semua');
+  const [selectedBranch, setSelectedBranch] = useState<BranchFilter>('all');
   const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null);
   const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
   const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([]);
   const [latihanImages, setLatihanImages] = useState<GalleryItem[]>([]);
+  const [dlbcImages, setDlbcImages] = useState<GalleryItem[]>([]);
   const [sparringImages, setSparringImages] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [mobileGridCols, setMobileGridCols] = useState<1 | 2>(1);
@@ -38,7 +43,41 @@ export default function GaleriPage() {
   const [latihanPage, setLatihanPage] = useState(1);
   const [sparringPage, setSparringPage] = useState(1);
   const [modalImageLoading, setModalImageLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const itemsPerPage = 50;
+
+  const handleDownloadImage = async (item: GalleryItem) => {
+    if (!item) return;
+    try {
+      setIsDownloading(true);
+      let response = await fetch(`https://lh3.googleusercontent.com/d/${item.id}=s0`);
+      if (!response.ok) {
+        response = await fetch(`/api/drive/proxy?id=${item.id}&sz=s0`);
+      }
+      if (!response.ok) throw new Error('Fetch failed');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${item.title || 'foto-galeri'}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.warn('Direct blob download fallback to Google Drive export download:', err);
+      window.open(`https://drive.google.com/uc?export=download&id=${item.id}`, '_blank', 'noopener,noreferrer');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const resetPages = () => {
+    setSemuaPage(1);
+    setPertandinganPage(1);
+    setLatihanPage(1);
+    setSparringPage(1);
+  };
 
   // Fetch YouTube videos from channel
   useEffect(() => {
@@ -89,9 +128,13 @@ export default function GaleriPage() {
 
   // Fetch Google Drive images
   useEffect(() => {
-    const fetchGoogleDriveImages = async (folderId: string, category: 'latihan' | 'sparring') => {
+    const fetchGoogleDriveImages = async (
+      folderId: string,
+      category: 'latihan' | 'sparring',
+      branch: 'dlob' | 'dlbc' = 'dlob'
+    ) => {
       try {
-        console.log(`🔄 Fetching ${category} images from folder: ${folderId}`);
+        console.log(`🔄 Fetching ${category} (${branch}) images from folder: ${folderId}`);
         
         // Use server-side API route for proper authentication
         const response = await fetch(
@@ -104,28 +147,37 @@ export default function GaleriPage() {
         }
 
         const data = await response.json();
-        const images: GalleryItem[] = data.images || [];
+        const images: GalleryItem[] = (data.images || []).map((img: any) => ({
+          ...img,
+          branch,
+        }));
 
-        console.log(`✅ Fetched ${images.length} ${category} images`);
+        console.log(`✅ Fetched ${images.length} ${category} (${branch}) images`);
 
-        if (category === 'latihan') {
+        if (branch === 'dlbc') {
+          setDlbcImages(images);
+        } else if (category === 'latihan') {
           setLatihanImages(images);
         } else {
           setSparringImages(images);
         }
       } catch (error) {
-        console.error(`❌ Error fetching ${category} images:`, error);
+        console.error(`❌ Error fetching ${category} (${branch}) images:`, error);
       }
     };
 
-    const trainingFolderId = process.env.NEXT_PUBLIC_GDRIVE_TRAINING_FOLDER_ID;
-    const sparringFolderId = process.env.NEXT_PUBLIC_GDRIVE_SPARRING_FOLDER_ID;
+    const trainingFolderId = process.env.NEXT_PUBLIC_GDRIVE_TRAINING_FOLDER_ID || '1vEBxWbSSh_4UIflg9Duw6RlZVvnrHeSC';
+    const sparringFolderId = process.env.NEXT_PUBLIC_GDRIVE_SPARRING_FOLDER_ID || '1bNZD-938qEvYVOY6fYLajuvecbsxET9X';
+    const dlbcFolderId = process.env.NEXT_PUBLIC_GDRIVE_DLBC_FOLDER_ID || '1bgKdN9ga1TOYrBWsV9BZ46lm5vo6kh4u';
 
     if (trainingFolderId) {
-      fetchGoogleDriveImages(trainingFolderId, 'latihan');
+      fetchGoogleDriveImages(trainingFolderId, 'latihan', 'dlob');
     }
     if (sparringFolderId) {
-      fetchGoogleDriveImages(sparringFolderId, 'sparring');
+      fetchGoogleDriveImages(sparringFolderId, 'sparring', 'dlob');
+    }
+    if (dlbcFolderId) {
+      fetchGoogleDriveImages(dlbcFolderId, 'latihan', 'dlbc');
     }
 
     setLoading(false);
@@ -139,46 +191,48 @@ export default function GaleriPage() {
     type: 'video',
     url: video.embedUrl,
     category: 'pertandingan',
+    branch: 'dlob',
   }));
+
+  const allLatihanImages: GalleryItem[] = [...latihanImages, ...dlbcImages];
 
   const allItems = [
     ...pertandinganItems,
-    ...latihanImages,
+    ...allLatihanImages,
     ...sparringImages,
   ];
 
-  // Filter items based on active tab and apply pagination
-  const getFilteredItems = () => {
-    let items: GalleryItem[] = [];
-    let currentPage = 1;
-
+  const getTabBaseItems = () => {
     switch (activeTab) {
       case 'semua':
-        items = allItems;
-        currentPage = semuaPage;
-        break;
+        return allItems;
       case 'pertandingan':
-        items = pertandinganItems;
-        currentPage = pertandinganPage;
-        break;
+        return pertandinganItems;
       case 'latihan':
-        items = latihanImages;
-        currentPage = latihanPage;
-        break;
+        return allLatihanImages;
       case 'sparring':
-        items = sparringImages;
-        currentPage = sparringPage;
-        break;
+        return sparringImages;
       default:
-        items = allItems;
+        return allItems;
+    }
+  };
+
+  // Filter items based on active tab & selected branch, and apply pagination
+  const getFilteredItems = () => {
+    let items = getTabBaseItems();
+
+    if (selectedBranch !== 'all') {
+      items = items.filter((item) => item.branch === selectedBranch || item.branch === 'all');
     }
 
+    const currentPage = getCurrentPage();
+
     // Apply pagination to all tabs with 50 items per page
-    if (items.length > 50) {
+    if (items.length > itemsPerPage) {
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
       
-      console.log(`📄 Pagination: Tab=${activeTab}, Page=${currentPage}, Total=${items.length}, Range=[${startIndex}-${endIndex}]`);
+      console.log(`📄 Pagination: Tab=${activeTab}, Branch=${selectedBranch}, Page=${currentPage}, Total=${items.length}, Range=[${startIndex}-${endIndex}]`);
       
       return items.slice(startIndex, endIndex);
     }
@@ -186,20 +240,17 @@ export default function GaleriPage() {
     return items;
   };
 
-  // Get total pages for current tab
-  const getTotalPages = () => {
-    switch (activeTab) {
-      case 'semua':
-        return Math.ceil(allItems.length / itemsPerPage);
-      case 'pertandingan':
-        return Math.ceil(pertandinganItems.length / itemsPerPage);
-      case 'latihan':
-        return Math.ceil(latihanImages.length / itemsPerPage);
-      case 'sparring':
-        return Math.ceil(sparringImages.length / itemsPerPage);
-      default:
-        return 1;
+  const getTotalFilteredCount = () => {
+    let items = getTabBaseItems();
+    if (selectedBranch !== 'all') {
+      items = items.filter((item) => item.branch === selectedBranch || item.branch === 'all');
     }
+    return items.length;
+  };
+
+  // Get total pages for current tab and branch
+  const getTotalPages = () => {
+    return Math.max(1, Math.ceil(getTotalFilteredCount() / itemsPerPage));
   };
 
   // Get current page
@@ -225,19 +276,15 @@ export default function GaleriPage() {
     switch (activeTab) {
       case 'semua':
         setSemuaPage(newPage);
-        console.log(`✅ Set semuaPage to ${newPage}`);
         break;
       case 'pertandingan':
         setPertandinganPage(newPage);
-        console.log(`✅ Set pertandinganPage to ${newPage}`);
         break;
       case 'latihan':
         setLatihanPage(newPage);
-        console.log(`✅ Set latihanPage to ${newPage}`);
         break;
       case 'sparring':
         setSparringPage(newPage);
-        console.log(`✅ Set sparringPage to ${newPage}`);
         break;
     }
     // Scroll to top
@@ -297,10 +344,11 @@ export default function GaleriPage() {
         ].map(getMemberImageUrl)}
       />
 
-      {/* Tabs Section */}
-      <section className="py-10 bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
-          <div className="flex flex-wrap gap-2 bg-slate-100 p-1.5 rounded-full border border-gray-200">
+      {/* Tabs & Filter Section */}
+      <section className="py-8 bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center gap-4">
+          {/* Main Activity Tabs */}
+          <div className="flex flex-wrap justify-center gap-2 bg-slate-100 p-1.5 rounded-full border border-gray-200">
             {[
               { label: 'Semua', value: 'semua' },
               { label: 'Pertandingan', value: 'pertandingan' },
@@ -312,10 +360,7 @@ export default function GaleriPage() {
                 onClick={() => {
                   setActiveTab(tab.value as TabType);
                   setSelectedVideo(null);
-                  setSemuaPage(1);
-                  setPertandinganPage(1);
-                  setLatihanPage(1);
-                  setSparringPage(1);
+                  resetPages();
                 }}
                 className={`px-6 py-2.5 text-xs sm:text-sm font-bold rounded-full transition-all duration-200 ${
                   activeTab === tab.value
@@ -324,6 +369,31 @@ export default function GaleriPage() {
                 }`}
               >
                 {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Secondary Branch Filter (Subtle, Inclusive, Non-discriminatory) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs">
+            <span className="text-slate-400 font-medium mr-1 text-[11px] uppercase tracking-wider">Cabang:</span>
+            {[
+              { label: 'Semua Cabang', value: 'all' },
+              { label: 'DLOB', value: 'dlob' },
+              { label: 'DLBC Cikupa', value: 'dlbc' },
+            ].map((b) => (
+              <button
+                key={b.value}
+                onClick={() => {
+                  setSelectedBranch(b.value as BranchFilter);
+                  resetPages();
+                }}
+                className={`px-3.5 py-1 rounded-full font-semibold transition-all text-xs ${
+                  selectedBranch === b.value
+                    ? 'bg-[#4382C8] text-white shadow-xs'
+                    : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                {b.label}
               </button>
             ))}
           </div>
@@ -395,6 +465,7 @@ export default function GaleriPage() {
                             embedUrl: item.url,
                           });
                         } else if (item.type === 'image') {
+                          setModalImageLoading(true);
                           setSelectedImage(item);
                         }
                       }}
@@ -406,16 +477,16 @@ export default function GaleriPage() {
                             <img 
                               src={item.thumbnail} 
                               alt={item.title} 
+                              referrerPolicy="no-referrer"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               onLoad={() => {
                                 console.log('✓ Image loaded:', item.title, item.id);
                               }}
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
-                                if (!img.src.includes('thumbnail')) {
-                                  img.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w400`;
-                                } else if (!img.src.includes('export=download')) {
-                                  img.src = `https://drive.google.com/uc?export=download&id=${item.id}`;
+                                const proxyUrl = `/api/drive/proxy?id=${item.id}&sz=w600`;
+                                if (!img.src.includes('/api/drive/proxy')) {
+                                  img.src = proxyUrl;
                                 }
                               }}
                             />
@@ -423,7 +494,12 @@ export default function GaleriPage() {
                           </>
                         ) : (
                           <>
-                            <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img 
+                              src={item.thumbnail} 
+                              alt={item.title} 
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                            />
                             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                               <div className="bg-white/90 backdrop-blur-sm rounded-full p-4 group-hover:scale-110 transition-transform">
                                 <Play className="w-6 h-6 text-zinc-950 fill-zinc-950" />
@@ -438,9 +514,21 @@ export default function GaleriPage() {
                         <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#4382C8] transition-colors line-clamp-1">
                           {item.title}
                         </h3>
-                        <span className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#4382C8]/10 text-[#4382C8]">
-                          {item.type === 'video' ? 'Video' : 'Foto'}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.branch === 'dlbc' && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+                              DLBC
+                            </span>
+                          )}
+                          {item.branch === 'dlob' && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60">
+                              DLOB
+                            </span>
+                          )}
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#4382C8]/10 text-[#4382C8]">
+                            {item.type === 'video' ? 'Video' : 'Foto'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -507,12 +595,7 @@ export default function GaleriPage() {
 
                       {/* Page Info */}
                       <p className="text-sm text-gray-600">
-                        Halaman {getCurrentPage()} dari {getTotalPages()} (Total: {
-                          activeTab === 'semua' ? allItems.length :
-                          activeTab === 'pertandingan' ? pertandinganItems.length :
-                          activeTab === 'latihan' ? latihanImages.length :
-                          sparringImages.length
-                        } item)
+                        Halaman {getCurrentPage()} dari {getTotalPages()} (Total: {getTotalFilteredCount()} item)
                       </p>
                     </div>
                   )}
@@ -548,7 +631,7 @@ export default function GaleriPage() {
               {/* Close Button */}
               <button
                 onClick={() => setSelectedVideo(null)}
-                className="absolute top-4 right-4 flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                className="absolute top-4 right-4 z-50 flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 text-white rounded-full transition-colors cursor-pointer backdrop-blur-sm"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -562,7 +645,7 @@ export default function GaleriPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-zinc-100 border border-zinc-200 rounded-xl p-6">
             <p className="text-sm text-zinc-800">
-              ℹ️ Tab Latihan dan Sparring menampilkan foto dari Google Drive secara real-time.
+              ℹ️ Tab Latihan dan Sparring menampilkan dokumentasi kegiatan dari Google Drive komunitas DLOB & DLBC secara real-time.
             </p>
           </div>
         </div>
@@ -571,88 +654,108 @@ export default function GaleriPage() {
       {/* Image Zoom Modal */}
       {selectedImage && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6"
           onClick={() => {
             setSelectedImage(null);
             setModalImageLoading(false);
           }}
         >
           <div 
-            className="relative w-full max-w-5xl max-h-[90vh] bg-black rounded-2xl overflow-hidden flex flex-col"
+            className="relative w-full max-w-5xl max-h-[90vh] bg-zinc-950 rounded-2xl overflow-hidden flex flex-col shadow-2xl border border-white/10"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
-            <button
-              onClick={() => {
-                setSelectedImage(null);
-                setModalImageLoading(false);
-              }}
-              className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {/* Modal Header Bar with Title & Close Button */}
+            <div className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-3 bg-zinc-900/90 border-b border-white/10">
+              <div className="flex items-center gap-2.5 min-w-0 pr-4">
+                {selectedImage.branch === 'dlbc' && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shrink-0 shadow-xs">
+                    DLBC Cikupa
+                  </span>
+                )}
+                {selectedImage.branch === 'dlob' && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#4382C8] text-white shrink-0 shadow-xs">
+                    DLOB Pusat
+                  </span>
+                )}
+                <h4 className="text-white text-xs sm:text-sm font-semibold truncate">
+                  {selectedImage.title}
+                </h4>
+              </div>
 
-            {/* Image Container with Loading Spinner */}
-            <div className="flex-1 flex items-center justify-center min-h-0 overflow-auto relative">
-              {/* Thumbnail Blur Background (shows while loading) */}
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  setSelectedImage(null);
+                  setModalImageLoading(false);
+                }}
+                className="flex items-center justify-center w-9 h-9 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white rounded-full transition-all cursor-pointer shrink-0"
+                title="Tutup"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Image Viewport Container */}
+            <div className="flex-1 flex items-center justify-center min-h-[250px] sm:min-h-[350px] max-h-[75vh] overflow-hidden relative p-2 sm:p-4 bg-black">
+              {/* Immediate sharp preview from preloaded thumbnail */}
               <img 
                 src={selectedImage.thumbnail}
                 alt={selectedImage.title}
-                className="absolute inset-0 w-full h-full object-contain blur-sm opacity-30 pointer-events-none"
+                referrerPolicy="no-referrer"
+                className="max-w-full max-h-[70vh] object-contain relative z-10"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  const proxyUrl = `/api/drive/proxy?id=${selectedImage.id}&sz=w600`;
+                  if (!img.src.includes('/api/drive/proxy')) {
+                    img.src = proxyUrl;
+                  }
+                }}
               />
-              
-              {/* Loading Spinner */}
-              {modalImageLoading && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-                </div>
-              )}
 
-              {/* Full Resolution Image */}
+              {/* High-resolution image overlay */}
               <img 
-                src={`https://drive.google.com/uc?export=view&id=${selectedImage.id}`}
+                src={`https://lh3.googleusercontent.com/d/${selectedImage.id}=w1600`}
                 alt={selectedImage.title}
-                className="w-full h-auto max-h-full object-contain relative z-10"
-                onLoadStart={() => setModalImageLoading(true)}
+                referrerPolicy="no-referrer"
+                className={`max-w-full max-h-[70vh] object-contain absolute inset-0 m-auto z-20 transition-opacity duration-300 ${
+                  modalImageLoading ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                }`}
                 onLoad={() => setModalImageLoading(false)}
                 onError={(e) => {
-                  console.warn('Modal image failed with export=view, trying alternative URL:', selectedImage.id);
+                  console.warn('High-res image load error, trying proxy fallback:', selectedImage.id);
                   const img = e.target as HTMLImageElement;
-                  
-                  // Fallback strategy: try different sizes and formats
-                  if (!img.src.includes('export=download')) {
-                    // Try download export with medium size
-                    img.src = `https://drive.google.com/uc?export=download&id=${selectedImage.id}`;
-                    console.log('Trying export=download');
-                  } else if (!img.src.includes('sz=w800')) {
-                    // Try smaller size (800px) which might load faster
-                    img.src = `https://drive.google.com/uc?export=view&id=${selectedImage.id}&sz=w800`;
-                    console.log('Trying sz=w800');
-                  } else if (!img.src.includes('sz=w400')) {
-                    // Try even smaller size (400px)
-                    img.src = `https://drive.google.com/uc?export=view&id=${selectedImage.id}&sz=w400`;
-                    console.log('Trying sz=w400');
-                  } else {
-                    // Use thumbnail as final fallback
-                    img.src = selectedImage.thumbnail;
-                    console.warn('Using thumbnail as last resort fallback');
+                  const proxyUrl = `/api/drive/proxy?id=${selectedImage.id}&sz=w1600`;
+                  if (!img.src.includes('/api/drive/proxy')) {
+                    img.src = proxyUrl;
                   }
                   setModalImageLoading(false);
                 }}
               />
+
+              {/* Subtle loading indicator */}
+              {modalImageLoading && (
+                <div className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md text-white text-xs font-medium border border-white/10">
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Memuat HD...</span>
+                </div>
+              )}
             </div>
 
-            {/* Download Button */}
-            <a
-              href={`https://drive.google.com/uc?export=download&id=${selectedImage.id}`}
-              download={selectedImage.title}
-              className="absolute bottom-4 left-4 flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-full shadow-lg transition-all z-10"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Download className="w-4 h-4" />
-              Download Foto
-            </a>
+            {/* Modal Footer Bar with Download Button */}
+            <div className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-3 bg-zinc-900/90 border-t border-white/10">
+              <button
+                onClick={() => handleDownloadImage(selectedImage)}
+                disabled={isDownloading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white text-zinc-950 hover:bg-slate-100 active:scale-95 font-bold text-xs rounded-full shadow-md transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {isDownloading ? 'Mengunduh...' : 'Download Foto'}
+              </button>
+
+              <span className="text-white/40 text-xs hidden sm:inline">
+                Klik di luar modal untuk menutup
+              </span>
+            </div>
           </div>
         </div>
       )}

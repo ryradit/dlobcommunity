@@ -13,6 +13,86 @@ interface MatchInput {
   shuttlecock_amount: string;
 }
 
+async function getOrCreatePlayerProfile(supabase: any, name: string, targetBranchId: string) {
+  const cleanName = name.trim();
+  if (!cleanName) return null;
+
+  // 1. Lookup by name (case-insensitive)
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('id, full_name, is_payment_exempt, phone, email, branch_id')
+    .ilike('full_name', cleanName)
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    return existing;
+  }
+
+  // 2. Lookup by unified temp email
+  const slug = cleanName.toLowerCase().replace(/\s+/g, '.');
+  const email = `${slug}@temp.dlob.local`;
+
+  const { data: existingByEmail } = await supabase
+    .from('profiles')
+    .select('id, full_name, is_payment_exempt, phone, email, branch_id')
+    .eq('email', email)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingByEmail) {
+    return existingByEmail;
+  }
+
+  // 3. Auto-create temp member auth user + profile
+  try {
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password: 'Dlob2026!',
+      email_confirm: true,
+      user_metadata: { full_name: cleanName, branch_id: targetBranchId },
+    });
+
+    let userId = authData?.user?.id;
+    if (authError && (authError.message?.includes('already been registered') || authError.message?.includes('already exists'))) {
+      const { data: userByEmail } = await supabase
+        .from('profiles')
+        .select('id, full_name, is_payment_exempt, phone, email, branch_id')
+        .eq('email', email)
+        .maybeSingle();
+      if (userByEmail) return userByEmail;
+    }
+
+    if (userId) {
+      await supabase.rpc('update_profile_safe', {
+        p_id: userId,
+        p_full_name: cleanName,
+        p_email: email,
+        p_role: 'member',
+        p_is_active: true,
+      });
+
+      await supabase
+        .from('profiles')
+        .update({ branch_id: targetBranchId })
+        .eq('id', userId);
+
+      return {
+        id: userId,
+        full_name: cleanName,
+        is_payment_exempt: false,
+        phone: null,
+        email,
+        branch_id: targetBranchId,
+      };
+    }
+  } catch (err) {
+    console.error(`[bulk-create] Auto-create temp profile failed for ${cleanName}:`, err);
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -23,7 +103,45 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { matches, matchDate } = await request.json();
+    const { matches, matchDate, branchId } = await request.json();
+    const targetBranchId = (branchId && typeof branchId === 'string' && branchId.trim()) 
+      ? branchId.trim() 
+      : 'dlob-pusat';
+
+    // Verify caller branch authorization if auth header is provided
+    const authHeader = request.headers.get('authorization');
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
+        const userEmail = (user.email || '').toLowerCase().trim();
+        const isMultiBranchAdmin = userEmail.includes('ryradit') || userEmail === 'dlob.official.tng@gmail.com';
+
+        if (!isMultiBranchAdmin) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, branch_id')
+            .eq('id', user.id)
+            .single();
+
+          const isCallerBranchAdmin = profile?.role === 'branch_admin' || userEmail === 'edi@temp.dlob.local' || profile?.branch_id === 'dlob-cikupa';
+
+          if (isCallerBranchAdmin && targetBranchId !== 'dlob-cikupa') {
+            return NextResponse.json(
+              { error: 'Akses Ditolak: Admin DLBC hanya diizinkan menginput pertandingan untuk cabang DLBC (Cikupa).' },
+              { status: 403 }
+            );
+          }
+
+          if (!isCallerBranchAdmin && targetBranchId === 'dlob-cikupa') {
+            return NextResponse.json(
+              { error: 'Akses Ditolak: Admin DLOB Pusat tidak diizinkan menginput pertandingan untuk cabang DLBC.' },
+              { status: 403 }
+            );
+          }
+        }
+      }
+    }
 
     if (!matches || !Array.isArray(matches) || matches.length === 0) {
       return NextResponse.json(
@@ -75,48 +193,33 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        console.log(`Processing match #${i + 1}, players:`, playerNames);
+        console.log(`Processing match #${i + 1} (${targetBranchId}), players:`, playerNames);
 
-        // Validate that all player names exist in profiles table AND get payment_exempt flag
+        // Validate or auto-create temp accounts for all players
         const profilePromises = playerNames.map(name => 
-          supabase
-            .from('profiles')
-            .select('id, full_name, is_payment_exempt, phone, email')
-            .ilike('full_name', name)
-            .single()
+          getOrCreatePlayerProfile(supabase, name, targetBranchId)
         );
 
         const profileResults = await Promise.all(profilePromises);
-        
-        // Check for errors
-        const profileErrors = profileResults.filter(r => r.error);
-        if (profileErrors.length > 0) {
-          console.error('Error fetching profiles:', profileErrors.map((r, idx) => ({
-            name: playerNames[idx],
-            error: r.error
-          })));
-          const missingNames = profileErrors.map((r, idx) => playerNames[idx]);
-          errors.push(`Pertandingan #${i + 1}: Pemain tidak ditemukan di database: ${missingNames.join(', ')}`);
+        const missingNames = playerNames.filter((_, idx) => !profileResults[idx]);
+
+        if (missingNames.length > 0) {
+          errors.push(`Pertandingan #${i + 1}: Gagal memproses pemain: ${missingNames.join(', ')}`);
           errorCount++;
           continue;
         }
 
-        const profiles = profileResults
-          .filter(r => r.data)
-          .map(r => r.data!);
+        const profiles = profileResults as NonNullable<typeof profileResults[0]>[];
 
-        if (!profiles || profiles.length !== 4) {
-          const foundNames = profiles.map(m => m.full_name).join(', ');
-          const missingNames = playerNames.filter(name => !profiles.find(m => m.full_name === name));
-          errors.push(`Pertandingan #${i + 1}: hanya ditemukan ${profiles?.length || 0}/4 pemain. Pemain tidak ditemukan: ${missingNames.join(', ')}`);
-          errorCount++;
-          continue;
-        }
-
-        // Calculate costs
-        const costPerShuttlecock = 12000;
-        const totalCost = parseInt(match.shuttlecock_amount) * costPerShuttlecock;
-        const costPerMember = totalCost / 4;
+        // Calculate costs based on branch rules:
+        // DLBC (dlob-cikupa): Rp 12.000 attendance fee, Rp 2.500 per shuttlecock per member
+        // DLOB Pusat: Rp 18.000 attendance fee, Rp 12.000 total per cock / 4 members
+        const isDlbcBranch = targetBranchId === 'dlob-cikupa';
+        const shuttlecockAmountNum = parseInt(match.shuttlecock_amount) || 1;
+        const costPerMember = isDlbcBranch 
+          ? (shuttlecockAmountNum * 2500) 
+          : ((shuttlecockAmountNum * 12000) / 4);
+        const attendanceFeeRate = isDlbcBranch ? 12000 : 18000;
 
         // Get match month and year to check memberships
         const matchDateObj = new Date(matchDate);
@@ -124,51 +227,78 @@ export async function POST(request: NextRequest) {
         const matchMonth = matchDateObj.getMonth() + 1;
         const matchYear = matchDateObj.getFullYear();
 
-        // Check active memberships for this month
-        const { data: activeMemberships } = await supabase
-          .from('memberships')
-          .select('member_name')
-          .eq('month', matchMonth)
-          .eq('year', matchYear)
-          .eq('payment_status', 'paid');
+        // Check active memberships for this month and branch (DLBC has no membership package yet)
+        let membershipSet = new Set<string>();
+        if (!isDlbcBranch) {
+          let membershipQuery = supabase
+            .from('memberships')
+            .select('member_name')
+            .eq('month', matchMonth)
+            .eq('year', matchYear)
+            .eq('payment_status', 'paid');
 
-        const membershipSet = new Set(
-          (activeMemberships || []).map(m => m.member_name.toLowerCase().trim())
-        );
+          if (targetBranchId) {
+            membershipQuery = membershipQuery.eq('branch_id', targetBranchId);
+          }
 
-        // Check which members already paid attendance fee TODAY (not per match!)
-        // by looking at existing match_members for this date
+          const { data: activeMemberships } = await membershipQuery;
+          membershipSet = new Set(
+            (activeMemberships || []).map(m => m.member_name.toLowerCase().trim())
+          );
+        }
+
+        // Check which members already paid attendance fee TODAY in THIS branch (not per match!)
         const matchDayStart = new Date(matchDateObj);
         matchDayStart.setHours(0, 0, 0, 0);
         const matchDayEnd = new Date(matchDateObj);
         matchDayEnd.setHours(23, 59, 59, 999);
-        const { data: existingMatchMembers } = await supabase
+
+        let attendanceQuery = supabase
           .from('match_members')
-          .select('member_name, matches!inner(match_date)')
+          .select('member_name, branch_id, matches!inner(match_date, branch_id)')
           .gt('attendance_fee', 0)
           .gte('matches.match_date', matchDayStart.toISOString())
           .lte('matches.match_date', matchDayEnd.toISOString());
+
+        if (targetBranchId) {
+          attendanceQuery = attendanceQuery.eq('branch_id', targetBranchId);
+        }
+
+        const { data: existingMatchMembers } = await attendanceQuery;
 
         const attendancePaidTodaySet = new Set(
           (existingMatchMembers || []).map(mm => mm.member_name.toLowerCase().trim())
         );
 
-        console.log(`📅 Date: ${matchDayStart.toISOString().split('T')[0]}, Already paid attendance today:`, Array.from(attendancePaidTodaySet));
+        console.log(`📅 Date: ${matchDayStart.toISOString().split('T')[0]}, Branch: ${targetBranchId}, Already paid attendance today:`, Array.from(attendancePaidTodaySet));
 
-        // Get next match number for this date
-        const { data: matchNumberData } = await supabase
-          .rpc('get_next_match_number', { p_date: matchDateObj.toISOString() });
+        // Get next match number for this date and branch
+        let matchNumber = 1;
+        const { data: branchMatchNum } = await supabase
+          .rpc('get_next_match_number_by_branch', { 
+            p_date: matchDateObj.toISOString(), 
+            p_branch_id: targetBranchId 
+          });
 
-        const matchNumber = matchNumberData || 1;
-        console.log(`🔢 Creating match #${matchNumber} for ${matchDateString}`);
+        if (typeof branchMatchNum === 'number' && branchMatchNum > 0) {
+          matchNumber = branchMatchNum;
+        } else {
+          // Fallback: try standard get_next_match_number or query max
+          const { data: standardMatchNum } = await supabase
+            .rpc('get_next_match_number', { p_date: matchDateObj.toISOString() });
+          matchNumber = standardMatchNum || 1;
+        }
 
-        // Create match
+        console.log(`🔢 Creating match #${matchNumber} for ${matchDateString} (${targetBranchId})`);
+
+        // Create match with branch_id
         const { data: createdMatch, error: matchError } = await supabase
           .from('matches')
           .insert({
-            shuttlecock_count: parseInt(match.shuttlecock_amount) || 4,
+            shuttlecock_count: shuttlecockAmountNum,
             match_date: matchDateObj.toISOString(),
             match_number: matchNumber,
+            branch_id: targetBranchId,
           })
           .select()
           .single();
@@ -197,6 +327,7 @@ export async function POST(request: NextRequest) {
               has_membership: true, // Mark as membership to avoid confusion
               payment_status: 'pending',
               attendance_paid_this_entry: false,
+              branch_id: targetBranchId,
             };
           }
           
@@ -206,10 +337,10 @@ export async function POST(request: NextRequest) {
           
           // Determine attendance fee:
           // - Has membership: no fee (0)
-          // - No membership && first match today: charge 18000 and mark as paid
+          // - No membership && first match today: charge attendanceFeeRate (12000 for DLBC, 18000 for Pusat) and mark as paid
           // - No membership && already played today: don't charge (already paid)
           const shouldChargeAttendance = !hasMembership && !alreadyPaidToday;
-          const attendanceFee = hasMembership ? 0 : (shouldChargeAttendance ? 18000 : 0);
+          const attendanceFee = hasMembership ? 0 : (shouldChargeAttendance ? attendanceFeeRate : 0);
           
           // Mark in set so next profile in this same match doesn't get charged again
           if (shouldChargeAttendance) {
@@ -224,6 +355,7 @@ export async function POST(request: NextRequest) {
             has_membership: hasMembership,
             payment_status: 'pending',
             attendance_paid_this_entry: shouldChargeAttendance, // TRUE only if charging attendance in this entry
+            branch_id: targetBranchId,
           };
         });
 

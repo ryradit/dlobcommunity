@@ -1,23 +1,56 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect } from 'react';
 import { Shield, User } from 'lucide-react';
 
 export default function ViewSwitcher() {
-  const { isAdmin, isMember, viewAs, switchView } = useAuth();
+  const { isAdmin, isMember, isBranchAdmin, isSuperAdmin, userBranchId, viewAs, switchView } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Detect whether current page is admin or member route
+  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/cikupa/admin');
+  const isMemberRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/cikupa/dashboard');
+
+  // Active view matches current page if on admin or dashboard, otherwise falls back to viewAs
+  const activeView = isAdminRoute ? 'admin' : isMemberRoute ? 'member' : viewAs;
+
+  // Keep viewAs in AuthContext in sync with the route
+  useEffect(() => {
+    if (!isAdmin || !isMember) return;
+    if (isAdminRoute && viewAs !== 'admin') {
+      switchView('admin');
+    } else if (isMemberRoute && viewAs !== 'member') {
+      switchView('member');
+    }
+  }, [isAdmin, isMember, pathname, isAdminRoute, isMemberRoute, viewAs, switchView]);
 
   if (!isAdmin || !isMember) {
     return null;
   }
 
-  const handleSwitch = (view: 'admin' | 'member') => {
-    switchView(view);
-    if (view === 'admin') {
-      router.push('/admin');
+  const handleSwitch = (target: 'admin' | 'member') => {
+    switchView(target);
+    const isCikupa = pathname.startsWith('/cikupa') || (isBranchAdmin && userBranchId === 'dlob-cikupa');
+
+    if (target === 'admin') {
+      if (isCikupa && !isSuperAdmin) {
+        router.push('/cikupa/admin');
+      } else if (pathname.startsWith('/cikupa')) {
+        router.push('/cikupa/admin');
+      } else {
+        router.push('/admin');
+      }
     } else {
-      router.push('/dashboard');
+      if (isCikupa && !isSuperAdmin) {
+        router.push('/cikupa/dashboard');
+      } else if (pathname.startsWith('/cikupa')) {
+        router.push('/cikupa/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     }
   };
 
@@ -27,7 +60,7 @@ export default function ViewSwitcher() {
         <button
           onClick={() => handleSwitch('admin')}
           className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-all ${
-            viewAs === 'admin'
+            activeView === 'admin'
               ? 'bg-purple-600 text-white shadow-md'
               : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-800'
           }`}
@@ -38,7 +71,7 @@ export default function ViewSwitcher() {
         <button
           onClick={() => handleSwitch('member')}
           className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-all ${
-            viewAs === 'member'
+            activeView === 'member'
               ? 'bg-blue-600 text-white shadow-md'
               : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-800'
           }`}

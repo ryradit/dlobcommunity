@@ -52,30 +52,48 @@ export default function KontakPage() {
     }
   };
 
+  const [selectedBranch, setSelectedBranch] = useState<'dlob' | 'dlbc'>('dlob');
+
   const contactInfo = [
     {
       icon: MapPin,
       title: 'Lokasi Lapangan',
-      value: 'GOR Wisma Harapan',
-      detail: 'Jl. Wisma Lantana IV, Gembor, Kec. Periuk, Kota Tangerang',
+      value: selectedBranch === 'dlob' ? 'GOR Wisma Harapan' : 'GOR Galaxi Cikupa',
+      detail: selectedBranch === 'dlob' 
+        ? 'Gembor, Kec. Periuk, Kota Tangerang' 
+        : 'Jl. Raya Peusar No.6, Sukamulya, Kec. Cikupa, Kab. Tangerang, Banten 15710',
+      mapsUrl: selectedBranch === 'dlob'
+        ? 'https://www.google.com/maps/search/?api=1&query=GOR+Badminton+Wisma+Harapan+Gembor+Tangerang'
+        : 'https://maps.app.goo.gl/329H3C2CTr9BZRDQ9',
+      flippable: true,
     },
     {
       icon: Phone,
       title: 'WhatsApp Admin',
-      value: '+62 812-7073-7272',
-      detail: 'Respon cepat untuk info jadwal & pendaftaran',
+      value: selectedBranch === 'dlob' ? '+62 812-7073-7272' : 'Edi (+62 821-1345-5696)',
+      detail: selectedBranch === 'dlob' 
+        ? 'Respon cepat untuk info jadwal & pendaftaran DLOB Pusat'
+        : 'Respon cepat untuk info jadwal mabar DLBC Cikupa',
+      waUrl: selectedBranch === 'dlob'
+        ? 'https://wa.me/6281270737272'
+        : 'https://wa.me/6282113455696',
+      flippable: true,
     },
     {
       icon: Mail,
       title: 'Email Resmi',
       value: 'support@dlobcommunity.com',
       detail: 'Pertanyaan umum & kemitraan komunitas',
+      flippable: false,
     },
     {
       icon: Clock,
       title: 'Jadwal Mabar',
-      value: 'Setiap Sabtu Malam',
-      detail: '20:00 – 23:00 WIB (GOR Wisma Harapan)',
+      value: selectedBranch === 'dlob' ? 'Setiap Sabtu Malam' : 'Setiap Jumat Malam',
+      detail: selectedBranch === 'dlob'
+        ? '20:00 – 23:00 WIB (GOR Wisma Harapan)'
+        : '20:00 – 23:00 WIB (GOR Galaxi Cikupa)',
+      flippable: true,
     },
   ];
 
@@ -130,6 +148,32 @@ export default function KontakPage() {
       ───────────────────────────────────────────────────────────── */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Branch Selector */}
+          <div className="flex justify-center mb-10">
+            <div className="inline-flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-full border border-slate-200">
+              <button
+                onClick={() => setSelectedBranch('dlob')}
+                className={`px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  selectedBranch === 'dlob'
+                    ? 'bg-[#4382C8] text-white shadow-md'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                🏸 DLOB Pusat (Wisma Harapan)
+              </button>
+              <button
+                onClick={() => setSelectedBranch('dlbc')}
+                className={`px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  selectedBranch === 'dlbc'
+                    ? 'bg-amber-500 text-white shadow-md'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                🏸 DLBC Cikupa (Jl. Peusar)
+              </button>
+            </div>
+          </div>
+
           <motion.div
             variants={containerVariants}
             initial="hidden"

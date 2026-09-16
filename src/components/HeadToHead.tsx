@@ -29,9 +29,10 @@ interface HeadToHeadMatch {
 
 interface Props {
   memberName: string;
+  branchId?: string;
 }
 
-export default function HeadToHead({ memberName }: Props) {
+export default function HeadToHead({ memberName, branchId }: Props) {
   const [headToHeadMatches, setHeadToHeadMatches] = useState<HeadToHeadMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -39,29 +40,28 @@ export default function HeadToHead({ memberName }: Props) {
 
   useEffect(() => {
     fetchHeadToHeadMatches();
-  }, [memberName]);
+  }, [memberName, branchId]);
 
   async function fetchHeadToHeadMatches() {
     try {
       setLoading(true);
 
-      // Calculate last month's date range
-      const today = new Date();
-      const lastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-      const monthStart = new Date(lastMonthDate.getFullYear(), lastMonthDate.getMonth(), 1);
-      const monthEnd = new Date(lastMonthDate.getFullYear(), lastMonthDate.getMonth() + 1, 0, 23, 59, 59);
-
-      // Fetch all 2v2 matches from that month
-      const { data, error } = await supabase
+      // Fetch all recent 2v2 matches
+      let query = supabase
         .from('matches')
         .select('*')
-        .gte('match_date', monthStart.toISOString())
-        .lte('match_date', monthEnd.toISOString())
         .not('team1_player1', 'is', null)
         .not('team1_player2', 'is', null)
         .not('team2_player1', 'is', null)
         .not('team2_player2', 'is', null)
-        .order('match_date', { ascending: false });
+        .order('match_date', { ascending: false, nullsFirst: false })
+        .limit(100);
+
+      if (branchId) {
+        query = query.eq('branch_id', branchId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching matches:', error);
@@ -138,7 +138,7 @@ export default function HeadToHead({ memberName }: Props) {
           <h2 className="font-bold text-gray-900 dark:text-white">Head-to-Head</h2>
         </div>
         <p className="text-sm text-gray-500 dark:text-zinc-400">
-          Belum ada pertandingan 2v2 yang data dari bulan {new Date(new Date().getFullYear(), new Date().getMonth() - 1).toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
+          Belum ada data pertandingan 2v2 untuk sesi ini
         </p>
       </div>
     );
@@ -171,8 +171,8 @@ export default function HeadToHead({ memberName }: Props) {
         >
           <Zap className="w-5 h-5 text-purple-500 shrink-0" />
           <h2 className="font-bold text-gray-900 dark:text-white text-lg flex-1 text-left">Head-to-Head</h2>
-          <span className="text-xs text-gray-400 dark:text-zinc-500">
-            {new Date(new Date().getFullYear(), new Date().getMonth() - 1).toLocaleString('id-ID', { month: 'short', year: 'numeric' })}
+          <span className="text-xs text-gray-400 dark:text-zinc-500 font-medium">
+            Riwayat 2v2
           </span>
           {expanded ? (
             <ChevronUp className="w-4 h-4 text-gray-400" />

@@ -15,32 +15,52 @@ Anggota bisa mengakses dashboard di https://www.dlobcommunity.com untuk melihat
 tagihan, statistik pertandingan, membership, dan lainnya.
 
 ────────────────────────────────────────
-💰 BIAYA PERTANDINGAN
+🏬 CABANG KOMUNITAS (DLOB PUSAT & DLBC CIKUPA)
 ────────────────────────────────────────
-Ada 2 komponen biaya di setiap pertandingan:
+DLOB Community memiliki 2 cabang utama yang aktif menyelenggarakan mabar rutin:
 
-1. BIAYA KOK (Shuttlecock Fee)
-   - Dibagi rata antar semua pemain yang hadir di sesi tersebut
-   - Jumlah bervariasi tergantung jumlah kok yang dipakai & jumlah pemain
-   - Berlaku untuk SEMUA member, kecuali yang punya status VIP/Gratis
+1. DLOB PUSAT (TANGERANG KOTA)
+   - Jadwal Rutin: Setiap SABTU MALAM, 20.00 – 23.00 WIB
+   - Lokasi: GOR Badminton Wisma Harapan, Gembor, Kec. Periuk, Kota Tangerang
+   - Google Maps: https://www.google.com/maps/search/?api=1&query=GOR+Badminton+Wisma+Harapan+Gembor+Tangerang
 
-2. BIAYA HADIR (Attendance Fee)
-   - Rp 18.000 per hari main (dikenakan sekali per hari, bukan per game)
-   - HANYA berlaku untuk member yang TIDAK punya membership aktif bulan itu
-   - Member dengan membership aktif: attendance fee = Rp 0 (gratis)
-   - Member VIP/Gratis: semua biaya dibebaskan
+2. DLBC CIKUPA (DLOB BADMINTON CLUB CIKUPA) — CABANG EKSPANSI TERBARU
+   - Contact Person (Admin DLBC): Edi (+62 821-1345-5696 / https://wa.me/6282113455696)
+   - Jadwal Rutin: Setiap JUMAT MALAM, 20.00 – 23.00 WIB
+   - Lokasi: GOR Galaxi Cikupa, Jl. Raya Peusar No.6, Sukamulya, Kec. Cikupa, Kabupaten Tangerang, Banten 15710
+   - Google Maps: https://maps.app.goo.gl/329H3C2CTr9BZRDQ9
+   - Tujuan: Memfasilitasi pemain badminton di area Cikupa, Bitung, Pasir Jaya, dan sekitarnya.
+   - Terintegrasi App DLOB: Data match, statistik win rate, skor, dan leaderboard tersinkronisasi penuh dengan platform DLOB Community.
 
 ────────────────────────────────────────
-🎫 MEMBERSHIP BULANAN
+💰 BIAYA PERTANDINGAN & RINCIAN PER CABANG
 ────────────────────────────────────────
-- Membership adalah iuran bulanan untuk anggota DLOB Community
-- Harga:
+Komponen biaya pertandingan disesuaikan per cabang:
+
+1. DLBC CIKUPA (DLOB BADMINTON CLUB CIKUPA):
+   - BELUM ADA MEMBERSHIP BULANAN untuk cabang DLBC Cikupa.
+   - Semua pemain dikenakan Biaya Hadir / Iuran Lapangan (Attendance Fee) Rp 12.000 per orang per hari (dikenakan 1x per hari main).
+   - Biaya Kok (Shuttlecock Fee): Rp 2.500 per kok per orang (akumulatif tergantung total kok yang dipakai pemain tersebut dalam sesi pertandingan).
+   - Pemain VIP / Payment Exempt: Bebas seluruh biaya (Rp 0).
+
+2. DLOB PUSAT (TANGERANG KOTA):
+   - Memiliki Paket Membership Bulanan (Rp 40.000 / 4 minggu, Rp 45.000 / 5 minggu).
+   - Member Aktif Bulanan / VIP: Bebas Attendance Fee (Rp 0).
+   - Non-Member: Bayar Biaya Hadir Rp 18.000 per orang per hari (1x per hari) + Biaya Kok (Rp 12.000 total per kok / 4).
+
+────────────────────────────────────────
+🎫 MEMBERSHIP BULANAN (KHUSUS DLOB PUSAT)
+────────────────────────────────────────
+- Membership bulanan saat ini KHUSUS berlaku untuk cabang DLOB Pusat (DLBC Cikupa belum ada membership).
+- Harga (DLOB Pusat):
     • Rp 40.000/bulan → untuk bulan yang punya 4 minggu
     • Rp 45.000/bulan → untuk bulan yang punya 5 minggu
-- Keuntungan membership:
-    • Attendance fee dibebaskan (Rp 0)
-    • Cukup bayar biaya kok saja setiap main
-- Tanpa membership: kena attendance fee Rp 18.000 per hari + biaya kok
+- Keuntungan membership (DLOB Pusat):
+    • Biaya Hadir dibebaskan (Rp 0 / Gratis)
+    • Cukup bayar biaya kok saja setiap main (Rp 3.000/kok per orang)
+- Tanpa membership:
+    • DLBC Cikupa: kena Iuran Lapangan Rp 12.000 per hari + biaya kok (Rp 2.500/kok per orang)
+    • DLOB Pusat: kena Attendance Fee Rp 18.000 per hari + biaya kok
 - Masa berlaku: per bulan kalender (tidak bisa dipindah ke bulan lain)
 - Pembayaran membership: tunai ke admin atau transfer, upload bukti di dashboard
 
@@ -450,9 +470,9 @@ PENTING:
 ────────────────────────────────────────
 📞 KONTAK & BANTUAN
 ────────────────────────────────────────
-- Hubungi admin DLOB via WhatsApp untuk pertanyaan pembayaran, pendaftaran,
-  atau masalah akun
-- Nomor admin: +62 812-7073-7272 atau +62 822-3045-0433
+- Hubungi admin DLOB via WhatsApp untuk pertanyaan pembayaran, pendaftaran, atau masalah akun
+- Admin DLOB Pusat: +62 812-7073-7272 atau +62 822-3045-0433
+- Admin DLBC Cikupa: Edi (+62 821-1345-5696 / https://wa.me/6282113455696)
 - Atau temui admin langsung di lapangan saat sesi berlangsung
 `;
 

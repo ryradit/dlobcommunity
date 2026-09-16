@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Image as ImageIcon, Loader2, CheckCircle, XCircle, AlertCircle, ChevronDown, Save, Award, RefreshCw, UserPlus, Sparkles, History, Trash2 } from 'lucide-react';
+import { Upload, Image as ImageIcon, Loader2, CheckCircle, XCircle, AlertCircle, ChevronDown, Save, Award, RefreshCw, UserPlus, Sparkles, History, Trash2, GitBranch, Printer } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
+import { useAuth } from '@/contexts/AuthContext';
+import BranchBadge from '@/components/BranchBadge';
+import DlbcSessionSheetPrintModal from '@/components/DlbcSessionSheetPrintModal';
 
 interface MatchData {
   team1_player1: string;
@@ -41,9 +44,32 @@ type PlayerValidation = {
   };
 };
 
-const STORAGE_KEY = 'dlob_match_image_extraction_draft';
+interface MatchImageExtractionPageProps {
+  initialBranchId?: string;
+}
 
-export default function MatchImageExtractionPage() {
+export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat' }: MatchImageExtractionPageProps) {
+  const { user, isSuperAdmin, isBranchAdmin, userBranchId } = useAuth();
+  const userEmail = (user?.email || '').toLowerCase().trim();
+  const isMultiBranchAdmin = isSuperAdmin || userEmail.includes('ryradit') || userEmail === 'dlob.official.tng@gmail.com';
+
+  // Determine forced branch for non-multi-branch admins
+  const isCallerBranchAdmin = isBranchAdmin || userEmail === 'edi@temp.dlob.local' || userBranchId === 'dlob-cikupa';
+  const forcedBranchId = !isMultiBranchAdmin ? (isCallerBranchAdmin ? 'dlob-cikupa' : 'dlob-pusat') : null;
+
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(forcedBranchId || initialBranchId);
+
+  // Automatically enforce branch lock if user is not multi-branch admin
+  useEffect(() => {
+    if (!isMultiBranchAdmin && forcedBranchId && selectedBranchId !== forcedBranchId) {
+      setSelectedBranchId(forcedBranchId);
+    }
+  }, [isMultiBranchAdmin, forcedBranchId, selectedBranchId]);
+
+  const isCikupa = selectedBranchId === 'dlob-cikupa';
+  const STORAGE_KEY = `dlob_match_image_extraction_draft_${selectedBranchId}`;
+  const [showDlbcPrintModal, setShowDlbcPrintModal] = useState(false);
+
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedResponse | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -113,20 +139,25 @@ export default function MatchImageExtractionPage() {
     setMembershipFee(fee);
 
     setLoadingMemberships(true);
-    supabase
+    let memQuery = supabase
       .from('memberships')
       .select('member_name')
       .eq('month', month)
       .eq('year', year)
-      .eq('payment_status', 'paid')
-      .then(({ data }) => {
-        const paid = new Set((data || []).map((m: { member_name: string }) => m.member_name));
-        setExistingMemberships(paid);
-        // Reset payers selection when date changes
-        setMembershipPayers(new Set());
-        setLoadingMemberships(false);
-      });
-  }, [matchDate]);
+      .eq('payment_status', 'paid');
+
+    if (selectedBranchId) {
+      memQuery = memQuery.eq('branch_id', selectedBranchId);
+    }
+
+    memQuery.then(({ data }) => {
+      const paid = new Set((data || []).map((m: { member_name: string }) => m.member_name));
+      setExistingMemberships(paid);
+      // Reset payers selection when date changes
+      setMembershipPayers(new Set());
+      setLoadingMemberships(false);
+    });
+  }, [matchDate, selectedBranchId]);
 
   // Check draft on mount
   useEffect(() => {
@@ -227,7 +258,7 @@ export default function MatchImageExtractionPage() {
     const response = await fetch('/api/ai/match-extraction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64 }),
+      body: JSON.stringify({ imageBase64, branchId: selectedBranchId }),
     });
 
     if (!response.ok) {
@@ -273,7 +304,7 @@ export default function MatchImageExtractionPage() {
       const response = await fetch('/api/members/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({ name: name.trim(), branchId: selectedBranchId }),
       });
 
       if (!response.ok) return null;
@@ -394,7 +425,7 @@ export default function MatchImageExtractionPage() {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({ full_name: name }),
+            body: JSON.stringify({ full_name: name, branch_id: selectedBranchId }),
           });
           const data = await res.json();
           if (res.ok && !data.error) {
@@ -563,20 +594,22 @@ export default function MatchImageExtractionPage() {
         const date = getLocalDateFromString(matchDate);
         const month = date.getMonth() + 1;
         const year = date.getFullYear();
-        const membershipInserts = Array.from(membershipPayers).map(name => ({
-          member_name: name,
-          month,
-          year,
-          weeks_in_month: weeksInMonth,
-          amount: membershipFee,
-          payment_status: 'paid',
-          paid_at: new Date().toISOString(),
-        }));
         const { error: membershipError } = await supabase
           .from('memberships')
-          .upsert(membershipInserts, { onConflict: 'member_name,month,year', ignoreDuplicates: false });
+          .insert(
+            Array.from(membershipPayers).map(name => ({
+              member_name: name,
+              month,
+              year,
+              weeks_in_month: weeksInMonth,
+              amount: membershipFee,
+              payment_status: 'paid',
+              paid_at: new Date().toISOString(),
+              branch_id: selectedBranchId,
+            }))
+          );
         if (membershipError) {
-          console.error('[Membership] Insert error:', membershipError);
+          console.error('[Membership] Error saving memberships:', membershipError);
           // Non-fatal — proceed anyway but warn
           alert(`⚠️ Gagal menyimpan ${membershipPayers.size} pembayaran membership: ${membershipError.message}\n\nPertandingan tetap akan disimpan.`);
         } else {
@@ -584,12 +617,19 @@ export default function MatchImageExtractionPage() {
         }
       }
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch('/api/matches/bulk-create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           matches: extractedData.matches,
           matchDate: matchDate,
+          branchId: selectedBranchId,
         }),
       });
 
@@ -717,7 +757,7 @@ export default function MatchImageExtractionPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ full_name: cleanName }),
+        body: JSON.stringify({ full_name: cleanName, branch_id: selectedBranchId }),
       });
       const data = await res.json();
       if (data.error) { alert(data.error); return; }
@@ -864,42 +904,119 @@ export default function MatchImageExtractionPage() {
       <div>
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Ekstraksi Gambar Pertandingan
-          </h1>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl sm:text-4xl font-bold text-white">
+                Ekstraksi Gambar Pertandingan
+              </h1>
+              <BranchBadge size="sm" />
+            </div>
+
+            {/* Branch Switcher for Super Admin / Dual Admin */}
+            {isMultiBranchAdmin ? (
+              <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl border border-white/10 self-start sm:self-auto">
+                <GitBranch className="w-4 h-4 text-purple-300 ml-1.5" />
+                <button
+                  type="button"
+                  onClick={() => setSelectedBranchId('dlob-pusat')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    selectedBranchId === 'dlob-pusat'
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'text-purple-200 hover:text-white'
+                  }`}
+                >
+                  DLOB Pusat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBranchId('dlob-cikupa')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    selectedBranchId === 'dlob-cikupa'
+                      ? 'bg-emerald-600 text-white shadow'
+                      : 'text-purple-200 hover:text-white'
+                  }`}
+                >
+                  DLBC Cikupa
+                </button>
+              </div>
+            ) : (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold self-start sm:self-auto ${
+                isCikupa
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${isCikupa ? 'bg-emerald-400' : 'bg-blue-400'}`} />
+                {isCikupa ? 'Cabang DLBC (Cikupa)' : 'Cabang DLOB Pusat'}
+              </div>
+            )}
+          </div>
           <p className="text-purple-200">
-            Ekstraksi data pertandingan bertenaga AI menggunakan Gemini Vision
+            Ekstraksi data pertandingan bertenaga AI menggunakan Gemini Vision ({isCikupa ? 'Cabang DLBC Cikupa' : 'Cabang DLOB Pusat'})
           </p>
           
-          {/* Format Info */}
-          <div className="mt-4 bg-blue-500/10 border border-blue-400/30 rounded-lg p-4">
-            <h3 className="text-blue-300 font-semibold mb-2">Format Gambar yang Diharapkan (15-20 pertandingan per gambar):</h3>
-            <div className="grid grid-cols-4 gap-2 text-sm">
-              <div className="bg-blue-500/20 rounded px-3 py-2 text-center">
-                <div className="text-blue-200 font-semibold">Kolom 1</div>
-                <div className="text-white">Tim 1</div>
-                <div className="text-xs text-blue-300">Kevin/Solaso</div>
+          {/* Format Info — Branch-specific */}
+          {isCikupa ? (
+            <div className="mt-4 bg-emerald-500/10 border border-emerald-400/30 rounded-2xl p-4 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="text-emerald-300 font-bold text-sm">
+                    Format Gambar DLBC: Lembar Matriks Pemakaian Kock & Lapangan
+                  </h3>
+                  <p className="text-xs text-emerald-200/80 mt-0.5">
+                    AI otomatis membaca kolom NO, NAMA, Match 1–10, Total Kok, Lapangan, dan TOTAL tagihan.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDlbcPrintModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 shadow transition-colors shrink-0 self-start sm:self-auto"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak Form Kosong DLBC</span>
+                </button>
               </div>
-              <div className="bg-red-500/20 rounded px-3 py-2 text-center">
-                <div className="text-red-200 font-semibold">Kolom 2</div>
-                <div className="text-white">Tim 2</div>
-                <div className="text-xs text-red-300">Khai/William</div>
-              </div>
-              <div className="bg-purple-500/20 rounded px-3 py-2 text-center">
-                <div className="text-purple-200 font-semibold">Kolom 3</div>
-                <div className="text-white">Lapangan #</div>
-                <div className="text-xs text-purple-300">2</div>
-              </div>
-              <div className="bg-green-500/20 rounded px-3 py-2 text-center">
-                <div className="text-green-200 font-semibold">Kolom 4</div>
-                <div className="text-white">Kok</div>
-                <div className="text-xs text-green-300">4</div>
+
+              <div className="overflow-x-auto rounded-xl border border-emerald-500/20 bg-black/20 p-2 text-[10px]">
+                <div className="grid grid-cols-6 gap-1 min-w-[500px] text-center font-semibold">
+                  <div className="bg-emerald-500/20 py-1.5 px-1 rounded text-emerald-300">NO</div>
+                  <div className="bg-emerald-500/20 py-1.5 px-2 rounded text-emerald-200">NAMA PEMAIN</div>
+                  <div className="bg-emerald-500/20 py-1.5 px-2 rounded text-emerald-200">MATCH 1 s/d 10</div>
+                  <div className="bg-emerald-500/20 py-1.5 px-2 rounded text-emerald-200">TOTAL KOCK (Pcs & Rp)</div>
+                  <div className="bg-emerald-500/20 py-1.5 px-2 rounded text-emerald-200">LAPANGAN (Rp)</div>
+                  <div className="bg-emerald-500/20 py-1.5 px-2 rounded text-emerald-200">TOTAL & KET</div>
+                </div>
               </div>
             </div>
-            <p className="text-xs text-blue-200 mt-2">
-              ℹ️ Setiap baris adalah pertandingan terpisah. Format tim: Pemain1/Pemain2. AI akan mengekstrak SEMUA pertandingan dari gambar.
-            </p>
-          </div>
+          ) : (
+            <div className="mt-4 bg-blue-500/10 border border-blue-400/30 rounded-lg p-4">
+              <h3 className="text-blue-300 font-semibold mb-2">Format Gambar yang Diharapkan (15-20 pertandingan per gambar):</h3>
+              <div className="grid grid-cols-4 gap-2 text-sm">
+                <div className="bg-blue-500/20 rounded px-3 py-2 text-center">
+                  <div className="text-blue-200 font-semibold">Kolom 1</div>
+                  <div className="text-white">Tim 1</div>
+                  <div className="text-xs text-blue-300">Kevin/Solaso</div>
+                </div>
+                <div className="bg-red-500/20 rounded px-3 py-2 text-center">
+                  <div className="text-red-200 font-semibold">Kolom 2</div>
+                  <div className="text-white">Tim 2</div>
+                  <div className="text-xs text-red-300">Khai/William</div>
+                </div>
+                <div className="bg-purple-500/20 rounded px-3 py-2 text-center">
+                  <div className="text-purple-200 font-semibold">Kolom 3</div>
+                  <div className="text-white">Lapangan #</div>
+                  <div className="text-xs text-purple-300">2</div>
+                </div>
+                <div className="bg-green-500/20 rounded px-3 py-2 text-center">
+                  <div className="text-green-200 font-semibold">Kolom 4</div>
+                  <div className="text-white">Kok</div>
+                  <div className="text-xs text-green-300">4</div>
+                </div>
+              </div>
+              <p className="text-xs text-blue-200 mt-2">
+                ℹ️ Setiap baris adalah pertandingan terpisah. Format tim: Pemain1/Pemain2. AI akan mengekstrak SEMUA pertandingan dari gambar.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Draft Restoration Banner */}
@@ -1390,6 +1507,11 @@ export default function MatchImageExtractionPage() {
           </div>
         </div>
       </div>
+      {/* DLBC Printable Sheet Modal */}
+      <DlbcSessionSheetPrintModal
+        isOpen={showDlbcPrintModal}
+        onClose={() => setShowDlbcPrintModal(false)}
+      />
     </div>
   );
 }

@@ -29,8 +29,17 @@ export default function LoginPage() {
   useEffect(() => {
     if (user) {
       const searchParams = new URLSearchParams(window.location.search);
-      const redirectUrl = searchParams.get('redirect') || '/dashboard';
-      router.push(redirectUrl);
+      const redirectUrl = searchParams.get('redirect');
+      if (redirectUrl) {
+        router.push(redirectUrl);
+        return;
+      }
+      const userBranch = user.user_metadata?.branch_id;
+      if (userBranch === 'dlob-cikupa') {
+        router.push('/cikupa/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     }
   }, [user, router]);
 

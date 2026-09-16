@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { CreditCard, TrendingUp, AlertCircle, Users, Award, Plus, X, Search, Check, Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, CheckSquare, Square, Sparkles, Send, Zap, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { StatCardSkeleton, TableRowSkeleton } from '@/components/LoadingSkeletons';
 import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
@@ -2293,13 +2294,22 @@ export default function AdminPembayaranPage() {
             )}
           </div>
           {activeTab === 'matches' ? (
-            <button
-              onClick={() => handleCreateClick('match')}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Buat Pertandingan
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/admin/match-image-extraction"
+                className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg font-medium flex items-center gap-2 border border-blue-500/30 hover:border-blue-500/50 transition-colors text-sm"
+              >
+                <ImageIcon className="w-4 h-4" />
+                Ekstraksi Foto AI
+              </Link>
+              <button
+                onClick={() => handleCreateClick('match')}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                Buat Pertandingan
+              </button>
+            </div>
           ) : (
             <button
               onClick={() => handleCreateClick('membership')}

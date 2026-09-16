@@ -16,7 +16,7 @@ async function verifyAdmin(req: NextRequest) {
     .select('role')
     .eq('id', user.id)
     .maybeSingle();
-  return profile?.role === 'admin' ? user : null;
+  return (profile?.role === 'admin' || profile?.role === 'branch_admin') ? user : null;
 }
 
 // GET /api/admin/app-settings?key=wa_notifications_enabled

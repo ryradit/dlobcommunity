@@ -18,30 +18,29 @@ export async function POST(request: NextRequest) {
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { data: profile } = await supabaseAdmin
-      .from('profiles').select('role').eq('id', user.id).single();
-    if (!profile || profile.role !== 'admin')
+      .from('profiles').select('role, branch_id').eq('id', user.id).single();
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'branch_admin'))
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { full_name } = await request.json();
+    const body = await request.json();
+    const { full_name, branch_id } = body;
     if (!full_name?.trim()) return NextResponse.json({ error: 'Name required' }, { status: 400 });
 
+    const targetBranch = branch_id || profile.branch_id || 'dlob-pusat';
     const name = full_name.trim();
     const slug = name.toLowerCase().replace(/\s+/g, '.');
     const email = `${slug}@temp.dlob.local`;
 
-    // Check if already exists - check by exact name match first, then by email
-    const { data: existing, error: checkError } = await supabaseAdmin
+    // Check if already exists - check by name or email
+    const { data: existing } = await supabaseAdmin
       .from('profiles')
-      .select('id, full_name')
-      .eq('full_name', name)
-      .single();
+      .select('id, full_name, branch_id')
+      .or(`full_name.ilike.${name},email.eq.${email}`)
+      .limit(1)
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json({ id: existing.id, full_name: existing.full_name, existed: true });
-    }
-
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
-      return NextResponse.json({ error: `Failed to check existing profile: ${checkError.message}` }, { status: 500 });
     }
 
     // Create auth user
@@ -49,10 +48,22 @@ export async function POST(request: NextRequest) {
       email,
       password: 'Dlob2026!',
       email_confirm: true,
-      user_metadata: { full_name: name },
+      user_metadata: { full_name: name, branch_id: targetBranch },
     });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      if (error.message?.includes('already been registered') || error.message?.includes('already exists')) {
+        const { data: profileByEmail } = await supabaseAdmin
+          .from('profiles')
+          .select('id, full_name')
+          .eq('email', email)
+          .maybeSingle();
+        if (profileByEmail) {
+          return NextResponse.json({ id: profileByEmail.id, full_name: profileByEmail.full_name, existed: true });
+        }
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     // Update profile created by trigger using RPC function with SECURITY DEFINER
     // This bypasses RLS policies to ensure service_role can update
@@ -83,6 +94,18 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json({ error: `Failed to create profile: ${updateError.message}` }, { status: 500 });
     }
+
+    // Ensure branch_id, test account flag, and extra profile info are set
+    const updateFields: Record<string, any> = { branch_id: targetBranch };
+    if (body.phone) updateFields.phone = body.phone.trim();
+    if (body.playing_level) updateFields.playing_level = body.playing_level;
+    if (typeof body.is_test_account === 'boolean') updateFields.is_test_account = body.is_test_account;
+    if (body.role) updateFields.role = body.role;
+
+    await supabaseAdmin
+      .from('profiles')
+      .update(updateFields)
+      .eq('id', data.user.id);
 
     return NextResponse.json({ id: data.user.id, full_name: name, existed: false });
   } catch (err) {

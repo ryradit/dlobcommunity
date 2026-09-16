@@ -144,6 +144,7 @@ export default function DashboardPage() {
                   )
                 `)
                 .ilike('member_name', queryName)
+                .or('branch_id.is.null,branch_id.eq.dlob-pusat')
                 .order('created_at', { ascending: false });
               console.log('[Dashboard] matches result:', result.data?.length, result.error);
               return result;
@@ -155,6 +156,7 @@ export default function DashboardPage() {
             .from('memberships')
             .select('*')
             .ilike('member_name', queryName)
+            .or('branch_id.is.null,branch_id.eq.dlob-pusat')
             .eq('month', currentMonth)
             .eq('year', currentYear)
             .maybeSingle(),
