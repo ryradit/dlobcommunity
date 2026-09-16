@@ -967,15 +967,15 @@ export default function CikupaAdminMembersPage() {
   }).length;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       {/* Top Header & Actions */}
       <div className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Kelola Anggota</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Kelola Anggota</h1>
             <BranchBadge branchId="dlob-cikupa" size="sm" />
           </div>
-          <p className="text-sm text-zinc-400">Manajemen profil, hak akses, dan status membership komunitas DLBC Cikupa.</p>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">Manajemen profil, hak akses, dan status membership komunitas DLBC Cikupa.</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
@@ -993,7 +993,7 @@ export default function CikupaAdminMembersPage() {
           <button
             type="button"
             onClick={() => handleExportCSV(filteredAndSortedMembers)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 text-xs sm:text-sm transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 text-xs sm:text-sm transition-colors cursor-pointer shadow-sm"
             title="Download CSV data anggota yang difilter"
           >
             <Download size={15} />
@@ -1005,21 +1005,21 @@ export default function CikupaAdminMembersPage() {
             type="button"
             onClick={() => detectDuplicates(true)}
             disabled={detectingDuplicates}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 text-xs sm:text-sm transition-colors disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 text-xs sm:text-sm transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
             title="Pindai potensi akun ganda dengan AI"
           >
-            <Sparkles size={15} className={detectingDuplicates ? 'animate-spin text-amber-400' : 'text-amber-400'} />
+            <Sparkles size={15} className={detectingDuplicates ? 'animate-spin text-amber-500 dark:text-amber-400' : 'text-amber-500 dark:text-amber-400'} />
             {detectingDuplicates ? 'Memindai...' : 'Pindai Duplikat'}
           </button>
 
           {fixTempResult && (
-            <span className="text-xs text-zinc-300 bg-zinc-900 border border-white/10 px-3 py-1.5 rounded-lg">{fixTempResult}</span>
+            <span className="text-xs text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-lg shadow-sm">{fixTempResult}</span>
           )}
           <button
             type="button"
             onClick={handleFixTempAccounts}
             disabled={fixingTemp}
-            className="p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 border border-white/10 text-yellow-400 transition-colors disabled:opacity-50 cursor-pointer"
+            className="p-2 rounded-xl bg-white dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/10 text-amber-500 dark:text-yellow-400 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
             title="Perbaiki flag warning akun temp (@temp.dlob.local)"
           >
             {fixingTemp ? <span className="text-xs px-1">...</span> : <AlertCircle className="w-5 h-5" />}
@@ -1027,7 +1027,7 @@ export default function CikupaAdminMembersPage() {
           <button
             type="button"
             onClick={toggleTutorial}
-            className="p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 border border-white/10 text-emerald-400 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-white dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/10 text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer shadow-sm"
             title="Tampilkan panduan fitur"
           >
             <HelpCircle className="w-5 h-5" />
@@ -1104,87 +1104,87 @@ export default function CikupaAdminMembersPage() {
 
       {/* Stats Cards - Glassmorphism */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="stat-card-total-members bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-5">
+        <div className="stat-card-total-members bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Total Anggota</p>
-              <p className="text-2xl font-bold text-white tracking-tight">{stats.total}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Total Anggota</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{stats.total}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <Users className="w-5 h-5 text-emerald-400" />
+              <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
         </div>
 
-        <div className="stat-card-active-members bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-5">
+        <div className="stat-card-active-members bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Anggota Aktif</p>
-              <p className="text-2xl font-bold text-emerald-400 tracking-tight">{stats.active}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Anggota Aktif</p>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">{stats.active}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
+              <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
         </div>
 
-        <div className="stat-card-admin-members bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-5">
+        <div className="stat-card-admin-members bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Administrator</p>
-              <p className="text-2xl font-bold text-purple-400 tracking-tight">{stats.admins}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Administrator</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 tracking-tight">{stats.admins}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-purple-400" />
+              <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-5">
+        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Akun Temp</p>
-              <p className="text-2xl font-bold text-yellow-400 tracking-tight">{stats.tempCount}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Akun Temp</p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-yellow-400 tracking-tight">{stats.tempCount}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-              <UserCog className="w-5 h-5 text-yellow-400" />
+              <UserCog className="w-5 h-5 text-amber-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Membership Month Indicator */}
-      <div className="mb-6 bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center gap-3">
+      <div className="mb-6 bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
         <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-          <Crown className="w-4 h-4 text-emerald-400" />
+          <Crown className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-white">
+            <span className="text-sm font-semibold text-slate-900 dark:text-white">
               Status Membership: {new Date(currentMonthYear.year, currentMonthYear.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
             </span>
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-slate-500 dark:text-zinc-400">
               ({activeMembershipCount} member aktif bulan ini)
             </span>
           </div>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
             Badge membership otomatis aktif setelah pembayaran bulan berjalan dikonfirmasi.
           </p>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="members-search bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 mb-6 space-y-3">
+      <div className="members-search bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 mb-6 space-y-3 shadow-sm">
         <div className="flex flex-col md:flex-row gap-3">
           {/* Search Input */}
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-400" />
             <input
               type="text"
               placeholder="Cari nama, email, atau nomor WhatsApp..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
             />
           </div>
 
@@ -1194,7 +1194,7 @@ export default function CikupaAdminMembersPage() {
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value as any)}
-              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-white/20"
+              className="px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-slate-300 dark:focus:border-white/20"
             >
               <option value="all">Semua Peran</option>
               <option value="branch_admin">Admin Cabang DLBC</option>
@@ -1207,15 +1207,15 @@ export default function CikupaAdminMembersPage() {
               <select
                 value={filterBranch}
                 onChange={(e) => setFilterBranch(e.target.value as any)}
-                className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-white/20"
+                className="px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-slate-300 dark:focus:border-white/20"
               >
                 <option value="dlob-cikupa">DLBC (Cikupa)</option>
                 <option value="dlob-pusat">DLOB Pusat</option>
                 <option value="all">Semua Cabang</option>
               </select>
             ) : (
-              <div className="px-3 py-2 bg-zinc-900/80 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 font-semibold flex items-center gap-1.5 cursor-default select-none">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <div className="px-3 py-2 bg-emerald-50 dark:bg-zinc-900/80 border border-emerald-500/30 rounded-xl text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5 cursor-default select-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                 DLBC (Cikupa)
               </div>
             )}
@@ -1224,7 +1224,7 @@ export default function CikupaAdminMembersPage() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-white/20"
+              className="px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-slate-300 dark:focus:border-white/20"
             >
               <option value="all">Semua Status</option>
               <option value="active">Aktif</option>
@@ -1235,7 +1235,7 @@ export default function CikupaAdminMembersPage() {
             <select
               value={filterMembership}
               onChange={(e) => setFilterMembership(e.target.value as any)}
-              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-white/20"
+              className="px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-slate-300 dark:focus:border-white/20"
             >
               <option value="all">Semua Membership</option>
               <option value="paid">Membership Aktif</option>
@@ -1247,7 +1247,7 @@ export default function CikupaAdminMembersPage() {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as any)}
-              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-white/20"
+              className="px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-slate-300 dark:focus:border-white/20"
             >
               <option value="all">Semua Tipe Akun</option>
               <option value="real">Akun Reguler</option>
@@ -1258,7 +1258,7 @@ export default function CikupaAdminMembersPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-white/20"
+              className="px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-slate-300 dark:focus:border-white/20"
             >
               <option value="name_asc">Nama (A - Z)</option>
               <option value="name_desc">Nama (Z - A)</option>
@@ -1269,9 +1269,9 @@ export default function CikupaAdminMembersPage() {
         </div>
 
         {/* Bottom Filter Info Row */}
-        <div className="flex flex-wrap items-center justify-between text-xs text-zinc-400 pt-1 border-t border-white/5">
+        <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-zinc-400 pt-1 border-t border-slate-200 dark:border-white/5">
           <div className="flex items-center gap-3">
-            <span>Ditemukan: <strong className="text-white">{filteredAndSortedMembers.length}</strong> anggota</span>
+            <span>Ditemukan: <strong className="text-slate-900 dark:text-white">{filteredAndSortedMembers.length}</strong> anggota</span>
             {(searchTerm || filterRole !== 'all' || filterBranch !== 'dlob-cikupa' || filterStatus !== 'all' || filterMembership !== 'all' || filterType !== 'all') && (
               <button
                 type="button"
@@ -1283,7 +1283,7 @@ export default function CikupaAdminMembersPage() {
                   setFilterMembership('all');
                   setFilterType('all');
                 }}
-                className="text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                className="text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
               >
                 Reset Filter
               </button>
@@ -1298,8 +1298,8 @@ export default function CikupaAdminMembersPage() {
                 onChange={e => setHideTestAccounts(e.target.checked)}
                 className="rounded accent-orange-500"
               />
-              <span className="text-zinc-400 flex items-center gap-1">
-                <FlaskConical className="w-3.5 h-3.5 text-orange-400" />
+              <span className="text-slate-500 dark:text-zinc-400 flex items-center gap-1">
+                <FlaskConical className="w-3.5 h-3.5 text-orange-500" />
                 Sembunyikan akun tes ({members.filter(m => m.is_test_account).length})
               </span>
             </label>
@@ -1308,10 +1308,10 @@ export default function CikupaAdminMembersPage() {
       </div>
 
       {/* Members List Table */}
-      <div className="members-table bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden mb-6">
+      <div className="members-table bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden mb-6 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-200">
-            <thead className="bg-zinc-900/90 border-b border-white/10 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            <thead className="bg-slate-100/80 dark:bg-zinc-900/90 border-b border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
               <tr>
                 <th className="px-4 sm:px-6 py-3.5 text-left">Anggota</th>
                 <th className="px-4 sm:px-6 py-3.5 text-left">Kontak</th>
@@ -1322,7 +1322,7 @@ export default function CikupaAdminMembersPage() {
                     title="Lihat penjelasan label & status"
                   >
                     <span>Peran &amp; Label</span>
-                    <Info className="w-3.5 h-3.5 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
+                    <Info className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-400 group-hover:text-emerald-500 transition-colors" />
                   </button>
                 </th>
                 <th className="px-4 sm:px-6 py-3.5 text-left">Status</th>
@@ -1330,7 +1330,7 @@ export default function CikupaAdminMembersPage() {
                 <th className="px-4 sm:px-6 py-3.5 text-left">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-sm">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-sm text-slate-800 dark:text-zinc-200">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center">
@@ -1349,11 +1349,11 @@ export default function CikupaAdminMembersPage() {
                 </tr>
               ) : (
                 paginatedMembers.map((member) => (
-                  <tr key={member.id} className="hover:bg-white/[0.02] transition-colors">
+                  <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
                     <td className="px-4 sm:px-6 py-3.5">
                       <div className="flex items-center gap-2.5 sm:gap-3">
                         <div
-                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-zinc-800 border border-white/10 flex items-center justify-center text-white font-bold text-xs sm:text-sm shrink-0 ${member.avatar_url ? 'cursor-pointer hover:ring-2 hover:ring-emerald-400 transition-all' : ''}`}
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-slate-200 dark:bg-zinc-800 border border-slate-300 dark:border-white/10 flex items-center justify-center text-slate-800 dark:text-white font-bold text-xs sm:text-sm shrink-0 ${member.avatar_url ? 'cursor-pointer hover:ring-2 hover:ring-emerald-400 transition-all' : ''}`}
                           onClick={member.avatar_url ? (e) => { e.stopPropagation(); setZoomPhoto({ url: member.avatar_url!, name: member.full_name || 'Member' }); } : undefined}
                           title={member.avatar_url ? 'Klik untuk perbesar foto' : undefined}
                         >
@@ -1370,10 +1370,10 @@ export default function CikupaAdminMembersPage() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-white font-medium text-sm truncate">
+                          <div className="text-slate-900 dark:text-white font-medium text-sm truncate">
                             {member.full_name || 'Tidak Diketahui'}
                           </div>
-                          <div className="text-xs text-zinc-400 flex items-center gap-2">
+                          <div className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-2">
                             {member.playing_level && (
                               <span className="capitalize">{member.playing_level}</span>
                             )}
@@ -1386,8 +1386,8 @@ export default function CikupaAdminMembersPage() {
                     </td>
                     <td className="px-4 sm:px-6 py-3.5">
                       <div className="space-y-1 min-w-0 text-xs">
-                        <div className="flex items-center gap-1.5 text-zinc-300">
-                          <Mail className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
+                          <Mail className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 shrink-0" />
                           <span className="truncate max-w-[180px]">{member.email}</span>
                         </div>
                         {member.phone && (
@@ -1396,10 +1396,10 @@ export default function CikupaAdminMembersPage() {
                               href={getWhatsAppUrl(member.phone)!}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors font-medium"
+                              className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline transition-colors font-medium"
                               title="Klik untuk membuka chat WhatsApp"
                             >
-                              <MessageSquare size={12} className="text-emerald-400 shrink-0" />
+                              <MessageSquare size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                               <span>{member.phone}</span>
                             </a>
                           </div>
@@ -1409,47 +1409,47 @@ export default function CikupaAdminMembersPage() {
                     <td className="px-4 sm:px-6 py-3.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {member.role === 'admin' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                            <Shield size={11} className="text-purple-400 shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/30">
+                            <Shield size={11} className="text-purple-600 dark:text-purple-400 shrink-0" />
                             Admin
                           </span>
                         ) : member.role === 'branch_admin' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                            <Shield size={11} className="text-emerald-400 shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                            <Shield size={11} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                             Admin DLBC
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-blue-500/10 text-blue-400 border-blue-500/20">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
                             Member
                           </span>
                         )}
                         <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${
                           member.branch_id === 'dlob-cikupa'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-zinc-800 text-zinc-400 border-white/10'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+                            : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-white/10'
                         }`} title={member.branch_id === 'dlob-cikupa' ? 'Cabang DLBC (Cikupa)' : 'Cabang DLOB Pusat'}>
                           {member.branch_id === 'dlob-cikupa' ? 'DLBC' : 'Pusat'}
                         </span>
                         {member.has_membership && (
                           <span 
-                            className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                            className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20"
                             title={`Membership aktif untuk ${new Date(currentMonthYear.year, currentMonthYear.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
                           >
                             Membership
                           </span>
                         )}
                         {member.is_payment_exempt && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-pink-500/10 text-pink-700 dark:text-pink-400 border border-pink-500/20">
                             VIP Gratis
                           </span>
                         )}
                         {member.email?.endsWith('@temp.dlob.local') && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-amber-700 dark:text-yellow-400 border border-yellow-500/20">
                             Akun Temp
                           </span>
                         )}
                         {member.is_test_account && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-500/20">
                             Tes
                           </span>
                         )}
@@ -1458,14 +1458,14 @@ export default function CikupaAdminMembersPage() {
                     <td className="px-4 sm:px-6 py-3.5">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                         member.is_active 
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                          : 'bg-zinc-800 text-zinc-400 border-white/10'
+                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' 
+                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-white/10'
                       }`}>
                         {member.is_active ? 'Aktif' : 'Nonaktif'}
                       </span>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5">
-                      <div className="text-zinc-400 text-xs whitespace-nowrap">
+                      <div className="text-slate-500 dark:text-zinc-400 text-xs whitespace-nowrap">
                         {new Date(member.created_at).toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'short',
@@ -1483,7 +1483,7 @@ export default function CikupaAdminMembersPage() {
                             setShowDetailModal(true);
                             fetchExemptionHistory(member.id);
                           }}
-                          className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors border border-white/10 cursor-pointer"
+                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-200 dark:border-white/10 cursor-pointer"
                           title="Lihat Detail Profil"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -1493,10 +1493,10 @@ export default function CikupaAdminMembersPage() {
                         <button
                           type="button"
                           onClick={() => handleOpenEditProfile(member)}
-                          className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors border border-white/10 cursor-pointer"
+                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-200 dark:border-white/10 cursor-pointer"
                           title="Edit Profil &amp; Nomor WA"
                         >
-                          <Edit className="w-3.5 h-3.5 text-emerald-400" />
+                          <Edit className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         </button>
 
                         {/* Dropdown Menu for Additional Actions */}
@@ -1504,7 +1504,7 @@ export default function CikupaAdminMembersPage() {
                           <button
                             type="button"
                             onClick={() => setOpenDropdownId(openDropdownId === member.id ? null : member.id)}
-                            className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors border border-white/10 cursor-pointer"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-200 dark:border-white/10 cursor-pointer"
                             title="Opsi Lainnya"
                           >
                             <MoreVertical className="w-3.5 h-3.5" />
@@ -1512,7 +1512,7 @@ export default function CikupaAdminMembersPage() {
 
                           {/* Dropdown Menu Items */}
                           {openDropdownId === member.id && (
-                            <div className="absolute right-0 mt-1 w-48 bg-zinc-900 border border-white/15 rounded-xl shadow-xl z-40 py-1 backdrop-blur-xl">
+                            <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/15 rounded-xl shadow-xl z-40 py-1 backdrop-blur-xl">
                               {/* Toggle Account Status */}
                               <button
                                 type="button"
@@ -1521,9 +1521,9 @@ export default function CikupaAdminMembersPage() {
                                   setOpenDropdownId(null);
                                 }}
                                 disabled={actionLoading}
-                                className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-white/10 text-zinc-300 cursor-pointer disabled:opacity-50"
+                                className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 cursor-pointer disabled:opacity-50"
                               >
-                                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                                <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                 {member.is_active ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
                               </button>
 
@@ -1534,9 +1534,9 @@ export default function CikupaAdminMembersPage() {
                                   handleToggleTestLabel(member);
                                   setOpenDropdownId(null);
                                 }}
-                                className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-white/10 text-zinc-300 cursor-pointer"
+                                className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 cursor-pointer"
                               >
-                                <FlaskConical className="w-3.5 h-3.5 text-orange-400" />
+                                <FlaskConical className="w-3.5 h-3.5 text-orange-500 dark:text-orange-400" />
                                 {member.is_test_account ? 'Hapus Label Tes' : 'Tandai Akun Tes'}
                               </button>
 
@@ -1547,9 +1547,9 @@ export default function CikupaAdminMembersPage() {
                                   openExemptionModal(member);
                                   setOpenDropdownId(null);
                                 }}
-                                className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-white/10 text-zinc-300 cursor-pointer"
+                                className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 cursor-pointer"
                               >
-                                <Award className="w-3.5 h-3.5 text-pink-400" />
+                                <Award className="w-3.5 h-3.5 text-pink-500 dark:text-pink-400" />
                                 {member.is_payment_exempt ? 'Hapus Akses VIP' : 'Berikan Akses VIP'}
                               </button>
 
@@ -1561,9 +1561,9 @@ export default function CikupaAdminMembersPage() {
                                   setShowMigrationModal(true);
                                   setOpenDropdownId(null);
                                 }}
-                                className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-white/10 text-zinc-300 cursor-pointer"
+                                className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 cursor-pointer"
                               >
-                                <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
+                                <ArrowRight className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" />
                                 Migrasi Data Pertandingan
                               </button>
 
@@ -1576,14 +1576,14 @@ export default function CikupaAdminMembersPage() {
                                     setShowDeleteModal(true);
                                     setOpenDropdownId(null);
                                   }}
-                                  className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-red-500/10 text-red-400 cursor-pointer border-t border-white/10"
+                                  className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-red-600 dark:text-red-400 cursor-pointer border-t border-slate-200 dark:border-white/10"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                   Hapus Akun
                                 </button>
                               ) : (
                                 <div
-                                  className="w-full px-3 py-2 text-left text-[11px] flex items-center gap-2 text-zinc-500 border-t border-white/10 cursor-not-allowed select-none bg-zinc-950/40"
+                                  className="w-full px-3 py-2 text-left text-[11px] flex items-center gap-2 text-slate-400 dark:text-zinc-500 border-t border-slate-200 dark:border-white/10 cursor-not-allowed select-none bg-slate-50 dark:bg-zinc-950/40"
                                   title={
                                     (member.email || '').toLowerCase().trim() === 'dlob.official.tng@gmail.com'
                                       ? 'Akun Wahyu (Admin DLOB & DLBC) dilindungi dari penghapusan'
@@ -1594,7 +1594,7 @@ export default function CikupaAdminMembersPage() {
                                       : 'Hirarki: Anda tidak memiliki wewenang untuk menghapus akun ini'
                                   }
                                 >
-                                  <Shield className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                  <Shield className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 shrink-0" />
                                   <span className="truncate">
                                     {(member.email || '').toLowerCase().trim() === 'dlob.official.tng@gmail.com'
                                       ? 'Terlindungi (Admin DLOB/DLBC)'
@@ -1617,28 +1617,28 @@ export default function CikupaAdminMembersPage() {
         </div>
 
         {/* Pagination Footer */}
-        <div className="px-4 sm:px-6 py-3 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
+        <div className="px-4 sm:px-6 py-3 border-t border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-zinc-400">
           <div>
-            Menampilkan <strong className="text-white">{filteredAndSortedMembers.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</strong> - <strong className="text-white">{Math.min(currentPage * pageSize, filteredAndSortedMembers.length)}</strong> dari <strong className="text-white">{filteredAndSortedMembers.length}</strong> anggota
+            Menampilkan <strong className="text-slate-900 dark:text-white">{filteredAndSortedMembers.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</strong> - <strong className="text-slate-900 dark:text-white">{Math.min(currentPage * pageSize, filteredAndSortedMembers.length)}</strong> dari <strong className="text-slate-900 dark:text-white">{filteredAndSortedMembers.length}</strong> anggota
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:hover:bg-zinc-800 text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 disabled:opacity-30 text-slate-800 dark:text-white transition-colors cursor-pointer border border-slate-200 dark:border-white/10"
               title="Halaman Sebelumnya"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="px-2 font-medium text-white">
+            <span className="px-2 font-medium text-slate-900 dark:text-white">
               Halaman {currentPage} dari {totalPages}
             </span>
             <button
               type="button"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage >= totalPages}
-              className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:hover:bg-zinc-800 text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 disabled:opacity-30 text-slate-800 dark:text-white transition-colors cursor-pointer border border-slate-200 dark:border-white/10"
               title="Halaman Selanjutnya"
             >
               <ChevronRight size={16} />

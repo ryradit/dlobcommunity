@@ -57,27 +57,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      if (profile?.avatar_url) {
-        // Get fresh user data
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        
-        // If avatar in profile differs from user metadata, sync it
-        if (currentUser && currentUser.user_metadata?.avatar_url !== profile.avatar_url) {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const freshAvatar = profile?.avatar_url || null;
+
+      if (currentUser) {
+        if (currentUser.user_metadata?.avatar_url !== freshAvatar) {
           const { data: { user: updatedUser }, error } = await supabase.auth.updateUser({
-            data: { avatar_url: profile.avatar_url }
+            data: { avatar_url: freshAvatar }
           });
           
           if (!error && updatedUser) {
             setUser(updatedUser);
           }
-        } else if (currentUser) {
-          // Even if same, ensure user state is updated
-          setUser(currentUser);
-        }
-      } else {
-        // No avatar in profile, but still update user to ensure state is fresh
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (currentUser) {
+        } else {
           setUser(currentUser);
         }
       }

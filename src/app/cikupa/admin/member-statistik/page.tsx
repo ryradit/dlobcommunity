@@ -367,16 +367,16 @@ export default function CikupaMemberStatistikPage() {
   return (
     <div className="space-y-6 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/80 backdrop-blur-md border border-white/10 p-5 rounded-2xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-slate-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-amber-400" />
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-amber-500 dark:text-amber-400" />
               Statistik Member DLBC
             </h1>
             <BranchBadge branchId={BRANCH_ID} />
           </div>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-slate-500 dark:text-zinc-400">
             Leaderboard, rekap performa, dan ranking 9 kategori cabang Cikupa
           </p>
         </div>
@@ -385,7 +385,7 @@ export default function CikupaMemberStatistikPage() {
           <button
             onClick={fetchStats}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold rounded-xl border border-white/10 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 text-xs font-bold rounded-xl border border-slate-200 dark:border-white/10 transition-colors shadow-sm"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh Data
@@ -395,40 +395,40 @@ export default function CikupaMemberStatistikPage() {
 
       {/* 4 Spotlight Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10">
+        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/10 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">Total Member DLBC</span>
-            <Users className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs text-slate-500 dark:text-zinc-400">Total Member DLBC</span>
+            <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="text-2xl font-black text-white">{stats.length}</div>
-          <p className="text-[11px] text-zinc-500 mt-1">Cabang Cikupa</p>
+          <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.length}</div>
+          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Cabang Cikupa</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10">
+        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/10 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">Paling Banyak Menang</span>
-            <Trophy className="w-4 h-4 text-amber-400" />
+            <span className="text-xs text-slate-500 dark:text-zinc-400">Paling Banyak Menang</span>
+            <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           </div>
-          <div className="text-lg font-black text-white truncate">{mostWinsMember?.name || '-'}</div>
-          <p className="text-[11px] text-amber-400 mt-1">{mostWinsMember?.wins || 0} Kemenangan</p>
+          <div className="text-lg font-black text-slate-900 dark:text-white truncate">{mostWinsMember?.name || '-'}</div>
+          <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mt-1">{mostWinsMember?.wins || 0} Kemenangan</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10">
+        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/10 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">Paling Rajin Hadir</span>
-            <Calendar className="w-4 h-4 text-blue-400" />
+            <span className="text-xs text-slate-500 dark:text-zinc-400">Paling Rajin Hadir</span>
+            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="text-lg font-black text-white truncate">{mostAttendedMember?.name || '-'}</div>
-          <p className="text-[11px] text-blue-400 mt-1">{mostAttendedMember?.attendances || 0} Pertemuan Sesi</p>
+          <div className="text-lg font-black text-slate-900 dark:text-white truncate">{mostAttendedMember?.name || '-'}</div>
+          <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold mt-1">{mostAttendedMember?.attendances || 0} Pertemuan Sesi</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10">
+        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-slate-200 dark:border-white/10 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">Streak Win Terpanjang</span>
-            <Flame className="w-4 h-4 text-red-400" />
+            <span className="text-xs text-slate-500 dark:text-zinc-400">Streak Win Terpanjang</span>
+            <Flame className="w-4 h-4 text-red-500 dark:text-red-400" />
           </div>
-          <div className="text-lg font-black text-white truncate">{highestStreakMember?.name || '-'}</div>
-          <p className="text-[11px] text-red-400 mt-1">🔥 {highestStreakMember?.longestWinStreak || 0} Win Beruntun</p>
+          <div className="text-lg font-black text-slate-900 dark:text-white truncate">{highestStreakMember?.name || '-'}</div>
+          <p className="text-[11px] text-red-600 dark:text-red-400 font-semibold mt-1">🔥 {highestStreakMember?.longestWinStreak || 0} Win Beruntun</p>
         </div>
       </div>
 
@@ -446,8 +446,8 @@ export default function CikupaMemberStatistikPage() {
               }}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap border transition-all ${
                 isSelected
-                  ? 'bg-emerald-500 text-black border-emerald-400 shadow-md shadow-emerald-500/20'
-                  : 'bg-zinc-900/80 text-zinc-400 border-white/10 hover:bg-zinc-800 hover:text-white'
+                  ? 'bg-emerald-500 text-white dark:text-black border-emerald-400 shadow-md shadow-emerald-500/20'
+                  : 'bg-white dark:bg-zinc-900/80 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -458,13 +458,13 @@ export default function CikupaMemberStatistikPage() {
       </div>
 
       {/* Leaderboard Panel */}
-      <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 shadow-xl space-y-5">
-        <div className="border-b border-white/10 pb-3">
-          <h3 className="text-base font-black text-white flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-emerald-400" />
+      <div className="bg-white dark:bg-zinc-900/80 border border-slate-200 dark:border-white/10 rounded-2xl p-5 shadow-sm space-y-5">
+        <div className="border-b border-slate-200 dark:border-white/10 pb-3">
+          <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             {CATEGORIES.find(c => c.id === activeCategory)?.label}
           </h3>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
             {CATEGORIES.find(c => c.id === activeCategory)?.desc}
           </p>
         </div>
@@ -473,25 +473,25 @@ export default function CikupaMemberStatistikPage() {
           /* DUO LEADERBOARD */
           <div className="space-y-3">
             {rankedDuos.length === 0 ? (
-              <div className="text-center py-12 text-zinc-500 text-xs">Belum ada data pasangan ganda di DLBC</div>
+              <div className="text-center py-12 text-slate-400 dark:text-zinc-500 text-xs">Belum ada data pasangan ganda di DLBC</div>
             ) : (
               rankedDuos.map((duo, idx) => {
                 const chem = duoChemistry(duo.winRate, duo.total);
                 return (
-                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-zinc-800/40 border border-white/5 gap-2">
+                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-white/5 gap-2">
                     <div className="flex items-center gap-3">
                       <span className="text-lg font-black">{medal(idx + 1)}</span>
                       <div>
-                        <p className="text-xs font-bold text-white">{duo.player1} & {duo.player2}</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white">{duo.player1} & {duo.player2}</p>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold inline-block mt-0.5 ${chem.color}`}>
                           {chem.emoji} {chem.label}
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-4 text-xs">
-                      <span className="text-zinc-400">Total: <strong className="text-white">{duo.total} main</strong></span>
-                      <span className="text-zinc-400">Menang: <strong className="text-emerald-400">{duo.wins}</strong></span>
-                      <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg">
+                      <span className="text-slate-500 dark:text-zinc-400">Total: <strong className="text-slate-900 dark:text-white">{duo.total} main</strong></span>
+                      <span className="text-slate-500 dark:text-zinc-400">Menang: <strong className="text-emerald-600 dark:text-emerald-400">{duo.wins}</strong></span>
+                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg">
                         {duo.winRate}% Win
                       </span>
                     </div>
@@ -513,20 +513,20 @@ export default function CikupaMemberStatistikPage() {
                       key={player.name}
                       className={`p-4 rounded-2xl border relative overflow-hidden flex flex-col justify-between ${
                         rank === 1
-                          ? 'bg-amber-500/10 border-amber-500/40 shadow-lg shadow-amber-500/5'
+                          ? 'bg-amber-500/10 border-amber-500/40 shadow-sm'
                           : rank === 2
-                          ? 'bg-zinc-800/80 border-zinc-600/40'
+                          ? 'bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-600/40'
                           : 'bg-orange-500/10 border-orange-500/30'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-2xl">{medal(rank)}</span>
-                        <span className="text-xs font-black text-zinc-400">Rank #{rank}</span>
+                        <span className="text-xs font-black text-slate-500 dark:text-zinc-400">Rank #{rank}</span>
                       </div>
 
                       <div>
-                        <h4 className="text-sm font-black text-white truncate">{player.name}</h4>
-                        <p className="text-xs text-emerald-400 font-bold mt-1">
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">{player.name}</h4>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mt-1">
                           {activeCategory === 'best-player' && `${calculateBestPlayerScore(player, maxStats)} Poin Weighted`}
                           {activeCategory === 'attendance' && `${player.attendances} Sesi Hadir`}
                           {activeCategory === 'wins' && `${player.wins} Kemenangan (${player.winRate}%)`}
@@ -539,7 +539,7 @@ export default function CikupaMemberStatistikPage() {
                         </p>
                       </div>
 
-                      <div className="text-[11px] text-zinc-500 mt-2 pt-2 border-t border-white/5 flex justify-between">
+                      <div className="text-[11px] text-slate-500 dark:text-zinc-500 mt-2 pt-2 border-t border-slate-200 dark:border-white/5 flex justify-between">
                         <span>{player.totalMatches} total main</span>
                         <span>{player.wins}M - {player.losses}K</span>
                       </div>
@@ -551,19 +551,19 @@ export default function CikupaMemberStatistikPage() {
 
             {/* Rest of the ranks table */}
             {restRanked.length > 0 && (
-              <div className="divide-y divide-white/5 bg-zinc-800/30 rounded-xl border border-white/5">
+              <div className="divide-y divide-slate-100 dark:divide-white/5 bg-slate-50 dark:bg-zinc-800/30 rounded-xl border border-slate-200 dark:border-white/5">
                 {restRanked.map((player, idx) => {
                   const rank = idx + 4;
                   return (
                     <div key={player.name} className="flex items-center justify-between p-3 text-xs">
                       <div className="flex items-center gap-3">
-                        <span className="w-6 text-center font-black text-zinc-500">#{rank}</span>
-                        <span className="font-bold text-white">{player.name}</span>
+                        <span className="w-6 text-center font-black text-slate-400 dark:text-zinc-500">#{rank}</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{player.name}</span>
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className="text-zinc-400">{player.totalMatches} main</span>
-                        <span className="text-zinc-300">{player.wins}M - {player.losses}K</span>
-                        <span className="font-black text-emerald-400">{player.winRate}%</span>
+                        <span className="text-slate-500 dark:text-zinc-400">{player.totalMatches} main</span>
+                        <span className="text-slate-700 dark:text-zinc-300">{player.wins}M - {player.losses}K</span>
+                        <span className="font-black text-emerald-600 dark:text-emerald-400">{player.winRate}%</span>
                       </div>
                     </div>
                   );
@@ -574,7 +574,7 @@ export default function CikupaMemberStatistikPage() {
             {rankedList.length > 8 && (
               <button
                 onClick={() => setShowAll(!showAll)}
-                className="w-full py-2 text-xs font-bold text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 rounded-xl transition-colors"
+                className="w-full py-2 text-xs font-bold text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-zinc-800/50 hover:bg-slate-200 dark:hover:bg-zinc-800 rounded-xl transition-colors"
               >
                 {showAll ? 'Tampilkan Lebih Sedikit' : `Lihat Semua (${rankedList.length} Pemain)`}
               </button>
@@ -584,24 +584,24 @@ export default function CikupaMemberStatistikPage() {
       </div>
 
       {/* Full Rekap All Members Table */}
-      <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+      <div className="bg-white dark:bg-zinc-900/80 border border-slate-200 dark:border-white/10 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-white/10 pb-3">
           <div>
-            <h3 className="text-sm font-black text-white flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               Rekap Seluruh Member DLBC
             </h3>
-            <p className="text-xs text-zinc-400">Klik judul kolom untuk mengurutkan data</p>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">Klik judul kolom untuk mengurutkan data</p>
           </div>
 
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Cari member..."
               value={recapSearch}
               onChange={e => setRecapSearch(e.target.value)}
-              className="pl-8 pr-3 py-1.5 bg-zinc-800 border border-white/10 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+              className="pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
             />
           </div>
         </div>
@@ -609,14 +609,14 @@ export default function CikupaMemberStatistikPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-white/10 text-zinc-400 font-semibold">
+              <tr className="border-b border-slate-200 dark:border-white/10 text-slate-500 dark:text-zinc-400 font-semibold">
                 <th className="py-2.5 px-3">Nama Member</th>
                 <th
                   onClick={() => {
                     if (recapSort === 'attendances') setRecapDir(d => d === 'asc' ? 'desc' : 'asc');
                     else { setRecapSort('attendances'); setRecapDir('desc'); }
                   }}
-                  className="py-2.5 px-3 cursor-pointer hover:text-white"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-white"
                 >
                   Sesi Hadir {recapSort === 'attendances' && (recapDir === 'desc' ? '↓' : '↑')}
                 </th>
@@ -625,7 +625,7 @@ export default function CikupaMemberStatistikPage() {
                     if (recapSort === 'totalMatches') setRecapDir(d => d === 'asc' ? 'desc' : 'asc');
                     else { setRecapSort('totalMatches'); setRecapDir('desc'); }
                   }}
-                  className="py-2.5 px-3 cursor-pointer hover:text-white"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-white"
                 >
                   Main {recapSort === 'totalMatches' && (recapDir === 'desc' ? '↓' : '↑')}
                 </th>
@@ -634,7 +634,7 @@ export default function CikupaMemberStatistikPage() {
                     if (recapSort === 'wins') setRecapDir(d => d === 'asc' ? 'desc' : 'asc');
                     else { setRecapSort('wins'); setRecapDir('desc'); }
                   }}
-                  className="py-2.5 px-3 cursor-pointer hover:text-white"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-white"
                 >
                   Menang {recapSort === 'wins' && (recapDir === 'desc' ? '↓' : '↑')}
                 </th>
@@ -643,7 +643,7 @@ export default function CikupaMemberStatistikPage() {
                     if (recapSort === 'losses') setRecapDir(d => d === 'asc' ? 'desc' : 'asc');
                     else { setRecapSort('losses'); setRecapDir('desc'); }
                   }}
-                  className="py-2.5 px-3 cursor-pointer hover:text-white"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-white"
                 >
                   Kalah {recapSort === 'losses' && (recapDir === 'desc' ? '↓' : '↑')}
                 </th>
@@ -652,7 +652,7 @@ export default function CikupaMemberStatistikPage() {
                     if (recapSort === 'winRate') setRecapDir(d => d === 'asc' ? 'desc' : 'asc');
                     else { setRecapSort('winRate'); setRecapDir('desc'); }
                   }}
-                  className="py-2.5 px-3 cursor-pointer hover:text-white"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-white"
                 >
                   Win Rate {recapSort === 'winRate' && (recapDir === 'desc' ? '↓' : '↑')}
                 </th>
@@ -661,7 +661,7 @@ export default function CikupaMemberStatistikPage() {
                     if (recapSort === 'avgScore') setRecapDir(d => d === 'asc' ? 'desc' : 'asc');
                     else { setRecapSort('avgScore'); setRecapDir('desc'); }
                   }}
-                  className="py-2.5 px-3 cursor-pointer hover:text-white"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-white"
                 >
                   Avg Skor {recapSort === 'avgScore' && (recapDir === 'desc' ? '↓' : '↑')}
                 </th>
@@ -670,23 +670,23 @@ export default function CikupaMemberStatistikPage() {
                     if (recapSort === 'longestWinStreak') setRecapDir(d => d === 'asc' ? 'desc' : 'asc');
                     else { setRecapSort('longestWinStreak'); setRecapDir('desc'); }
                   }}
-                  className="py-2.5 px-3 cursor-pointer hover:text-white"
+                  className="py-2.5 px-3 cursor-pointer hover:text-slate-900 dark:hover:text-white"
                 >
                   Max Streak {recapSort === 'longestWinStreak' && (recapDir === 'desc' ? '↓' : '↑')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5">
               {sortedRecap.map(m => (
-                <tr key={m.name} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-2.5 px-3 font-bold text-white">{m.name}</td>
-                  <td className="py-2.5 px-3 text-zinc-300">{m.attendances}</td>
-                  <td className="py-2.5 px-3 text-zinc-300">{m.totalMatches}</td>
-                  <td className="py-2.5 px-3 text-emerald-400 font-semibold">{m.wins}</td>
-                  <td className="py-2.5 px-3 text-rose-400 font-semibold">{m.losses}</td>
-                  <td className="py-2.5 px-3 font-black text-emerald-400">{m.winRate}%</td>
-                  <td className="py-2.5 px-3 text-zinc-300">{m.avgScore}</td>
-                  <td className="py-2.5 px-3 text-amber-400 font-semibold">🔥 {m.longestWinStreak}</td>
+                <tr key={m.name} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
+                  <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white">{m.name}</td>
+                  <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300">{m.attendances}</td>
+                  <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300">{m.totalMatches}</td>
+                  <td className="py-2.5 px-3 text-emerald-600 dark:text-emerald-400 font-semibold">{m.wins}</td>
+                  <td className="py-2.5 px-3 text-rose-600 dark:text-rose-400 font-semibold">{m.losses}</td>
+                  <td className="py-2.5 px-3 font-black text-emerald-600 dark:text-emerald-400">{m.winRate}%</td>
+                  <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300">{m.avgScore}</td>
+                  <td className="py-2.5 px-3 text-amber-600 dark:text-amber-400 font-semibold">🔥 {m.longestWinStreak}</td>
                 </tr>
               ))}
             </tbody>

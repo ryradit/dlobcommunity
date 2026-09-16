@@ -176,22 +176,22 @@ export default function CikupaAdminAnalitikPage() {
   return (
     <div className="space-y-6 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/80 backdrop-blur-md border border-white/10 p-5 rounded-2xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-gray-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-emerald-400" />
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
               Skor & Analitik Pertandingan DLBC
             </h1>
             <BranchBadge branchId={BRANCH_ID} />
           </div>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-slate-500 dark:text-zinc-400">
             Pencatatan skor set, susunan pemain ganda, dan rekap performa Cikupa
           </p>
         </div>
 
         {/* Month Picker */}
-        <div className="flex items-center gap-2 bg-zinc-800/80 border border-white/10 rounded-xl p-1.5 self-start md:self-auto">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800/80 border border-gray-200 dark:border-white/10 rounded-xl p-1.5 self-start md:self-auto">
           <button
             onClick={() => {
               const d = new Date(selectedMonth);
@@ -199,11 +199,11 @@ export default function CikupaAdminAnalitikPage() {
               setSelectedMonth(d);
               setSelectedMatch(null);
             }}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-300 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <div className="px-3 py-1 text-xs font-bold text-emerald-400">
+          <div className="px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-400">
             {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
           </div>
           <button
@@ -213,13 +213,13 @@ export default function CikupaAdminAnalitikPage() {
               setSelectedMonth(d);
               setSelectedMatch(null);
             }}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-300 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
             onClick={() => setSelectedMonth(new Date())}
-            className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 rounded-lg hover:bg-emerald-500/30 transition-colors ml-1"
+            className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-lg hover:bg-emerald-500/30 transition-colors ml-1"
           >
             Bulan Ini
           </button>
@@ -228,56 +228,56 @@ export default function CikupaAdminAnalitikPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10">
+        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">Total Pertandingan</span>
-            <Award className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs text-slate-500 dark:text-zinc-400">Total Pertandingan</span>
+            <Award className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           </div>
-          <div className="text-2xl font-black text-white">{matches.length}</div>
-          <p className="text-[11px] text-zinc-500 mt-1">Bulan terpilih</p>
+          <div className="text-2xl font-black text-slate-900 dark:text-white">{matches.length}</div>
+          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Bulan terpilih</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10">
+        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">Ada Pemenang</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs text-slate-500 dark:text-zinc-400">Ada Pemenang</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           </div>
-          <div className="text-2xl font-black text-emerald-400">{completedMatchesCount}</div>
-          <p className="text-[11px] text-zinc-500 mt-1">Skor lengkap</p>
+          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{completedMatchesCount}</div>
+          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Skor lengkap</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10">
+        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">Belum Ada Skor</span>
-            <Clock className="w-4 h-4 text-amber-400" />
+            <span className="text-xs text-slate-500 dark:text-zinc-400">Belum Ada Skor</span>
+            <Clock className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           </div>
-          <div className="text-2xl font-black text-amber-400">{pendingScoreMatchesCount}</div>
-          <p className="text-[11px] text-zinc-500 mt-1">Menunggu input skor</p>
+          <div className="text-2xl font-black text-amber-600 dark:text-amber-400">{pendingScoreMatchesCount}</div>
+          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Menunggu input skor</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10">
+        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">Penyelesaian</span>
-            <TrendingUp className="w-4 h-4 text-purple-400" />
+            <span className="text-xs text-slate-500 dark:text-zinc-400">Penyelesaian</span>
+            <TrendingUp className="w-4 h-4 text-purple-500 dark:text-purple-400" />
           </div>
-          <div className="text-2xl font-black text-white">{completionRate}%</div>
-          <p className="text-[11px] text-zinc-500 mt-1">Rasio pertandingan</p>
+          <div className="text-2xl font-black text-slate-900 dark:text-white">{completionRate}%</div>
+          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Rasio pertandingan</p>
         </div>
       </div>
 
       {/* Main 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left Column: Match Selector */}
-        <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 shadow-xl space-y-4">
-          <h3 className="text-sm font-black text-white flex items-center gap-2 border-b border-white/10 pb-3">
-            <Award className="w-4 h-4 text-emerald-400" />
+        <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm space-y-4">
+          <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 border-b border-gray-200 dark:border-white/10 pb-3">
+            <Award className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
             Daftar Pertandingan DLBC ({matches.length})
           </h3>
 
           {loading ? (
-            <div className="py-12 text-center text-xs text-zinc-500">Memuat pertandingan...</div>
+            <div className="py-12 text-center text-xs text-slate-400 dark:text-zinc-500">Memuat pertandingan...</div>
           ) : matches.length === 0 ? (
-            <div className="py-12 text-center text-xs text-zinc-500">Belum ada pertandingan di bulan ini</div>
+            <div className="py-12 text-center text-xs text-slate-400 dark:text-zinc-500">Belum ada pertandingan di bulan ini</div>
           ) : (
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
               {matches.map(m => {
@@ -292,29 +292,29 @@ export default function CikupaAdminAnalitikPage() {
                     className={`w-full p-3.5 rounded-xl text-left border transition-all ${
                       isSelected
                         ? 'bg-emerald-500/15 border-emerald-500 shadow-md shadow-emerald-500/10'
-                        : 'bg-zinc-800/40 border-white/5 hover:bg-zinc-800 text-zinc-400'
+                        : 'bg-slate-50 dark:bg-zinc-800/40 border-gray-100 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-400'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-black text-white">Match #{m.match_number}</span>
+                      <span className="text-xs font-black text-slate-900 dark:text-white">Match #{m.match_number}</span>
                       {hasScore ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
                           {m.team1_score} - {m.team2_score}
                         </span>
                       ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-semibold">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold">
                           Belum ada skor
                         </span>
                       )}
                     </div>
 
-                    <p className="text-[11px] text-zinc-400">
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400">
                       {m.match_date ? new Date(m.match_date).toLocaleDateString('id-ID', {
                         weekday: 'short', day: 'numeric', month: 'short'
                       }) : '-'} · {m.shuttlecock_count} Kock
                     </p>
 
-                    <div className="text-[11px] text-zinc-500 mt-1 truncate">
+                    <div className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1 truncate">
                       {members.map(mm => mm.member_name).join(', ')}
                     </div>
                   </button>
@@ -325,23 +325,23 @@ export default function CikupaAdminAnalitikPage() {
         </div>
 
         {/* Right Column: Score Editor & Detail */}
-        <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 shadow-xl lg:col-span-2 space-y-5">
+        <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm lg:col-span-2 space-y-5">
           {!selectedMatch ? (
-            <div className="py-24 text-center text-zinc-500 space-y-2">
-              <BarChart3 className="w-12 h-12 mx-auto text-zinc-600 opacity-40" />
-              <p className="text-sm font-semibold text-zinc-400">Pilih Pertandingan</p>
-              <p className="text-xs text-zinc-600">Klik salah satu pertandingan di daftar sebelah kiri untuk melihat atau mengedit skor.</p>
+            <div className="py-24 text-center text-slate-500 dark:text-zinc-500 space-y-2">
+              <BarChart3 className="w-12 h-12 mx-auto text-slate-400 dark:text-zinc-600 opacity-40" />
+              <p className="text-sm font-semibold text-slate-700 dark:text-zinc-400">Pilih Pertandingan</p>
+              <p className="text-xs text-slate-400 dark:text-zinc-600">Klik salah satu pertandingan di daftar sebelah kiri untuk melihat atau mengedit skor.</p>
             </div>
           ) : (
             <div className="space-y-5">
               {/* Match Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 dark:border-white/10 pb-4">
                 <div>
-                  <h3 className="text-lg font-black text-white flex items-center gap-2">
-                    <Award className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <Award className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                     Match #{selectedMatch.match_number}
                   </h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                     {selectedMatch.match_date ? new Date(selectedMatch.match_date).toLocaleDateString('id-ID', {
                       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
                     }) : '-'} · {selectedMatch.shuttlecock_count} Kock
@@ -352,7 +352,7 @@ export default function CikupaAdminAnalitikPage() {
                   onClick={() => setEditMode(!editMode)}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
                     editMode
-                      ? 'bg-zinc-700 text-white hover:bg-zinc-600'
+                      ? 'bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-zinc-600'
                       : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20'
                   }`}
                 >
@@ -367,17 +367,17 @@ export default function CikupaAdminAnalitikPage() {
                 <form onSubmit={e => { e.preventDefault(); saveMatchInfo(); }} className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Team 1 Form */}
-                    <div className="p-4 rounded-2xl bg-zinc-800/60 border border-white/5 space-y-3">
-                      <h4 className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-white/5 space-y-3">
+                      <h4 className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                         <Users className="w-4 h-4" /> Tim 1
                       </h4>
 
                       <div>
-                        <label className="text-[11px] text-zinc-400 block mb-1">Pemain 1</label>
+                        <label className="text-[11px] text-slate-500 dark:text-zinc-400 block mb-1">Pemain 1</label>
                         <select
                           value={formData.team1_player1}
                           onChange={e => setFormData({ ...formData, team1_player1: e.target.value })}
-                          className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:border-emerald-500"
+                          className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:border-emerald-500"
                         >
                           <option value="">-- Pilih Pemain --</option>
                           {getAvailablePlayers().map(p => (
@@ -387,11 +387,11 @@ export default function CikupaAdminAnalitikPage() {
                       </div>
 
                       <div>
-                        <label className="text-[11px] text-zinc-400 block mb-1">Pemain 2</label>
+                        <label className="text-[11px] text-slate-500 dark:text-zinc-400 block mb-1">Pemain 2</label>
                         <select
                           value={formData.team1_player2}
                           onChange={e => setFormData({ ...formData, team1_player2: e.target.value })}
-                          className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white focus:border-emerald-500"
+                          className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white focus:border-emerald-500"
                         >
                           <option value="">-- Pilih Pemain --</option>
                           {getAvailablePlayers().map(p => (
@@ -401,7 +401,7 @@ export default function CikupaAdminAnalitikPage() {
                       </div>
 
                       <div>
-                        <label className="text-[11px] text-zinc-400 block mb-1">Skor Akhir Tim 1</label>
+                        <label className="text-[11px] text-slate-500 dark:text-zinc-400 block mb-1">Skor Akhir Tim 1</label>
                         <input
                           type="number"
                           min="0"
