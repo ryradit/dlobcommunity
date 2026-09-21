@@ -1,6 +1,6 @@
 import React from 'react';
-import { Trophy, Users, Star } from 'lucide-react';
-import Footer from '@/components/Footer';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import HallOfFameSection from '@/components/HallOfFameSection';
 import { createClient } from '@supabase/supabase-js';
 
@@ -23,107 +23,120 @@ async function getActiveMemberCount(): Promise<number> {
 
 export default async function HallOfFamePage() {
   const activeMemberCount = await getActiveMemberCount();
+
+  const stats = [
+    { value: activeMemberCount || 50, suffix: '+', label: 'Member Aktif', desc: 'Anggota aktif di dua cabang' },
+    { value: '5+', suffix: ' Th', label: 'Tahun Bertumbuh', desc: 'Konsisten sejak tahun 2020' },
+    { value: '500+', suffix: '', label: 'Match Selesai', desc: 'Pertandingan resmi tercatat' },
+    { value: 'Top', suffix: ' Tier', label: 'Dedikasi & Sportivitas', desc: 'Standar komunitas berprestasi' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 to-purple-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex items-center justify-center mb-6">
-            <Trophy className="h-16 w-16 text-yellow-500 mr-4" />
-            <Users className="h-12 w-12 text-blue-600" />
-          </div>
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-8">
-            Hall of Fame
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-700 max-w-4xl mx-auto mb-6 leading-relaxed">
-            Mengenal lebih dekat para anggota luar biasa komunitas DLOB yang telah berkontribusi 
-            membangun komunitas badminton terbaik di Indonesia 🏸
-          </p>
-          <div className="flex items-center justify-center space-x-2 text-lg text-gray-600 mb-12">
-            <Star className="h-5 w-5 text-yellow-500" />
-            <span>Setiap Sabtu • 20:00-23:00 WIB • GOR Wisma Harapan</span>
-            <Star className="h-5 w-5 text-yellow-500" />
-          </div>
-          
-          {/* Stats Banner */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-100 hover:shadow-xl transition-shadow">
-              <div className="text-3xl font-bold text-blue-600 mb-2">{activeMemberCount}</div>
-              <div className="text-sm text-gray-600 font-medium">Member Aktif</div>
+    <main className="min-h-screen bg-white text-zinc-950 font-sans overflow-x-clip">
+      
+      {/* ─────────────────────────────────────────────────────────────
+          1. PRESTIGE HERO SECTION
+      ───────────────────────────────────────────────────────────── */}
+      <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 bg-white border-b border-zinc-200/80 overflow-hidden">
+        {/* Subtle prestige lighting */}
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gradient-radial from-amber-400/10 via-transparent to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/3 left-0 w-[500px] h-[500px] bg-gradient-radial from-[#4382C8]/10 via-transparent to-transparent rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center">
+          <div className="max-w-3xl mx-auto space-y-4">
+            
+            {/* Prestige Badge */}
+            <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-700 text-[11px] font-mono tracking-wider uppercase shadow-xs">
+              Apresiasi &amp; Rekognisi Komunitas
             </div>
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-green-100 hover:shadow-xl transition-shadow">
-              <div className="text-3xl font-bold text-green-600 mb-2">5+</div>
-              <div className="text-sm text-gray-600 font-medium">Tahun Berdiri</div>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-purple-100 hover:shadow-xl transition-shadow">
-              <div className="text-3xl font-bold text-purple-600 mb-2">500+</div>
-              <div className="text-sm text-gray-600 font-medium">Match Dimainkan</div>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-orange-100 hover:shadow-xl transition-shadow">
-              <div className="text-3xl font-bold text-orange-600 mb-2">100%</div>
-              <div className="text-sm text-gray-600 font-medium">Semangat</div>
+
+            {/* Display Headline */}
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-zinc-950 tracking-tight leading-[1.04]">
+              Hall of <span className="text-[#4382C8]">Fame.</span>
+            </h1>
+
+            <p className="text-zinc-600 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+              Penghargaan tertinggi bagi para atlet dan anggota berdedikasi yang membangun sportivitas serta prestasi di lapangan DLOB.
+            </p>
+
+            <div className="pt-2 text-xs font-mono text-zinc-400">
+              Setiap Sabtu 20:00 WIB (GOR Wisma Harapan) · Setiap Jumat 20:00 WIB (GOR Galaxi Cikupa)
             </div>
           </div>
+
+          {/* Doppelrand Milestone Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-5xl mx-auto mt-14">
+            {stats.map((stat, idx) => (
+              <div key={idx} className="doppelrand-shell p-1.5 rounded-[2rem] bg-zinc-100/90 border border-zinc-200/80 shadow-xs">
+                <div className="p-6 rounded-[calc(2rem-0.375rem)] bg-white text-left space-y-1.5">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                    0{idx + 1}
+                  </span>
+                  <p className="font-mono text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight">
+                    {stat.value}{stat.suffix}
+                  </p>
+                  <h3 className="text-xs sm:text-sm font-bold text-zinc-900 pt-1">{stat.label}</h3>
+                  <p className="text-[11px] text-zinc-500 leading-tight">{stat.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
       </section>
 
-      {/* Hall of Fame Grid */}
-      <section className="py-16">
+      {/* ─────────────────────────────────────────────────────────────
+          2. HALL OF FAME GRID
+      ───────────────────────────────────────────────────────────── */}
+      <section className="py-20 md:py-28 bg-zinc-50 border-b border-zinc-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <HallOfFameSection showAll={true} />
         </div>
       </section>
 
-      {/* Join Community CTA */}
-      <section className="relative min-h-80 overflow-hidden bg-black py-12">
-        {/* Gradient blur effects */}
-        <div className="flex flex-col items-end absolute -right-60 -top-10 blur-xl z-0">
-          <div className="h-[10rem] rounded-full w-[60rem] z-1 bg-gradient-to-b blur-[6rem] from-purple-600 to-sky-600"></div>
-          <div className="h-[10rem] rounded-full w-[90rem] z-1 bg-gradient-to-b blur-[6rem] from-pink-900 to-yellow-400"></div>
-          <div className="h-[10rem] rounded-full w-[60rem] z-1 bg-gradient-to-b blur-[6rem] from-yellow-600 to-sky-500"></div>
-        </div>
+      {/* ─────────────────────────────────────────────────────────────
+          3. CINEMATIC CLOSING CTA (Doppelrand Obsidian)
+      ───────────────────────────────────────────────────────────── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="p-2 sm:p-2.5 rounded-[2.5rem] bg-zinc-950 border border-zinc-800 shadow-2xl overflow-hidden relative text-white">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-radial from-[#4382C8]/25 via-transparent to-transparent rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-gradient-radial from-amber-400/15 via-transparent to-transparent rounded-full blur-3xl pointer-events-none" />
 
-        {/* Content */}
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 min-h-96 flex flex-col items-center justify-center">
-          {/* Badge */}
-          <div className="mb-6 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center gap-2">
-            <span className="text-sm font-medium text-white">🏆 Jadilah Bagian</span>
-          </div>
+          <div className="relative rounded-[calc(2.5rem-0.625rem)] bg-zinc-900/90 p-8 sm:p-14 lg:p-16 text-center max-w-3xl mx-auto space-y-6">
+            <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-white/10 border border-white/15 text-white text-[11px] font-mono tracking-wider uppercase">
+              Raih Peringkat Anda
+            </div>
 
-          {/* Heading */}
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4 text-center">
-            Bergabung dengan DLOB!
-          </h2>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tight">
+              Ingin Menjadi Bagian dari<br />
+              <span className="text-[#4382C8]">Hall of Fame Berikutnya?</span>
+            </h2>
 
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-gray-300 mb-8 text-center">
-            Ingin menjadi bagian dari Hall of Fame DLOB? Bergabunglah dengan komunitas 
-            badminton terbaik dan rasakan pengalaman bermain yang tak terlupakan!
-          </p>
+            <p className="text-zinc-400 text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
+              Ikuti mabar mingguan secara rutin, tingkatkan ELO rating pertandingan Anda, dan ukir nama Anda di daftar anggota terbaik DLOB.
+            </p>
 
-          {/* Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/pre-order"
-              className="inline-flex items-center justify-center px-8 py-3 bg-white text-black font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-300"
-            >
-              <span>Gabung Komunitas</span>
-              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </a>
-            <a
-              href="/tentang"
-              className="inline-flex items-center justify-center px-8 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-full border border-white/30 hover:bg-white/20 hover:border-white/50 transition-all duration-300"
-            >
-              Pelajari Lebih Lanjut
-            </a>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/register"
+                className="group inline-flex items-center gap-3 bg-white hover:bg-zinc-100 text-zinc-950 pl-7 pr-3 py-3.5 rounded-full font-bold text-sm tracking-tight transition-all shadow-xl active:scale-[0.98]"
+              >
+                <span>Daftar Member Sekarang</span>
+                <div className="btn-nested-icon w-8 h-8 rounded-full bg-zinc-950 text-white flex items-center justify-center group-hover:bg-[#4382C8] transition-colors">
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </Link>
+              <Link
+                href="/tentang"
+                className="px-7 py-3.5 rounded-full border border-white/20 hover:border-white/40 text-white text-sm font-semibold transition-all hover:bg-white/5 active:scale-[0.98]"
+              >
+                Pelajari Filosofi DLOB
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <Footer />
-    </div>
+    </main>
   );
 }

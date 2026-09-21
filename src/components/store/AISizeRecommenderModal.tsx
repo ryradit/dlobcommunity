@@ -106,18 +106,18 @@ export default function AISizeRecommenderModal({
         }`}
       >
         {/* Ambient Top Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-24 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-blue-500/20 blur-2xl pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-24 bg-gradient-to-r from-[#4382C8]/20 via-blue-500/20 to-sky-400/20 blur-2xl pointer-events-none" />
 
         {/* Header */}
         <div className={`p-6 pb-4 flex items-center justify-between border-b ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-gradient-to-br from-emerald-400/20 to-teal-500/20 border border-emerald-500/30 text-emerald-400">
+            <div className="p-2.5 rounded-2xl bg-[#4382C8]/15 border border-[#4382C8]/30 text-[#4382C8]">
               <Bot className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <span>D&apos;LOB AI Size Recommender</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#4382C8]/15 text-[#4382C8] border border-[#4382C8]/30">
                   D&apos;LOB AI
                 </span>
               </h3>
@@ -156,8 +156,8 @@ export default function AISizeRecommenderModal({
                   required
                   className={`w-full px-3.5 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
                     isDark
-                      ? 'bg-zinc-800/80 border-white/10 text-white focus:border-emerald-400'
-                      : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-black'
+                      ? 'bg-zinc-800/80 border-white/10 text-white focus:border-[#4382C8]'
+                      : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-[#4382C8]'
                   }`}
                 />
               </div>
@@ -177,8 +177,8 @@ export default function AISizeRecommenderModal({
                   required
                   className={`w-full px-3.5 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
                     isDark
-                      ? 'bg-zinc-800/80 border-white/10 text-white focus:border-emerald-400'
-                      : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-black'
+                      ? 'bg-zinc-800/80 border-white/10 text-white focus:border-[#4382C8]'
+                      : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-[#4382C8]'
                   }`}
                 />
               </div>
@@ -198,8 +198,8 @@ export default function AISizeRecommenderModal({
                   required
                   className={`w-full px-3.5 py-2.5 rounded-2xl text-sm font-semibold border transition-all ${
                     isDark
-                      ? 'bg-zinc-800/80 border-white/10 text-white focus:border-emerald-400'
-                      : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-black'
+                      ? 'bg-zinc-800/80 border-white/10 text-white focus:border-[#4382C8]'
+                      : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-[#4382C8]'
                   }`}
                 />
               </div>
@@ -223,8 +223,8 @@ export default function AISizeRecommenderModal({
                     className={`py-2 px-2 text-xs font-bold rounded-xl border transition-all ${
                       fitPreference === f.value
                         ? isDark
-                          ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300'
-                          : 'border-black bg-black text-white'
+                          ? 'border-[#4382C8] bg-[#4382C8]/20 text-blue-300'
+                          : 'border-[#4382C8] bg-[#4382C8] text-white shadow-sm'
                         : isDark
                         ? 'border-white/10 bg-zinc-800/50 text-zinc-400 hover:text-white'
                         : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300'
@@ -245,8 +245,8 @@ export default function AISizeRecommenderModal({
               disabled={loading}
               className={`w-full py-3 rounded-full text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-md ${
                 isDark
-                  ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-950'
-                  : 'bg-black hover:bg-gray-800 text-white'
+                  ? 'bg-[#4382C8] hover:bg-[#356db0] text-white shadow-blue-950/40'
+                  : 'bg-[#4382C8] hover:bg-[#356db0] text-white'
               } disabled:opacity-50`}
             >
               {loading ? (
@@ -268,12 +268,12 @@ export default function AISizeRecommenderModal({
             <div
               className={`p-5 rounded-3xl border transition-all animate-fadeIn space-y-4 ${
                 isDark
-                  ? 'bg-zinc-800/60 border-emerald-500/30'
-                  : 'bg-emerald-50/70 border-emerald-200'
+                  ? 'bg-zinc-800/60 border-[#4382C8]/30'
+                  : 'bg-blue-50/70 border-blue-200'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#4382C8] flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
                   Hasil Rekomendasi AI
                 </span>
@@ -289,7 +289,7 @@ export default function AISizeRecommenderModal({
                   {result.recommendedSize}
                 </div>
                 <div className="text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
-                  Kategori: <strong className="text-emerald-600 dark:text-emerald-400">{result.recommendedCategory.toUpperCase()}</strong>
+                  Kategori: <strong className="text-[#4382C8]">{result.recommendedCategory.toUpperCase()}</strong>
                 </div>
               </div>
 
@@ -303,7 +303,7 @@ export default function AISizeRecommenderModal({
                   isDark ? 'bg-zinc-900/90 border-white/10' : 'bg-white border-gray-200'
                 }`}>
                   <div className="flex items-center justify-between pb-2 border-b border-white/5 font-semibold">
-                    <span className="flex items-center gap-1.5 text-emerald-500">
+                    <span className="flex items-center gap-1.5 text-[#4382C8]">
                       <span>📏</span>
                       <span>Spesifikasi Tabel {result.recommendedSize}:</span>
                     </span>
@@ -312,11 +312,11 @@ export default function AISizeRecommenderModal({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
                     <div className="p-2 rounded-xl bg-white/5 border border-white/5">
                       <p className="text-[10px] text-zinc-400 uppercase">Tinggi Jersey</p>
-                      <p className="text-sm font-bold font-mono text-emerald-400 mt-0.5">{result.measurements.tinggi} cm</p>
+                      <p className="text-sm font-bold font-mono text-[#4382C8] mt-0.5">{result.measurements.tinggi} cm</p>
                     </div>
                     <div className="p-2 rounded-xl bg-white/5 border border-white/5">
                       <p className="text-[10px] text-zinc-400 uppercase">Lebar Dada</p>
-                      <p className="text-sm font-bold font-mono text-emerald-400 mt-0.5">{result.measurements.lebar} cm</p>
+                      <p className="text-sm font-bold font-mono text-[#4382C8] mt-0.5">{result.measurements.lebar} cm</p>
                     </div>
                     <div className="p-2 rounded-xl bg-white/5 border border-white/5">
                       <p className="text-[10px] text-zinc-400 uppercase">Toleransi</p>
@@ -324,7 +324,7 @@ export default function AISizeRecommenderModal({
                     </div>
                     <div className="p-2 rounded-xl bg-white/5 border border-white/5">
                       <p className="text-[10px] text-zinc-400 uppercase">Harga Dasar</p>
-                      <p className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
+                      <p className="text-sm font-bold font-mono text-[#4382C8] mt-0.5">
                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(result.measurements.price)}
                       </p>
                     </div>
@@ -334,7 +334,7 @@ export default function AISizeRecommenderModal({
 
               {result.alternativeSize && (
                 <div className={`p-3 rounded-2xl text-xs flex items-center justify-between ${
-                  isDark ? 'bg-zinc-900/80 border border-white/5' : 'bg-white border border-emerald-100'
+                  isDark ? 'bg-zinc-900/80 border border-white/5' : 'bg-white border border-blue-100'
                 }`}>
                   <span className="text-gray-500 dark:text-zinc-400">Ukuran Alternatif (Lebih Longgar):</span>
                   <span className="font-bold text-gray-900 dark:text-white font-mono">{result.alternativeSize}</span>
@@ -345,7 +345,7 @@ export default function AISizeRecommenderModal({
                 <button
                   type="button"
                   onClick={handleApply}
-                  className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-widest rounded-full transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-950/40 hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full py-3 bg-[#4382C8] hover:bg-[#356db0] text-white font-bold text-xs uppercase tracking-widest rounded-full transition-all flex items-center justify-center gap-2 shadow-md shadow-[#4382C8]/30 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <span>Gunakan Ukuran {result.recommendedSize}</span>
                   <ArrowRight className="w-4 h-4" />

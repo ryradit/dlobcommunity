@@ -10,7 +10,7 @@ import HubungiKamiSection from '@/components/HubungiKamiSection';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <main className="min-h-screen bg-white text-zinc-950 font-sans overflow-x-clip">
       {/* Hero Section */}
       <HeroSection />
 

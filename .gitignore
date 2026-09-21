@@ -69,3 +69,8 @@ next-env.d.ts
 
 # Scratch directory
 /scratch
+
+# Model weights and test video uploads
+*.pt
+/public/uploads/
+/public/sample_match.mp4

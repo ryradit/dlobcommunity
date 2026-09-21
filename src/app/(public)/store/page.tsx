@@ -336,34 +336,32 @@ function CatalogCard({
     };
   }, [mediaItems.length, activeIdx, currentIsVideo, cleanupVideo]);
 
-  // Distinctive Badge Styling
+  // Distinctive Badge Styling (Pure text-only badges)
   const renderBadge = () => {
     if (product.badgeType === 'active-preorder') {
       return (
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 backdrop-blur-md shadow-lg shadow-emerald-950/50">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>PRE-ORDER DIBUKA</span>
+        <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase bg-[#4382C8]/15 text-[#4382C8] border border-[#4382C8]/30 backdrop-blur-md shadow-lg shadow-blue-950/20">
+          PRE-ORDER DIBUKA
         </div>
       );
     }
     if (product.badgeType === 'closed') {
       return (
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-zinc-900/90 text-zinc-400 border border-white/10 backdrop-blur-md">
-          <Lock className="w-3 h-3 text-zinc-400" />
-          <span>BATCH DITUTUP</span>
+        <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase bg-zinc-900/90 text-zinc-400 border border-white/10 backdrop-blur-md">
+          BATCH DITUTUP
         </div>
       );
     }
     if (product.badgeType === 'coming-soon') {
       return (
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-zinc-800/80 text-zinc-400 border border-white/10 backdrop-blur-md">
-          <span>🔒 SEGERA HADIR</span>
+        <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase bg-zinc-800/80 text-zinc-400 border border-white/10 backdrop-blur-md">
+          SEGERA HADIR
         </div>
       );
     }
     return (
-      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-white/15 text-white border border-white/20 backdrop-blur-md">
-        <span>✨ EDISI REGULER</span>
+      <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase bg-white/15 text-white border border-white/20 backdrop-blur-md">
+        EDISI REGULER
       </div>
     );
   };
@@ -371,124 +369,128 @@ function CatalogCard({
   return (
     <div
       onClick={() => onOpen(product)}
-      className="group relative cursor-pointer text-left bg-zinc-900/60 backdrop-blur-xl border border-white/10 hover:border-white/30 rounded-3xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-black/80 hover:-translate-y-1 flex flex-col"
+      className="group relative cursor-pointer text-left p-1.5 rounded-[2.25rem] bg-zinc-100 border border-zinc-200/90 hover:border-[#4382C8]/60 transition-all duration-500 hover:shadow-2xl hover:shadow-zinc-900/10 hover:-translate-y-1.5 flex flex-col"
     >
-      {/* Media Canvas */}
-      <div className="relative w-full aspect-4/5 overflow-hidden bg-zinc-950">
-        {currentMedia ? (
-          <div
-            className="absolute inset-0 transition-opacity duration-700"
-            style={{ opacity: visible ? 1 : 0 }}
-          >
-            {currentIsVideo ? (
-              <video
-                key={`${product.id}-${currentMedia}-${activeIdx}`}
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                loop={false}
-                preload="metadata"
-                crossOrigin="anonymous"
-                poster={getFallbackImage() || undefined}
-                className="w-full h-full object-cover bg-black"
-                onError={() => handleVideoError(currentMedia)}
-                style={{ width: '100%', height: '100%', display: 'block' }}
-              >
-                <source src={currentMedia} type="video/mp4" />
-              </video>
-            ) : (
-              <SmartCropImage 
-                src={currentMedia} 
-                alt={product.name} 
-                name={product.name} 
-                objectPositionOverride={currentMedia.includes('pink8') ? '20% 50%' : undefined} 
-              />
-            )}
-          </div>
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-900">
-            <svg viewBox="0 0 200 200" className="w-28 h-28 opacity-20" fill="none" stroke="white" strokeWidth="1.5">
-              <rect x="20" y="20" width="60" height="60" rx="4" /><rect x="120" y="20" width="60" height="60" rx="4" />
-              <rect x="20" y="120" width="60" height="60" rx="4" /><rect x="120" y="120" width="60" height="60" rx="4" />
-            </svg>
-            <p className="text-white/40 text-xs tracking-widest uppercase font-semibold">Teaser Concept</p>
-          </div>
-        )}
-
-        {/* Ambient Dark Gradient Vignette */}
-        <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-zinc-950/20 to-transparent pointer-events-none" />
-
-        {/* Top Badges */}
-        <div className="absolute top-4 left-4 z-20">
-          {renderBadge()}
-        </div>
-
-        {/* Color Swatch Dots */}
-        <div className="absolute top-4 right-4 z-20 flex gap-1.5 p-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
-          {product.colorVariants.map((v) => (
+      <div className="relative w-full rounded-[calc(2.25rem-0.375rem)] overflow-hidden bg-white border border-zinc-200/60 flex flex-col flex-1">
+        {/* Media Canvas */}
+        <div className="relative w-full aspect-4/5 overflow-hidden bg-zinc-100">
+          {currentMedia ? (
             <div
-              key={v.id}
-              className="w-3.5 h-3.5 rounded-full border border-white/40 shadow-sm"
-              style={{ backgroundColor: v.bgColor }}
-              title={v.name}
-            />
-          ))}
-        </div>
+              className="absolute inset-0 transition-opacity duration-700"
+              style={{ opacity: visible ? 1 : 0 }}
+            >
+              {currentIsVideo ? (
+                <video
+                  key={`${product.id}-${currentMedia}-${activeIdx}`}
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  loop={false}
+                  preload="metadata"
+                  crossOrigin="anonymous"
+                  poster={getFallbackImage() || undefined}
+                  className="w-full h-full object-cover bg-black"
+                  onError={() => handleVideoError(currentMedia)}
+                  style={{ width: '100%', height: '100%', display: 'block' }}
+                >
+                  <source src={currentMedia} type="video/mp4" />
+                </video>
+              ) : (
+                <SmartCropImage 
+                  src={currentMedia} 
+                  alt={product.name} 
+                  name={product.name} 
+                  objectPositionOverride={currentMedia.includes('pink8') ? '20% 50%' : undefined} 
+                />
+              )}
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-100">
+              <svg viewBox="0 0 200 200" className="w-28 h-28 opacity-20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <rect x="20" y="20" width="60" height="60" rx="4" /><rect x="120" y="20" width="60" height="60" rx="4" />
+                <rect x="20" y="120" width="60" height="60" rx="4" /><rect x="120" y="120" width="60" height="60" rx="4" />
+              </svg>
+              <p className="text-zinc-400 text-xs tracking-widest uppercase font-mono font-semibold">Teaser Concept</p>
+            </div>
+          )}
 
-        {/* Media indicators */}
-        {mediaItems.length > 1 && (
-          <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-1.5 z-20">
-            {mediaItems.map((_, i) => (
+          {/* Ambient Dark Gradient Vignette for readable white typography over media */}
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/85 via-zinc-950/20 to-transparent pointer-events-none" />
+
+          {/* Top Badges */}
+          <div className="absolute top-4 left-4 z-20">
+            {renderBadge()}
+          </div>
+
+          {/* Color Swatch Dots */}
+          <div className="absolute top-4 right-4 z-20 flex gap-1.5 p-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 shadow-sm">
+            {product.colorVariants.map((v) => (
               <div
-                key={i}
-                className={`rounded-full transition-all duration-300 ${
-                  i === activeIdx ? 'w-4 h-1 bg-white' : 'w-1 h-1 bg-white/30'
-                }`}
+                key={v.id}
+                className="w-3.5 h-3.5 rounded-full border border-white/40 shadow-sm"
+                style={{ backgroundColor: v.bgColor }}
+                title={v.name}
               />
             ))}
           </div>
-        )}
 
-        {/* Product Title on Media Canvas */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 p-6">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-1 font-semibold">{product.tagline}</p>
-          <h3 className="text-2xl font-light tracking-tight text-white">{product.name}</h3>
-        </div>
-      </div>
-
-      {/* Glassmorphic Card Footer Details */}
-      <div className="p-6 bg-zinc-900/80 backdrop-blur-md border-t border-white/5 flex items-center justify-between mt-auto">
-        <div>
-          <div className="text-xs text-zinc-400 flex items-center gap-2">
-            <span>{product.material}</span>
-            <span>•</span>
-            <span>{product.colorVariants.length} Warna</span>
-          </div>
-          {product.isClosed ? (
-            <p className="text-sm font-semibold text-zinc-400 mt-1 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-zinc-500" />
-              <span>Status: Batch Ditutup</span>
-            </p>
-          ) : product.comingSoon ? (
-            <p className="text-sm font-semibold text-zinc-400 mt-1">Status: Segera Hadir</p>
-          ) : (
-            <p className="text-sm font-bold text-white mt-1">
-              Mulai <span className="text-emerald-400 font-mono">{formatPrice(product.startingPrice)}</span>
-            </p>
+          {/* Media indicators */}
+          {mediaItems.length > 1 && (
+            <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-1.5 z-20">
+              {mediaItems.map((_, i) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-300 ${
+                    i === activeIdx ? 'w-4 h-1 bg-white' : 'w-1 h-1 bg-white/40'
+                  }`}
+                />
+              ))}
+            </div>
           )}
+
+          {/* Product Title on Media Canvas */}
+          <div className="absolute bottom-0 left-0 right-0 z-10 p-6 text-white">
+            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-zinc-300 mb-1 font-semibold">{product.tagline}</p>
+            <h3 className="text-2xl font-black tracking-tight text-white">{product.name}</h3>
+          </div>
         </div>
 
-        <button
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
-            product.badgeType === 'active-preorder'
-              ? 'bg-white text-black hover:bg-zinc-200 group-hover:scale-105 shadow-md shadow-black/50'
-              : 'bg-white/10 text-white hover:bg-white/20 border border-white/10 group-hover:scale-105'
-          }`}
-        >
-          <span>{product.isClosed ? 'Detail' : product.comingSoon ? 'Info' : 'Pesan'}</span>
-          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+        {/* Light Card Footer Details */}
+        <div className="p-5 sm:p-6 bg-white border-t border-zinc-100 flex items-center justify-between mt-auto">
+          <div>
+            <div className="text-xs text-zinc-500 flex items-center gap-2 font-mono">
+              <span>{product.material}</span>
+              <span>•</span>
+              <span>{product.colorVariants.length} Warna</span>
+            </div>
+            {product.isClosed ? (
+              <p className="text-xs font-semibold text-zinc-500 mt-1 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-zinc-400" />
+                <span>Status: Batch Ditutup</span>
+              </p>
+            ) : product.comingSoon ? (
+              <p className="text-xs font-semibold text-zinc-500 mt-1">Status: Segera Hadir</p>
+            ) : (
+              <p className="text-sm font-bold text-zinc-950 mt-1">
+                Mulai <span className="text-[#4382C8] font-mono tabular-nums font-extrabold">{formatPrice(product.startingPrice)}</span>
+              </p>
+            )}
+          </div>
+
+          <div
+            className={`inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full text-xs font-bold transition-all duration-300 ${
+              product.badgeType === 'active-preorder'
+                ? 'bg-zinc-950 text-white group-hover:bg-[#4382C8] shadow-md shadow-zinc-950/15'
+                : 'bg-zinc-100 text-zinc-900 group-hover:bg-zinc-950 group-hover:text-white border border-zinc-200'
+            }`}
+          >
+            <span>{product.isClosed ? 'Detail' : product.comingSoon ? 'Info' : 'Pesan'}</span>
+            <div className="btn-nested-icon w-6 h-6 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center transition-colors">
+              <ChevronRight className="w-3.5 h-3.5 text-current" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -544,23 +546,32 @@ export default function StorePage() {
 
   const backToCatalog = () => setSelectedProductId(null);
 
-  // Futuristic Disclaimer Block
+  // Futuristic Disclaimer Block with Doppelrand Architecture
   const Disclaimer = () => (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-      <div className="flex items-start gap-3 bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-4 shadow-lg">
-        <Info className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-        <div className="text-xs sm:text-sm text-zinc-300">
-          <p className="font-semibold text-white mb-0.5">Informasi Batch &amp; Pemesanan Jersey DLOB</p>
-          <p className="text-zinc-400 leading-relaxed">
-            Pemesanan jersey saat ini difokuskan pada <strong className="text-emerald-400">Pre-Order New Batch 2026</strong> (tersedia size Dewasa, Kids &amp; Balita 👶). Edisi batch reguler sebelumnya telah resmi ditutup. Produksi batch baru berjalan setelah kuota minimum <strong className="text-white">15 pesanan</strong> terkumpul.
-          </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
+      <div className="p-1 rounded-2xl bg-zinc-100 border border-zinc-200/90 shadow-sm">
+        <div className="p-4 sm:p-5 rounded-[calc(1rem-0.125rem)] bg-white flex items-start gap-3.5 border border-zinc-200/50">
+          <div className="w-8 h-8 rounded-full bg-[#4382C8]/10 border border-[#4382C8]/20 flex items-center justify-center shrink-0 mt-0.5">
+            <Info className="w-4 h-4 text-[#4382C8]" />
+          </div>
+          <div className="text-xs sm:text-sm text-zinc-600 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[#4382C8] border border-blue-200">
+                PRODUKSI &amp; BATCH
+              </span>
+              <p className="font-bold text-zinc-950">Informasi Batch &amp; Pemesanan Jersey DLOB</p>
+            </div>
+            <p className="text-zinc-600 leading-relaxed text-xs sm:text-sm">
+              Pemesanan jersey saat ini difokuskan pada <strong className="text-[#4382C8] font-semibold">Pre-Order New Batch 2026</strong> (tersedia size Dewasa, Kids &amp; Balita 👶). Edisi batch reguler sebelumnya telah resmi ditutup. Produksi batch baru berjalan setelah kuota minimum <strong className="text-zinc-950 font-mono font-bold">15 pesanan</strong> terkumpul.
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white selection:bg-white selection:text-black">
+    <div className="min-h-screen bg-white text-zinc-950 selection:bg-[#4382C8] selection:text-white font-sans overflow-x-clip">
 
       {/* ── AI Size Recommender Modal ── */}
       <AISizeRecommenderModal
@@ -569,102 +580,93 @@ export default function StorePage() {
         onApplySize={(_cat, sizeId) => {
           setSelectedSize(sizeId);
         }}
-        theme="dark"
+        theme="light"
       />
 
       {/* ── Size Guide Modal (3 Tables: Dewasa, Kids, Balita) ── */}
       {showSizeGuideModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-zinc-900 border border-white/15 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                📏 Panduan Ukuran Jersey DLOB
-              </h2>
-              <button
-                onClick={() => setShowSizeGuideModal(false)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white flex items-center justify-center transition-colors"
-              >
-                ✕
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="p-1.5 rounded-[2.5rem] bg-zinc-100 border border-zinc-200 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white p-6 sm:p-8 rounded-[calc(2.5rem-0.375rem)] text-zinc-950">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#4382C8] animate-pulse" />
+                  <h2 className="text-xl font-black text-zinc-950 tracking-tight">
+                    Panduan Ukuran Jersey DLOB
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setShowSizeGuideModal(false)}
+                  className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-950 flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
 
-            {/* Category Tabs inside Modal */}
-            <div className="grid grid-cols-3 gap-2 p-1 bg-white/5 border border-white/10 rounded-full mb-6">
-              <button
-                type="button"
-                onClick={() => setSizeGuideTab('dewasa')}
-                className={`py-2 px-3 text-xs font-bold rounded-full transition-all ${
-                  sizeGuideTab === 'dewasa' ? 'bg-white text-black shadow-md' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Dewasa (110k)
-              </button>
-              <button
-                type="button"
-                onClick={() => setSizeGuideTab('kids')}
-                className={`py-2 px-3 text-xs font-bold rounded-full transition-all ${
-                  sizeGuideTab === 'kids' ? 'bg-white text-black shadow-md' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Kids (100k)
-              </button>
-              <button
-                type="button"
-                onClick={() => setSizeGuideTab('balita')}
-                className={`py-2 px-3 text-xs font-bold rounded-full transition-all ${
-                  sizeGuideTab === 'balita' ? 'bg-white text-black shadow-md' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Balita 👶 (100k)
-              </button>
-            </div>
+              {/* Category Tabs inside Modal */}
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-zinc-100 border border-zinc-200 rounded-full mb-6">
+                <button
+                  type="button"
+                  onClick={() => setSizeGuideTab('dewasa')}
+                  className={`py-2 px-3 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                    sizeGuideTab === 'dewasa' ? 'bg-zinc-950 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'
+                  }`}
+                >
+                  Dewasa (110k)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSizeGuideTab('kids')}
+                  className={`py-2 px-3 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                    sizeGuideTab === 'kids' ? 'bg-zinc-950 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'
+                  }`}
+                >
+                  Kids (100k)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSizeGuideTab('balita')}
+                  className={`py-2 px-3 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                    sizeGuideTab === 'balita' ? 'bg-zinc-950 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-950'
+                  }`}
+                >
+                  Balita 👶 (100k)
+                </button>
+              </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-white/10 bg-white/5 text-zinc-300">
-                    <th className="text-left py-3 px-4 font-semibold">Size</th>
-                    <th className="text-left py-3 px-4 font-semibold">Keterangan</th>
-                    <th className="text-right py-3 px-4 font-semibold">Tinggi (cm)</th>
-                    <th className="text-right py-3 px-4 font-semibold">Lebar (cm)</th>
-                    <th className="text-right py-3 px-4 font-semibold">Lengan Pendek</th>
-                    <th className="text-right py-3 px-4 font-semibold">Lengan Panjang</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-zinc-300">
-                  {allSizeOptions
-                    .filter((s) => s.category === sizeGuideTab)
-                    .map((item) => (
-                      <tr key={item.id} className="hover:bg-white/5 transition-colors">
-                        <td className="py-3 px-4 font-bold text-white">{item.label}</td>
-                        <td className="py-3 px-4 text-zinc-400 text-xs">{item.keterangan || 'Dewasa Standard'}</td>
-                        <td className="text-right py-3 px-4 font-mono">{item.tinggi}</td>
-                        <td className="text-right py-3 px-4 font-mono">{item.lebar}</td>
-                        <td className="text-right py-3 px-4 font-mono text-emerald-400 font-bold">
-                          {formatPrice(item.pendekPrice)}
-                        </td>
-                        <td className="text-right py-3 px-4 font-mono text-emerald-400">
-                          {formatPrice(item.panjangPrice)}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-zinc-200 bg-zinc-50 text-zinc-600 font-mono text-xs">
+                      <th className="text-left py-3 px-4 font-bold">Size</th>
+                      <th className="text-left py-3 px-4 font-bold">Keterangan</th>
+                      <th className="text-right py-3 px-4 font-bold">Tinggi (cm)</th>
+                      <th className="text-right py-3 px-4 font-bold">Lebar (cm)</th>
+                      <th className="text-right py-3 px-4 font-bold">Lengan Pendek</th>
+                      <th className="text-right py-3 px-4 font-bold">Lengan Panjang</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 text-zinc-800">
+                    {allSizeOptions
+                      .filter((s) => s.category === sizeGuideTab)
+                      .map((item) => (
+                        <tr key={item.id} className="hover:bg-zinc-50/80 transition-colors">
+                          <td className="py-3 px-4 font-bold text-zinc-950 font-mono">{item.label}</td>
+                          <td className="py-3 px-4 text-zinc-500 text-xs">{item.keterangan || 'Dewasa Standard'}</td>
+                          <td className="text-right py-3 px-4 font-mono tabular-nums">{item.tinggi}</td>
+                          <td className="text-right py-3 px-4 font-mono tabular-nums">{item.lebar}</td>
+                          <td className="text-right py-3 px-4 font-mono tabular-nums text-[#4382C8] font-bold">
+                            {formatPrice(item.pendekPrice)}
+                          </td>
+                          <td className="text-right py-3 px-4 font-mono tabular-nums text-[#4382C8]">
+                            {formatPrice(item.panjangPrice)}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
 
-            <div className="mt-6 p-4 bg-white/5 rounded-2xl border border-white/10 text-xs text-zinc-400 space-y-1">
-              <p className="font-semibold text-white">💡 Catatan Pengukuran:</p>
-              <p>• Satuan ukuran dalam Centimeter (cm) dengan toleransi jahitan ±2cm.</p>
-              <p>• Lengan panjang dikenakan biaya tambahan +Rp 10.000 dari harga lengan pendek.</p>
-            </div>
-
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => setShowSizeGuideModal(false)}
-                className="px-8 py-3 bg-white text-black hover:bg-zinc-200 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-full font-semibold text-sm shadow-md"
-              >
-                Tutup
-              </button>
             </div>
           </div>
         </div>
@@ -715,25 +717,24 @@ export default function StorePage() {
               crossOrigin="anonymous"
             />
             
-            {/* Ambient Dark Gradients */}
-            <div className="absolute inset-0 bg-linear-to-b from-black/60 via-black/30 to-zinc-950" />
+            {/* Ambient Transition Gradients: dark at top for text readability, seamlessly blending to pure white at bottom */}
+            <div className="absolute inset-0 bg-linear-to-b from-black/75 via-black/30 via-50% to-white" />
+            <div className="absolute inset-y-0 left-0 w-full md:w-3/5 bg-gradient-to-r from-black/60 via-black/25 to-transparent pointer-events-none" />
+            <div className="absolute inset-x-0 bottom-0 h-72 sm:h-96 bg-linear-to-t from-white via-white/85 via-35% to-transparent pointer-events-none" />
 
             {/* Content */}
             <div className="relative z-10 flex flex-col justify-end h-full min-h-[85vh] max-w-7xl mx-auto px-6 sm:px-10 pb-16 pt-32">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs uppercase tracking-widest text-zinc-300 bg-white/10 backdrop-blur-md border border-white/15 mb-4 w-fit">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                <span>DLOB Community Official Gear</span>
+              <div className="inline-flex items-center px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-wider uppercase text-zinc-300 bg-white/10 backdrop-blur-md border border-white/15 mb-5 w-fit shadow-xs">
+                DLOB Official Merchandise &amp; Gear
               </div>
 
-              <h1 className="text-5xl sm:text-7xl font-light tracking-tight text-white leading-none mb-4">
-                DLOB<br />
-                <span className="font-bold italic text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-400">
-                  STORE
-                </span>
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.05] mb-4">
+                Performa &amp; Presisi.<br />
+                <span className="text-sky-300 italic drop-shadow-[0_2px_12px_rgba(0,0,0,0.4)]">Official DLOB Gear.</span>
               </h1>
 
-              <p className="text-base sm:text-lg text-zinc-300 max-w-md leading-relaxed mb-8">
-                Jersey resmi komunitas bulutangkis DLOB. Kualitas material Milano Standard premium, ringan, adem, dan dirancang untuk performa puncak.
+              <p className="text-sm sm:text-base text-zinc-300 max-w-md leading-relaxed mb-8">
+                Jersey resmi komunitas bulutangkis DLOB. Material Milano Standard premium, ringan, bernapas optimal, dan dirancang untuk durabilitas pertandingan.
               </p>
 
               {/* CTAs */}
@@ -742,36 +743,46 @@ export default function StorePage() {
                   onClick={() => {
                     document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="px-8 py-3.5 bg-white text-black text-sm font-semibold uppercase tracking-widest hover:bg-zinc-200 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-full shadow-lg shadow-white/10"
+                  className="group inline-flex items-center gap-3 bg-white text-zinc-950 pl-7 pr-2 py-2 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-xl active:scale-[0.98] cursor-pointer"
                 >
-                  Lihat Katalog
+                  <span>Lihat Katalog</span>
+                  <div className="btn-nested-icon w-8 h-8 rounded-full bg-zinc-950 text-white flex items-center justify-center">
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
                 </button>
                 <button
                   onClick={() => router.push('/store/new-batch-pre-order')}
-                  className="px-8 py-3.5 bg-zinc-900/80 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-sm font-semibold uppercase tracking-widest hover:bg-emerald-500/10 hover:border-emerald-400 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-full flex items-center gap-2"
+                  className="group inline-flex items-center gap-3 bg-zinc-900/90 backdrop-blur-md border border-[#4382C8]/50 text-blue-300 pl-6 pr-2 py-2 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-[#4382C8]/15 hover:border-[#4382C8] transition-all active:scale-[0.98] cursor-pointer shadow-lg"
                 >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  Pre-Order New Batch
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#4382C8] animate-pulse" />
+                    Pre-Order New Batch
+                  </span>
+                  <div className="btn-nested-icon w-8 h-8 rounded-full bg-[#4382C8]/20 text-blue-300 flex items-center justify-center">
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
                 </button>
               </div>
 
-              {/* Stats strip in glassmorphic pill */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12 pt-6 border-t border-white/10 max-w-2xl">
-                <div>
-                  <p className="text-2xl font-bold text-white">3</p>
-                  <p className="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Model Jersey</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">3 Tipe</p>
-                  <p className="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Dewasa, Kids &amp; Balita</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">Milano</p>
-                  <p className="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Standard Premium</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">16</p>
-                  <p className="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Pilihan Ukuran</p>
+              {/* Stats strip in Doppelrand shell with elevated shadow over white blend */}
+              <div className="p-1 rounded-2xl bg-zinc-900/90 border border-white/20 max-w-2xl mt-12 backdrop-blur-xl shadow-2xl shadow-zinc-950/20">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 rounded-[calc(1rem-0.125rem)] bg-zinc-950/85">
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">3</p>
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Model Jersey</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">3 Tipe</p>
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Dewasa, Kids &amp; Balita</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">Milano</p>
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Standard Premium</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">16</p>
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Pilihan Ukuran</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -780,53 +791,51 @@ export default function StorePage() {
           <Disclaimer />
 
           {/* Breadcrumbs & Status Filter Bar */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6" id="catalog-grid">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" id="catalog-grid">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-5 border-b border-zinc-200">
               <div>
-                <h2 className="text-2xl font-light text-white tracking-tight">Koleksi Jersey DLOB</h2>
-                <p className="text-xs text-zinc-400 mt-1">Pilih jersey yang sesuai dengan kebutuhan pertandingan Anda</p>
+                <h2 className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight">Koleksi Jersey DLOB</h2>
+                <p className="text-xs sm:text-sm text-zinc-600 mt-1">Pilih jersey yang sesuai dengan kebutuhan pertandingan dan latihan Anda</p>
               </div>
 
               {/* Filter Pills - Zero Ambiguity */}
-              <div className="flex flex-wrap gap-2 p-1.5 rounded-full bg-zinc-900/80 backdrop-blur-md border border-white/10">
+              <div className="flex flex-wrap gap-1.5 p-1.5 rounded-full bg-zinc-100 border border-zinc-200 shadow-inner">
                 <button
                   onClick={() => setFilterCategory('all')}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     filterCategory === 'all'
-                      ? 'bg-white text-black shadow-md'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'bg-zinc-950 text-white shadow-md'
+                      : 'text-zinc-600 hover:text-zinc-950'
                   }`}
                 >
                   Semua ({allProducts.length})
                 </button>
                 <button
                   onClick={() => setFilterCategory('preorder')}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     filterCategory === 'preorder'
-                      ? 'bg-emerald-500 text-black font-bold shadow-md shadow-emerald-950'
-                      : 'text-emerald-400/80 hover:text-emerald-300'
+                      ? 'bg-[#4382C8] text-white shadow-md'
+                      : 'text-[#4382C8] hover:text-blue-700'
                   }`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Pre-Order Aktif (1)
                 </button>
                 <button
                   onClick={() => setFilterCategory('closed')}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     filterCategory === 'closed'
-                      ? 'bg-zinc-700 text-white shadow-md'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'bg-zinc-800 text-white shadow-md'
+                      : 'text-zinc-600 hover:text-zinc-950'
                   }`}
                 >
-                  <Lock className="w-3 h-3 text-zinc-400" />
                   Batch Ditutup (1)
                 </button>
                 <button
                   onClick={() => setFilterCategory('coming-soon')}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     filterCategory === 'coming-soon'
-                      ? 'bg-white text-black shadow-md'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'bg-zinc-950 text-white shadow-md'
+                      : 'text-zinc-600 hover:text-zinc-950'
                   }`}
                 >
                   Segera Hadir (1)
@@ -849,95 +858,101 @@ export default function StorePage() {
             </div>
           </div>
 
-          {/* ── HIGH-TECH GLASSMORPHIC NEW BATCH HIGHLIGHT SECTION ── */}
+          {/* ── HIGH-TECH DOPPELRAND NEW BATCH HIGHLIGHT SECTION ── */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-zinc-900/90 via-zinc-950/80 to-zinc-900/90 backdrop-blur-2xl border border-white/15 p-8 sm:p-12 shadow-2xl">
-              {/* Subtle ambient light glow */}
-              <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="p-1.5 rounded-[2.5rem] bg-zinc-100 border border-zinc-200/90 shadow-xl">
+              <div className="relative rounded-[calc(2.5rem-0.375rem)] overflow-hidden bg-white p-8 sm:p-12 border border-zinc-200/60 shadow-inner">
+                {/* Subtle ambient light glow */}
+                <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#4382C8]/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                {/* Left Information Column */}
-                <div className="lg:col-span-7 space-y-6">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Batch Terbaru · Terbuka Untuk Pemesanan</span>
-                  </div>
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  {/* Left Information Column */}
+                  <div className="lg:col-span-7 space-y-6">
+                    <div className="inline-flex items-center px-3.5 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-blue-50 text-[#4382C8] border border-blue-200">
+                      Batch Terbaru · Terbuka Untuk Pemesanan
+                    </div>
 
-                  <div>
-                    <h3 className="text-3xl sm:text-4xl font-light tracking-tight text-white">
-                      Jersey DLOB <span className="font-bold italic text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-100">New Batch 2026</span>
-                    </h3>
-                    <p className="text-sm sm:text-base text-zinc-300 mt-3 leading-relaxed">
-                      Koleksi batch terbaru dengan 3 warna eksklusif (<span className="text-blue-400 font-semibold">Biru</span>, <span className="text-amber-400 font-semibold">Kuning</span>, dan <span className="text-red-400 font-semibold">Merah</span>). Kini tersedia dalam size <strong>Dewasa</strong>, <strong>Kids (7-13 Thn)</strong>, dan <strong>Balita 👶 (1-6 Thn)</strong>!
-                    </p>
-                    <div className="mt-3 p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 text-xs text-zinc-300">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span><strong>Catatan:</strong> Logo di gambar dan video hanya contoh, aslinya sekarang sudah menggunakan logo official D&apos;LOB.</span>
+                    <div>
+                      <h3 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-950">
+                        Jersey DLOB <span className="text-[#4382C8] italic">New Batch 2026</span>
+                      </h3>
+                      <p className="text-sm sm:text-base text-zinc-600 mt-3 leading-relaxed">
+                        Koleksi batch terbaru dengan 3 warna eksklusif (<span className="text-blue-600 font-semibold">Biru</span>, <span className="text-amber-600 font-semibold">Kuning</span>, dan <span className="text-red-600 font-semibold">Merah</span>). Kini tersedia dalam size <strong>Dewasa</strong>, <strong>Kids (7-13 Thn)</strong>, dan <strong>Balita 👶 (1-6 Thn)</strong>!
+                      </p>
+                      <div className="mt-3 p-3 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center gap-2.5 text-xs text-zinc-600">
+                        <Sparkles className="w-3.5 h-3.5 text-[#4382C8] shrink-0" />
+                        <span><strong>Catatan:</strong> Logo di visual representasi adalah mockup; versi jadi menggunakan patch logo official D&apos;LOB beresolusi tinggi.</span>
+                      </div>
+                    </div>
+
+                    {/* Highlights Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono font-semibold">Model Order</p>
+                        <p className="text-sm font-bold text-zinc-950 mt-1">Pre-Order</p>
+                        <p className="text-[11px] text-[#4382C8] font-mono font-bold mt-0.5">Min. 15 Kuota</p>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono font-semibold">Tipe Ukuran</p>
+                        <p className="text-sm font-bold text-zinc-950 mt-1">Dewasa, Kids &amp; Balita</p>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">Milano Standard</p>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono font-semibold">Harga Mulai</p>
+                        <p className="text-sm font-bold text-[#4382C8] font-mono tabular-nums mt-1">Rp 100.000</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">Kids/Balita 100k · Dewasa 110k</p>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-4 pt-2">
+                      <button
+                        onClick={() => router.push('/store/new-batch-pre-order')}
+                        className="group inline-flex items-center gap-3 bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs sm:text-sm uppercase tracking-wider pl-7 pr-2 py-2 rounded-full transition-all shadow-lg active:scale-[0.98] cursor-pointer"
+                      >
+                        <span>Form Pre-Order Online</span>
+                        <div className="btn-nested-icon w-8 h-8 rounded-full bg-white text-zinc-950 flex items-center justify-center">
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => router.push('/store/jersey-dlob-new-batch')}
+                        className="group inline-flex items-center gap-3 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200 text-zinc-800 font-semibold text-xs sm:text-sm pl-6 pr-2 py-2 rounded-full transition-all active:scale-[0.98] cursor-pointer"
+                      >
+                        <span>Lihat Foto &amp; Video Detail</span>
+                        <div className="btn-nested-icon w-8 h-8 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center">
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </button>
                     </div>
                   </div>
 
-                  {/* Highlights Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                      <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Model Order</p>
-                      <p className="text-sm font-bold text-white mt-0.5">Pre-Order</p>
-                      <p className="text-[11px] text-emerald-400 mt-0.5">Min. 15 Kuota</p>
-                    </div>
-                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                      <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Tipe Ukuran</p>
-                      <p className="text-sm font-bold text-white mt-0.5">Dewasa, Kids &amp; Balita</p>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">Milano Standard</p>
-                    </div>
-                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                      <p className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Harga Mulai</p>
-                      <p className="text-sm font-bold text-emerald-400 font-mono mt-0.5">Rp 100.000</p>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">Kids/Balita (100k), Dewasa (110k)</p>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-4 pt-2">
-                    <button
-                      onClick={() => router.push('/store/new-batch-pre-order')}
-                      className="px-8 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm uppercase tracking-widest rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-emerald-950 flex items-center gap-2"
-                    >
-                      <span>Form Pre-Order Online</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => router.push('/store/jersey-dlob-new-batch')}
-                      className="px-6 py-3.5 bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold text-sm rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all"
-                    >
-                      Lihat Foto &amp; Video Detail
-                    </button>
-                  </div>
-                </div>
-
-                {/* Right Visual Swatches Column */}
-                <div className="lg:col-span-5 flex flex-col gap-3">
-                  {[
-                    { name: 'Biru (Blue Milano)', color: 'Blue Edition', hex: '#0b244c', photo: '/images/new jersey promotion/biru-photo1.jpeg' },
-                    { name: 'Kuning (Yellow Milano)', color: 'Yellow Edition', hex: '#FFC000', photo: '/images/new jersey promotion/kuning-photo1.jpeg' },
-                    { name: 'Merah (Red Milano)', color: 'Red Edition', hex: '#ff0000', photo: '/images/new jersey promotion/merah-photo1.jpeg' },
-                  ].map((c) => (
-                    <div
-                      key={c.name}
-                      onClick={() => router.push('/store/jersey-dlob-new-batch')}
-                      className="group/item flex items-center justify-between p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/25 transition-all cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full border border-white/30 shadow-md" style={{ backgroundColor: c.hex }} />
-                        <div>
-                          <p className="text-sm font-semibold text-white group-hover/item:text-emerald-300 transition-colors">{c.name}</p>
-                          <p className="text-xs text-zinc-400">{c.color}</p>
+                  {/* Right Visual Swatches Column */}
+                  <div className="lg:col-span-5 flex flex-col gap-3">
+                    {[
+                      { name: 'Biru (Blue Milano)', color: 'Blue Edition', hex: '#0b244c', photo: '/images/new jersey promotion/biru-photo1.jpeg' },
+                      { name: 'Kuning (Yellow Milano)', color: 'Yellow Edition', hex: '#FFC000', photo: '/images/new jersey promotion/kuning-photo1.jpeg' },
+                      { name: 'Merah (Red Milano)', color: 'Red Edition', hex: '#ff0000', photo: '/images/new jersey promotion/merah-photo1.jpeg' },
+                    ].map((c) => (
+                      <div
+                        key={c.name}
+                        onClick={() => router.push('/store/jersey-dlob-new-batch')}
+                        className="group/item flex items-center justify-between p-3.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100/90 border border-zinc-200/80 hover:border-[#4382C8]/50 transition-all cursor-pointer shadow-xs"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-9 h-9 rounded-full border border-zinc-200 shadow-sm" style={{ backgroundColor: c.hex }} />
+                          <div>
+                            <p className="text-sm font-bold text-zinc-950 group-hover/item:text-[#4382C8] transition-colors">{c.name}</p>
+                            <p className="text-xs text-zinc-500">{c.color}</p>
+                          </div>
+                        </div>
+                        <div className="btn-nested-icon w-7 h-7 rounded-full bg-zinc-200/80 group-hover/item:bg-[#4382C8] group-hover/item:text-white flex items-center justify-center transition-colors">
+                          <ChevronRight className="w-3.5 h-3.5 text-zinc-600 group-hover/item:text-white" />
                         </div>
                       </div>
-                      <span className="text-xs font-semibold text-zinc-400 group-hover/item:text-white flex items-center gap-1">
-                        Pilih <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -948,35 +963,35 @@ export default function StorePage() {
       {/* ── DETAIL VIEW ──────────────────────────────────────────────── */}
       {selectedProductId && selectedProduct && selectedVariant && (
         <>
-          <div className="bg-zinc-900/60 backdrop-blur-xl border-b border-white/10 py-12">
+          <div className="bg-zinc-50 border-b border-zinc-200 py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-              <span className="text-xs uppercase tracking-[0.25em] text-zinc-400 font-semibold mb-2 block">
+              <span className="text-[11px] uppercase tracking-[0.25em] font-mono text-[#4382C8] font-bold mb-2 block">
                 {selectedProduct.badge}
               </span>
-              <h1 className="text-4xl font-light text-white mb-2 tracking-tight">{selectedProduct.name}</h1>
-              <p className="text-sm text-zinc-400 max-w-xl mx-auto">{selectedProduct.tagline}</p>
+              <h1 className="text-3xl sm:text-5xl font-black text-zinc-950 mb-2 tracking-tight">{selectedProduct.name}</h1>
+              <p className="text-sm text-zinc-600 max-w-xl mx-auto">{selectedProduct.tagline}</p>
             </div>
           </div>
 
           <Disclaimer />
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-white/10">
-            <nav className="text-sm flex items-center gap-2">
-              <span className="text-zinc-500">Beranda</span>
-              <span className="text-zinc-600">/</span>
-              <button onClick={backToCatalog} className="text-zinc-400 hover:text-white transition-colors">Jersey</button>
-              <span className="text-zinc-600">/</span>
-              <span className="text-white font-medium">{selectedProduct.name}</span>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 border-b border-zinc-200">
+            <nav className="text-xs font-mono flex items-center gap-2">
+              <span className="text-zinc-400">Beranda</span>
+              <span className="text-zinc-300">/</span>
+              <button onClick={backToCatalog} className="text-zinc-600 hover:text-zinc-950 transition-colors cursor-pointer">Jersey</button>
+              <span className="text-zinc-300">/</span>
+              <span className="text-zinc-950 font-semibold">{selectedProduct.name}</span>
             </nav>
           </div>
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
             <button
               onClick={backToCatalog}
-              className="inline-flex items-center gap-2 text-sm text-zinc-300 hover:text-white transition-all font-semibold group px-4 py-2 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98]"
+              className="group inline-flex items-center gap-2.5 text-xs sm:text-sm text-zinc-700 hover:text-zinc-950 transition-all font-bold pl-4 pr-3 py-2 rounded-full border border-zinc-200 bg-zinc-100 hover:bg-zinc-200/80 active:scale-[0.98] cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-              Kembali ke Katalog
+              <span>Kembali ke Katalog</span>
             </button>
           </div>
 
@@ -986,13 +1001,13 @@ export default function StorePage() {
               {/* Images Column */}
               <div className="relative space-y-4">
                 {!currentImage ? (
-                  <div className="w-full aspect-3/4 flex flex-col items-center justify-center rounded-3xl bg-zinc-900 border border-white/10" style={{ backgroundColor: selectedVariant.bgColor || '#0f0f1a' }}>
-                    <svg viewBox="0 0 200 200" className="w-48 h-48 opacity-20" fill="none" stroke="white" strokeWidth="1.5">
+                  <div className="w-full aspect-3/4 flex flex-col items-center justify-center rounded-3xl bg-zinc-100 border border-zinc-200" style={{ backgroundColor: selectedVariant.bgColor || '#0f0f1a' }}>
+                    <svg viewBox="0 0 200 200" className="w-48 h-48 opacity-20" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <rect x="20" y="20" width="60" height="60" rx="4" /><rect x="120" y="20" width="60" height="60" rx="4" />
                       <rect x="20" y="120" width="60" height="60" rx="4" /><rect x="120" y="120" width="60" height="60" rx="4" />
                     </svg>
-                    <p className="text-white/50 text-xs tracking-widest uppercase mt-4">Foto Segera Hadir</p>
-                    <p className="text-white/30 text-xs mt-1">{selectedVariant.color}</p>
+                    <p className="text-zinc-500 text-xs tracking-widest uppercase mt-4">Foto Segera Hadir</p>
+                    <p className="text-zinc-400 text-xs mt-1">{selectedVariant.color}</p>
                   </div>
                 ) : (
                   <>
@@ -1007,8 +1022,8 @@ export default function StorePage() {
                         <button
                           key={index}
                           onClick={() => setSelectedImageIndex(index)}
-                          className={`aspect-3/4 overflow-hidden bg-zinc-900 border-2 rounded-2xl transition-all ${
-                            selectedImageIndex === index ? 'border-emerald-400 shadow-lg' : 'border-white/10 hover:border-white/30'
+                          className={`aspect-3/4 overflow-hidden bg-zinc-100 border-2 rounded-2xl transition-all ${
+                            selectedImageIndex === index ? 'border-[#4382C8] ring-2 ring-[#4382C8]/20 shadow-md' : 'border-zinc-200 hover:border-zinc-300'
                           }`}
                         >
                           <SmartCropImage
@@ -1024,15 +1039,15 @@ export default function StorePage() {
                 )}
 
                 {/* Other Colors Swatches Preview */}
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-zinc-400 mb-3 font-semibold uppercase tracking-wider">Pilihan Varian Warna Lainnya:</p>
+                <div className="pt-4 border-t border-zinc-200">
+                  <p className="text-xs text-zinc-600 mb-3 font-semibold uppercase tracking-wider">Pilihan Varian Warna Lainnya:</p>
                   <div className="grid grid-cols-3 gap-3">
                     {selectedProduct.colorVariants.map((variant) => (
                       <button
                         key={variant.id}
                         onClick={() => { setSelectedColor(variant.id); setSelectedImageIndex(0); }}
-                        className={`aspect-3/4 overflow-hidden rounded-2xl bg-zinc-900 border-2 transition-all ${
-                          selectedColor === variant.id ? 'border-emerald-400 shadow-md' : 'border-white/10 hover:border-white/30'
+                        className={`aspect-3/4 overflow-hidden rounded-2xl bg-zinc-100 border-2 transition-all ${
+                          selectedColor === variant.id ? 'border-[#4382C8] ring-2 ring-[#4382C8]/20 shadow-md' : 'border-zinc-200 hover:border-zinc-300'
                         }`}
                       >
                         {variant.images[0] ? (
@@ -1044,7 +1059,7 @@ export default function StorePage() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: variant.bgColor }}>
-                            <span className="text-white/60 text-xs text-center px-1 font-medium">{variant.color}</span>
+                            <span className="text-white text-xs text-center px-1 font-medium">{variant.color}</span>
                           </div>
                         )}
                       </button>
@@ -1058,39 +1073,39 @@ export default function StorePage() {
                 <div className="mb-6">
                   <span className={`inline-block text-xs px-3 py-1 font-bold uppercase tracking-wider rounded-full mb-3 ${
                     selectedProduct.isClosed
-                      ? 'bg-zinc-800 text-zinc-400 border border-white/10'
+                      ? 'bg-zinc-100 text-zinc-600 border border-zinc-200'
                       : selectedProduct.comingSoon
-                      ? 'bg-zinc-800 text-zinc-400 border border-white/10'
-                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      ? 'bg-zinc-100 text-zinc-600 border border-zinc-200'
+                      : 'bg-blue-50 text-[#4382C8] border border-blue-200 font-mono'
                   }`}>
                     {selectedProduct.badge}
                   </span>
-                  <h1 className="text-3xl sm:text-4xl font-light text-white mb-2">{selectedProduct.name}</h1>
-                  <p className="text-base text-zinc-300 font-medium">Varian: {selectedVariant.color}</p>
+                  <h1 className="text-3xl sm:text-4xl font-black text-zinc-950 mb-2">{selectedProduct.name}</h1>
+                  <p className="text-base text-zinc-600 font-medium">Varian: <strong className="text-zinc-950">{selectedVariant.color}</strong></p>
                 </div>
 
                 {/* Closed Notice */}
                 {selectedProduct.isClosed && (
-                  <div className="mb-8 p-4 bg-zinc-900/90 border border-amber-500/30 rounded-2xl">
-                    <p className="text-amber-300 font-semibold text-sm flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-amber-400" />
+                  <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                    <p className="text-amber-900 font-semibold text-sm flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-amber-700" />
                       <span>Pemesanan Batch Reguler Telah Ditutup</span>
                     </p>
-                    <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
+                    <p className="text-amber-800 text-xs mt-1.5 leading-relaxed">
                       Pemesanan untuk edisi batch reguler klasik saat ini telah ditutup. Silakan memesan edisi terbaru melalui <strong>Pre-Order New Batch 2026</strong> yang saat ini aktif dibuka!
                     </p>
                   </div>
                 )}
 
                 {!selectedProduct.comingSoon && !selectedProduct.isClosed && currentPrice && (
-                  <div className="mb-8 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <div className="mb-8 p-5 rounded-2xl bg-zinc-50 border border-zinc-200">
                     <div className="flex items-baseline gap-3">
-                      <span className="text-3xl font-extrabold text-emerald-400 font-mono">{formatPrice(currentPrice)}</span>
-                      <span className="text-xs text-zinc-400 font-medium">/ pcs</span>
+                      <span className="text-3xl font-extrabold text-[#4382C8] font-mono">{formatPrice(currentPrice)}</span>
+                      <span className="text-xs text-zinc-500 font-medium">/ pcs</span>
                     </div>
                     {selectedProduct.preOrder && (
-                      <p className="text-xs text-emerald-300 font-medium mt-2 flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <p className="text-xs text-[#4382C8] font-medium mt-2 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-[#4382C8]" />
                         <span>Pre-Order Terbuka · Estimasi Produksi: {selectedProduct.estimatedDelivery}</span>
                       </p>
                     )}
@@ -1098,24 +1113,24 @@ export default function StorePage() {
                 )}
 
                 {selectedProduct.comingSoon && (
-                  <div className="mb-8 p-4 bg-zinc-900 border border-white/10 rounded-2xl">
-                    <p className="text-zinc-200 font-semibold text-sm flex items-center gap-2">
+                  <div className="mb-8 p-4 bg-zinc-50 border border-zinc-200 rounded-2xl">
+                    <p className="text-zinc-800 font-semibold text-sm flex items-center gap-2">
                       <span>🔒</span> Segera Hadir (Concept Preview)
                     </p>
-                    <p className="text-zinc-400 text-xs mt-1">Jersey ini sedang dalam tahap finalisasi desain pabrik. Pantau terus update komunitas untuk pembukaan batch resmi!</p>
+                    <p className="text-zinc-600 text-xs mt-1">Jersey ini sedang dalam tahap finalisasi desain pabrik. Pantau terus update komunitas untuk pembukaan batch resmi!</p>
                   </div>
                 )}
 
                 {/* Choose Color */}
                 <div className="mb-6">
-                  <h3 className="text-xs font-bold text-zinc-400 mb-3 uppercase tracking-wider">Pilih Warna</h3>
+                  <h3 className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-wider font-mono">Pilih Warna</h3>
                   <div className="flex gap-3">
                     {selectedProduct.colorVariants.map((variant) => (
                       <button
                         key={variant.id}
                         onClick={() => setSelectedColor(variant.id)}
-                        className={`relative w-12 h-12 rounded-full border-2 transition-all ${
-                          selectedColor === variant.id ? 'border-emerald-400 scale-110 shadow-lg' : 'border-white/20 hover:border-white/40'
+                        className={`relative w-12 h-12 rounded-full border-2 transition-all cursor-pointer ${
+                          selectedColor === variant.id ? 'border-[#4382C8] ring-2 ring-[#4382C8]/30 scale-110 shadow-md' : 'border-zinc-300 hover:border-zinc-400'
                         }`}
                       >
                         <div className="w-full h-full rounded-full" style={{ backgroundColor: variant.bgColor }} />
@@ -1125,23 +1140,23 @@ export default function StorePage() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-zinc-300 mt-2 font-medium">Warna terpilih: <strong className="text-white">{selectedVariant.color}</strong></p>
+                  <p className="text-xs text-zinc-600 mt-2 font-medium">Warna terpilih: <strong className="text-zinc-950">{selectedVariant.color}</strong></p>
                 </div>
 
                 {!selectedProduct.comingSoon && !selectedProduct.isClosed && (
                   <>
                     {/* Choose Sleeve */}
                     <div className="mb-8">
-                      <h3 className="text-xs font-bold text-zinc-400 mb-3 uppercase tracking-wider">Pilih Tipe Lengan</h3>
+                      <h3 className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-wider font-mono">Pilih Tipe Lengan</h3>
                       <div className="flex flex-wrap gap-3">
                         {(['pendek', 'panjang'] as const).map((sleeve) => (
                           <button
                             key={sleeve}
                             onClick={() => setSelectedSleeve(sleeve)}
-                            className={`px-6 py-2.5 rounded-full text-xs font-semibold border transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                            className={`px-6 py-2.5 rounded-full text-xs font-semibold border transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
                               selectedSleeve === sleeve
-                                ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-md'
-                                : 'border-white/15 text-zinc-300 hover:border-white/30 bg-white/5'
+                                ? 'border-zinc-950 bg-zinc-950 text-white shadow-sm'
+                                : 'border-zinc-200 text-zinc-700 hover:border-zinc-300 bg-zinc-50'
                             }`}
                           >
                             {sleeve === 'pendek' ? 'Lengan Pendek' : 'Lengan Panjang (+Rp 10.000)'}
@@ -1153,19 +1168,22 @@ export default function StorePage() {
                     {/* Choose Size */}
                     <div className="mb-8">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Pilih Ukuran</h3>
+                        <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider font-mono">Pilih Ukuran</h3>
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
                             onClick={() => setShowAIModal(true)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-black shadow-md shadow-emerald-950/40 hover:scale-105 active:scale-95 transition-all"
+                            className="group inline-flex items-center gap-2 pl-3.5 pr-2 py-1.5 rounded-full text-xs font-bold bg-zinc-950 text-white hover:bg-zinc-800 shadow-sm active:scale-95 transition-all cursor-pointer"
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-black animate-pulse" />
+                            <Sparkles className="w-3.5 h-3.5 text-[#4382C8] group-hover:text-white animate-pulse" />
                             <span>D&apos;LOB AI Rekomendasi Ukuran</span>
+                            <div className="btn-nested-icon w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                              <ChevronRight className="w-3 h-3" />
+                            </div>
                           </button>
                           <button
                             onClick={() => { setSizeGuideTab('dewasa'); setShowSizeGuideModal(true); }}
-                            className="text-xs text-emerald-400 hover:underline font-semibold flex items-center gap-1"
+                            className="text-xs text-[#4382C8] hover:text-blue-700 font-semibold flex items-center gap-1 cursor-pointer"
                           >
                             📏 Panduan Ukuran
                           </button>
@@ -1176,10 +1194,10 @@ export default function StorePage() {
                           <button
                             key={sizeObj.id}
                             onClick={() => setSelectedSize(sizeObj.id)}
-                            className={`py-2.5 rounded-full text-xs font-bold border transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                            className={`py-2.5 rounded-full text-xs font-mono font-bold border transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
                               selectedSize === sizeObj.id
-                                ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-md'
-                                : 'border-white/15 text-zinc-300 hover:border-white/30 bg-white/5'
+                                ? 'border-zinc-950 bg-zinc-950 text-white shadow-sm'
+                                : 'border-zinc-200 text-zinc-700 hover:border-zinc-300 bg-zinc-50'
                             }`}
                           >
                             {sizeObj.label}
@@ -1191,7 +1209,7 @@ export default function StorePage() {
                 )}
 
                 {/* Description */}
-                <div className="mb-8 p-4 rounded-2xl bg-white/5 border border-white/10 text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                <div className="mb-8 p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs sm:text-sm text-zinc-600 leading-relaxed">
                   <p>{selectedProduct.description}</p>
                 </div>
 
@@ -1200,14 +1218,17 @@ export default function StorePage() {
                   {selectedProduct.isClosed ? (
                     <button
                       onClick={() => router.push('/store/new-batch-pre-order')}
-                      className="w-full py-4 font-bold text-sm uppercase tracking-widest transition-all bg-emerald-500 hover:bg-emerald-400 text-black hover:scale-[1.02] active:scale-[0.98] rounded-full shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2"
+                      className="group w-full py-4 font-bold text-xs sm:text-sm uppercase tracking-widest transition-all bg-zinc-950 hover:bg-zinc-800 text-white active:scale-[0.98] rounded-full shadow-lg flex items-center justify-center gap-3 cursor-pointer"
                     >
-                      <span>Beralih ke Pre-Order New Batch →</span>
+                      <span>Beralih ke Pre-Order New Batch</span>
+                      <div className="btn-nested-icon w-7 h-7 rounded-full bg-white text-zinc-950 flex items-center justify-center">
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
                     </button>
                   ) : selectedProduct.comingSoon ? (
                     <button
                       disabled
-                      className="w-full py-4 font-bold text-xs uppercase tracking-widest bg-zinc-800 text-zinc-500 cursor-not-allowed rounded-full border border-white/5"
+                      className="w-full py-4 font-bold text-xs uppercase tracking-widest bg-zinc-100 text-zinc-400 cursor-not-allowed rounded-full border border-zinc-200 font-mono"
                     >
                       SEGERA HADIR (CONCEPT PREVIEW)
                     </button>
@@ -1220,27 +1241,29 @@ export default function StorePage() {
                             : '/pre-order'
                         )
                       }
-                      className="w-full py-4 font-bold text-sm uppercase tracking-widest transition-all bg-emerald-500 hover:bg-emerald-400 text-black hover:scale-[1.02] active:scale-[0.98] rounded-full shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2"
+                      className="group w-full py-4 font-bold text-xs sm:text-sm uppercase tracking-widest transition-all bg-[#4382C8] hover:bg-[#356db0] text-white active:scale-[0.98] rounded-full shadow-xl shadow-[#4382C8]/25 flex items-center justify-center gap-3 cursor-pointer"
                     >
                       <span>PRE-ORDER SEKARANG</span>
-                      <ChevronRight className="w-4 h-4" />
+                      <div className="btn-nested-icon w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
                     </button>
                   )}
                 </div>
 
                 {/* Specs */}
-                <div className="mt-10 pt-6 border-t border-white/10 space-y-3 text-xs">
+                <div className="mt-10 pt-6 border-t border-zinc-200 space-y-3 text-xs">
                   <div className="flex justify-between py-1.5">
-                    <span className="text-zinc-400 font-medium">Material Kain</span>
-                    <span className="font-semibold text-white">{selectedProduct.material}</span>
+                    <span className="text-zinc-500 font-medium">Material Kain</span>
+                    <span className="font-semibold text-zinc-950">{selectedProduct.material}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
-                    <span className="text-zinc-400 font-medium">Perawatan</span>
-                    <span className="font-semibold text-white">{selectedProduct.care}</span>
+                    <span className="text-zinc-500 font-medium">Perawatan</span>
+                    <span className="font-semibold text-zinc-950">{selectedProduct.care}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
-                    <span className="text-zinc-400 font-medium">Asal Produksi</span>
-                    <span className="font-semibold text-white">{selectedProduct.origin}</span>
+                    <span className="text-zinc-500 font-medium">Asal Produksi</span>
+                    <span className="font-semibold text-zinc-950">{selectedProduct.origin}</span>
                   </div>
                 </div>
               </div>

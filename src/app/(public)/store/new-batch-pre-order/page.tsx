@@ -368,7 +368,7 @@ function ItemCard({
               <button
                 type="button"
                 onClick={onShowAIRecommend}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm hover:scale-105 active:scale-95 transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#4382C8] hover:bg-[#356db0] text-white shadow-sm hover:scale-105 active:scale-95 transition-all"
               >
                 <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
                 <span>D&apos;LOB AI Rekomendasi Ukuran</span>
@@ -447,7 +447,7 @@ function ItemCard({
                       {s.keterangan}
                     </span>
                   )}
-                  <span className={`text-[10px] font-mono mt-0.5 ${isSelected ? 'text-emerald-400' : 'text-gray-400'}`}>
+                  <span className={`text-[10px] font-mono mt-0.5 ${isSelected ? 'text-blue-200' : 'text-gray-400'}`}>
                     {s.tinggi}x{s.lebar}cm
                   </span>
                 </button>
@@ -475,7 +475,7 @@ function ItemCard({
                 }`}
               >
                 <span>{l.label}</span>
-                <span className={`text-[11px] font-medium ${item.lengan === l.value ? 'text-emerald-400' : 'text-gray-400'}`}>
+                <span className={`text-[11px] font-medium ${item.lengan === l.value ? 'text-blue-200' : 'text-gray-400'}`}>
                   {l.extra}
                 </span>
               </button>
@@ -660,7 +660,7 @@ export default function NewBatchPreOrderPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white border-2 border-black rounded-3xl p-8 sm:p-10 max-w-lg w-full text-center shadow-xl">
-          <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-white text-2xl shadow-md">
+          <div className="w-16 h-16 bg-[#4382C8] rounded-full flex items-center justify-center mx-auto mb-6 text-white text-2xl shadow-md">
             ✓
           </div>
           <h2 className="text-2xl font-light text-gray-900 mb-2">Pre-Order Diterima!</h2>
@@ -695,7 +695,7 @@ export default function NewBatchPreOrderPage() {
               href={`https://wa.me/6281387643604?text=${encodeURIComponent(`Halo Admin DLOB, saya ${nama} ingin konfirmasi pembayaran pre-order Jersey DLOB New Batch.\n\nTotal: ${formatRp(grandTotal)}\nNo. rekening: BCA 1082386054\n\n[lampirkan bukti transfer]`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm uppercase tracking-widest rounded-full flex items-center justify-center gap-2 transition-all shadow-md"
+              className="w-full py-4 bg-[#4382C8] hover:bg-[#356db0] text-white font-bold text-sm uppercase tracking-widest rounded-full flex items-center justify-center gap-2 transition-all shadow-md"
             >
               <span>Konfirmasi via WhatsApp</span>
               <ChevronRight className="w-4 h-4" />
@@ -805,7 +805,7 @@ export default function NewBatchPreOrderPage() {
                         <td className="py-3 px-4 text-gray-600">{s.keterangan || 'Dewasa Standard'}</td>
                         <td className="text-right py-3 px-4 font-mono">{s.tinggi}</td>
                         <td className="text-right py-3 px-4 font-mono">{s.lebar}</td>
-                        <td className="text-right py-3 px-4 font-mono font-bold text-emerald-600">
+                        <td className="text-right py-3 px-4 font-mono font-bold text-[#4382C8]">
                           {formatRp(s.pendekPrice)}
                         </td>
                       </tr>
@@ -840,9 +840,8 @@ export default function NewBatchPreOrderPage() {
             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
             Kembali ke Katalog
           </button>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-3">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Form Pre-Order Online</span>
+          <div className="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#4382C8]/15 text-[#4382C8] border border-[#4382C8]/30 mb-3">
+            Form Pre-Order Online
           </div>
           <h1 className="text-3xl sm:text-5xl font-light tracking-tight mb-3">
             Pre-Order <span className="font-bold italic">Jersey DLOB New Batch</span>
@@ -960,7 +959,7 @@ export default function NewBatchPreOrderPage() {
               <div>
                 <p className="text-xs text-zinc-400 uppercase tracking-widest font-semibold">Total Estimasi Pembayaran</p>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl sm:text-4xl font-extrabold text-emerald-400 font-mono">
+                  <span className="text-3xl sm:text-4xl font-extrabold text-[#4382C8] font-mono">
                     {formatRp(grandTotal)}
                   </span>
                   <span className="text-xs text-zinc-400">({items.length} jersey)</span>
@@ -971,7 +970,7 @@ export default function NewBatchPreOrderPage() {
                 onClick={() => {
                   if (validate()) setShowConfirm(true);
                 }}
-                className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm uppercase tracking-widest rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-emerald-950 flex items-center justify-center gap-2"
+                className="px-8 py-4 bg-[#4382C8] hover:bg-[#356db0] text-white font-bold text-sm uppercase tracking-widest rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-blue-950/30 flex items-center justify-center gap-2"
               >
                 <span>Lanjutkan Pemesanan</span>
                 <ChevronRight className="w-4 h-4" />
@@ -1034,7 +1033,7 @@ export default function NewBatchPreOrderPage() {
 
               <div className="p-4 bg-zinc-950 text-white rounded-2xl flex justify-between items-center">
                 <span className="text-xs font-semibold text-zinc-300">Total ({items.length} item):</span>
-                <span className="text-lg font-bold text-emerald-400 font-mono">{formatRp(grandTotal)}</span>
+                <span className="text-lg font-bold text-[#4382C8] font-mono">{formatRp(grandTotal)}</span>
               </div>
             </div>
 
@@ -1043,7 +1042,7 @@ export default function NewBatchPreOrderPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm uppercase tracking-widest rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                className="w-full py-4 bg-[#4382C8] hover:bg-[#356db0] text-white font-bold text-sm uppercase tracking-widest rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
               >
                 {isSubmitting ? 'Menyimpan...' : 'Konfirmasi & Kirim Pesanan'}
               </button>

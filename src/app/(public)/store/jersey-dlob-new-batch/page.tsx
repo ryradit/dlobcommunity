@@ -208,7 +208,7 @@ export default function JerseyDlobNewBatchPage() {
                         <td className="py-3 px-4 text-gray-600">{s.keterangan || 'Dewasa Standard'}</td>
                         <td className="text-right py-3 px-4 font-mono">{s.tinggi}</td>
                         <td className="text-right py-3 px-4 font-mono">{s.lebar}</td>
-                        <td className="text-right py-3 px-4 font-mono font-bold text-emerald-600">
+                        <td className="text-right py-3 px-4 font-mono font-bold text-[#4382C8]">
                           {formatPrice(s.pendekPrice)}
                         </td>
                       </tr>
@@ -238,9 +238,8 @@ export default function JerseyDlobNewBatchPage() {
       {/* Header Banner */}
       <div className="bg-zinc-950 text-white py-12 border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-3">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Official Collection · New Batch 2026</span>
+          <div className="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#4382C8]/15 text-[#4382C8] border border-[#4382C8]/30 mb-3">
+            Official Collection · New Batch 2026
           </div>
           <h1 className="text-4xl sm:text-5xl font-light tracking-tight mb-2">
             DLOB JERSEY <span className="font-bold italic">NEW BATCH</span>
@@ -334,8 +333,8 @@ export default function JerseyDlobNewBatchPage() {
                 <span className="text-3xl font-extrabold text-blue-600 font-mono">{formatPrice(currentPrice)}</span>
                 <span className="text-xs text-gray-500 font-medium">/ pcs</span>
               </div>
-              <p className="text-xs text-emerald-600 font-semibold mt-2 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <p className="text-xs text-[#4382C8] font-semibold mt-2 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-[#4382C8]" />
                 <span>Pre-Order Terbuka · Estimasi Produksi: Kuota 15 Order</span>
               </p>
             </div>
@@ -410,7 +409,7 @@ export default function JerseyDlobNewBatchPage() {
                   <button
                     type="button"
                     onClick={() => setShowAIModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm hover:scale-105 active:scale-95 transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#4382C8] hover:bg-[#356db0] text-white shadow-sm hover:scale-105 active:scale-95 transition-all"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
                     <span>D&apos;LOB AI Rekomendasi Ukuran</span>
@@ -440,7 +439,7 @@ export default function JerseyDlobNewBatchPage() {
                         {s.keterangan}
                       </span>
                     )}
-                    <span className={`text-[10px] font-mono mt-0.5 ${selectedSize === s.id ? 'text-emerald-300' : 'text-gray-400'}`}>
+                    <span className={`text-[10px] font-mono mt-0.5 ${selectedSize === s.id ? 'text-blue-200' : 'text-gray-400'}`}>
                       {s.tinggi}x{s.lebar}cm
                     </span>
                   </button>
@@ -466,7 +465,7 @@ export default function JerseyDlobNewBatchPage() {
                     }`}
                   >
                     <span>{sleeve.label}</span>
-                    <span className={`text-[11px] ${selectedSleeve === sleeve.value ? 'text-emerald-300' : 'text-gray-400'}`}>
+                    <span className={`text-[11px] ${selectedSleeve === sleeve.value ? 'text-blue-200' : 'text-gray-400'}`}>
                       {sleeve.extra}
                     </span>
                   </button>

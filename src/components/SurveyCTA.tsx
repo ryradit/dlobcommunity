@@ -3,86 +3,59 @@
 import React, { useRef } from 'react';
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
-import { Megaphone } from 'lucide-react';
+import { MessageSquarePlus, ArrowRight } from 'lucide-react';
 
 export default function SurveyCTA() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-80px' });
 
   return (
-    <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+    <section className="py-12 md:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <motion.div
         ref={ref}
-        initial={{ opacity: 0, y: 32, scale: 0.97 }}
-        animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-        transition={{ type: 'spring', stiffness: 80, damping: 18 }}
-        className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/30"
+        initial={{ opacity: 0, y: 32 }}
+        animate={isInView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
+        className="doppelrand-shell p-2 sm:p-2.5 rounded-[2.5rem] bg-zinc-950 border border-zinc-800 shadow-2xl"
       >
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#4382C8] via-[#356ca8] to-[#1d4573]" />
-        <div className="absolute inset-0 bg-white/10 backdrop-blur-md" />
+        <div className="relative rounded-[calc(2.5rem-0.625rem)] overflow-hidden bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 p-8 sm:p-12 lg:p-14 text-white border border-white/5">
+          
+          {/* Subtle electric blue radial glow */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-radial from-[#4382C8]/15 via-[#4382C8]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-gradient-radial from-blue-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-        {/* Animated floating orbs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div
-            className="absolute -top-10 -left-10 w-48 h-48 bg-white/10 rounded-full blur-2xl"
-            animate={{ y: [0, 16, 0], x: [0, 8, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-          />
-          <motion.div
-            className="absolute -bottom-10 right-20 w-64 h-64 bg-white/5 rounded-full blur-2xl"
-            animate={{ y: [0, -12, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          />
-          {/* Animated particle dots */}
-          {[...Array(6)].map((_, i) => (
-            <motion.span
-              key={i}
-              className="absolute w-1.5 h-1.5 rounded-full bg-white/40"
-              style={{ top: `${20 + i * 12}%`, left: `${10 + i * 14}%` }}
-              animate={{ opacity: [0.3, 1, 0.3], y: [0, -8, 0] }}
-              transition={{ duration: 2.5 + i * 0.4, repeat: Infinity, delay: i * 0.3 }}
-            />
-          ))}
-        </div>
+          <div className="relative flex flex-col lg:flex-row items-center justify-between gap-8 z-10">
+            
+            {/* Left Content */}
+            <div className="space-y-4 text-center lg:text-left max-w-2xl">
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white text-[11px] font-mono tracking-wider uppercase">
+                Riset Komunitas &amp; Masa Depan
+              </div>
 
-        {/* Pulsing glow ring behind the badge */}
-        <div className="absolute top-1/2 left-8 -translate-y-1/2 pointer-events-none">
-          <motion.div
-            className="w-14 h-14 rounded-full border-2 border-white/30"
-            animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }}
-            transition={{ duration: 2.5, repeat: Infinity }}
-          />
-        </div>
-
-        {/* Content */}
-        <div className="relative px-6 py-8 sm:px-10 flex flex-col sm:flex-row items-center justify-between gap-6 text-white">
-          <div className="flex items-center gap-5">
-            <motion.div
-              className="shrink-0 w-12 h-12 rounded-2xl bg-white/20 border border-white/30 backdrop-blur-md flex items-center justify-center shadow-lg"
-              animate={{ rotate: [0, -8, 8, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <Megaphone className="w-5 h-5 text-white" />
-            </motion.div>
-            <div>
-              <p className="text-blue-100 text-sm font-semibold mb-0.5">Suara kamu penting 🏸</p>
-              <h2 className="text-white text-xl md:text-2xl font-bold leading-snug">
-                Bantu DLOB berkembang — ikut survey komunitas
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
+                Suara Anda Membentuk Arah<br />
+                <span className="text-[#4382C8]">DLOB Badminton Community.</span>
               </h2>
-              <p className="text-white/75 text-sm mt-1">
-                5–10 menit · anonim boleh · pertanyaan adaptif
+
+              <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+                Evaluasi jadwal mabar, kualitas lapangan, turnamen, dan fitur aplikasi berikutnya. Pengisian hanya butuh 3–5 menit & anonim.
               </p>
             </div>
+
+            {/* Right Action: Button-in-Button CTA */}
+            <div className="shrink-0">
+              <Link
+                href="/survey"
+                className="group inline-flex items-center gap-4 bg-white hover:bg-zinc-100 text-zinc-950 pl-7 pr-3 py-4 rounded-full font-bold text-sm tracking-tight transition-all duration-300 shadow-xl active:scale-[0.98]"
+              >
+                <span>Ikuti Survey Sekarang</span>
+                <div className="btn-nested-icon w-9 h-9 rounded-full bg-zinc-950 text-white flex items-center justify-center group-hover:bg-[#4382C8] transition-colors">
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </Link>
+            </div>
+
           </div>
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-            <Link
-              href="/survey"
-              className="shrink-0 bg-zinc-950 hover:bg-zinc-800 text-white font-bold px-8 py-3.5 rounded-full text-sm shadow-xl border border-white/10 transition-colors whitespace-nowrap"
-            >
-              Isi Survey Sekarang →
-            </Link>
-          </motion.div>
         </div>
       </motion.div>
     </section>
