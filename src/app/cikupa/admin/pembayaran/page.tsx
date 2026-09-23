@@ -17,6 +17,7 @@ import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeleto
 import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
 import BranchBadge from '@/components/BranchBadge';
 import DlbcSessionSheetPrintModal from '@/components/DlbcSessionSheetPrintModal';
+import { getBranchPricing, DEFAULT_DLBC_PRICING, BranchPricing } from '@/lib/pricingSettings';
 
 const BRANCH_ID = 'dlob-cikupa';
 const ACCENT = '#10B981';
@@ -99,6 +100,7 @@ export default function CikupaAdminPembayaranPage() {
   const [creatingMatch, setCreatingMatch] = useState(false);
   const [paymentExemptMembers, setPaymentExemptMembers] = useState<Set<string>>(new Set());
   const [createMatchMembershipPayers, setCreateMatchMembershipPayers] = useState<Set<string>>(new Set());
+  const [branchPricing, setBranchPricing] = useState<BranchPricing>(DEFAULT_DLBC_PRICING);
 
   // Membership creation form
   const [newMembership, setNewMembership] = useState({
@@ -157,7 +159,7 @@ export default function CikupaAdminPembayaranPage() {
       const monthStart = new Date(targetYear, targetMonth - 1, 1);
       const monthEnd = new Date(targetYear, targetMonth, 0, 23, 59, 59);
 
-      const [matchesRes, membershipsRes, profilesRes] = await Promise.all([
+      const [matchesRes, membershipsRes, profilesRes, pricingRes] = await Promise.all([
         supabase
           .from('matches')
           .select('*')
@@ -180,7 +182,13 @@ export default function CikupaAdminPembayaranPage() {
           .select('id, full_name, email, is_payment_exempt, branch_id')
           .or(`branch_id.eq.${BRANCH_ID},branch_id.is.null`)
           .order('full_name', { ascending: true }),
+
+        getBranchPricing(supabase, BRANCH_ID),
       ]);
+
+      if (pricingRes) {
+        setBranchPricing(pricingRes);
+      }
 
       if (matchesRes.error) console.error('Error fetching matches:', matchesRes.error);
       const fetchedMatches: Match[] = matchesRes.data || [];
@@ -304,8 +312,9 @@ export default function CikupaAdminPembayaranPage() {
 
       if (matchError) throw matchError;
 
-      // For DLBC: Rp 2.500 per shuttlecock per player (accumulative)
-      const costPerCockPerMember = 2500;
+      // Dynamic pricing for DLBC from branch settings
+      const currentPricing = await getBranchPricing(supabase, BRANCH_ID);
+      const costPerCockPerMember = currentPricing.costPerMemberPerCock;
       const costPerMember = newMatch.shuttlecock_count * costPerCockPerMember;
 
       // Check same-day attendance fee
@@ -347,7 +356,7 @@ export default function CikupaAdminPembayaranPage() {
           match_id: match.id,
           member_name: name,
           amount_due: isExempt ? 0 : costPerMember,
-          attendance_fee: shouldChargeAttendance ? 12000 : 0,
+          attendance_fee: shouldChargeAttendance ? currentPricing.attendanceFee : 0,
           has_membership: hasMember || isExempt,
           payment_status: isExempt ? 'paid' : 'pending',
           paid_at: isExempt ? new Date().toISOString() : null,
@@ -1316,11 +1325,11 @@ export default function CikupaAdminPembayaranPage() {
 
               <div className="bg-zinc-800/60 p-3 rounded-xl border border-white/5 text-[11px] text-zinc-400 space-y-1">
                 <div className="flex justify-between items-center">
-                  <span>Biaya Kock per Pemain (Rp 2.500 × {newMatch.shuttlecock_count} kock)</span>
-                  <span className="font-bold text-emerald-400 text-xs">Rp {(newMatch.shuttlecock_count * 2500).toLocaleString('id-ID')}</span>
+                  <span>Biaya Kock per Pemain (Rp {branchPricing.costPerMemberPerCock.toLocaleString('id-ID')} × {newMatch.shuttlecock_count} kock)</span>
+                  <span className="font-bold text-emerald-400 text-xs">Rp {(newMatch.shuttlecock_count * branchPricing.costPerMemberPerCock).toLocaleString('id-ID')}</span>
                 </div>
                 <div className="text-[10px] text-zinc-500 pt-1 border-t border-white/5">
-                  *Member bulanan bebas iuran lapangan. Non-member otomatis dikenakan iuran lapangan Rp 12.000 (1x sehari).
+                  *Member bulanan bebas iuran lapangan. Non-member otomatis dikenakan iuran lapangan Rp {branchPricing.attendanceFee.toLocaleString('id-ID')} (1x sehari).
                 </div>
               </div>
 

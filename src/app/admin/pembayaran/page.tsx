@@ -14,6 +14,7 @@ import { useTutorial } from '@/hooks/useTutorial';
 import { getTutorialSteps } from '@/lib/tutorialSteps';
 import { useReportGenerator } from '@/hooks/useReportGenerator';
 import { formatReportDate } from '@/lib/reportGenerator';
+import { getBranchPricing, DEFAULT_PUSAT_PRICING, BranchPricing } from '@/lib/pricingSettings';
 
 interface Match {
   id: string;
@@ -58,6 +59,7 @@ interface Membership {
 export default function AdminPembayaranPage() {
   const { user } = useAuth();
   const pathname = usePathname();
+  const [branchPricing, setBranchPricing] = useState<BranchPricing>(DEFAULT_PUSAT_PRICING);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchMembers, setMatchMembers] = useState<Record<string, MatchMember[]>>({});
@@ -274,6 +276,13 @@ export default function AdminPembayaranPage() {
   // Load data function - defined outside useEffect so it can be called from other functions
   const loadData = useCallback(async () => {
     setLoading(true);
+
+    try {
+      const pricing = await getBranchPricing(supabase, 'dlob-pusat');
+      setBranchPricing(pricing);
+    } catch (err) {
+      console.error('Error fetching branch pricing:', err);
+    }
     
     // Use selected month instead of current month
     const targetMonth = selectedMonth.getMonth() + 1;
@@ -808,7 +817,7 @@ export default function AdminPembayaranPage() {
         return;
       }
 
-      const costPerShuttlecock = 12000;
+      const costPerShuttlecock = branchPricing.shuttlecockFee;
       const totalCost = newMatch.shuttlecock_count * costPerShuttlecock;
       const costPerMember = totalCost / 4;
 
@@ -936,7 +945,7 @@ export default function AdminPembayaranPage() {
         const hasMembershipStatus = !!memberMembership || createMatchMembershipPayers.has(memberName);
         const alreadyPaidToday = attendancePaidTodaySet.has(memberName.toLowerCase().trim());
         const shouldCharge = !hasMembershipStatus && !alreadyPaidToday;
-        const attendanceFee = shouldCharge ? 18000 : 0;
+        const attendanceFee = shouldCharge ? branchPricing.attendanceFee : 0;
         if (shouldCharge) attendancePaidTodaySet.add(memberName.toLowerCase().trim());
         
         return {
@@ -1097,7 +1106,7 @@ export default function AdminPembayaranPage() {
       }
 
       // Calculate costs
-      const costPerShuttlecock = 12000;
+      const costPerShuttlecock = branchPricing.shuttlecockFee;
       const newTotalCost = editingMatch.shuttlecock_count * costPerShuttlecock;
       const newCostPerMember = newTotalCost / 4;
       
@@ -1184,7 +1193,7 @@ export default function AdminPembayaranPage() {
           const memberMembership = matchMonthMembershipMap[memberData.name.toLowerCase().trim()];
           hasMembershipStatus = !!memberMembership;
           const alreadyPaidElsewhere = editAttendancePaidSet.has(memberData.name.toLowerCase().trim());
-          attendanceFee = hasMembershipStatus || alreadyPaidElsewhere ? 0 : 18000;
+          attendanceFee = hasMembershipStatus || alreadyPaidElsewhere ? 0 : branchPricing.attendanceFee;
         }
 
         // Manual override: admin explicitly set this member as having membership
@@ -2428,7 +2437,7 @@ export default function AdminPembayaranPage() {
                       <>
                         <div className="text-right mr-4">
                           <p className="text-sm text-gray-600 dark:text-zinc-400 transition-colors duration-300">Shuttlecock: {match.shuttlecock_count}</p>
-                          <p className="text-sm text-gray-600 dark:text-zinc-400 transition-colors duration-300">Total Per Orang: Rp {((match.shuttlecock_count * 12000) / 4).toLocaleString('id-ID')}</p>
+                          <p className="text-sm text-gray-600 dark:text-zinc-400 transition-colors duration-300">Total Per Orang: Rp {(match.cost_per_member || (match.shuttlecock_count * branchPricing.shuttlecockFee) / 4).toLocaleString('id-ID')}</p>
                         </div>
                         <button
                           onClick={() => startEditingMatch(match)}
@@ -3033,7 +3042,7 @@ export default function AdminPembayaranPage() {
                   className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors duration-300"
                 />
                 <p className="text-xs text-gray-500 dark:text-zinc-500 mt-1 transition-colors duration-300">
-                  @ Rp 12.000 per shuttlecock = Rp {((newMatch.shuttlecock_count * 12000) / 4).toLocaleString('id-ID')} per orang
+                  @ Rp {branchPricing.shuttlecockFee.toLocaleString('id-ID')} per shuttlecock = Rp {((newMatch.shuttlecock_count * branchPricing.shuttlecockFee) / 4).toLocaleString('id-ID')} per orang
                 </p>
               </div>
 
@@ -3064,8 +3073,8 @@ export default function AdminPembayaranPage() {
                       return sats >= 5 ? 45000 : 40000;
                     })();
                     const costBreakdown = {
-                      shuttlecock: isPaymentExempt ? 0 : (newMatch.shuttlecock_count * 12000) / 4,
-                      attendance: (isPaymentExempt || memberMembership || willPayMembership) ? 0 : 18000,
+                      shuttlecock: isPaymentExempt ? 0 : (newMatch.shuttlecock_count * branchPricing.shuttlecockFee) / 4,
+                      attendance: (isPaymentExempt || memberMembership || willPayMembership) ? 0 : branchPricing.attendanceFee,
                     };
                     const total = costBreakdown.shuttlecock + costBreakdown.attendance + (willPayMembership ? membershipFeeForMatch : 0);
 
@@ -3140,7 +3149,7 @@ export default function AdminPembayaranPage() {
                                 {!memberMembership && !isPaymentExempt && !willPayMembership ? (
                                   <>
                                     <p className="text-yellow-400">
-                                      + Kehadiran: Rp {(18000).toLocaleString('id-ID')} (Belum Member {new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' })})
+                                      + Kehadiran: Rp {(branchPricing.attendanceFee).toLocaleString('id-ID')} (Belum Member {new Date(newMatch.match_date).toLocaleDateString('id-ID', { month: 'long' })})
                                     </p>
                                     <label className="flex items-center gap-2 mt-1 cursor-pointer group">
                                       <input

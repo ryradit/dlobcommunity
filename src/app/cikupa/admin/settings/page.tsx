@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   User, Mail, Camera, Save, Loader2, Lock, Eye, EyeOff, MessageSquare, 
   CreditCard, Plus, Trash2, Pencil, QrCode, Upload, Shield, CheckCircle,
-  AlertTriangle, Info
+  AlertTriangle, Info, Banknote
 } from 'lucide-react';
 import Image from 'next/image';
 import BranchBadge from '@/components/BranchBadge';
@@ -53,6 +53,11 @@ export default function CikupaAdminSettingsPage() {
   const [phone, setPhone] = useState(user?.user_metadata?.phone || '');
   const [isProfileLoading, setIsProfileLoading] = useState(false);
 
+  // Pricing states for DLBC Cikupa
+  const [shuttlecockFee, setShuttlecockFee] = useState<number>(2500);
+  const [attendanceFee, setAttendanceFee] = useState<number>(12000);
+  const [pricingSaving, setPricingSaving] = useState(false);
+
   // Password states
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -79,6 +84,11 @@ export default function CikupaAdminSettingsPage() {
       setWaEnabled(wa ? wa.value === 'true' : false);
       setEmailEnabled(email ? email.value === 'true' : true);
       setQrisImageUrl(qris?.value || '');
+
+      const shuttlecockSetting = settings.find(s => s.key === `shuttlecock_fee_${BRANCH_ID}`);
+      const attendanceSetting = settings.find(s => s.key === `attendance_fee_${BRANCH_ID}`);
+      if (shuttlecockSetting?.value) setShuttlecockFee(parseInt(shuttlecockSetting.value, 10) || 2500);
+      if (attendanceSetting?.value) setAttendanceFee(parseInt(attendanceSetting.value, 10) || 12000);
 
       if (bank?.value) {
         try {
@@ -247,6 +257,35 @@ export default function CikupaAdminSettingsPage() {
     } finally {
       setQrisUploading(false);
       if (qrisInputRef.current) qrisInputRef.current.value = '';
+    }
+  };
+
+  const handleSavePricing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPricingSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sesi telah berakhir');
+
+      await Promise.all([
+        fetch('/api/admin/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ key: `shuttlecock_fee_${BRANCH_ID}`, value: String(shuttlecockFee) }),
+        }),
+        fetch('/api/admin/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ key: `attendance_fee_${BRANCH_ID}`, value: String(attendanceFee) }),
+        }),
+      ]);
+
+      setMessage({ type: 'success', text: 'Tarif pertandingan DLBC Cikupa berhasil disimpan!' });
+      setTimeout(() => setMessage(null), 3500);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message || 'Gagal menyimpan tarif' });
+    } finally {
+      setPricingSaving(false);
     }
   };
 
@@ -673,6 +712,98 @@ export default function CikupaAdminSettingsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── PRICING & TARIFF SETTINGS FOR DLBC CIKUPA ── */}
+      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-white/10 p-6">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+              <Banknote className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-gray-900 dark:text-white">Tarif & Biaya Match (DLBC Cikupa)</h2>
+              <p className="text-xs text-gray-500 dark:text-zinc-400">
+                Atur nominal biaya shuttlecock dan kehadiran lapangan untuk sesi mabar di GOR Galaxi Cikupa
+              </p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
+            dlob-cikupa
+          </span>
+        </div>
+
+        <form onSubmit={handleSavePricing} className="mt-5 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Shuttlecock Fee per player per cock */}
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2">
+              <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                Biaya Kock (Per Pemain / Kock)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
+                  Rp
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="500"
+                  value={shuttlecockFee}
+                  onChange={(e) => setShuttlecockFee(Math.max(0, parseInt(e.target.value) || 0))}
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
+                Biaya per pemain untuk setiap 1 kock yang terpakai dalam match.
+              </p>
+              <div className="pt-2 border-t border-gray-200/60 dark:border-white/5 flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
+                <span>1 kok = Rp {shuttlecockFee.toLocaleString('id-ID')}</span>
+                <span>2 kok = Rp {(shuttlecockFee * 2).toLocaleString('id-ID')}</span>
+                <span>3 kok = Rp {(shuttlecockFee * 3).toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+
+            {/* Attendance Fee */}
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2">
+              <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                Biaya Kehadiran / Lapangan (Per Hari)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
+                  Rp
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={attendanceFee}
+                  onChange={(e) => setAttendanceFee(Math.max(0, parseInt(e.target.value) || 0))}
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
+                Dikenakan <strong>sekali per hari kehadiran</strong> pada match pertama member. Match berikutnya di hari yang sama gratis.
+              </p>
+              <div className="pt-2 border-t border-gray-200/60 dark:border-white/5 text-[11px] text-gray-600 dark:text-zinc-400 font-mono">
+                Total tarif awal hadir: <strong className="text-gray-900 dark:text-white">Rp {attendanceFee.toLocaleString('id-ID')}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={pricingSaving}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+              style={{ backgroundColor: ACCENT }}
+            >
+              {pricingSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>Simpan Tarif DLBC</span>
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Change Password */}

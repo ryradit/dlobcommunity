@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getBranchPricing } from '@/lib/pricingSettings';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -211,15 +212,12 @@ export async function POST(request: NextRequest) {
 
         const profiles = profileResults as NonNullable<typeof profileResults[0]>[];
 
-        // Calculate costs based on branch rules:
-        // DLBC (dlob-cikupa): Rp 12.000 attendance fee, Rp 2.500 per shuttlecock per member
-        // DLOB Pusat: Rp 18.000 attendance fee, Rp 12.000 total per cock / 4 members
-        const isDlbcBranch = targetBranchId === 'dlob-cikupa';
+        // Dynamic pricing based on branch rules (configured by admin in app_settings)
+        const pricing = await getBranchPricing(supabase, targetBranchId);
         const shuttlecockAmountNum = parseInt(match.shuttlecock_amount) || 1;
-        const costPerMember = isDlbcBranch 
-          ? (shuttlecockAmountNum * 2500) 
-          : ((shuttlecockAmountNum * 12000) / 4);
-        const attendanceFeeRate = isDlbcBranch ? 12000 : 18000;
+        const costPerMember = shuttlecockAmountNum * pricing.costPerMemberPerCock;
+        const attendanceFeeRate = pricing.attendanceFee;
+        const isDlbcBranch = targetBranchId === 'dlob-cikupa';
 
         // Get match month and year to check memberships
         const matchDateObj = new Date(matchDate);
