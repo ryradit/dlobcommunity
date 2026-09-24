@@ -13,8 +13,8 @@ export interface BranchPricing {
 
 export const DEFAULT_DLBC_PRICING: BranchPricing = {
   branchId: 'dlob-cikupa',
-  shuttlecockFee: 2500, // Rp 2.500 per member per cock
-  costPerMemberPerCock: 2500,
+  shuttlecockFee: 3000, // Rp 3.000 per member per cock
+  costPerMemberPerCock: 3000,
   attendanceFee: 12000, // Rp 12.000 / day
 };
 

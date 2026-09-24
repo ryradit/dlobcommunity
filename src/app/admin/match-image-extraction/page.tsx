@@ -253,7 +253,7 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
   };
 
   const processWithGemini = async (imageBase64: string) => {
-    setCurrentStep('Memproses dengan Gemini AI Vision...');
+    setCurrentStep('Memproses dengan AI Vision...');
     
     const response = await fetch('/api/ai/match-extraction', {
       method: 'POST',
@@ -264,7 +264,7 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
     if (!response.ok) {
       const data = await response.json();
       const errorMsg = data.details ? `${data.error}: ${data.details}` : data.error;
-      throw new Error(errorMsg || 'Gagal memproses dengan Gemini');
+      throw new Error(errorMsg || 'Gagal memproses gambar pertandingan');
     }
 
     const data = await response.json();
@@ -951,7 +951,7 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
             )}
           </div>
           <p className="text-purple-200">
-            Ekstraksi data pertandingan bertenaga AI menggunakan Gemini Vision ({isCikupa ? 'Cabang DLBC Cikupa' : 'Cabang DLOB Pusat'})
+            Ekstraksi data pertandingan bertenaga AI Vision ({isCikupa ? 'Cabang DLBC Cikupa' : 'Cabang DLOB Pusat'})
           </p>
           
           {/* Format Info — Branch-specific */}

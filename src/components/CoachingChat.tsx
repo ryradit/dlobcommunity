@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ChevronDown, BarChart3, Target } from 'lucide-react';
+import { Send, ChevronDown, BarChart3, Target, Sparkles, Video, Copy, Check, RotateCw, Brain, Trash2, Network } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@supabase/supabase-js';
 
@@ -11,11 +11,22 @@ const supabaseClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+interface MemoryEntityItem {
+  name: string;
+  type: string;
+  confidence: number;
+  mentions: number;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'coach';
   content: string;
   timestamp: Date;
+  isCached?: boolean;
+  cachedAt?: string;
+  originalQuery?: string;
+  memoryEntities?: MemoryEntityItem[];
 }
 
 interface ActionItem {
@@ -56,9 +67,130 @@ interface CoachingSession {
 interface CoachingChatProps {
   memberName: string;
   onClose?: () => void;
+  initialQuery?: string;
+  onQueryConsumed?: () => void;
+  completedDrills?: Record<string, boolean>;
+  activeVideoAnalysis?: any;
+  onClearVideoContext?: () => void;
 }
 
-const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
+function parseInlineMarkdown(text: string): React.ReactNode {
+  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+  const parts = text.split(regex);
+
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} className="font-extrabold text-gray-900 dark:text-white">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return (
+        <em key={i} className="italic text-gray-800 dark:text-zinc-200">
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code key={i} className="font-mono text-xs px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-emerald-600 dark:text-emerald-400 font-bold">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return part;
+  });
+}
+
+function FormattedCoachMessage({ content }: { content: string }) {
+  let displayContent = content;
+
+  // Defensive: if content is stringified JSON containing "response"
+  if (typeof displayContent === 'string' && displayContent.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(displayContent);
+      if (parsed.response && typeof parsed.response === 'string') {
+        displayContent = parsed.response;
+      }
+    } catch {
+      const match = displayContent.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (match) {
+        try {
+          displayContent = JSON.parse(`"${match[1]}"`);
+        } catch {
+          displayContent = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        }
+      }
+    }
+  }
+
+  const lines = displayContent.split('\n');
+
+  return (
+    <div className="space-y-2 text-xs sm:text-sm leading-relaxed text-gray-800 dark:text-zinc-200">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={idx} className="h-1.5" />;
+        }
+
+        // Heading: ### Title or ### **Title**
+        if (trimmed.startsWith('### ')) {
+          const headingText = trimmed.replace(/^###\s+/, '');
+          return (
+            <h4 key={idx} className="text-sm sm:text-base font-black text-gray-900 dark:text-white pt-2.5 pb-1 border-b border-gray-200/60 dark:border-white/10 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span>{parseInlineMarkdown(headingText)}</span>
+            </h4>
+          );
+        }
+
+        // Bullet point: * or -
+        if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+          const bulletText = trimmed.replace(/^[\*\-]\s+/, '');
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-2">
+              <span className="text-emerald-500 font-bold mt-0.5 text-xs shrink-0">•</span>
+              <div className="flex-1">{parseInlineMarkdown(bulletText)}</div>
+            </div>
+          );
+        }
+
+        // Numbered list: 1. 2. etc.
+        const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+        if (numMatch) {
+          const num = numMatch[1];
+          const rest = numMatch[2];
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-2">
+              <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0">{num}.</span>
+              <div className="flex-1">{parseInlineMarkdown(rest)}</div>
+            </div>
+          );
+        }
+
+        // Regular paragraph
+        return (
+          <p key={idx} className="leading-relaxed">
+            {parseInlineMarkdown(trimmed)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+const CoachingChat: React.FC<CoachingChatProps> = ({ 
+  memberName, 
+  onClose, 
+  initialQuery, 
+  onQueryConsumed, 
+  completedDrills, 
+  activeVideoAnalysis, 
+  onClearVideoContext 
+}) => {
   const { user } = useAuth();
   const userId = user?.id;
   const [messages, setMessages] = useState<Message[]>([]);
@@ -80,6 +212,23 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [pendingUserQuery, setPendingUserQuery] = useState<string | null>(null); // Track user's message until coach responds
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  
+  // Knowledge Graph & Persistent Memory State
+  const [memoryInfo, setMemoryInfo] = useState<{
+    totalRemembered: number;
+    entities: MemoryEntityItem[];
+    summary: any;
+  } | null>(null);
+  const [showMemoryModal, setShowMemoryModal] = useState(false);
+  const [memoryGraphData, setMemoryGraphData] = useState<{
+    entities: any[];
+    edges: any[];
+    snapshots: any[];
+  } | null>(null);
+  const [isLoadingMemory, setIsLoadingMemory] = useState(false);
+  const [isClearingMemory, setIsClearingMemory] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -305,8 +454,82 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
       }
     };
 
+    const fetchInitialMemory = async () => {
+      if (!userId) return;
+      try {
+        const res = await fetch(`/api/ai/coach-agent?userId=${userId}&action=get_memory`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.graph) {
+            setMemoryGraphData(json.graph);
+            setMemoryInfo({
+              totalRemembered: json.graph.entities?.length || 0,
+              entities: json.graph.entities?.slice(0, 6) || [],
+              summary: {
+                totalEntities: json.graph.entities?.length || 0,
+                topWeaknesses: json.graph.entities?.filter((e: any) => e.entity_type === 'weakness').slice(0, 3).map((e: any) => e.name) || [],
+                knownPartners: json.graph.entities?.filter((e: any) => e.entity_type === 'partner').slice(0, 3).map((e: any) => e.name) || [],
+                knownOpponents: json.graph.entities?.filter((e: any) => e.entity_type === 'opponent').slice(0, 3).map((e: any) => e.name) || [],
+              },
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[CoachingChat] Could not load initial memory graph:', e);
+      }
+    };
+
     fetchCoachingHistory();
+    fetchInitialMemory();
   }, [userId]);
+
+  const fetchFullMemoryGraph = async () => {
+    if (!userId) return;
+    try {
+      setIsLoadingMemory(true);
+      const res = await fetch(`/api/ai/coach-agent?userId=${userId}&action=get_memory`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.graph) {
+          setMemoryGraphData(json.graph);
+          setMemoryInfo({
+            totalRemembered: json.graph.entities?.length || 0,
+            entities: json.graph.entities?.slice(0, 6) || [],
+            summary: {
+              totalEntities: json.graph.entities?.length || 0,
+              topWeaknesses: json.graph.entities?.filter((e: any) => e.entity_type === 'weakness').slice(0, 3).map((e: any) => e.name) || [],
+              knownPartners: json.graph.entities?.filter((e: any) => e.entity_type === 'partner').slice(0, 3).map((e: any) => e.name) || [],
+              knownOpponents: json.graph.entities?.filter((e: any) => e.entity_type === 'opponent').slice(0, 3).map((e: any) => e.name) || [],
+            },
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('[CoachingChat] Failed to load memory graph:', e);
+    } finally {
+      setIsLoadingMemory(false);
+    }
+  };
+
+  const handleClearMemory = async () => {
+    if (!userId) return;
+    if (!confirm('Apakah kamu yakin ingin menghapus semua ingatan pengetahuan pelatih? Pelatih akan melupakan riwayat entitas dan metrik masa lalu.')) {
+      return;
+    }
+    try {
+      setIsClearingMemory(true);
+      const res = await fetch(`/api/ai/coach-agent?userId=${userId}&action=clear_memory`);
+      if (res.ok) {
+        setMemoryGraphData({ entities: [], edges: [], snapshots: [] });
+        setMemoryInfo(null);
+        alert('Ingatan pelatih berhasil direset.');
+      }
+    } catch (e) {
+      console.error('[CoachingChat] Error clearing memory:', e);
+    } finally {
+      setIsClearingMemory(false);
+    }
+  };
 
   // Load previous coaching sessions into chat on mount
   useEffect(() => {
@@ -405,7 +628,7 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
     }
   }, [actualMemberName, coachingHistory, sessionId]);
 
-  const handleSendMessage = async (text?: string) => {
+  const handleSendMessage = async (text?: string, forceRefresh: boolean = false) => {
     const messageText = text || input;
     if (!messageText.trim()) return;
 
@@ -413,7 +636,7 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: messageText,
+      content: forceRefresh ? `${messageText} (🔄 Analisis Ulang)` : messageText,
       timestamp: new Date(),
     };
 
@@ -421,13 +644,11 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
     setInput('');
     setIsLoading(true);
 
-    // Store the user query - will be saved with coach response
-    setPendingUserQuery(messageText);
-
     console.log('[CoachingChat] Sending message:', {
       memberName,
       userId,
       messageText: messageText.substring(0, 50),
+      forceRefresh,
     });
 
     try {
@@ -438,7 +659,11 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
         body: JSON.stringify({
           query: messageText,
           userId,
+          sessionId,
           memberName: actualMemberName || memberName,
+          completedDrills,
+          videoAnalysisContext: activeVideoAnalysis || null,
+          forceRefresh,
           sessionHistory: messages.map((m) => ({
             query: m.role === 'user' ? m.content : undefined,
             response: m.role === 'coach' ? m.content : undefined,
@@ -447,24 +672,53 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get coach response');
+        const errorData = await response.json().catch(() => ({}));
+        const detailMsg = errorData.details || errorData.error || 'Failed to get coach response';
+        console.error('[CoachingChat] Coach Agent HTTP Error:', response.status, detailMsg);
+        throw new Error(detailMsg);
       }
 
       const data = await response.json();
+      let coachContent = data.response || 'Maaf, saya tidak bisa merespons sekarang. Coba lagi nanti.';
+      if (typeof coachContent === 'string' && coachContent.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(coachContent);
+          if (parsed.response && typeof parsed.response === 'string') {
+            coachContent = parsed.response;
+          }
+        } catch {
+          const match = coachContent.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          if (match) {
+            try {
+              coachContent = JSON.parse(`"${match[1]}"`);
+            } catch {
+              coachContent = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            }
+          }
+        }
+      }
+
       const coachMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'coach',
-        content: data.response || 'Maaf, saya tidak bisa merespons sekarang. Coba lagi nanti.',
+        content: coachContent,
         timestamp: new Date(),
+        isCached: data.isCached || false,
+        cachedAt: data.cachedAt,
+        originalQuery: messageText,
+        memoryEntities: data.memoryContext?.entities || [],
       };
 
       setMessages((prev) => [...prev, coachMessage]);
+      setPendingUserQuery(null);
 
-      // Save the complete conversation pair (user query + coach response) as ONE row
-      if (pendingUserQuery) {
-        await saveCoachingExchange(pendingUserQuery, coachMessage.content);
-        setPendingUserQuery(null);
+      // Update knowledge graph memory info
+      if (data.memoryContext) {
+        setMemoryInfo({
+          totalRemembered: data.memoryContext.totalRemembered,
+          entities: data.memoryContext.entities,
+          summary: data.memoryContext.summary,
+        });
       }
 
       // Store response type and weakness options for progressive disclosure
@@ -497,6 +751,47 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCopyMessage = async (msgId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(msgId);
+      setTimeout(() => {
+        setCopiedMessageId((prev) => (prev === msgId ? null : prev));
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
+
+  const handleRegenerate = (coachMsg: Message) => {
+    if (isLoading) return;
+    // 1. Check originalQuery
+    if (coachMsg.originalQuery) {
+      handleSendMessage(coachMsg.originalQuery, true);
+      return;
+    }
+    // 2. Otherwise find the nearest user message directly preceding this coach message
+    const coachIdx = messages.findIndex((m) => m.id === coachMsg.id);
+    if (coachIdx > 0) {
+      for (let i = coachIdx - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') {
+          const cleanQuery = messages[i].content.replace(/\s*\(🔄\s*Analisis Ulang\)\s*$/, '');
+          handleSendMessage(cleanQuery, true);
+          return;
+        }
+      }
+    }
+    // 3. Fallback: use initialQuery if present
+    if (initialQuery) {
+      handleSendMessage(initialQuery, true);
+    }
+  };
+
+  const handleAskFollowup = (followupText: string) => {
+    if (isLoading) return;
+    handleSendMessage(followupText);
   };
 
   const getActionItemIcon = (type: string) => {
@@ -556,6 +851,26 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
     }
   };
 
+  const initialQueryHandled = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!initialQuery || !initialQuery.trim()) {
+      initialQueryHandled.current = null;
+      return;
+    }
+    if (initialQueryHandled.current === initialQuery) return;
+    if (!sessionId || isLoadingSession) return;
+
+    const queryToSend = initialQuery.trim();
+    initialQueryHandled.current = queryToSend;
+
+    // Immediately send the query to AI Coach
+    handleSendMessage(queryToSend);
+
+    // Consume the query in parent so it clears cleanly
+    onQueryConsumed?.();
+  }, [initialQuery, sessionId, isLoadingSession, onQueryConsumed]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Loading session state */}
@@ -570,6 +885,84 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
 
       {!isLoadingSession && (
         <>
+      {/* Active Video Analysis Session Banner */}
+      {activeVideoAnalysis && (
+        <div className="bg-emerald-500/10 border-b border-emerald-500/30 p-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="p-1 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+              <Sparkles className="w-4 h-4" />
+            </span>
+            <div>
+              <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                📹 Sesi Video Terhubung: {activeVideoAnalysis.strokeType || 'Taktik Ganda'}
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500 text-white font-black">
+                  Skor {activeVideoAnalysis.overallScore}/100
+                </span>
+              </span>
+              <span className="text-[11px] text-gray-600 dark:text-zinc-400 block line-clamp-1">
+                {activeVideoAnalysis.criticalFixes?.[0] || 'Koreksi posisi rotasi dan pencegahan area kosong'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+            <button
+              onClick={() => {
+                const prompt = `Coach, tolong analisis hasil rekaman video saya barusan (${activeVideoAnalysis.strokeType}, Skor: ${activeVideoAnalysis.overallScore}/100). Bandingkan dengan riwayat pertandingan saya di komunitas, apa program latihan bertahap yang paling tepat?`;
+                handleSendMessage(prompt);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+            >
+              <BarChart3 className="w-3 h-3" />
+              <span>Sintesiskan dengan Riwayat Match</span>
+            </button>
+            {onClearVideoContext && (
+              <button
+                onClick={onClearVideoContext}
+                className="text-[10px] text-gray-400 hover:text-red-500 px-1 cursor-pointer"
+                title="Lepas konteks video"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Knowledge Graph Memory Status Bar */}
+      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-zinc-900/60 flex items-center justify-between text-xs backdrop-blur-xs">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              fetchFullMemoryGraph();
+              setShowMemoryModal(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30 font-medium transition-all cursor-pointer group"
+            title="Buka Knowledge Graph & Memori Jangka Panjang"
+          >
+            <Brain className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 group-hover:scale-110 transition-transform" />
+            <span className="font-semibold text-[11px]">
+              {memoryInfo?.totalRemembered 
+                ? `Mengingat ${memoryInfo.totalRemembered} Wawasan & Relasi` 
+                : '🧠 Knowledge Graph Memori'}
+            </span>
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-violet-200 dark:bg-violet-900/60 text-violet-800 dark:text-violet-200 font-bold uppercase tracking-wider">
+              Aktif
+            </span>
+          </button>
+        </div>
+
+        {memoryInfo?.summary?.topWeaknesses && memoryInfo.summary.topWeaknesses.length > 0 && (
+          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+            <span>Fokus Utama:</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[160px]">
+              {memoryInfo.summary.topWeaknesses[0]}
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Collapsible Session History */}
       {coachingHistory.length > 0 && (
         <div className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
@@ -766,6 +1159,201 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
         </div>
       )}
 
+      {/* Knowledge Graph Memory Modal */}
+      {showMemoryModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between bg-gray-50/80 dark:bg-zinc-900/80">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                  <Brain className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
+                    Knowledge Graph & Ingatan Pelatih
+                  </h3>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Jaringan pemahaman jangka panjang AI tentang teknik, lawan, partner, & progres kamu
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMemoryModal(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+              {isLoadingMemory ? (
+                <div className="py-12 text-center space-y-2">
+                  <div className="inline-block animate-spin text-2xl">🧠</div>
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">Memuat jaringan pengetahuan pemain...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Top Stats Strip */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-3 rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200/60 dark:border-violet-800/50 text-center">
+                      <p className="text-[10px] uppercase font-bold text-violet-600 dark:text-violet-400 tracking-wider">Entitas (Nodes)</p>
+                      <p className="text-xl font-black text-gray-900 dark:text-white mt-0.5">
+                        {memoryGraphData?.entities?.length || 0}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/50 text-center">
+                      <p className="text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 tracking-wider">Relasi (Edges)</p>
+                      <p className="text-xl font-black text-gray-900 dark:text-white mt-0.5">
+                        {memoryGraphData?.edges?.length || 0}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/50 text-center">
+                      <p className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">Snapshot Metrik</p>
+                      <p className="text-xl font-black text-gray-900 dark:text-white mt-0.5">
+                        {memoryGraphData?.snapshots?.length || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Section 1: Entitas Kunci */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <Network className="w-3.5 h-3.5 text-violet-500" />
+                        Entitas Badminton yang Diingat ({memoryGraphData?.entities?.length || 0})
+                      </span>
+                    </div>
+
+                    {(!memoryGraphData?.entities || memoryGraphData.entities.length === 0) ? (
+                      <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-dashed border-gray-200 dark:border-zinc-700 text-center text-gray-500 dark:text-gray-400">
+                        Belum ada memori tercatat. Mulai chat dengan coach tentang teknik, lawan, atau rotasi untuk membangun knowledge graph.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {memoryGraphData.entities.map((ent: any) => {
+                          const icon = ent.entity_type === 'weakness' ? '🎯' :
+                                       ent.entity_type === 'opponent' ? '⚔️' :
+                                       ent.entity_type === 'partner' ? '👥' :
+                                       ent.entity_type === 'drill' ? '🏋️' :
+                                       ent.entity_type === 'skill' ? '🏸' : '💡';
+                          return (
+                            <div
+                              key={ent.id}
+                              className="p-2.5 rounded-lg bg-gray-50 dark:bg-zinc-800/60 border border-gray-200/80 dark:border-zinc-700/80 flex items-start gap-2"
+                            >
+                              <span className="text-base shrink-0">{icon}</span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100 truncate text-[11px]">
+                                    {ent.name}
+                                  </span>
+                                  <span className="text-[9px] px-1 py-0.2 rounded bg-violet-100 dark:bg-violet-900/60 text-violet-700 dark:text-violet-300 font-mono font-bold shrink-0">
+                                    {Math.round((ent.confidence || 0.8) * 100)}%
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                  <span className="capitalize">{ent.entity_type}</span>
+                                  <span>{ent.mention_count || 1}x disebut</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Section 2: Relasi Taktis (Edges) */}
+                  {memoryGraphData?.edges && memoryGraphData.edges.length > 0 && (
+                    <div>
+                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 mb-2">
+                        🔗 Relasi Taktis Antar Entitas ({memoryGraphData.edges.length})
+                      </span>
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                        {memoryGraphData.edges.map((edge: any) => {
+                          const srcName = memoryGraphData.entities.find((e: any) => e.id === edge.source_entity_id)?.name || 'Entitas';
+                          const tgtName = memoryGraphData.entities.find((e: any) => e.id === edge.target_entity_id)?.name || 'Entitas';
+                          return (
+                            <div
+                              key={edge.id}
+                              className="px-2.5 py-1.5 rounded-md bg-gray-50 dark:bg-zinc-800/40 border border-gray-200/60 dark:border-zinc-700/50 flex items-center justify-between text-[11px]"
+                            >
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="font-medium text-gray-800 dark:text-gray-200">{srcName}</span>
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-mono">
+                                  {edge.relation_type}
+                                </span>
+                                <span className="font-medium text-gray-800 dark:text-gray-200">{tgtName}</span>
+                              </div>
+                              <span className="text-[9px] text-gray-400 font-mono">
+                                w:{Math.round((edge.weight || 1.0) * 10) / 10}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section 3: Snapshot Perkembangan */}
+                  {memoryGraphData?.snapshots && memoryGraphData.snapshots.length > 0 && (
+                    <div>
+                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 mb-2">
+                        📈 Snapshot Perkembangan Metrik ({memoryGraphData.snapshots.length})
+                      </span>
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                        {memoryGraphData.snapshots.map((snap: any) => (
+                          <div
+                            key={snap.id}
+                            className="px-2.5 py-1.5 rounded-md bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center justify-between text-[11px]"
+                          >
+                            <span className="font-medium text-gray-800 dark:text-gray-200">
+                              {snap.metric_name}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                {snap.metric_value}
+                              </span>
+                              <span className="text-[9px] text-gray-400">
+                                {new Date(snap.measured_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer with Privacy Controls */}
+            <div className="p-3 border-t border-gray-200 dark:border-zinc-800 bg-gray-50/80 dark:bg-zinc-900/80 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={handleClearMemory}
+                disabled={isClearingMemory}
+                className="px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isClearingMemory ? 'Mereset...' : 'Hapus Ingatan Pelatih'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowMemoryModal(false)}
+                className="px-4 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold text-xs transition-colors cursor-pointer hover:opacity-90"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Messages Area - Minimal styling, blended background */}
       <div
         ref={scrollContainerRef}
@@ -777,15 +1365,137 @@ const CoachingChat: React.FC<CoachingChatProps> = ({ memberName, onClose }) => {
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
+              className={`rounded-2xl px-4 py-3 shadow-xs transition-all ${
                 message.role === 'user'
-                  ? 'bg-blue-500 text-white rounded-br-none shadow-sm'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-none shadow-sm'
+                  ? 'max-w-xs sm:max-w-md bg-emerald-600 text-white rounded-br-none ml-auto'
+                  : 'max-w-xs sm:max-w-xl lg:max-w-2xl bg-gray-100 dark:bg-zinc-800/90 text-gray-900 dark:text-gray-100 rounded-bl-none border border-gray-200/80 dark:border-white/5'
               }`}
             >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {message.content}
-              </p>
+              {message.role === 'coach' ? (
+                <div>
+                  <FormattedCoachMessage content={message.content} />
+                  
+                  {/* Recalled Knowledge Graph Entities */}
+                  {message.memoryEntities && message.memoryEntities.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-gray-200/60 dark:border-white/10 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                        <Brain className="w-3 h-3" /> Memori Terhubung:
+                      </span>
+                      {message.memoryEntities.map((ent, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-violet-100/70 dark:bg-violet-950/50 text-violet-800 dark:text-violet-300 border border-violet-200/80 dark:border-violet-800/80 shadow-2xs"
+                        >
+                          <span>
+                            {ent.type === 'weakness' ? '🎯' : ent.type === 'opponent' ? '⚔️' : ent.type === 'partner' ? '👥' : ent.type === 'drill' ? '🏋️' : '💡'}
+                          </span>
+                          <span>{ent.name}</span>
+                          {ent.mentions > 1 && (
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-violet-200 dark:bg-violet-900 text-violet-800 dark:text-violet-200 font-mono">
+                              {ent.mentions}x
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {message.isCached && (
+                    <div className="mt-3 pt-2.5 border-t border-gray-200/80 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                      <span className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+                        <span className="inline-block animate-pulse">⚡</span>
+                        <span>Jawaban instan dari analisis sebelumnya (0 token terpakai)</span>
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Micro-Action Toolbar (Copy, Regenerate, Follow-up Drill) */}
+                  <div className="mt-3 pt-2 border-t border-gray-200/70 dark:border-white/10 flex items-center justify-between gap-2 text-[11px]">
+                    <div className="flex items-center gap-1">
+                      {/* Copy response */}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyMessage(message.id, message.content)}
+                        className="px-2 py-1 rounded-lg hover:bg-gray-200/80 dark:hover:bg-zinc-700/70 text-gray-600 dark:text-zinc-300 font-medium transition-colors flex items-center gap-1.5 cursor-pointer text-[11px]"
+                        title="Salin jawaban coach ke clipboard"
+                      >
+                        {copiedMessageId === message.id ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">Tersalin!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Salin</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Regenerate (Fresh AI) - only if not greeting */}
+                      {message.id !== '0' && message.id !== 'greeting' && (
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerate(message)}
+                          disabled={isLoading}
+                          className="px-2 py-1 rounded-lg hover:bg-gray-200/80 dark:hover:bg-zinc-700/70 text-gray-600 dark:text-zinc-300 font-medium transition-colors flex items-center gap-1.5 cursor-pointer text-[11px] disabled:opacity-50"
+                          title="Analisis ulang dengan AI terbaru"
+                        >
+                          <RotateCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                          <span>Regenerate</span>
+                        </button>
+                      )}
+
+                      {/* Quick Shortcut: Drill lanjutan */}
+                      {message.id !== '0' && message.id !== 'greeting' && (
+                        <button
+                          type="button"
+                          onClick={() => handleAskFollowup('Bisa berikan 1 drill latihan spesifik dan durasinya untuk mempraktikkan tips ini di lapangan?')}
+                          disabled={isLoading}
+                          className="hidden sm:flex px-2 py-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-medium transition-colors items-center gap-1 cursor-pointer text-[11px] disabled:opacity-50"
+                          title="Minta drill latihan spesifik ke coach"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Minta Drill</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-mono">
+                      {new Date(message.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+                    {message.content}
+                  </p>
+                  <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-white/20 text-[10px] text-emerald-100">
+                    <span className="font-mono">
+                      {new Date(message.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyMessage(message.id, message.content)}
+                      className="hover:text-white flex items-center gap-1 transition-colors cursor-pointer opacity-90 hover:opacity-100"
+                      title="Salin pertanyaan"
+                    >
+                      {copiedMessageId === message.id ? (
+                        <>
+                          <Check className="w-3 h-3 text-white" />
+                          <span>Tersalin</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Salin</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}

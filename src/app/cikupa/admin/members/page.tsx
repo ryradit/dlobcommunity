@@ -37,7 +37,6 @@ interface Member {
   achievements?: string;
   partner_preferences?: string;
   instagram_url?: string;
-  has_membership?: boolean;
   is_payment_exempt?: boolean;
   is_test_account?: boolean;
   branch_id?: string;
@@ -165,7 +164,6 @@ export default function CikupaAdminMembersPage() {
   const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'branch_admin' | 'member'>('all');
   const [filterBranch, setFilterBranch] = useState<'all' | 'dlob-pusat' | 'dlob-cikupa'>('dlob-cikupa');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  const [filterMembership, setFilterMembership] = useState<'all' | 'paid' | 'unpaid' | 'vip'>('all');
   const [filterType, setFilterType] = useState<'all' | 'real' | 'temp'>('all');
   const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'date_desc' | 'date_asc'>('name_asc');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -317,7 +315,7 @@ export default function CikupaAdminMembersPage() {
       alert('Tidak ada data anggota untuk diexport');
       return;
     }
-    const headers = ['Nama', 'Email', 'No Telepon', 'Cabang', 'Peran', 'Status', 'Membership Bulan Ini', 'VIP Gratis', 'Level', 'Tanggal Bergabung'];
+    const headers = ['Nama', 'Email', 'No Telepon', 'Cabang', 'Peran', 'Status', 'VIP Gratis', 'Level', 'Tanggal Bergabung'];
     const rows = list.map(m => [
       `"${(m.full_name || '').replace(/"/g, '""')}"`,
       `"${(m.email || '').replace(/"/g, '""')}"`,
@@ -325,7 +323,6 @@ export default function CikupaAdminMembersPage() {
       m.branch_id === 'dlob-cikupa' ? 'DLBC Cikupa' : 'DLOB Pusat',
       m.role === 'admin' ? 'Admin DLOB' : m.role === 'branch_admin' ? 'Admin DLBC' : 'Member',
       m.is_active ? 'Aktif' : 'Nonaktif',
-      m.has_membership ? 'Ya' : 'Tidak',
       m.is_payment_exempt ? 'Ya' : 'Tidak',
       m.playing_level || '-',
       new Date(m.created_at).toLocaleDateString('id-ID'),
@@ -370,65 +367,26 @@ export default function CikupaAdminMembersPage() {
       
       setCurrentMonthYear({ month: currentMonth, year: currentYear });
       
-      const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-      const previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-      queryCache.invalidate(`admin-active-memberships-${previousMonth}-${previousYear}`);
-      queryCache.invalidate(`admin-active-memberships-${currentMonth}-${currentYear}`);
-      
-      const [profilesResult, membershipsResult] = await Promise.allSettled([
-        cachedQuery(
-          canViewAllBranches ? 'admin-profiles-list-all' : 'admin-profiles-list-cikupa',
-          async () => {
-            let query = supabase
-              .from('profiles')
-              .select('*')
-              .order('created_at', { ascending: false });
+      const profilesResult = await cachedQuery(
+        canViewAllBranches ? 'admin-profiles-list-all' : 'admin-profiles-list-cikupa',
+        async () => {
+          let query = supabase
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-            if (!canViewAllBranches) {
-              query = query.eq('branch_id', BRANCH_ID);
-            }
+          if (!canViewAllBranches) {
+            query = query.eq('branch_id', BRANCH_ID);
+          }
 
-            const result = await query;
-            return result;
-          },
-          30000
-        ),
-        supabase
-          .from('memberships')
-          .select('member_name, payment_status, branch_id')
-          .eq('month', currentMonth)
-          .eq('year', currentYear)
-          .eq('payment_status', 'paid'),
-      ]);
+          const result = await query;
+          return result;
+        },
+        30000
+      );
       
-      let profilesData: any[] = [];
-      let membershipNames = new Set<string>();
-      
-      if (profilesResult.status === 'fulfilled') {
-        const res = profilesResult.value as { data: any[] | null; error: any };
-        if (!res.error && res.data) {
-          profilesData = res.data;
-        }
-      }
-      
-      if (membershipsResult.status === 'fulfilled') {
-        const res = membershipsResult.value as { data: any[] | null; error: any };
-        if (!res.error && res.data) {
-          membershipNames = new Set(
-            res.data.map((m: any) => (m.member_name || '').toLowerCase().trim())
-          );
-        }
-      }
-      
-      if (profilesData.length > 0) {
-        const mergedData = profilesData.map(profile => {
-          const hasMembership = membershipNames.has((profile.full_name || '').toLowerCase().trim());
-          return {
-            ...profile,
-            has_membership: hasMembership,
-          };
-        });
-        setMembers(mergedData);
+      if (profilesResult && (profilesResult as any).data) {
+        setMembers((profilesResult as any).data);
       }
     } catch (error) {
       console.error('Error fetching members:', error);
@@ -907,11 +865,6 @@ export default function CikupaAdminMembersPage() {
         if (filterStatus === 'active' && !member.is_active) return false;
         if (filterStatus === 'inactive' && member.is_active) return false;
 
-        // Membership filter
-        if (filterMembership === 'paid' && !member.has_membership) return false;
-        if (filterMembership === 'unpaid' && member.has_membership) return false;
-        if (filterMembership === 'vip' && !member.is_payment_exempt) return false;
-
         // Temp account filter
         const isTemp = Boolean(member.email?.endsWith('@temp.dlob.local'));
         if (filterType === 'temp' && !isTemp) return false;
@@ -926,7 +879,7 @@ export default function CikupaAdminMembersPage() {
         if (sortBy === 'date_asc') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         return 0;
       });
-  }, [members, searchTerm, hideTestAccounts, filterRole, filterBranch, filterStatus, filterMembership, filterType, sortBy, canViewAllBranches]);
+  }, [members, searchTerm, hideTestAccounts, filterRole, filterBranch, filterStatus, filterType, sortBy, canViewAllBranches]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedMembers.length / pageSize));
   const paginatedMembers = React.useMemo(() => {
@@ -937,7 +890,7 @@ export default function CikupaAdminMembersPage() {
   // Reset page to 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterRole, filterBranch, filterStatus, filterMembership, filterType, sortBy, pageSize]);
+  }, [searchTerm, filterRole, filterBranch, filterStatus, filterType, sortBy, pageSize]);
 
   const realMembers = members.filter(m => !m.is_test_account);
 
@@ -960,22 +913,13 @@ export default function CikupaAdminMembersPage() {
     }).length,
   };
 
-  const activeMembershipCount = members.filter(m => {
-    const mBranch = m.branch_id || 'dlob-pusat';
-    const matchBranch = !canViewAllBranches ? mBranch === BRANCH_ID : (filterBranch === 'all' || mBranch === filterBranch);
-    return matchBranch && m.has_membership && !m.is_test_account;
-  }).length;
-
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
+    <div className="min-h-screen text-zinc-900 dark:text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       {/* Top Header & Actions */}
       <div className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Kelola Anggota</h1>
-            <BranchBadge branchId="dlob-cikupa" size="sm" />
-          </div>
-          <p className="text-sm text-slate-500 dark:text-zinc-400">Manajemen profil, hak akses, dan status membership komunitas DLBC Cikupa.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">Kelola Anggota</h1>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">Manajemen profil dan hak akses anggota komunitas DLBC Cikupa.</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
@@ -1104,7 +1048,8 @@ export default function CikupaAdminMembersPage() {
 
       {/* Stats Cards - Glassmorphism */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="stat-card-total-members bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-sm">
+        <div className="stat-card-total-members glass-premium stat-card-glow rounded-2xl p-4 sm:p-5">
+          <div className="h-0.5 w-8 rounded-full bg-emerald-500 mb-3" />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Total Anggota</p>
@@ -1116,7 +1061,8 @@ export default function CikupaAdminMembersPage() {
           </div>
         </div>
 
-        <div className="stat-card-active-members bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-sm">
+        <div className="stat-card-active-members glass-premium stat-card-glow rounded-2xl p-4 sm:p-5">
+          <div className="h-0.5 w-8 rounded-full bg-emerald-500 mb-3" />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Anggota Aktif</p>
@@ -1128,7 +1074,8 @@ export default function CikupaAdminMembersPage() {
           </div>
         </div>
 
-        <div className="stat-card-admin-members bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-sm">
+        <div className="stat-card-admin-members glass-premium stat-card-glow rounded-2xl p-4 sm:p-5">
+          <div className="h-0.5 w-8 rounded-full bg-purple-500 mb-3" />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Administrator</p>
@@ -1140,7 +1087,8 @@ export default function CikupaAdminMembersPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 shadow-sm">
+        <div className="glass-premium stat-card-glow rounded-2xl p-4 sm:p-5">
+          <div className="h-0.5 w-8 rounded-full bg-amber-500 mb-3" />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Akun Temp</p>
@@ -1153,25 +1101,7 @@ export default function CikupaAdminMembersPage() {
         </div>
       </div>
 
-      {/* Membership Month Indicator */}
-      <div className="mb-6 bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
-        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-          <Crown className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">
-              Status Membership: {new Date(currentMonthYear.year, currentMonthYear.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-            </span>
-            <span className="text-xs text-slate-500 dark:text-zinc-400">
-              ({activeMembershipCount} member aktif bulan ini)
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-            Badge membership otomatis aktif setelah pembayaran bulan berjalan dikonfirmasi.
-          </p>
-        </div>
-      </div>
+
 
       {/* Filter & Search Bar */}
       <div className="members-search bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-4 mb-6 space-y-3 shadow-sm">
@@ -1231,17 +1161,7 @@ export default function CikupaAdminMembersPage() {
               <option value="inactive">Nonaktif</option>
             </select>
 
-            {/* Membership Filter */}
-            <select
-              value={filterMembership}
-              onChange={(e) => setFilterMembership(e.target.value as any)}
-              className="px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-700 dark:text-zinc-300 focus:outline-none focus:border-slate-300 dark:focus:border-white/20"
-            >
-              <option value="all">Semua Membership</option>
-              <option value="paid">Membership Aktif</option>
-              <option value="unpaid">Belum Membership</option>
-              <option value="vip">VIP (Gratis)</option>
-            </select>
+
 
             {/* Account Type Filter */}
             <select
@@ -1272,7 +1192,7 @@ export default function CikupaAdminMembersPage() {
         <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-zinc-400 pt-1 border-t border-slate-200 dark:border-white/5">
           <div className="flex items-center gap-3">
             <span>Ditemukan: <strong className="text-slate-900 dark:text-white">{filteredAndSortedMembers.length}</strong> anggota</span>
-            {(searchTerm || filterRole !== 'all' || filterBranch !== 'dlob-cikupa' || filterStatus !== 'all' || filterMembership !== 'all' || filterType !== 'all') && (
+            {(searchTerm || filterRole !== 'all' || filterBranch !== 'dlob-cikupa' || filterStatus !== 'all' || filterType !== 'all') && (
               <button
                 type="button"
                 onClick={() => {
@@ -1280,7 +1200,6 @@ export default function CikupaAdminMembersPage() {
                   setFilterRole('all');
                   setFilterBranch('dlob-cikupa');
                   setFilterStatus('all');
-                  setFilterMembership('all');
                   setFilterType('all');
                 }}
                 className="text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
@@ -1308,7 +1227,7 @@ export default function CikupaAdminMembersPage() {
       </div>
 
       {/* Members List Table */}
-      <div className="members-table bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden mb-6 shadow-sm">
+      <div className="members-table glass-premium rounded-2xl overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="w-full min-w-200">
             <thead className="bg-slate-100/80 dark:bg-zinc-900/90 border-b border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
@@ -1430,14 +1349,7 @@ export default function CikupaAdminMembersPage() {
                         }`} title={member.branch_id === 'dlob-cikupa' ? 'Cabang DLBC (Cikupa)' : 'Cabang DLOB Pusat'}>
                           {member.branch_id === 'dlob-cikupa' ? 'DLBC' : 'Pusat'}
                         </span>
-                        {member.has_membership && (
-                          <span 
-                            className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20"
-                            title={`Membership aktif untuk ${new Date(currentMonthYear.year, currentMonthYear.month - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
-                          >
-                            Membership
-                          </span>
-                        )}
+
                         {member.is_payment_exempt && (
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-pink-500/10 text-pink-700 dark:text-pink-400 border border-pink-500/20">
                             VIP Gratis
@@ -1696,13 +1608,7 @@ export default function CikupaAdminMembersPage() {
               <div>
                 <p className="text-xs font-semibold text-gray-500 dark:text-zinc-500 uppercase tracking-wide mb-2">Label Khusus</p>
                 <div className="space-y-2">
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20">
-                    <Crown className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
-                    <div>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30">Membership</span>
-                      <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1">Anggota telah membayar iuran membership untuk bulan berjalan. Badge ini otomatis muncul setelah pembayaran dikonfirmasi.</p>
-                    </div>
-                  </div>
+
                   <div className="flex items-start gap-3 p-3 rounded-xl bg-pink-500/5 border border-pink-500/20">
                     <Award className="w-4 h-4 text-pink-400 mt-0.5 shrink-0" />
                     <div>
@@ -2680,7 +2586,7 @@ export default function CikupaAdminMembersPage() {
                     <>
                       <li className="flex items-start gap-2">
                         <span className="text-emerald-400 mt-0.5">✓</span>
-                        <span><strong>SEMUA</strong> biaya akan Rp 0 (shuttlecock + kehadiran + membership)</span>
+                        <span><strong>SEMUA</strong> biaya akan Rp 0 (shuttlecock + kehadiran)</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-emerald-400 mt-0.5">✓</span>

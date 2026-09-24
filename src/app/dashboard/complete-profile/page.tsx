@@ -7,7 +7,7 @@ import { Mail, Lock, User, AlertCircle, CheckCircle2, Phone } from 'lucide-react
 import Image from 'next/image';
 
 export default function CompleteProfilePage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -24,13 +24,14 @@ export default function CompleteProfilePage() {
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user?.id) {
-      router.push('/login');
+      router.replace(`/login?redirect=${encodeURIComponent('/dashboard/complete-profile')}`);
       return;
     }
 
     loadProfile();
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   const loadProfile = async () => {
     try {

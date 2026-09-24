@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function middleware(request: NextRequest) {
@@ -32,48 +32,23 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request,
           });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-            httpOnly: false, // Allow client-side access
-            sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production',
-            path: '/',
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-            httpOnly: false,
-            path: '/',
-          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, {
+              ...options,
+              httpOnly: false,
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              path: '/',
+            })
+          );
         },
       },
     }
@@ -82,7 +57,9 @@ export async function middleware(request: NextRequest) {
   // Only refresh session if we don't have a valid token cookie
   // This reduces unnecessary auth checks on every page navigation
   const cookieNames = request.cookies.getAll().map(c => c.name);
-  const hasAuthToken = cookieNames.some(name => name.includes('auth-token') && name.startsWith('sb-'));
+  const hasAuthToken = cookieNames.some(name => 
+    name.startsWith('sb-') && (name.includes('auth-token') || name.includes('-token'))
+  );
   
   if (hasAuthToken) {
     // Allow dashboard access for all authenticated users
@@ -98,10 +75,11 @@ export async function middleware(request: NextRequest) {
     path.startsWith('/cikupa/dashboard') ||
     path.startsWith('/cikupa/admin')
   ) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', path);
+      const redirectTarget = request.nextUrl.pathname + (request.nextUrl.search || '');
+      loginUrl.searchParams.set('redirect', redirectTarget);
       return NextResponse.redirect(loginUrl);
     }
   }

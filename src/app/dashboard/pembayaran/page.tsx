@@ -928,7 +928,7 @@ export default function PembayaranPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen text-slate-900 dark:text-slate-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
       <ProfileCompletionWarning />
       <div className="space-y-8">
         <div className="flex items-center justify-between">
@@ -1034,7 +1034,7 @@ export default function PembayaranPage() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+            <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5 transition-colors duration-300" />
                 <div>
@@ -1176,7 +1176,7 @@ export default function PembayaranPage() {
         {/* Stats Cards */}
         <div className="member-payment-stats grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Total Due */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Tagihan</p>
@@ -1202,7 +1202,7 @@ export default function PembayaranPage() {
           </div>
 
           {/* Menunggu Verifikasi */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Menunggu Konfirmasi</p>
               <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400 transition-colors duration-300" />
@@ -1212,7 +1212,7 @@ export default function PembayaranPage() {
           </div>
 
           {/* Total Paid */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Terbayar</p>
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 transition-colors duration-300" />
@@ -1224,7 +1224,7 @@ export default function PembayaranPage() {
           </div>
 
           {/* Total Matches */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">Total Pertandingan</p>
               <Users className="w-5 h-5 text-blue-600 dark:text-blue-400 transition-colors duration-300" />
@@ -1236,7 +1236,7 @@ export default function PembayaranPage() {
 
         {/* Membership Payment */}
         {myMembership && (
-          <div className="member-payment-membership bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="member-payment-membership glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Award className="w-6 h-6 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
@@ -1362,7 +1362,7 @@ export default function PembayaranPage() {
         )}
 
         {/* Payment List */}
-        <div className="member-payment-matches bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl overflow-hidden shadow-sm transition-colors duration-300">
+        <div className="member-payment-matches glass-premium rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
           <div className="p-6 border-b-2 border-gray-200 dark:border-white/10 transition-colors duration-300">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Riwayat Pembayaran Pertandingan</h2>

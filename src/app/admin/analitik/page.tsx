@@ -193,7 +193,7 @@ export default function AdminAnalitikPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
+    <div className="min-h-screen text-zinc-900 dark:text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       <div>
         {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-4 pb-4 border-b border-white/5">
@@ -212,7 +212,7 @@ export default function AdminAnalitikPage() {
         </div>
 
         {/* Monthly Summary Card */}
-        <div className="analitik-monthly-summary bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 mb-6 shadow-sm">
+        <div className="analitik-monthly-summary glass-premium rounded-2xl p-5 mb-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
             <div>
               <h2 className="text-sm font-semibold text-white mb-2">
@@ -281,27 +281,31 @@ export default function AdminAnalitikPage() {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
-              <p className="text-[11px] font-medium text-zinc-400 mb-1">Total Pertandingan</p>
-              <p className="text-xl font-bold text-white tracking-tight">
+            <div className="glass-premium stat-card-glow rounded-xl p-3.5">
+              <div className="h-0.5 w-6 rounded-full bg-blue-500 mb-2" />
+              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Total Pertandingan</p>
+              <p className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
                 {monthlyStats.totalMatches}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
-              <p className="text-[11px] font-medium text-zinc-400 mb-1">Pertandingan Selesai</p>
-              <p className="text-xl font-bold text-emerald-400 tracking-tight">
+            <div className="glass-premium stat-card-glow rounded-xl p-3.5">
+              <div className="h-0.5 w-6 rounded-full bg-emerald-500 mb-2" />
+              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Pertandingan Selesai</p>
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
                 {monthlyStats.completedMatches}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
-              <p className="text-[11px] font-medium text-zinc-400 mb-1">Berlangsung</p>
-              <p className="text-xl font-bold text-amber-400 tracking-tight">
+            <div className="glass-premium stat-card-glow rounded-xl p-3.5">
+              <div className="h-0.5 w-6 rounded-full bg-amber-500 mb-2" />
+              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Berlangsung</p>
+              <p className="text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
                 {monthlyStats.activeMatches}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
-              <p className="text-[11px] font-medium text-zinc-400 mb-1">Slot Partisipasi</p>
-              <p className="text-xl font-bold text-sky-400 tracking-tight">
+            <div className="glass-premium stat-card-glow rounded-xl p-3.5">
+              <div className="h-0.5 w-6 rounded-full bg-sky-500 mb-2" />
+              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Slot Partisipasi</p>
+              <p className="text-xl font-bold text-sky-600 dark:text-sky-400 tracking-tight">
                 {monthlyStats.totalMatches * 4}
               </p>
             </div>
@@ -311,7 +315,7 @@ export default function AdminAnalitikPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Match List */}
           <div className="analitik-matches-list lg:col-span-1">
-            <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-sm">
+            <div className="glass-premium rounded-2xl p-5 shadow-sm">
               <h2 className="text-sm font-semibold text-white mb-3.5 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-zinc-400" />
                 <span>Daftar Pertandingan</span>
@@ -372,7 +376,7 @@ export default function AdminAnalitikPage() {
           {/* Match Details */}
           <div className="analitik-match-stats lg:col-span-2">
             {selectedMatch ? (
-              <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm">
+              <div className="glass-premium rounded-2xl p-5 sm:p-6 shadow-sm">
                 <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/10">
                   <div>
                     <h2 className="text-lg font-bold text-white tracking-tight">

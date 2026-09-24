@@ -985,7 +985,7 @@ export default function AdminMembersPage() {
   }).length;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
+    <div className="min-h-screen text-zinc-900 dark:text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6">
       {/* Top Header & Actions */}
       <div className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -1119,57 +1119,61 @@ export default function AdminMembersPage() {
 
       {/* Stats Cards - Refined Glassmorphism */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="stat-card-total-members bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-5">
+        <div className="stat-card-total-members glass-premium stat-card-glow rounded-2xl p-4 sm:p-5">
+          <div className="h-0.5 w-8 rounded-full bg-blue-500 mb-3" />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Total Anggota</p>
-              <p className="text-2xl font-bold text-white tracking-tight">{stats.total}</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Total Anggota</p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">{stats.total}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-400" />
+              <Users className="w-5 h-5 text-blue-500 dark:text-blue-400" />
             </div>
           </div>
         </div>
 
-        <div className="stat-card-active-members bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-5">
+        <div className="stat-card-active-members glass-premium stat-card-glow rounded-2xl p-4 sm:p-5">
+          <div className="h-0.5 w-8 rounded-full bg-emerald-500 mb-3" />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Anggota Aktif</p>
-              <p className="text-2xl font-bold text-emerald-400 tracking-tight">{stats.active}</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Anggota Aktif</p>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">{stats.active}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
+              <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
             </div>
           </div>
         </div>
 
-        <div className="stat-card-admin-members bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-5">
+        <div className="stat-card-admin-members glass-premium stat-card-glow rounded-2xl p-4 sm:p-5">
+          <div className="h-0.5 w-8 rounded-full bg-purple-500 mb-3" />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Administrator</p>
-              <p className="text-2xl font-bold text-purple-400 tracking-tight">{stats.admins}</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Administrator</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 tracking-tight">{stats.admins}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-purple-400" />
+              <Shield className="w-5 h-5 text-purple-500 dark:text-purple-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-5">
+        <div className="glass-premium stat-card-glow rounded-2xl p-4 sm:p-5">
+          <div className="h-0.5 w-8 rounded-full bg-amber-500 mb-3" />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1">Akun Temp</p>
-              <p className="text-2xl font-bold text-yellow-400 tracking-tight">{stats.tempCount}</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Akun Temp</p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-yellow-400 tracking-tight">{stats.tempCount}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
-              <UserCog className="w-5 h-5 text-yellow-400" />
+              <UserCog className="w-5 h-5 text-amber-500 dark:text-yellow-400" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Membership Month Indicator */}
-      <div className="mb-6 bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center gap-3">
+      <div className="mb-6 glass-premium rounded-2xl p-4 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
           <Crown className="w-4 h-4 text-purple-400" />
         </div>
@@ -1323,7 +1327,7 @@ export default function AdminMembersPage() {
       </div>
 
       {/* Members List Table */}
-      <div className="members-table bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden mb-6">
+      <div className="members-table glass-premium rounded-2xl overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="w-full min-w-200">
             <thead className="bg-zinc-900/90 border-b border-white/10 text-xs font-semibold text-zinc-400 uppercase tracking-wider">

@@ -14,6 +14,7 @@ import {
 import Image from 'next/image';
 import { StatCardSkeleton, ActivityItemSkeleton } from '@/components/LoadingSkeletons';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { motion, AnimatePresence } from 'framer-motion';
 import SystemHealthMonitor from '@/components/admin/SystemHealthMonitor';
 import BranchBadge from '@/components/BranchBadge';
 import BranchSelector from '@/components/BranchSelector';
@@ -103,16 +104,15 @@ export default function CikupaAdminPage() {
         const now = new Date();
 
         // 1. Fetch branch stats in parallel
-        const [membersRes, adminsRes, matchesRes, pendingMatchRes, pendingMemRes, recentProfilesRes] = await Promise.all([
+        const [membersRes, adminsRes, matchesRes, pendingMatchRes, recentProfilesRes] = await Promise.all([
           supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('branch_id', BRANCH_ID).eq('is_active', true),
           supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('branch_id', BRANCH_ID).or('role.eq.admin,role.eq.branch_admin'),
           supabase.from('matches').select('id', { count: 'exact', head: true }).eq('branch_id', BRANCH_ID),
           supabase.from('match_members').select('id, member_name, created_at, payment_proof').eq('branch_id', BRANCH_ID).eq('payment_status', 'pending').limit(15),
-          supabase.from('memberships').select('id, member_name, created_at, payment_proof').eq('branch_id', BRANCH_ID).eq('payment_status', 'pending').limit(15),
           supabase.from('profiles').select('id, full_name, created_at, updated_at').eq('branch_id', BRANCH_ID).order('created_at', { ascending: false }).limit(10),
         ]);
 
-        const pendingTotal = (pendingMatchRes.data?.length || 0) + (pendingMemRes.data?.length || 0);
+        const pendingTotal = pendingMatchRes.data?.length || 0;
 
         if (mounted) {
           setStats({
@@ -152,23 +152,10 @@ export default function CikupaAdminPage() {
           });
         }
 
-        if (pendingMemRes.data) {
-          pendingMemRes.data.forEach(p => {
-            activityList.push({
-              id: `mem-pay-${p.id}`,
-              type: 'payment_pending',
-              user: `${p.member_name} - Membership DLBC`,
-              timestamp: p.created_at,
-              icon: Bell,
-              color: 'text-purple-400',
-            });
-          });
-        }
-
         activityList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         if (mounted) setActivities(activityList.slice(0, 8));
 
-        // 3. Fetch 6 months revenue for DLBC
+        // 3. Fetch 6 months revenue for DLBC (Shuttlecock + Attendance fee)
         const chartMonths: RevenueData[] = [];
         let curTotal = 0;
         let lastMonthRev = 0;
@@ -179,14 +166,15 @@ export default function CikupaAdminPage() {
           const start = d.toISOString();
           const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString();
 
-          const [matchPaidRes, memPaidRes] = await Promise.all([
-            supabase.from('match_members').select('total_amount').eq('branch_id', BRANCH_ID).eq('payment_status', 'paid').gte('paid_at', start).lt('paid_at', end),
-            supabase.from('memberships').select('amount').eq('branch_id', BRANCH_ID).eq('payment_status', 'paid').gte('paid_at', start).lt('paid_at', end),
-          ]);
+          const matchPaidRes = await supabase
+            .from('match_members')
+            .select('total_amount')
+            .eq('branch_id', BRANCH_ID)
+            .eq('payment_status', 'paid')
+            .gte('paid_at', start)
+            .lt('paid_at', end);
 
-          const mSum = (matchPaidRes.data || []).reduce((s, r) => s + (r.total_amount || 0), 0);
-          const memSum = (memPaidRes.data || []).reduce((s, r) => s + (r.amount || 0), 0);
-          const monthRev = mSum + memSum;
+          const monthRev = (matchPaidRes.data || []).reduce((s, r) => s + (r.total_amount || 0), 0);
 
           chartMonths.push({
             month: d.toLocaleDateString('id-ID', { month: 'short' }),
@@ -278,9 +266,15 @@ export default function CikupaAdminPage() {
   }, []);
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="relative min-h-screen bg-slate-50 dark:bg-[#09090e] transition-colors duration-300">
+      {/* Aurora ambient */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+        <div className="aurora-a absolute top-[-5%] right-[5%] w-[40vw] h-[40vw] rounded-full bg-emerald-500/8 dark:bg-emerald-500/6 blur-[110px]" />
+        <div className="aurora-b absolute bottom-[10%] left-[-5%] w-[35vw] h-[35vw] rounded-full bg-[#4382C8]/6 blur-[100px]" />
+      </div>
+      <div className="relative z-10 space-y-6 pb-20 px-4 sm:px-6 lg:px-8 pt-20 lg:pt-8">
       {/* Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-gray-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-premium p-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -307,76 +301,86 @@ export default function CikupaAdminPage() {
       </div>
 
       {/* 4 Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Link href="/cikupa/admin/members" className="group">
-          <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-white/10 group-hover:border-emerald-500/40 transition-all relative overflow-hidden shadow-sm">
-            <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Anggota DLBC</span>
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <Users className="w-4 h-4" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+          <Link href="/cikupa/admin/members" className="block group">
+            <div className="glass-premium stat-card-glow p-4 sm:p-5 h-full flex flex-col justify-between">
+              <div>
+                <div className="h-0.5 w-8 rounded-full mb-3 bg-emerald-500" />
+                <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight tabular-nums">
+                  {stats.totalMembers}
+                </div>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">
+                  Anggota DLBC
+                </p>
               </div>
+              <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-2 font-medium flex items-center gap-1">
+                Kelola anggota <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+              </p>
             </div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.totalMembers}</div>
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 font-semibold flex items-center gap-1">
-              Kelola anggota <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-            </p>
-          </div>
-        </Link>
+          </Link>
+        </motion.div>
 
-        <Link href="/cikupa/admin/pembayaran" className="group">
-          <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-white/10 group-hover:border-amber-500/40 transition-all relative overflow-hidden shadow-sm">
-            <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Menunggu Bayar</span>
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <Bell className="w-4 h-4" />
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+          <Link href="/cikupa/admin/pembayaran" className="block group">
+            <div className={`glass-premium stat-card-glow p-4 sm:p-5 h-full flex flex-col justify-between ${stats.pendingPayments > 0 ? 'ring-1 ring-amber-400/30' : ''}`}>
+              <div>
+                <div className="h-0.5 w-8 rounded-full mb-3 bg-amber-500" />
+                <div className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 tracking-tight tabular-nums">
+                  {stats.pendingPayments}
+                </div>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">
+                  Menunggu Bayar
+                </p>
               </div>
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2 font-medium flex items-center gap-1">
+                Validasi bayar <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+              </p>
             </div>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400">{stats.pendingPayments}</div>
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-semibold flex items-center gap-1">
-              Validasi bayar <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-            </p>
-          </div>
-        </Link>
+          </Link>
+        </motion.div>
 
-        <Link href="/cikupa/admin/analitik" className="group">
-          <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-white/10 group-hover:border-blue-500/40 transition-all relative overflow-hidden shadow-sm">
-            <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-blue-500/10 rounded-full blur-xl pointer-events-none" />
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Pertandingan DLBC</span>
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                <Award className="w-4 h-4" />
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+          <Link href="/cikupa/admin/analitik" className="block group">
+            <div className="glass-premium stat-card-glow p-4 sm:p-5 h-full flex flex-col justify-between">
+              <div>
+                <div className="h-0.5 w-8 rounded-full mb-3 bg-blue-500" />
+                <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight tabular-nums">
+                  {stats.totalMatches}
+                </div>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">
+                  Pertandingan DLBC
+                </p>
               </div>
+              <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-2 font-medium flex items-center gap-1">
+                Skor & Analitik <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+              </p>
             </div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.totalMatches}</div>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-semibold flex items-center gap-1">
-              Skor & Analitik <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-            </p>
-          </div>
-        </Link>
+          </Link>
+        </motion.div>
 
-        <Link href="/cikupa/admin/keuangan" className="group">
-          <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900/60 border-gray-200 dark:border-white/10 group-hover:border-purple-500/40 transition-all relative overflow-hidden shadow-sm">
-            <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-purple-500/10 rounded-full blur-xl pointer-events-none" />
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Kas Masuk Bulan Ini</span>
-              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                <TrendingUp className="w-4 h-4" />
+        <motion.div whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}>
+          <Link href="/cikupa/admin/keuangan" className="block group">
+            <div className="glass-premium stat-card-glow p-4 sm:p-5 h-full flex flex-col justify-between">
+              <div>
+                <div className="h-0.5 w-8 rounded-full mb-3 bg-purple-500" />
+                <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight tabular-nums">
+                  Rp {totalRevenue.toLocaleString('id-ID')}
+                </div>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">
+                  Kas Masuk Bulan Ini
+                </p>
               </div>
+              <p className="text-[11px] text-purple-600 dark:text-purple-400 mt-2 font-medium flex items-center gap-1">
+                Buku Kas DLBC <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+              </p>
             </div>
-            <div className="text-xl font-black text-slate-900 dark:text-white">
-              Rp {totalRevenue.toLocaleString('id-ID')}
-            </div>
-            <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 font-semibold flex items-center gap-1">
-              Buku Kas DLBC <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-            </p>
-          </div>
-        </Link>
+          </Link>
+        </motion.div>
       </div>
 
       {/* Revenue Chart Section */}
-      <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+      <div className="glass-premium p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2">
           <div>
             <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -384,7 +388,7 @@ export default function CikupaAdminPage() {
               Tren Pendapatan DLBC (6 Bulan Terakhir)
             </h2>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-              Pertumbuhan pemasukan match & membership cabang Cikupa
+              Pertumbuhan pemasukan match (kok & attendance fee) cabang Cikupa
             </p>
           </div>
 
@@ -447,7 +451,7 @@ export default function CikupaAdminPage() {
       {/* Grid: Live Activity Feed + Top Performers + Most Active */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Live Activity Feed */}
-        <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm lg:col-span-2">
+        <div className="glass-premium p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-500 dark:text-emerald-400 animate-pulse" />
@@ -492,7 +496,7 @@ export default function CikupaAdminPage() {
         {/* Top Performers & Most Active Players */}
         <div className="space-y-5">
           {/* Top Performers */}
-          <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+          <div className="glass-premium p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400" />
@@ -524,7 +528,7 @@ export default function CikupaAdminPage() {
           </div>
 
           {/* Most Active */}
-          <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+          <div className="glass-premium p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Award className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
@@ -549,7 +553,7 @@ export default function CikupaAdminPage() {
       </div>
 
       {/* Quick Action Navigation Grid */}
-      <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm">
+      <div className="glass-premium p-5">
         <h3 className="text-sm font-black text-slate-900 dark:text-white mb-3 flex items-center gap-2">
           <Zap className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           Aksi Cepat Admin DLBC
@@ -558,7 +562,7 @@ export default function CikupaAdminPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Link
             href="/cikupa/admin/pembayaran"
-            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-slate-200/60 dark:border-white/[0.06] hover:border-emerald-500/40 transition-all flex flex-col items-center text-center gap-2 group"
           >
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <CreditCard className="w-5 h-5" />
@@ -568,7 +572,7 @@ export default function CikupaAdminPage() {
 
           <Link
             href="/cikupa/admin/members"
-            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-slate-200/60 dark:border-white/[0.06] hover:border-emerald-500/40 transition-all flex flex-col items-center text-center gap-2 group"
           >
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <Users className="w-5 h-5" />
@@ -578,7 +582,7 @@ export default function CikupaAdminPage() {
 
           <Link
             href="/cikupa/admin/team-optimizer"
-            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-slate-200/60 dark:border-white/[0.06] hover:border-emerald-500/40 transition-all flex flex-col items-center text-center gap-2 group"
           >
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <Sparkles className="w-5 h-5" />
@@ -588,7 +592,7 @@ export default function CikupaAdminPage() {
 
           <Link
             href="/cikupa/admin/member-statistik"
-            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-slate-200/60 dark:border-white/[0.06] hover:border-emerald-500/40 transition-all flex flex-col items-center text-center gap-2 group"
           >
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <Trophy className="w-5 h-5" />
@@ -598,7 +602,7 @@ export default function CikupaAdminPage() {
 
           <Link
             href="/cikupa/admin/analitik"
-            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-slate-200/60 dark:border-white/[0.06] hover:border-emerald-500/40 transition-all flex flex-col items-center text-center gap-2 group"
           >
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <BarChart3 className="w-5 h-5" />
@@ -608,7 +612,7 @@ export default function CikupaAdminPage() {
 
           <Link
             href="/cikupa/admin/keuangan"
-            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-slate-200/60 dark:border-white/[0.06] hover:border-emerald-500/40 transition-all flex flex-col items-center text-center gap-2 group"
           >
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <TrendingUp className="w-5 h-5" />
@@ -618,7 +622,7 @@ export default function CikupaAdminPage() {
 
           <button
             onClick={() => setShowPrintModal(true)}
-            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-slate-200/60 dark:border-white/[0.06] hover:border-emerald-500/40 transition-all flex flex-col items-center text-center gap-2 group"
           >
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <Printer className="w-5 h-5" />
@@ -628,7 +632,7 @@ export default function CikupaAdminPage() {
 
           <button
             onClick={() => setShowQrisModal(true)}
-            className="p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 transition-all flex flex-col items-center text-center gap-2 group"
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-slate-200/60 dark:border-white/[0.06] hover:border-emerald-500/40 transition-all flex flex-col items-center text-center gap-2 group"
           >
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
               <QrCode className="w-5 h-5" />
@@ -712,6 +716,7 @@ export default function CikupaAdminPage() {
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}
       />
+      </div>{/* end relative z-10 */}
     </div>
   );
 }

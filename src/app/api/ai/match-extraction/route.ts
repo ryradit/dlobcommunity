@@ -9,8 +9,8 @@ export async function POST(request: NextRequest) {
     if (!apiKey || apiKey === 'your_gemini_api_key_here') {
       return NextResponse.json(
         { 
-          error: 'Gemini API key not configured',
-          details: 'Please add GEMINI_API_KEY to your .env.local file. Get your free API key from: https://aistudio.google.com/app/apikey'
+          error: 'DLOB AI Engine key not configured',
+          details: 'Please ensure AI engine credentials are set in environment variables.'
         },
         { status: 500 }
       );

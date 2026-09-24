@@ -122,7 +122,7 @@ export default function SystemHealthMonitor() {
               )}
             </h2>
             <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
-              Diagnostik real-time Gemini, Supabase, Google Drive Quota, Email, dan Bot WhatsApp
+              Diagnostik real-time DLOB AI Engine, Supabase, Google Drive Quota, Email, dan Bot WhatsApp
             </p>
           </div>
         </div>
@@ -168,15 +168,15 @@ export default function SystemHealthMonitor() {
         <div className="animate-in fade-in duration-200">
           {/* Grid of 5 services */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-5">
-        {/* Gemini AI Card */}
+        {/* DLOB AI Engine Card */}
         <div className="bg-gray-50 dark:bg-zinc-800/40 border border-gray-200/70 dark:border-white/5 rounded-xl p-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
                   <Cpu className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-bold text-gray-900 dark:text-white">Google Gemini</span>
+                <span className="text-xs font-bold text-gray-900 dark:text-white">DLOB AI Engine</span>
               </div>
               {getStatusBadge(healthData?.services?.gemini?.status)}
             </div>
@@ -185,9 +185,9 @@ export default function SystemHealthMonitor() {
             </p>
           </div>
           <div className="mt-3 pt-2.5 border-t border-gray-200/50 dark:border-white/5 flex items-center justify-between text-[11px] text-gray-500 dark:text-zinc-500">
-            <span>LLM Engine</span>
+            <span>AI Intelligence</span>
             {healthData?.services?.gemini?.latencyMs !== undefined && (
-              <span className="font-mono text-blue-500 font-semibold">
+              <span className="font-mono text-emerald-500 font-semibold">
                 {healthData.services.gemini.latencyMs}ms
               </span>
             )}
@@ -296,7 +296,7 @@ export default function SystemHealthMonitor() {
         <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>
-            <strong>Catatan Sistem:</strong> Salah satu layanan mengalami degradasi respons atau limit kuota Google Drive/Gemini. Riwayat insiden telah dicatat di Supabase secara otomatis.
+            <strong>Catatan Sistem:</strong> Salah satu layanan mengalami degradasi respons atau limit kuota Google Drive / DLOB AI. Riwayat insiden telah dicatat di Supabase secara otomatis.
           </span>
         </div>
       )}

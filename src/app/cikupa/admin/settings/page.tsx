@@ -53,8 +53,8 @@ export default function CikupaAdminSettingsPage() {
   const [phone, setPhone] = useState(user?.user_metadata?.phone || '');
   const [isProfileLoading, setIsProfileLoading] = useState(false);
 
-  // Pricing states for DLBC Cikupa
-  const [shuttlecockFee, setShuttlecockFee] = useState<number>(2500);
+  // Pricing states for DLBC Cikupa (defaults to 3000 matching database)
+  const [shuttlecockFee, setShuttlecockFee] = useState<number>(3000);
   const [attendanceFee, setAttendanceFee] = useState<number>(12000);
   const [pricingSaving, setPricingSaving] = useState(false);
 
@@ -87,8 +87,24 @@ export default function CikupaAdminSettingsPage() {
 
       const shuttlecockSetting = settings.find(s => s.key === `shuttlecock_fee_${BRANCH_ID}`);
       const attendanceSetting = settings.find(s => s.key === `attendance_fee_${BRANCH_ID}`);
-      if (shuttlecockSetting?.value) setShuttlecockFee(parseInt(shuttlecockSetting.value, 10) || 2500);
-      if (attendanceSetting?.value) setAttendanceFee(parseInt(attendanceSetting.value, 10) || 12000);
+      if (shuttlecockSetting?.value) {
+        const parsed = parseInt(shuttlecockSetting.value, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          setShuttlecockFee(parsed);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(`shuttlecock_fee_${BRANCH_ID}`, String(parsed));
+          }
+        }
+      }
+      if (attendanceSetting?.value) {
+        const parsed = parseInt(attendanceSetting.value, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          setAttendanceFee(parsed);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(`attendance_fee_${BRANCH_ID}`, String(parsed));
+          }
+        }
+      }
 
       if (bank?.value) {
         try {
@@ -280,6 +296,11 @@ export default function CikupaAdminSettingsPage() {
         }),
       ]);
 
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`shuttlecock_fee_${BRANCH_ID}`, String(shuttlecockFee));
+        localStorage.setItem(`attendance_fee_${BRANCH_ID}`, String(attendanceFee));
+      }
+
       setMessage({ type: 'success', text: 'Tarif pertandingan DLBC Cikupa berhasil disimpan!' });
       setTimeout(() => setMessage(null), 3500);
     } catch (err: any) {
@@ -307,17 +328,19 @@ export default function CikupaAdminSettingsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen text-slate-900 dark:text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 space-y-6 w-full">
+      {/* Header Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-premium p-5 rounded-2xl shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Shield className="w-6 h-6" style={{ color: ACCENT }} />
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Pengaturan Admin DLBC</h1>
-            <BranchBadge size="sm" />
+            <Shield className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              Pengaturan Admin DLBC
+            </h1>
+            <BranchBadge branchId={BRANCH_ID} size="sm" />
           </div>
-          <p className="text-xs text-gray-500 dark:text-zinc-400">
-            Kelola profil admin cabang Cikupa, rekening penerimaan dana khusus DLBC, dan notifikasi
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
+            Kelola profil admin cabang Cikupa, rekening penerimaan dana khusus DLBC, dan tarif operasional pertandingan
           </p>
         </div>
       </div>
@@ -334,7 +357,7 @@ export default function CikupaAdminSettingsPage() {
       )}
 
       {/* Profile Section */}
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-white/10 p-6">
+      <div className="glass-premium rounded-2xl p-6 shadow-sm">
         <h2 className="text-base font-black text-gray-900 dark:text-white mb-4">Profil Admin</h2>
         
         {/* Avatar */}
@@ -406,7 +429,7 @@ export default function CikupaAdminSettingsPage() {
       </div>
 
       {/* Bank & Payment Accounts for DLBC (Completely Isolated from DLOB Pusat) */}
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-white/10 p-6">
+      <div className="glass-premium rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2">
@@ -534,7 +557,7 @@ export default function CikupaAdminSettingsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {(bankInfo?.banks || []).filter(b => b.number && b.number !== '—').length === 0 ? (
                     <p className="text-xs text-gray-400 py-2">Belum ada rekening bank dikonfigurasi</p>
                   ) : (
@@ -610,7 +633,7 @@ export default function CikupaAdminSettingsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {(bankInfo?.ewallets || []).filter(e => e.number && e.number !== '—').length === 0 ? (
                     <p className="text-xs text-gray-400 py-2">Belum ada e-wallet dikonfigurasi</p>
                   ) : (
@@ -715,7 +738,7 @@ export default function CikupaAdminSettingsPage() {
       </div>
 
       {/* ── PRICING & TARIFF SETTINGS FOR DLBC CIKUPA ── */}
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-white/10 p-6">
+      <div className="glass-premium rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
@@ -807,7 +830,7 @@ export default function CikupaAdminSettingsPage() {
       </div>
 
       {/* Change Password */}
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-white/10 p-6">
+      <div className="glass-premium rounded-2xl p-6 shadow-sm">
         <h2 className="text-base font-black text-gray-900 dark:text-white mb-4">Ganti Kata Sandi</h2>
         <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-md">
           <div>

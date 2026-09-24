@@ -11,10 +11,9 @@ import {
   Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, 
   CheckSquare, Square, Sparkles, Send, Zap, HelpCircle, ChevronLeft, ChevronRight,
   Printer, ZoomIn, ZoomOut, RotateCw, RefreshCw, RotateCcw, Download, UserPlus,
-  Clock, CheckCircle2, XCircle
+  Clock, CheckCircle2, XCircle, UserCheck
 } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
-import { getSaturdaysInMonth } from '@/lib/weeksCalculation';
 import BranchBadge from '@/components/BranchBadge';
 import DlbcSessionSheetPrintModal from '@/components/DlbcSessionSheetPrintModal';
 import { getBranchPricing, DEFAULT_DLBC_PRICING, BranchPricing } from '@/lib/pricingSettings';
@@ -42,27 +41,11 @@ interface MatchMember {
   member_name: string;
   amount_due: number;
   attendance_fee: number;
-  has_membership: boolean;
   total_amount: number;
   payment_status: 'pending' | 'paid' | 'cancelled' | 'revision' | 'rejected';
   paid_at: string | null;
   payment_proof: string | null;
   additional_amount?: number;
-  rejection_reason?: string | null;
-  branch_id?: string;
-}
-
-interface Membership {
-  id: string;
-  member_name: string;
-  month: number;
-  year: number;
-  weeks_in_month: number;
-  amount: number;
-  payment_status: 'pending' | 'paid' | 'cancelled' | 'rejected' | 'revision';
-  paid_at: string | null;
-  payment_proof: string | null;
-  created_at: string;
   rejection_reason?: string | null;
   branch_id?: string;
 }
@@ -73,8 +56,6 @@ export default function CikupaAdminPembayaranPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchMembers, setMatchMembers] = useState<Record<string, MatchMember[]>>({});
-  const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [membershipMap, setMembershipMap] = useState<Record<string, Membership>>({});
   const [allMembers, setAllMembers] = useState<Array<{ id: string; name: string }>>([]);
   const [newMemberInputs, setNewMemberInputs] = useState<Record<string, string>>({});
   const [creatingMember, setCreatingMember] = useState<Record<string, boolean>>({});
@@ -83,9 +64,7 @@ export default function CikupaAdminPembayaranPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'paid' | 'proof'>('all');
   const [expandedMatches, setExpandedMatches] = useState<Record<string, boolean>>({});
   
-  const [activeTab, setActiveTab] = useState<'matches' | 'memberships'>('matches');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showMembershipModal, setShowMembershipModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Match creation form
@@ -99,20 +78,11 @@ export default function CikupaAdminPembayaranPage() {
   });
   const [creatingMatch, setCreatingMatch] = useState(false);
   const [paymentExemptMembers, setPaymentExemptMembers] = useState<Set<string>>(new Set());
-  const [createMatchMembershipPayers, setCreateMatchMembershipPayers] = useState<Set<string>>(new Set());
   const [branchPricing, setBranchPricing] = useState<BranchPricing>(DEFAULT_DLBC_PRICING);
-
-  // Membership creation form
-  const [newMembership, setNewMembership] = useState({
-    member_name: '',
-    weeks_in_month: 4,
-  });
-  const [creatingMembership, setCreatingMembership] = useState(false);
 
   // Proof Modal state with Zoom & Pan
   const [showProofModal, setShowProofModal] = useState(false);
   const [selectedProof, setSelectedProof] = useState<{
-    type: 'match' | 'membership';
     id: string;
     matchId?: string;
     memberName: string;
@@ -131,24 +101,10 @@ export default function CikupaAdminPembayaranPage() {
   const [customRejectReason, setCustomRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
 
-  // Rollback modal state
-  const [showRollbackModal, setShowRollbackModal] = useState(false);
-  const [membershipToRollback, setMembershipToRollback] = useState<Membership | null>(null);
-  const [rollbackReason, setRollbackReason] = useState('');
-  const [rollingBack, setRollingBack] = useState(false);
-
   // Bulk Selection state
-  const [selectedPayments, setSelectedPayments] = useState<Array<{ id: string; type: 'match' | 'membership'; memberName: string; amount: number; matchId?: string }>>([]);
+  const [selectedPayments, setSelectedPayments] = useState<Array<{ id: string; memberName: string; amount: number; matchId?: string }>>([]);
   const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
   const [bulkConfirming, setBulkConfirming] = useState(false);
-
-  // Auto-detect Saturdays for membership modal
-  useEffect(() => {
-    if (showMembershipModal) {
-      const detected = getSaturdaysInMonth(selectedMonth);
-      setNewMembership(prev => ({ ...prev, weeks_in_month: detected }));
-    }
-  }, [showMembershipModal, selectedMonth]);
 
   // Load Data
   const loadData = useCallback(async () => {
@@ -159,7 +115,7 @@ export default function CikupaAdminPembayaranPage() {
       const monthStart = new Date(targetYear, targetMonth - 1, 1);
       const monthEnd = new Date(targetYear, targetMonth, 0, 23, 59, 59);
 
-      const [matchesRes, membershipsRes, profilesRes, pricingRes] = await Promise.all([
+      const [matchesRes, profilesRes, pricingRes] = await Promise.all([
         supabase
           .from('matches')
           .select('*')
@@ -167,15 +123,6 @@ export default function CikupaAdminPembayaranPage() {
           .gte('match_date', monthStart.toISOString())
           .lte('match_date', monthEnd.toISOString())
           .order('match_date', { ascending: false }),
-
-        supabase
-          .from('memberships')
-          .select('*')
-          .eq('branch_id', BRANCH_ID)
-          .eq('month', targetMonth)
-          .eq('year', targetYear)
-          .neq('payment_status', 'cancelled')
-          .order('created_at', { ascending: false }),
 
         supabase
           .from('profiles')
@@ -212,16 +159,6 @@ export default function CikupaAdminPembayaranPage() {
       } else {
         setMatchMembers({});
       }
-
-      if (membershipsRes.error) console.error('Error fetching memberships:', membershipsRes.error);
-      const fetchedMemberships: Membership[] = membershipsRes.data || [];
-      setMemberships(fetchedMemberships);
-
-      const map: Record<string, Membership> = {};
-      fetchedMemberships.forEach(m => {
-        map[m.member_name.toLowerCase()] = m;
-      });
-      setMembershipMap(map);
 
       if (!profilesRes.error && profilesRes.data) {
         setAllMembers(
@@ -291,11 +228,6 @@ export default function CikupaAdminPembayaranPage() {
     try {
       setCreatingMatch(true);
       const matchDateObj = new Date(newMatch.match_date);
-      const matchMonth = matchDateObj.getMonth() + 1;
-      const matchYear = matchDateObj.getFullYear();
-
-      // DLBC currently does not have monthly membership packages. All non-exempt players pay attendance fee Rp 12.000 (1x/day).
-      const monthMembershipSet = new Set<string>();
 
       // Insert match
       const { data: match, error: matchError } = await supabase
@@ -344,9 +276,8 @@ export default function CikupaAdminPembayaranPage() {
 
       const membersData = players.map(name => {
         const isExempt = paymentExemptMembers.has(name.toLowerCase());
-        const hasMember = monthMembershipSet.has(name.toLowerCase()) || createMatchMembershipPayers.has(name);
         const alreadyChargedToday = sameDayFeeCharged.has(name.toLowerCase());
-        const shouldChargeAttendance = !hasMember && !alreadyChargedToday && !isExempt;
+        const shouldChargeAttendance = !alreadyChargedToday && !isExempt;
 
         if (shouldChargeAttendance) {
           sameDayFeeCharged.add(name.toLowerCase());
@@ -357,7 +288,7 @@ export default function CikupaAdminPembayaranPage() {
           member_name: name,
           amount_due: isExempt ? 0 : costPerMember,
           attendance_fee: shouldChargeAttendance ? currentPricing.attendanceFee : 0,
-          has_membership: hasMember || isExempt,
+          has_membership: false,
           payment_status: isExempt ? 'paid' : 'pending',
           paid_at: isExempt ? new Date().toISOString() : null,
           branch_id: BRANCH_ID,
@@ -379,7 +310,6 @@ export default function CikupaAdminPembayaranPage() {
         member4: '',
         match_date: new Date().toISOString().split('T')[0],
       });
-      setCreateMatchMembershipPayers(new Set());
       await loadData();
     } catch (e: any) {
       console.error('Error creating match:', e);
@@ -389,68 +319,17 @@ export default function CikupaAdminPembayaranPage() {
     }
   }
 
-  // Create membership handler
-  async function handleCreateMembership(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newMembership.member_name.trim()) {
-      alert('Pilih member terlebih dahulu.');
-      return;
-    }
-
-    try {
-      setCreatingMembership(true);
-      const targetMonth = selectedMonth.getMonth() + 1;
-      const targetYear = selectedMonth.getFullYear();
-      const feePerWeek = 25000;
-      const totalAmount = newMembership.weeks_in_month * feePerWeek;
-
-      const { error } = await supabase
-        .from('memberships')
-        .insert({
-          member_name: newMembership.member_name.trim(),
-          month: targetMonth,
-          year: targetYear,
-          weeks_in_month: newMembership.weeks_in_month,
-          amount: totalAmount,
-          payment_status: 'pending',
-          branch_id: BRANCH_ID,
-        });
-
-      if (error) throw error;
-
-      setShowMembershipModal(false);
-      setNewMembership({ member_name: '', weeks_in_month: 4 });
-      await loadData();
-    } catch (e: any) {
-      console.error('Error creating membership:', e);
-      alert(e?.message || 'Gagal menambahkan membership');
-    } finally {
-      setCreatingMembership(false);
-    }
-  }
-
   // Verify Single Payment
-  async function handleVerifyPayment(type: 'match' | 'membership', id: string) {
+  async function handleVerifyPayment(id: string) {
     try {
-      if (type === 'match') {
-        const { error } = await supabase
-          .from('match_members')
-          .update({
-            payment_status: 'paid',
-            paid_at: new Date().toISOString(),
-          })
-          .eq('id', id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('memberships')
-          .update({
-            payment_status: 'paid',
-            paid_at: new Date().toISOString(),
-          })
-          .eq('id', id);
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from('match_members')
+        .update({
+          payment_status: 'paid',
+          paid_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+      if (error) throw error;
 
       setShowProofModal(false);
       setSelectedProof(null);
@@ -468,25 +347,14 @@ export default function CikupaAdminPembayaranPage() {
 
     try {
       setRejecting(true);
-      if (selectedProof.type === 'match') {
-        const { error } = await supabase
-          .from('match_members')
-          .update({
-            payment_status: 'rejected',
-            rejection_reason: finalReason,
-          })
-          .eq('id', selectedProof.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('memberships')
-          .update({
-            payment_status: 'rejected',
-            rejection_reason: finalReason,
-          })
-          .eq('id', selectedProof.id);
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from('match_members')
+        .update({
+          payment_status: 'rejected',
+          rejection_reason: finalReason,
+        })
+        .eq('id', selectedProof.id);
+      if (error) throw error;
 
       setShowRejectModal(false);
       setShowProofModal(false);
@@ -498,33 +366,6 @@ export default function CikupaAdminPembayaranPage() {
       alert('Gagal menolak pembayaran');
     } finally {
       setRejecting(false);
-    }
-  }
-
-  // Rollback Membership
-  async function handleConfirmRollback() {
-    if (!membershipToRollback) return;
-    try {
-      setRollingBack(true);
-      const res = await fetch('/api/admin/membership-rollback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          membershipId: membershipToRollback.id,
-          reason: rollbackReason.trim() || 'Rollback verifikasi oleh admin DLBC',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal rollback');
-
-      setShowRollbackModal(false);
-      setMembershipToRollback(null);
-      setRollbackReason('');
-      await loadData();
-    } catch (e: any) {
-      alert(e?.message || 'Gagal melakukan rollback');
-    } finally {
-      setRollingBack(false);
     }
   }
 
@@ -546,20 +387,13 @@ export default function CikupaAdminPembayaranPage() {
     if (selectedPayments.length === 0) return;
     try {
       setBulkConfirming(true);
-      const matchIds = selectedPayments.filter(p => p.type === 'match').map(p => p.id);
-      const membershipIds = selectedPayments.filter(p => p.type === 'membership').map(p => p.id);
+      const matchIds = selectedPayments.map(p => p.id);
 
       if (matchIds.length > 0) {
         await supabase
           .from('match_members')
           .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
           .in('id', matchIds);
-      }
-      if (membershipIds.length > 0) {
-        await supabase
-          .from('memberships')
-          .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
-          .in('id', membershipIds);
       }
 
       setShowBulkConfirmModal(false);
@@ -594,30 +428,16 @@ export default function CikupaAdminPembayaranPage() {
     return true;
   });
 
-  const filteredMemberships = memberships.filter(m => {
-    const matchesSearch = m.member_name.toLowerCase().includes(searchTerm.toLowerCase());
-    if (!matchesSearch) return false;
-
-    if (filterStatus === 'pending') return m.payment_status === 'pending';
-    if (filterStatus === 'paid') return m.payment_status === 'paid';
-    if (filterStatus === 'proof') return !!m.payment_proof;
-    return true;
-  });
-
   // Calculate Stat Cards
-  const totalMatchIncome = allMatchMemberList
+  const totalRevenue = allMatchMemberList
     .filter(mm => mm.payment_status === 'paid')
     .reduce((sum, mm) => sum + (mm.total_amount || (mm.amount_due + mm.attendance_fee) || 0), 0);
 
-  const totalMembershipIncome = memberships
-    .filter(m => m.payment_status === 'paid')
-    .reduce((sum, m) => sum + (m.amount || 0), 0);
+  const totalAttendancePaid = allMatchMemberList
+    .filter(mm => mm.payment_status === 'paid')
+    .reduce((sum, mm) => sum + (mm.attendance_fee || 0), 0);
 
-  const totalRevenue = totalMatchIncome + totalMembershipIncome;
-
-  const pendingMatchPaymentsCount = allMatchMemberList.filter(mm => mm.payment_status === 'pending').length;
-  const pendingMembershipPaymentsCount = memberships.filter(m => m.payment_status === 'pending').length;
-  const totalPendingCount = pendingMatchPaymentsCount + pendingMembershipPaymentsCount;
+  const totalPendingCount = allMatchMemberList.filter(mm => mm.payment_status === 'pending').length;
 
   // Proof Zoom & Pan Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -646,7 +466,7 @@ export default function CikupaAdminPembayaranPage() {
   return (
     <div className="space-y-6 pb-20">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-gray-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-premium p-5 rounded-2xl shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -656,7 +476,7 @@ export default function CikupaAdminPembayaranPage() {
             <BranchBadge branchId={BRANCH_ID} />
           </div>
           <p className="text-sm text-slate-500 dark:text-zinc-400">
-            Pusat validasi bukti bayar pertandingan & membership bulanan Cikupa
+            Pusat validasi bukti bayar pertandingan & biaya kehadiran Cikupa
           </p>
         </div>
 
@@ -698,8 +518,8 @@ export default function CikupaAdminPembayaranPage() {
 
       {/* 4 Glassmorphism Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 rounded-2xl p-4.5 relative overflow-hidden shadow-sm">
-          <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
+        <div className="glass-premium stat-card-glow rounded-2xl p-4.5 relative overflow-hidden">
+          <div className="h-0.5 w-8 rounded-full bg-emerald-500 mb-3" />
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total Pendapatan</span>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -710,12 +530,12 @@ export default function CikupaAdminPembayaranPage() {
             Rp {totalRevenue.toLocaleString('id-ID')}
           </div>
           <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">
-            Pertandingan + Membership
+            Biaya Kock + Kehadiran
           </p>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 rounded-2xl p-4.5 relative overflow-hidden shadow-sm">
-          <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
+        <div className="glass-premium stat-card-glow rounded-2xl p-4.5 relative overflow-hidden">
+          <div className="h-0.5 w-8 rounded-full bg-amber-500 mb-3" />
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Menunggu Konfirmasi</span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
@@ -726,12 +546,12 @@ export default function CikupaAdminPembayaranPage() {
             {totalPendingCount} Transaksi
           </div>
           <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">
-            {pendingMatchPaymentsCount} match · {pendingMembershipPaymentsCount} member
+            {totalPendingCount} slot match menunggu konfirmasi
           </p>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 rounded-2xl p-4.5 relative overflow-hidden shadow-sm">
-          <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-blue-500/10 rounded-full blur-xl pointer-events-none" />
+        <div className="glass-premium stat-card-glow rounded-2xl p-4.5 relative overflow-hidden">
+          <div className="h-0.5 w-8 rounded-full bg-blue-500 mb-3" />
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Pertandingan Selesai</span>
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
@@ -746,52 +566,33 @@ export default function CikupaAdminPembayaranPage() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 rounded-2xl p-4.5 relative overflow-hidden shadow-sm">
-          <div className="absolute -right-2 -bottom-2 w-20 h-20 bg-purple-500/10 rounded-full blur-xl pointer-events-none" />
+        <div className="glass-premium stat-card-glow rounded-2xl p-4.5 relative overflow-hidden">
+          <div className="h-0.5 w-8 rounded-full bg-purple-500 mb-3" />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Membership Bulan Ini</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total Biaya Hadir</span>
             <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl font-black text-slate-900 dark:text-white">
-            {memberships.filter(m => m.payment_status === 'paid').length} Lunas
+            Rp {totalAttendancePaid.toLocaleString('id-ID')}
           </div>
           <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">
-            Dari {memberships.length} terdaftar
+            Tarif Rp {(branchPricing.attendanceFee || 12000).toLocaleString('id-ID')} / kehadiran
           </p>
         </div>
       </div>
 
       {/* Action Toolbar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-        {/* Dual Tab Switcher */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-zinc-900/90 border border-gray-200 dark:border-white/10 rounded-xl">
-          <button
-            onClick={() => setActiveTab('matches')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'matches'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5'
-            }`}
-          >
-            <Award className="w-3.5 h-3.5" />
-            Pertandingan ({matches.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('memberships')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'memberships'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            Membership ({memberships.length})
-          </button>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-zinc-800/80 border border-gray-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-700 dark:text-zinc-200">
+            <Award className="w-4 h-4 text-emerald-500" />
+            Daftar Pertandingan ({matches.length})
+          </div>
         </div>
 
-        {/* Buttons: Add Match, Add Membership, Print Sheet, Image Extraction */}
+        {/* Buttons: Add Match, Print Sheet, Image Extraction */}
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/cikupa/admin/match-image-extraction"
@@ -809,8 +610,6 @@ export default function CikupaAdminPembayaranPage() {
             <Plus className="w-3.5 h-3.5" />
             Input Match
           </button>
-
-
 
           <button
             onClick={() => setShowPrintModal(true)}
@@ -830,7 +629,7 @@ export default function CikupaAdminPembayaranPage() {
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder={activeTab === 'matches' ? 'Cari no match atau nama pemain...' : 'Cari nama member membership...'}
+            placeholder="Cari no match atau nama pemain..."
             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
@@ -892,8 +691,7 @@ export default function CikupaAdminPembayaranPage() {
           <MatchCardSkeleton />
           <MatchCardSkeleton />
         </div>
-      ) : activeTab === 'matches' ? (
-        /* MATCHES TAB */
+      ) : (
         <div className="space-y-3">
           {filteredMatches.length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-zinc-900/40 border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm">
@@ -950,7 +748,7 @@ export default function CikupaAdminPembayaranPage() {
 
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-zinc-300 mr-2">
-                        Total: Rp {(match.total_cost || (match.shuttlecock_count * 2500)).toLocaleString('id-ID')}
+                        Total: Rp {(match.total_cost || (match.shuttlecock_count * (branchPricing?.costPerMemberPerCock || 3000) * 4)).toLocaleString('id-ID')}
                       </span>
                       <button
                         onClick={() => handleDeleteMatch(match.id)}
@@ -986,7 +784,6 @@ export default function CikupaAdminPembayaranPage() {
                                     if (e.target.checked) {
                                       setSelectedPayments(prev => [...prev, {
                                         id: member.id,
-                                        type: 'match',
                                         memberName: member.member_name,
                                         amount: totalFee,
                                         matchId: match.id,
@@ -1004,11 +801,6 @@ export default function CikupaAdminPembayaranPage() {
                                   <span className="text-xs font-bold text-white">
                                     {member.member_name}
                                   </span>
-                                  {member.has_membership && (
-                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-semibold">
-                                      Member
-                                    </span>
-                                  )}
                                   {paymentExemptMembers.has(member.member_name.toLowerCase()) && (
                                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-semibold">
                                       VIP
@@ -1032,7 +824,6 @@ export default function CikupaAdminPembayaranPage() {
                                 <button
                                   onClick={() => {
                                     setSelectedProof({
-                                      type: 'match',
                                       id: member.id,
                                       matchId: match.id,
                                       memberName: member.member_name,
@@ -1067,7 +858,7 @@ export default function CikupaAdminPembayaranPage() {
                                 </span>
                               ) : (
                                 <button
-                                  onClick={() => handleVerifyPayment('match', member.id)}
+                                  onClick={() => handleVerifyPayment(member.id)}
                                   className="flex items-center gap-1 px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-black text-xs font-bold rounded-lg border border-emerald-500/30 transition-all"
                                 >
                                   <Check className="w-3 h-3" /> Verifikasi
@@ -1082,123 +873,6 @@ export default function CikupaAdminPembayaranPage() {
                 </div>
               );
             })
-          )}
-        </div>
-      ) : (
-        /* MEMBERSHIPS TAB */
-        <div className="space-y-3">
-          {filteredMemberships.length === 0 ? (
-            <div className="text-center py-16 bg-zinc-900/40 border border-white/10 rounded-2xl">
-              <Users className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-zinc-300">Belum ada membership di bulan ini</p>
-              <p className="text-xs text-zinc-500 mt-1">Klik &quot;Input Membership&quot; untuk menambahkan member bulanan DLBC.</p>
-            </div>
-          ) : (
-            <div className="bg-zinc-900/70 border border-white/10 rounded-2xl overflow-hidden divide-y divide-white/5">
-              {filteredMemberships.map(membership => {
-                const isPaid = membership.payment_status === 'paid';
-                const isRejected = membership.payment_status === 'rejected';
-
-                return (
-                  <div
-                    key={membership.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3 hover:bg-white/[0.02] transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {!isPaid && (
-                        <input
-                          type="checkbox"
-                          checked={selectedPayments.some(p => p.id === membership.id)}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setSelectedPayments(prev => [...prev, {
-                                id: membership.id,
-                                type: 'membership',
-                                memberName: membership.member_name,
-                                amount: membership.amount,
-                              }]);
-                            } else {
-                              setSelectedPayments(prev => prev.filter(p => p.id !== membership.id));
-                            }
-                          }}
-                          className="w-4 h-4 rounded bg-zinc-800 border-white/20 text-emerald-500 focus:ring-emerald-500"
-                        />
-                      )}
-
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-white">
-                            {membership.member_name}
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-semibold">
-                            {membership.weeks_in_month} Pertemuan (Sabtu)
-                          </span>
-                        </div>
-                        <p className="text-xs text-zinc-400 mt-0.5">
-                          Biaya: <span className="font-bold text-emerald-400">Rp {(membership.amount || 0).toLocaleString('id-ID')}</span> · {monthNames[membership.month - 1]} {membership.year}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
-                      {/* Proof Button */}
-                      {membership.payment_proof ? (
-                        <button
-                          onClick={() => {
-                            setSelectedProof({
-                              type: 'membership',
-                              id: membership.id,
-                              memberName: membership.member_name,
-                              amount: membership.amount,
-                              proofUrl: membership.payment_proof,
-                            });
-                            setShowProofModal(true);
-                          }}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
-                        >
-                          <Eye className="w-3 h-3" />
-                          Bukti Bayar
-                        </button>
-                      ) : (
-                        <span className="text-[10px] text-zinc-500 italic">
-                          Belum upload bukti
-                        </span>
-                      )}
-
-                      {/* Status & Rollback */}
-                      {isPaid ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-emerald-400 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Lunas
-                          </span>
-                          <button
-                            onClick={() => {
-                              setMembershipToRollback(membership);
-                              setShowRollbackModal(true);
-                            }}
-                            className="p-1.5 rounded-lg text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
-                            title="Rollback Pembayaran"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : isRejected ? (
-                        <span className="text-xs font-bold text-rose-400 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center gap-1">
-                          <X className="w-3 h-3" /> Ditolak
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleVerifyPayment('membership', membership.id)}
-                          className="flex items-center gap-1 px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-black text-xs font-bold rounded-lg border border-emerald-500/30 transition-all"
-                        >
-                          <Check className="w-3 h-3" /> Verifikasi
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           )}
         </div>
       )}
@@ -1329,7 +1003,7 @@ export default function CikupaAdminPembayaranPage() {
                   <span className="font-bold text-emerald-400 text-xs">Rp {(newMatch.shuttlecock_count * branchPricing.costPerMemberPerCock).toLocaleString('id-ID')}</span>
                 </div>
                 <div className="text-[10px] text-zinc-500 pt-1 border-t border-white/5">
-                  *Member bulanan bebas iuran lapangan. Non-member otomatis dikenakan iuran lapangan Rp {branchPricing.attendanceFee.toLocaleString('id-ID')} (1x sehari).
+                  *Biaya kehadiran (lapangan) Rp {branchPricing.attendanceFee.toLocaleString('id-ID')} per pemain dikenakan 1x per hari kehadiran.
                 </div>
               </div>
 
@@ -1355,98 +1029,7 @@ export default function CikupaAdminPembayaranPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: CREATE MEMBERSHIP */}
-      {/* ========================================================================= */}
-      {showMembershipModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-white">Input Membership DLBC</h3>
-                  <p className="text-xs text-zinc-400">
-                    {monthNames[selectedMonth.getMonth()]} {selectedMonth.getFullYear()}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowMembershipModal(false)}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateMembership} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-zinc-300 block mb-1">Pilih Member</label>
-                <select
-                  required
-                  value={newMembership.member_name}
-                  onChange={e => setNewMembership({ ...newMembership, member_name: e.target.value })}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="">-- Pilih Member DLBC --</option>
-                  {allMembers.map(m => (
-                    <option key={m.id} value={m.name}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-zinc-300 block mb-1">
-                  Jumlah Pertemuan Sabtu Bulan Ini
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="6"
-                  required
-                  value={newMembership.weeks_in_month}
-                  onChange={e => setNewMembership({ ...newMembership, weeks_in_month: parseInt(e.target.value) || 4 })}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="bg-zinc-800/60 p-3 rounded-xl border border-white/5 text-[11px] text-zinc-400 space-y-1">
-                <div className="flex justify-between">
-                  <span>Tarif per Pertemuan</span>
-                  <span className="font-bold text-white">Rp 25.000</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Total Tagihan Membership</span>
-                  <span className="font-bold text-emerald-400">
-                    Rp {(newMembership.weeks_in_month * 25000).toLocaleString('id-ID')}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setShowMembershipModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white rounded-xl"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={creatingMembership}
-                  className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-xl transition-colors shadow-lg shadow-emerald-500/20 disabled:opacity-50"
-                >
-                  {creatingMembership ? 'Menyimpan...' : 'Simpan Membership'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 3: PROOF VIEWER WITH ZOOM & PAN */}
+      {/* MODAL 2: PROOF VIEWER WITH ZOOM & PAN */}
       {/* ========================================================================= */}
       {showProofModal && selectedProof && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
@@ -1459,7 +1042,7 @@ export default function CikupaAdminPembayaranPage() {
                   Bukti Pembayaran: {selectedProof.memberName}
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Tagihan: <span className="font-bold text-emerald-400">Rp {selectedProof.amount.toLocaleString('id-ID')}</span> · {selectedProof.type === 'match' ? 'Pertandingan' : 'Membership'}
+                  Tagihan: <span className="font-bold text-emerald-400">Rp {selectedProof.amount.toLocaleString('id-ID')}</span> · Pertandingan
                 </p>
               </div>
               <div className="flex items-center gap-1">
@@ -1552,7 +1135,7 @@ export default function CikupaAdminPembayaranPage() {
                   Tutup
                 </button>
                 <button
-                  onClick={() => handleVerifyPayment(selectedProof.type, selectedProof.id)}
+                  onClick={() => handleVerifyPayment(selectedProof.id)}
                   className="flex items-center gap-1.5 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-xl transition-colors shadow-lg shadow-emerald-500/20"
                 >
                   <Check className="w-3.5 h-3.5" />
@@ -1565,7 +1148,7 @@ export default function CikupaAdminPembayaranPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 4: REJECTION REASON */}
+      {/* MODAL 3: REJECTION REASON */}
       {/* ========================================================================= */}
       {showRejectModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -1619,50 +1202,6 @@ export default function CikupaAdminPembayaranPage() {
                 className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
               >
                 {rejecting ? 'Menolak...' : 'Konfirmasi Tolak'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 5: ROLLBACK MEMBERSHIP */}
-      {/* ========================================================================= */}
-      {showRollbackModal && membershipToRollback && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl p-5 shadow-2xl space-y-4">
-            <h3 className="text-sm font-black text-white flex items-center gap-2">
-              <RotateCcw className="w-4 h-4 text-amber-400" />
-              Rollback Verifikasi Membership
-            </h3>
-            <p className="text-xs text-zinc-400">
-              Yakin ingin membatalkan status lunas untuk <strong className="text-white">{membershipToRollback.member_name}</strong>? Status akan kembali menjadi pending.
-            </p>
-
-            <div>
-              <label className="text-xs font-semibold text-zinc-300 block mb-1">Alasan Rollback</label>
-              <input
-                type="text"
-                placeholder="cth. Salah konfirmasi / komplain transfer batal"
-                value={rollbackReason}
-                onChange={e => setRollbackReason(e.target.value)}
-                className="w-full px-3 py-2 bg-zinc-800 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setShowRollbackModal(false)}
-                className="px-3 py-1.5 text-xs text-zinc-400 hover:text-white"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleConfirmRollback}
-                disabled={rollingBack}
-                className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-black text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
-              >
-                {rollingBack ? 'Proses...' : 'Lakukan Rollback'}
               </button>
             </div>
           </div>

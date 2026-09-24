@@ -37,7 +37,6 @@ interface MatchMember {
   member_name: string;
   amount_due: number;
   attendance_fee: number;
-  has_membership: boolean;
   total_amount: number;
   payment_status: 'pending' | 'paid' | 'cancelled' | 'revision' | 'rejected';
   paid_at: string | null;
@@ -60,21 +59,6 @@ interface MatchMember {
   };
 }
 
-interface Membership {
-  id: string;
-  member_name: string;
-  month: number;
-  year: number;
-  weeks_in_month: number;
-  amount: number;
-  payment_status: 'pending' | 'paid' | 'cancelled' | 'rejected';
-  paid_at: string | null;
-  payment_proof: string | null;
-  rejection_reason?: string | null;
-  rejection_date?: string | null;
-  created_at: string;
-}
-
 type BankAccount = { name: string; number: string };
 type BankInfo = { holderName: string; banks: BankAccount[]; ewallets: BankAccount[] };
 
@@ -86,7 +70,6 @@ const MONTHS = [
 export default function CikupaPembayaranPage() {
   const { user } = useAuth();
   const [allMatches, setAllMatches] = useState<MatchMember[]>([]);
-  const [myMembership, setMyMembership] = useState<Membership | null>(null);
   const [memberName, setMemberName] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -109,7 +92,6 @@ export default function CikupaPembayaranPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<{
     id: string;
-    type: 'match' | 'membership';
     amount: number;
     matchNumber?: number;
     matchDate?: string;
@@ -122,12 +104,12 @@ export default function CikupaPembayaranPage() {
   // Bulk selection & modal
   const [selectedPayments, setSelectedPayments] = useState<Array<{
     id: string;
-    type: 'match' | 'membership';
     amount: number;
     matchNumber?: number;
     label: string;
   }>>([]);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [bulkPaymentMethod, setBulkPaymentMethod] = useState<'bank_transfer' | 'qris'>('bank_transfer');
   const [bulkProofFile, setBulkProofFile] = useState<File | null>(null);
   const [bulkUploading, setBulkUploading] = useState(false);
 
@@ -153,7 +135,7 @@ export default function CikupaPembayaranPage() {
     setTimeout(() => setCopiedAccount(null), 2000);
   };
 
-  // Fetch Member Matches & Membership
+  // Fetch Member Matches
   const loadData = async () => {
     if (!user) return;
     try {
@@ -186,7 +168,6 @@ export default function CikupaPembayaranPage() {
           member_name,
           amount_due,
           attendance_fee,
-          has_membership,
           total_amount,
           payment_status,
           paid_at,
@@ -217,26 +198,6 @@ export default function CikupaPembayaranPage() {
         const parsed = (matchesData as unknown as MatchMember[]) || [];
         setAllMatches(parsed);
       }
-
-      // Fetch Membership for DLBC
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
-
-      const { data: membershipData, error: membershipError } = await supabase
-        .from('memberships')
-        .select('*')
-        .eq('member_name', resolvedName)
-        .eq('month', currentMonth)
-        .eq('year', currentYear)
-        .eq('branch_id', BRANCH_ID)
-        .maybeSingle();
-
-      if (membershipError) {
-        console.error('Error fetching DLBC membership:', membershipError);
-      } else {
-        setMyMembership(membershipData);
-      }
     } catch (err) {
       console.error('Error loading DLBC payment data:', err);
     } finally {
@@ -248,52 +209,34 @@ export default function CikupaPembayaranPage() {
     loadData();
   }, [user]);
 
-  // Statistics
+  // Statistics (DLBC: Shuttlecock fee + Attendance fee)
   const totalPending = useMemo(() => {
-    const matchSum = allMatches
+    return allMatches
       .filter((m) => m.payment_status !== 'paid' && m.payment_status !== 'cancelled')
       .reduce((sum, m) => sum + (m.total_amount || 0), 0);
-    const membershipSum =
-      myMembership && myMembership.payment_status !== 'paid' && myMembership.payment_status !== 'cancelled'
-        ? myMembership.amount
-        : 0;
-    return matchSum + membershipSum;
-  }, [allMatches, myMembership]);
+  }, [allMatches]);
 
   const unpaidCount = useMemo(() => {
-    const matchUnpaid = allMatches.filter(
+    return allMatches.filter(
       (m) => (m.payment_status === 'pending' && !m.payment_proof) || m.payment_status === 'rejected'
     ).length;
-    const membershipUnpaid =
-      myMembership &&
-      ((myMembership.payment_status === 'pending' && !myMembership.payment_proof) ||
-        myMembership.payment_status === 'rejected')
-        ? 1
-        : 0;
-    return matchUnpaid + membershipUnpaid;
-  }, [allMatches, myMembership]);
+  }, [allMatches]);
 
   const revisionCount = useMemo(() => {
     return allMatches.filter((m) => m.payment_status === 'revision').length;
   }, [allMatches]);
 
   const totalUnconfirmed = useMemo(() => {
-    const matchUnconf = allMatches.filter(
+    return allMatches.filter(
       (m) => !!m.payment_proof && (m.payment_status === 'pending' || m.payment_status === 'revision')
     ).length;
-    const membershipUnconf =
-      myMembership?.payment_proof && myMembership.payment_status === 'pending' ? 1 : 0;
-    return matchUnconf + membershipUnconf;
-  }, [allMatches, myMembership]);
+  }, [allMatches]);
 
   const totalPaid = useMemo(() => {
-    const matchPaid = allMatches
+    return allMatches
       .filter((m) => m.payment_status === 'paid')
       .reduce((sum, m) => sum + (m.total_amount || 0), 0);
-    const membershipPaid =
-      myMembership && myMembership.payment_status === 'paid' ? myMembership.amount : 0;
-    return matchPaid + membershipPaid;
-  }, [allMatches, myMembership]);
+  }, [allMatches]);
 
   // Status helper function
   function getPaymentStatus(paymentStatus: string, paymentProof: string | null) {
@@ -327,20 +270,20 @@ export default function CikupaPembayaranPage() {
     return allMatches;
   }, [allMatches, activeTab]);
 
+
   // Bulk Selection Handlers
-  const isPaymentSelected = (id: string, type: 'match' | 'membership') => {
-    return selectedPayments.some((p) => p.id === id && p.type === type);
+  const isPaymentSelected = (id: string) => {
+    return selectedPayments.some((p) => p.id === id);
   };
 
   const togglePaymentSelection = (item: {
     id: string;
-    type: 'match' | 'membership';
     amount: number;
     matchNumber?: number;
     label: string;
   }) => {
-    if (isPaymentSelected(item.id, item.type)) {
-      setSelectedPayments((prev) => prev.filter((p) => !(p.id === item.id && p.type === item.type)));
+    if (isPaymentSelected(item.id)) {
+      setSelectedPayments((prev) => prev.filter((p) => p.id !== item.id));
     } else {
       setSelectedPayments((prev) => [...prev, item]);
     }
@@ -353,7 +296,6 @@ export default function CikupaPembayaranPage() {
   const selectAllUnpaid = () => {
     const unpaids: Array<{
       id: string;
-      type: 'match' | 'membership';
       amount: number;
       matchNumber?: number;
       label: string;
@@ -364,21 +306,11 @@ export default function CikupaPembayaranPage() {
       .forEach((m) => {
         unpaids.push({
           id: m.id,
-          type: 'match',
           amount: m.total_amount,
           matchNumber: m.matches.match_number,
           label: `Match #${m.matches.match_number}`,
         });
       });
-
-    if (myMembership && myMembership.payment_status === 'pending' && !myMembership.payment_proof) {
-      unpaids.push({
-        id: myMembership.id,
-        type: 'membership',
-        amount: myMembership.amount,
-        label: `Membership ${MONTHS[myMembership.month - 1]} ${myMembership.year}`,
-      });
-    }
 
     setSelectedPayments(unpaids);
   };
@@ -386,13 +318,12 @@ export default function CikupaPembayaranPage() {
   // Open single payment modal
   const openPaymentModal = (
     id: string,
-    type: 'match' | 'membership',
     amount: number,
     matchNumber?: number,
     matchDate?: string,
     match?: MatchMember
   ) => {
-    setSelectedPayment({ id, type, amount, matchNumber, matchDate, match });
+    setSelectedPayment({ id, amount, matchNumber, matchDate, match });
     setPaymentMethod('bank_transfer');
     setProofFile(null);
     setShowPaymentModal(true);
@@ -412,23 +343,14 @@ export default function CikupaPembayaranPage() {
     if (paymentMethod === 'cash') {
       try {
         setUploading(true);
-        if (selectedPayment.type === 'match') {
-          await supabase
-            .from('match_members')
-            .update({
-              payment_proof: 'CASH_PAYMENT',
-              payment_status: 'pending',
-            })
-            .eq('id', selectedPayment.id);
-        } else {
-          await supabase
-            .from('memberships')
-            .update({
-              payment_proof: 'CASH_PAYMENT',
-              payment_status: 'pending',
-            })
-            .eq('id', selectedPayment.id);
-        }
+        await supabase
+          .from('match_members')
+          .update({
+            payment_proof: 'CASH_PAYMENT',
+            payment_status: 'pending',
+          })
+          .eq('id', selectedPayment.id);
+
         alert('Permintaan pembayaran cash telah dicatat. Silakan bayar tunai ke koordinator DLBC.');
         closePaymentModal();
         await loadData();
@@ -449,7 +371,7 @@ export default function CikupaPembayaranPage() {
     try {
       setUploading(true);
       const ext = proofFile.name.split('.').pop();
-      const filename = `dlbc_${selectedPayment.type}_${selectedPayment.id}_${Date.now()}.${ext}`;
+      const filename = `dlbc_match_${selectedPayment.id}_${Date.now()}.${ext}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('payment-proofs')
@@ -463,27 +385,15 @@ export default function CikupaPembayaranPage() {
 
       const publicUrl = publicUrlData.publicUrl;
 
-      if (selectedPayment.type === 'match') {
-        const { error: updateError } = await supabase
-          .from('match_members')
-          .update({
-            payment_proof: publicUrl,
-            payment_status: 'pending',
-            paid_at: new Date().toISOString(),
-          })
-          .eq('id', selectedPayment.id);
-        if (updateError) throw updateError;
-      } else {
-        const { error: updateError } = await supabase
-          .from('memberships')
-          .update({
-            payment_proof: publicUrl,
-            payment_status: 'pending',
-            paid_at: new Date().toISOString(),
-          })
-          .eq('id', selectedPayment.id);
-        if (updateError) throw updateError;
-      }
+      const { error: updateError } = await supabase
+        .from('match_members')
+        .update({
+          payment_proof: publicUrl,
+          payment_status: 'pending',
+          paid_at: new Date().toISOString(),
+        })
+        .eq('id', selectedPayment.id);
+      if (updateError) throw updateError;
 
       alert('Bukti pembayaran berhasil diunggah! Menunggu verifikasi admin DLBC.');
       closePaymentModal();
@@ -521,9 +431,7 @@ export default function CikupaPembayaranPage() {
         .getPublicUrl(uploadData.path);
 
       const publicUrl = publicUrlData.publicUrl;
-
-      const matchIds = selectedPayments.filter((p) => p.type === 'match').map((p) => p.id);
-      const membershipIds = selectedPayments.filter((p) => p.type === 'membership').map((p) => p.id);
+      const matchIds = selectedPayments.map((p) => p.id);
 
       if (matchIds.length > 0) {
         const { error: matchErr } = await supabase
@@ -535,18 +443,6 @@ export default function CikupaPembayaranPage() {
           })
           .in('id', matchIds);
         if (matchErr) throw matchErr;
-      }
-
-      if (membershipIds.length > 0) {
-        const { error: memErr } = await supabase
-          .from('memberships')
-          .update({
-            payment_proof: publicUrl,
-            payment_status: 'pending',
-            paid_at: new Date().toISOString(),
-          })
-          .in('id', membershipIds);
-        if (memErr) throw memErr;
       }
 
       alert(`Bukti pembayaran untuk ${selectedPayments.length} tagihan berhasil diunggah!`);
@@ -566,9 +462,8 @@ export default function CikupaPembayaranPage() {
   // PDF Receipts Download
   const handleDownloadAllPayments = async () => {
     const paidMatches = allMatches.filter((m) => m.payment_status === 'paid');
-    const hasPaidMembership = myMembership && myMembership.payment_status === 'paid';
 
-    if (paidMatches.length === 0 && !hasPaidMembership) {
+    if (paidMatches.length === 0) {
       alert('Belum ada pembayaran yang berstatus Lunas di cabang DLBC Cikupa untuk diunduh struknya.');
       setShowReceiptDropdown(false);
       return;
@@ -588,16 +483,6 @@ export default function CikupaPembayaranPage() {
         paidAt: m.paid_at ?? undefined,
       }));
 
-      const membershipData = hasPaidMembership
-        ? {
-            month: myMembership.month,
-            year: myMembership.year,
-            amount: myMembership.amount,
-            paymentStatus: myMembership.payment_status,
-            paidAt: myMembership.paid_at ?? undefined,
-          }
-        : null;
-
       await generateBulkPaymentPDF(
         `${memberName || 'Member DLBC'} (DLBC Cikupa)`,
         bulkData,
@@ -605,7 +490,7 @@ export default function CikupaPembayaranPage() {
         undefined,
         undefined,
         undefined,
-        membershipData
+        null
       );
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -629,13 +514,7 @@ export default function CikupaPembayaranPage() {
       );
     });
 
-    const hasPaidMembershipThisMonth =
-      myMembership &&
-      myMembership.payment_status === 'paid' &&
-      myMembership.month === currentMonth &&
-      myMembership.year === currentYear;
-
-    if (monthMatches.length === 0 && !hasPaidMembershipThisMonth) {
+    if (monthMatches.length === 0) {
       alert(`Belum ada pembayaran yang berstatus Lunas di bulan ${MONTHS[currentMonth - 1]} untuk diunduh struknya.`);
       setShowReceiptDropdown(false);
       return;
@@ -655,16 +534,6 @@ export default function CikupaPembayaranPage() {
         paidAt: m.paid_at ?? undefined,
       }));
 
-      const membershipData = hasPaidMembershipThisMonth
-        ? {
-            month: myMembership.month,
-            year: myMembership.year,
-            amount: myMembership.amount,
-            paymentStatus: myMembership.payment_status,
-            paidAt: myMembership.paid_at ?? undefined,
-          }
-        : null;
-
       await generateBulkPaymentPDF(
         `${memberName || 'Member DLBC'} (DLBC Cikupa)`,
         bulkData,
@@ -672,7 +541,7 @@ export default function CikupaPembayaranPage() {
         currentMonth,
         currentYear,
         undefined,
-        membershipData
+        null
       );
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -714,7 +583,7 @@ export default function CikupaPembayaranPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen text-slate-900 dark:text-slate-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
       <div className="space-y-8">
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -726,7 +595,7 @@ export default function CikupaPembayaranPage() {
               <BranchBadge size="sm" />
             </div>
             <p className="text-gray-700 dark:text-zinc-300 mt-2 font-medium transition-colors duration-300">
-              Kelola pembayaran sesi pertandingan dan membership Anda di cabang DLBC Cikupa
+              Kelola pembayaran sesi pertandingan Anda di cabang DLBC Cikupa
             </p>
           </div>
 
@@ -817,7 +686,7 @@ export default function CikupaPembayaranPage() {
         {/* 4 Stats Cards */}
         <div className="member-payment-stats grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Total Tagihan */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">
@@ -845,7 +714,7 @@ export default function CikupaPembayaranPage() {
           </div>
 
           {/* Menunggu Konfirmasi */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">
                 Menunggu Konfirmasi
@@ -861,7 +730,7 @@ export default function CikupaPembayaranPage() {
           </div>
 
           {/* Total Terbayar */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">
                 Total Terbayar
@@ -877,7 +746,7 @@ export default function CikupaPembayaranPage() {
           </div>
 
           {/* Total Pertandingan */}
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+          <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-700 dark:text-zinc-300 font-bold transition-colors duration-300">
                 Total Sesi DLBC
@@ -893,204 +762,10 @@ export default function CikupaPembayaranPage() {
           </div>
         </div>
 
-        {/* DLBC Payment Destination Card (Rekening & QRIS Resmi) */}
-        {((bankInfo && ((bankInfo.banks || []).some((b) => b.number) || (bankInfo.ewallets || []).some((e) => e.number))) || qrisImageUrl) && (
-          <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-200 dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 shrink-0">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                    Rekening & QRIS Resmi Cabang DLBC Cikupa
-                  </h2>
-                  <p className="text-xs text-gray-600 dark:text-zinc-400">
-                    Tujuan pembayaran resmi cabang DLBC Cikupa{bankInfo?.holderName ? ` (a.n. ${bankInfo.holderName})` : ''}
-                  </p>
-                </div>
-              </div>
-              {qrisImageUrl && (
-                <button
-                  onClick={() => setShowQrisModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 transition-colors self-start sm:self-auto"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>Lihat QRIS DLBC</span>
-                </button>
-              )}
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {(bankInfo?.banks || []).filter((b) => b.number).map((b, idx) => (
-                <div
-                  key={`bank-${idx}`}
-                  className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-white/5"
-                >
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-400">{b.name}</span>
-                    <p className="text-sm font-bold font-mono text-gray-900 dark:text-white">{b.number}</p>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(b.number)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-white dark:hover:bg-zinc-700 transition-colors"
-                    title="Salin nomor rekening"
-                  >
-                    {copiedAccount === b.number ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-              ))}
-
-              {(bankInfo?.ewallets || []).filter((e) => e.number).map((e, idx) => (
-                <div
-                  key={`ewallet-${idx}`}
-                  className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-white/5"
-                >
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-400">{e.name}</span>
-                    <p className="text-sm font-bold font-mono text-gray-900 dark:text-white">{e.number}</p>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(e.number)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-white dark:hover:bg-zinc-700 transition-colors"
-                    title="Salin nomor"
-                  >
-                    {copiedAccount === e.number ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Membership Bulanan DLBC Card */}
-        {myMembership && (
-          <div className="member-payment-membership bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Award className="w-6 h-6 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">
-                    Membership Bulanan DLBC
-                  </h3>
-                  <p className="text-sm text-gray-700 dark:text-zinc-300 font-medium transition-colors duration-300">
-                    {MONTHS[myMembership.month - 1]} {myMembership.year} • {myMembership.weeks_in_month} minggu
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
-                  Rp {myMembership.amount.toLocaleString('id-ID')}
-                </p>
-                {(() => {
-                  const status = getPaymentStatus(myMembership.payment_status, myMembership.payment_proof);
-                  const Icon = status.icon;
-                  return (
-                    <span
-                      className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full mt-1 font-bold border-2 transition-colors duration-300 ${status.color}`}
-                    >
-                      <Icon className="w-3 h-3" />
-                      {status.label}
-                    </span>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {myMembership.payment_status === 'pending' && !myMembership.payment_proof && (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() =>
-                    togglePaymentSelection({
-                      id: myMembership.id,
-                      type: 'membership',
-                      amount: myMembership.amount,
-                      label: `Membership ${MONTHS[myMembership.month - 1]} ${myMembership.year}`,
-                    })
-                  }
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-gray-300 dark:border-white/10 hover:border-purple-400 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 transition-colors text-gray-900 dark:text-white shadow-sm font-medium duration-300"
-                >
-                  {isPaymentSelected(myMembership.id, 'membership') ? (
-                    <>
-                      <CheckSquare className="w-5 h-5 text-purple-600 dark:text-purple-400 transition-colors duration-300" />
-                      <span className="text-sm font-bold">Dipilih untuk bulk upload</span>
-                    </>
-                  ) : (
-                    <>
-                      <Square className="w-5 h-5 text-gray-600 dark:text-zinc-400 transition-colors duration-300" />
-                      <span className="text-sm font-bold">Pilih untuk bulk upload</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() =>
-                    openPaymentModal(myMembership.id, 'membership', myMembership.amount, undefined, undefined, undefined)
-                  }
-                  className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-purple-700 transition-colors border-2 border-transparent hover:border-purple-400 shadow-sm"
-                >
-                  Bayar Sekarang
-                </button>
-              </div>
-            )}
-
-            {myMembership.payment_proof && myMembership.payment_status === 'pending' && (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                <p className="text-sm text-yellow-800 dark:text-yellow-300 flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  {myMembership.payment_proof === 'CASH_PAYMENT'
-                    ? 'Pembayaran cash sedang diverifikasi oleh admin DLBC'
-                    : 'Bukti pembayaran sedang diverifikasi oleh admin DLBC'}
-                </p>
-                {myMembership.payment_proof !== 'CASH_PAYMENT' && (
-                  <button
-                    onClick={() => setViewingProofUrl(myMembership.payment_proof)}
-                    className="text-sm text-emerald-600 hover:underline mt-1 inline-block font-semibold"
-                  >
-                    Lihat bukti pembayaran
-                  </button>
-                )}
-              </div>
-            )}
-
-            {myMembership.payment_status === 'paid' && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                <p className="text-sm text-green-800 dark:text-green-300 flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4" />
-                  Pembayaran telah dikonfirmasi pada {new Date(myMembership.paid_at!).toLocaleDateString('id-ID')}
-                </p>
-              </div>
-            )}
-
-            {myMembership.payment_status === 'rejected' && (
-              <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-1">
-                      Bukti Pembayaran Ditolak
-                    </p>
-                    {myMembership.rejection_reason && (
-                      <p className="text-sm text-red-700 dark:text-red-300 mb-2">
-                        <span className="font-medium">Alasan:</span> {myMembership.rejection_reason}
-                      </p>
-                    )}
-                    <button
-                      onClick={() =>
-                        openPaymentModal(myMembership.id, 'membership', myMembership.amount, undefined, undefined, undefined)
-                      }
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      Upload Ulang Bukti Pembayaran
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Payment History Table Section */}
-        <div className="member-payment-matches bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl overflow-hidden shadow-sm transition-colors duration-300">
+        <div className="member-payment-matches glass-premium rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
           <div className="p-6 border-b-2 border-gray-200 dark:border-white/10 transition-colors duration-300">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -1238,7 +913,7 @@ export default function CikupaPembayaranPage() {
                     const status = getPaymentStatus(match.payment_status, match.payment_proof);
                     const Icon = status.icon;
                     const canSelect = match.payment_status === 'pending' && !match.payment_proof;
-                    const isSelected = isPaymentSelected(match.id, 'match');
+                    const isSelected = isPaymentSelected(match.id);
 
                     return (
                       <React.Fragment key={match.id}>
@@ -1250,7 +925,6 @@ export default function CikupaPembayaranPage() {
                                 onClick={() =>
                                   togglePaymentSelection({
                                     id: match.id,
-                                    type: 'match',
                                     amount: match.total_amount,
                                     matchNumber: match.matches.match_number,
                                     label: `Match #${match.matches.match_number}`,
@@ -1306,13 +980,7 @@ export default function CikupaPembayaranPage() {
                           {/* Kehadiran column */}
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium transition-colors duration-300">
                             {(match.attendance_fee ?? 0) === 0 ? (
-                              match.has_membership ? (
-                                <span className="text-purple-600 dark:text-purple-400 font-bold transition-colors duration-300">
-                                  GRATIS
-                                </span>
-                              ) : (
-                                <span className="text-gray-500 dark:text-zinc-500">-</span>
-                              )
+                              <span className="text-gray-500 dark:text-zinc-500">-</span>
                             ) : (
                               <span className="text-gray-900 dark:text-white">
                                 Rp {(match.attendance_fee ?? 0).toLocaleString('id-ID')}
@@ -1344,7 +1012,6 @@ export default function CikupaPembayaranPage() {
                                 onClick={() =>
                                   openPaymentModal(
                                     match.id,
-                                    'match',
                                     match.total_amount,
                                     match.matches.match_number,
                                     match.matches.match_date || match.matches.created_at,
@@ -1362,7 +1029,6 @@ export default function CikupaPembayaranPage() {
                                 onClick={() =>
                                   openPaymentModal(
                                     match.id,
-                                    'match',
                                     match.total_amount,
                                     match.matches.match_number,
                                     match.matches.match_date || match.matches.created_at,
@@ -1441,256 +1107,262 @@ export default function CikupaPembayaranPage() {
       {/* Single Payment Instructions Modal */}
       {showPaymentModal && selectedPayment && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/10">
               <div>
-                <h3 className="text-2xl font-bold text-white">Cara Pembayaran (DLBC)</h3>
-                {selectedPayment.type === 'match' && selectedPayment.matchNumber && (
-                  <p className="text-sm text-zinc-400 mt-1">
-                    Pertandingan #{selectedPayment.matchNumber}
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-emerald-400" />
+                  Pembayaran Pertandingan DLBC
+                </h3>
+                {selectedPayment.matchNumber && (
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Pertandingan #{selectedPayment.matchNumber} · {selectedPayment.matchDate ? new Date(selectedPayment.matchDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }) : ''}
                   </p>
                 )}
-                {selectedPayment.type === 'membership' && (
-                  <p className="text-sm text-zinc-400 mt-1">Membership Bulanan DLBC</p>
-                )}
               </div>
-              <button onClick={closePaymentModal} className="text-zinc-400 hover:text-zinc-300">
-                <X className="w-6 h-6" />
+              <button onClick={closePaymentModal} className="text-zinc-400 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-white/5 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Total Amount Box */}
-            <div className="bg-linear-to-r from-emerald-600 to-teal-600 rounded-xl p-6 text-white mb-6">
-              <p className="text-sm text-emerald-100 mb-1">Total yang harus dibayar</p>
-              <p className="text-4xl font-bold">
-                Rp {selectedPayment.amount.toLocaleString('id-ID')}
-              </p>
+            <div className="bg-linear-to-r from-emerald-600 to-teal-600 rounded-xl p-5 text-white mb-6 flex items-center justify-between shadow-lg shadow-emerald-950/40">
+              <div>
+                <p className="text-xs text-emerald-100 uppercase tracking-wider font-bold mb-0.5">Total Tagihan</p>
+                <p className="text-3xl font-black">
+                  Rp {selectedPayment.amount.toLocaleString('id-ID')}
+                </p>
+              </div>
+              <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-bold">
+                1 Pertandingan
+              </span>
             </div>
 
-            {/* Payment Method Selection */}
+            {/* STEP 1: Choose Payment Method & View Destination */}
             <div className="mb-6">
-              <h4 className="font-semibold text-white mb-3">Pilih Metode Pembayaran:</h4>
-              <div className={`grid gap-4 ${qrisImageUrl ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center justify-center">1</span>
+                <h4 className="font-bold text-white text-sm">Pilih Metode & Lakukan Pembayaran</h4>
+              </div>
+
+              <div className={`grid gap-3 ${qrisImageUrl ? 'grid-cols-3' : 'grid-cols-2'} mb-4`}>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('bank_transfer')}
-                  className={`p-4 border-2 rounded-xl transition-all ${
+                  className={`p-3.5 border-2 rounded-xl transition-all text-left ${
                     paymentMethod === 'bank_transfer'
-                      ? 'border-emerald-500 bg-emerald-500/10'
+                      ? 'border-emerald-500 bg-emerald-500/10 shadow-sm'
                       : 'border-white/10 hover:border-white/20 bg-zinc-800'
                   }`}
                 >
                   <Building2
-                    className={`w-8 h-8 mx-auto mb-2 ${
+                    className={`w-6 h-6 mb-2 ${
                       paymentMethod === 'bank_transfer' ? 'text-emerald-400' : 'text-zinc-400'
                     }`}
                   />
-                  <p
-                    className={`font-semibold text-sm ${
-                      paymentMethod === 'bank_transfer' ? 'text-emerald-300' : 'text-zinc-300'
-                    }`}
-                  >
-                    Bank Transfer
+                  <p className={`font-bold text-xs ${
+                    paymentMethod === 'bank_transfer' ? 'text-emerald-300' : 'text-zinc-200'
+                  }`}>
+                    Transfer Bank
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1">Upload bukti transfer</p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">BCA / Mandiri / E-Wallet</p>
                 </button>
 
                 {qrisImageUrl && (
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('qris')}
-                    className={`p-4 border-2 rounded-xl transition-all ${
+                    className={`p-3.5 border-2 rounded-xl transition-all text-left ${
                       paymentMethod === 'qris'
-                        ? 'border-purple-500 bg-purple-500/10'
+                        ? 'border-purple-500 bg-purple-500/10 shadow-sm'
                         : 'border-white/10 hover:border-white/20 bg-zinc-800'
                     }`}
                   >
                     <QrCode
-                      className={`w-8 h-8 mx-auto mb-2 ${
+                      className={`w-6 h-6 mb-2 ${
                         paymentMethod === 'qris' ? 'text-purple-400' : 'text-zinc-400'
                       }`}
                     />
-                    <p
-                      className={`font-semibold text-sm ${
-                        paymentMethod === 'qris' ? 'text-purple-300' : 'text-zinc-300'
-                      }`}
-                    >
+                    <p className={`font-bold text-xs ${
+                      paymentMethod === 'qris' ? 'text-purple-300' : 'text-zinc-200'
+                    }`}>
                       QRIS DLBC
                     </p>
-                    <p className="text-xs text-zinc-400 mt-1">Scan & bayar</p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">Scan kode QR</p>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('cash')}
-                  className={`p-4 border-2 rounded-xl transition-all ${
+                  className={`p-3.5 border-2 rounded-xl transition-all text-left ${
                     paymentMethod === 'cash'
-                      ? 'border-teal-500 bg-teal-500/10'
+                      ? 'border-teal-500 bg-teal-500/10 shadow-sm'
                       : 'border-white/10 hover:border-white/20 bg-zinc-800'
                   }`}
                 >
                   <CreditCard
-                    className={`w-8 h-8 mx-auto mb-2 ${
+                    className={`w-6 h-6 mb-2 ${
                       paymentMethod === 'cash' ? 'text-teal-400' : 'text-zinc-400'
                     }`}
                   />
-                  <p
-                    className={`font-semibold text-sm ${
-                      paymentMethod === 'cash' ? 'text-teal-300' : 'text-zinc-300'
-                    }`}
-                  >
-                    Cash
+                  <p className={`font-bold text-xs ${
+                    paymentMethod === 'cash' ? 'text-teal-300' : 'text-zinc-200'
+                  }`}>
+                    Tunai (Cash)
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1">Bayar tunai di lapangan</p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">Bayar di lapangan</p>
                 </button>
               </div>
+
+              {/* Payment Destination Details Box */}
+              {paymentMethod === 'bank_transfer' && (
+                <div className="bg-zinc-800/80 border border-emerald-500/30 rounded-xl p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3 pb-2 border-b border-white/5">
+                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5" />
+                      Tujuan Rekening Resmi DLBC Cikupa
+                    </span>
+                    {bankInfo?.holderName && (
+                      <span className="text-[11px] text-zinc-400">
+                        a.n. <strong className="text-white">{bankInfo.holderName}</strong>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(bankInfo?.banks || []).filter((b) => b.number).map((acct) => (
+                      <div
+                        key={acct.name}
+                        className="bg-zinc-900 border border-white/10 rounded-lg p-2.5 flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-400 uppercase">{acct.name}</p>
+                          <p className="font-mono font-bold text-white text-xs mt-0.5">{acct.number}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(acct.number)}
+                          className="p-1.5 hover:bg-white/10 rounded text-zinc-400 hover:text-emerald-400 transition-colors"
+                          title="Salin nomor rekening"
+                        >
+                          {copiedAccount === acct.number ? (
+                            <Check className="w-4 h-4 text-green-400" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                    {(bankInfo?.ewallets || []).filter((e) => e.number).map((acct) => (
+                      <div
+                        key={acct.name}
+                        className="bg-zinc-900 border border-white/10 rounded-lg p-2.5 flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-400 uppercase">{acct.name}</p>
+                          <p className="font-mono font-bold text-white text-xs mt-0.5">{acct.number}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(acct.number)}
+                          className="p-1.5 hover:bg-white/10 rounded text-zinc-400 hover:text-emerald-400 transition-colors"
+                          title="Salin nomor e-wallet"
+                        >
+                          {copiedAccount === acct.number ? (
+                            <Check className="w-4 h-4 text-green-400" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === 'qris' && qrisImageUrl && (
+                <div className="bg-zinc-800/80 border border-purple-500/30 rounded-xl p-4 text-center">
+                  <div className="flex items-center justify-center gap-1.5 mb-2">
+                    <QrCode className="w-4 h-4 text-purple-400" />
+                    <p className="text-xs font-bold text-purple-300 uppercase tracking-wider">
+                      QRIS Resmi Cabang DLBC Cikupa
+                    </p>
+                  </div>
+                  <div className="relative w-56 h-56 mx-auto rounded-xl overflow-hidden border-2 border-white/20 bg-white p-2 mb-2">
+                    <Image
+                      src={qrisImageUrl}
+                      alt="QRIS DLBC Cikupa"
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    Scan via BCA Mobile, Mandiri Livin, GoPay, OVO, ShopeePay, atau DANA. Masukkan nominal tagihan tepat: <strong className="text-emerald-400 font-mono">Rp {selectedPayment.amount.toLocaleString('id-ID')}</strong>
+                  </p>
+                </div>
+              )}
+
+              {paymentMethod === 'cash' && (
+                <div className="bg-zinc-800/80 border border-teal-500/30 rounded-xl p-4">
+                  <p className="text-xs font-bold text-teal-300 uppercase tracking-wider mb-1">
+                    Pembayaran Tunai di Lapangan
+                  </p>
+                  <p className="text-xs text-zinc-300">
+                    Silakan serahkan uang tunai sebesar{' '}
+                    <strong className="text-teal-400">
+                      Rp {selectedPayment.amount.toLocaleString('id-ID')}
+                    </strong>{' '}
+                    langsung kepada pengurus/koordinator DLBC di lapangan.
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Bank Transfer Instructions */}
-            {paymentMethod === 'bank_transfer' && (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 mb-6">
-                <div className="flex items-start gap-4">
-                  <div className="bg-emerald-600 p-3 rounded-full">
-                    <Building2 className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-white mb-2">
-                      Pilih Rekening Tujuan Transfer DLBC
-                    </h4>
-                    {bankInfo?.holderName && (
-                      <p className="text-xs text-emerald-300 mb-3">
-                        Semua rekening a.n. <strong>{bankInfo.holderName}</strong>
-                      </p>
-                    )}
-
-                    {/* Bank Accounts Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                      {(bankInfo?.banks || []).filter((b) => b.number).map((acct) => (
-                        <div
-                          key={acct.name}
-                          className="bg-white/5 border border-emerald-500/20 rounded-lg p-3"
-                        >
-                          <p className="text-xs text-emerald-300 mb-1">{acct.name}</p>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-mono font-semibold text-white text-sm">{acct.number}</p>
-                            <button
-                              type="button"
-                              onClick={() => copyToClipboard(acct.number)}
-                              className="p-1 hover:bg-emerald-500/20 rounded transition-colors"
-                              title="Salin nomor rekening"
-                            >
-                              {copiedAccount === acct.number ? (
-                                <Check className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4 text-emerald-400" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* E-Wallets */}
-                    {(bankInfo?.ewallets || []).filter((e) => e.number).length > 0 && (
-                      <div className="border-t border-emerald-500/20 pt-4">
-                        <p className="text-sm font-semibold text-white mb-3">E-Wallet DLBC</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {bankInfo!.ewallets.filter((e) => e.number).map((acct) => (
-                            <div
-                              key={acct.name}
-                              className="bg-white/5 border border-emerald-500/20 rounded-lg p-3"
-                            >
-                              <p className="text-xs text-emerald-300 mb-1">{acct.name}</p>
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="font-mono font-semibold text-white text-sm">{acct.number}</p>
-                                <button
-                                  type="button"
-                                  onClick={() => copyToClipboard(acct.number)}
-                                  className="p-1 hover:bg-emerald-500/20 rounded transition-colors"
-                                  title="Salin nomor"
-                                >
-                                  {copiedAccount === acct.number ? (
-                                    <Check className="w-4 h-4 text-green-400" />
-                                  ) : (
-                                    <Copy className="w-4 h-4 text-emerald-400" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            {/* STEP 2: Upload Proof After Payment */}
+            <form onSubmit={handleSubmitPayment} className="space-y-4 pt-2 border-t border-white/10">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center justify-center">2</span>
+                <h4 className="font-bold text-white text-sm">
+                  {paymentMethod === 'cash' ? 'Konfirmasi Pembayaran Cash' : 'Upload Bukti Pembayaran'}
+                </h4>
               </div>
-            )}
 
-            {/* QRIS Instructions */}
-            {paymentMethod === 'qris' && qrisImageUrl && (
-              <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6 mb-6 text-center">
-                <h4 className="text-lg font-semibold text-white mb-2">Scan QRIS Resmi DLBC</h4>
-                <p className="text-xs text-purple-300 mb-4">
-                  Buka aplikasi mobile banking atau e-wallet Anda, lalu scan kode QR di bawah ini:
-                </p>
-                <div className="relative w-64 h-64 mx-auto rounded-xl overflow-hidden border-2 border-white/20 bg-white p-2">
-                  <Image
-                    src={qrisImageUrl}
-                    alt="QRIS DLBC Cikupa"
-                    fill
-                    className="object-contain"
-                    unoptimized
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Cash Instructions */}
-            {paymentMethod === 'cash' && (
-              <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-6 mb-6">
-                <h4 className="text-lg font-semibold text-white mb-2">Pembayaran Tunai (Cash)</h4>
-                <p className="text-sm text-zinc-300">
-                  Silakan serahkan uang tunai sebesar{' '}
-                  <strong className="text-teal-400">
-                    Rp {selectedPayment.amount.toLocaleString('id-ID')}
-                  </strong>{' '}
-                  langsung kepada pengurus/koordinator DLBC di lapangan.
-                </p>
-              </div>
-            )}
-
-            {/* Form Upload Proof */}
-            <form onSubmit={handleSubmitPayment} className="space-y-4">
-              {paymentMethod !== 'cash' && (
+              {paymentMethod !== 'cash' ? (
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
-                    Unggah Bukti Transfer / Screenshot:
-                  </label>
+                  <p className="text-xs text-zinc-400 mb-2.5">
+                    Setelah berhasil melakukan transfer atau scan QRIS, unggah screenshot / foto bukti pembayaran Anda:
+                  </p>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={(e) => setProofFile(e.target.files?.[0] || null)}
                     required
-                    className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer"
+                    className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer text-xs"
                   />
                 </div>
+              ) : (
+                <p className="text-xs text-zinc-400">
+                  Klik tombol konfirmasi di bawah ini untuk mencatat pembayaran tunai Anda.
+                </p>
               )}
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={closePaymentModal}
-                  className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold transition-colors"
+                  className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={uploading || (paymentMethod !== 'cash' && !proofFile)}
-                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors shadow-md shadow-emerald-600/20"
                 >
-                  {uploading ? 'Mengunggah...' : paymentMethod === 'cash' ? 'Konfirmasi Cash' : 'Kirim Bukti Pembayaran'}
+                  {uploading ? 'Mengunggah...' : paymentMethod === 'cash' ? 'Konfirmasi Bayar Cash' : 'Kirim Bukti Pembayaran'}
                 </button>
               </div>
             </form>
@@ -1701,26 +1373,30 @@ export default function CikupaPembayaranPage() {
       {/* Bulk Upload Modal */}
       {showBulkUploadModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+            {/* Header */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
               <div>
-                <h3 className="text-xl font-bold text-white">Pembayaran Sekaligus (Bulk)</h3>
-                <p className="text-xs text-zinc-400">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-emerald-400" />
+                  Pembayaran Sekaligus (Bulk)
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1">
                   {selectedPayments.length} tagihan dipilih di cabang DLBC Cikupa
                 </p>
               </div>
               <button
                 onClick={() => setShowBulkUploadModal(false)}
-                className="text-zinc-400 hover:text-zinc-300"
+                className="text-zinc-400 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-white/5 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Selected Items Breakdown */}
-            <div className="bg-zinc-800/60 rounded-xl p-4 mb-4 divide-y divide-white/5 max-h-48 overflow-y-auto">
+            <div className="bg-zinc-800/60 rounded-xl p-4 mb-4 divide-y divide-white/5 max-h-40 overflow-y-auto">
               {selectedPayments.map((p, idx) => (
-                <div key={idx} className="flex items-center justify-between py-2 text-sm">
+                <div key={idx} className="flex items-center justify-between py-1.5 text-xs">
                   <span className="text-zinc-300 font-medium">{p.label}</span>
                   <span className="font-mono font-bold text-white">
                     Rp {p.amount.toLocaleString('id-ID')}
@@ -1730,74 +1406,184 @@ export default function CikupaPembayaranPage() {
             </div>
 
             {/* Total */}
-            <div className="bg-linear-to-r from-emerald-600 to-teal-600 rounded-xl p-5 text-white mb-6 flex items-center justify-between">
+            <div className="bg-linear-to-r from-emerald-600 to-teal-600 rounded-xl p-5 text-white mb-6 flex items-center justify-between shadow-lg shadow-emerald-950/40">
               <div>
-                <p className="text-xs text-emerald-100 uppercase tracking-wider font-bold">Total Transfer</p>
+                <p className="text-xs text-emerald-100 uppercase tracking-wider font-bold mb-0.5">Total Transfer Sekaligus</p>
                 <p className="text-3xl font-black">
                   Rp {selectedPayments.reduce((s, p) => s + p.amount, 0).toLocaleString('id-ID')}
                 </p>
               </div>
               <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-bold">
-                1x Transaksi
+                {selectedPayments.length} Tagihan
               </span>
             </div>
 
-            {/* Destination Accounts */}
-            {bankInfo && ((bankInfo.banks || []).some((b) => b.number) || (bankInfo.ewallets || []).some((e) => e.number)) && (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6">
-                <p className="text-xs text-emerald-300 font-bold mb-2">
-                  Transfer ke salah satu rekening DLBC a.n. {bankInfo.holderName}:
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {(bankInfo.banks || []).filter((b) => b.number).map((b, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2 rounded bg-white/5 text-xs text-white"
-                    >
-                      <span>
-                        {b.name}: <strong className="font-mono">{b.number}</strong>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(b.number)}
-                        className="p-1 hover:bg-white/10 rounded"
-                        title="Salin"
-                      >
-                        {copiedAccount === b.number ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                  ))}
-                </div>
+            {/* STEP 1: Payment Method Selection */}
+            <div className="mb-5">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center justify-center">1</span>
+                <h4 className="font-bold text-white text-xs">Pilih Opsi Pembayaran</h4>
               </div>
-            )}
 
-            {/* Proof Upload */}
-            <form onSubmit={handleSubmitBulkPayment} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-white mb-2">
-                  Upload Bukti Transfer Sekaligus:
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setBulkProofFile(e.target.files?.[0] || null)}
-                  required
-                  className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer"
-                />
+              <div className={`grid gap-3 ${qrisImageUrl ? 'grid-cols-2' : 'grid-cols-1'} mb-3`}>
+                <button
+                  type="button"
+                  onClick={() => setBulkPaymentMethod('bank_transfer')}
+                  className={`p-3 border-2 rounded-xl transition-all text-left flex items-center gap-3 ${
+                    bulkPaymentMethod === 'bank_transfer'
+                      ? 'border-emerald-500 bg-emerald-500/10 shadow-sm'
+                      : 'border-white/10 hover:border-white/20 bg-zinc-800'
+                  }`}
+                >
+                  <Building2
+                    className={`w-6 h-6 shrink-0 ${
+                      bulkPaymentMethod === 'bank_transfer' ? 'text-emerald-400' : 'text-zinc-400'
+                    }`}
+                  />
+                  <div>
+                    <p className={`font-bold text-xs ${
+                      bulkPaymentMethod === 'bank_transfer' ? 'text-emerald-300' : 'text-zinc-200'
+                    }`}>
+                      Transfer Bank
+                    </p>
+                    <p className="text-[10px] text-zinc-400">BCA, Mandiri, E-Wallet</p>
+                  </div>
+                </button>
+
+                {qrisImageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setBulkPaymentMethod('qris')}
+                    className={`p-3 border-2 rounded-xl transition-all text-left flex items-center gap-3 ${
+                      bulkPaymentMethod === 'qris'
+                        ? 'border-purple-500 bg-purple-500/10 shadow-sm'
+                        : 'border-white/10 hover:border-white/20 bg-zinc-800'
+                    }`}
+                  >
+                    <QrCode
+                      className={`w-6 h-6 shrink-0 ${
+                        bulkPaymentMethod === 'qris' ? 'text-purple-400' : 'text-zinc-400'
+                      }`}
+                    />
+                    <div>
+                      <p className={`font-bold text-xs ${
+                        bulkPaymentMethod === 'qris' ? 'text-purple-300' : 'text-zinc-200'
+                      }`}>
+                        QRIS DLBC
+                      </p>
+                      <p className="text-[10px] text-zinc-400">Scan 1x untuk total transfer</p>
+                    </div>
+                  </button>
+                )}
               </div>
+
+              {/* Destination Accounts / QRIS */}
+              {bulkPaymentMethod === 'bank_transfer' && bankInfo && ((bankInfo.banks || []).some((b) => b.number) || (bankInfo.ewallets || []).some((e) => e.number)) && (
+                <div className="bg-zinc-800/80 border border-emerald-500/30 rounded-xl p-3.5 mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                      <Building2 className="w-3.5 h-3.5" />
+                      Rekening Resmi DLBC Cikupa
+                    </span>
+                    {bankInfo.holderName && (
+                      <span className="text-[10px] text-zinc-400">
+                        a.n. <strong className="text-white">{bankInfo.holderName}</strong>
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(bankInfo.banks || []).filter((b) => b.number).map((b, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2 rounded bg-zinc-900 border border-white/10 text-xs text-white"
+                      >
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-emerald-400">{b.name}</span>
+                          <p className="font-mono font-bold">{b.number}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(b.number)}
+                          className="p-1 hover:bg-white/10 rounded text-zinc-400 hover:text-emerald-400"
+                          title="Salin"
+                        >
+                          {copiedAccount === b.number ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    ))}
+                    {(bankInfo.ewallets || []).filter((e) => e.number).map((e, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2 rounded bg-zinc-900 border border-white/10 text-xs text-white"
+                      >
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-emerald-400">{e.name}</span>
+                          <p className="font-mono font-bold">{e.number}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(e.number)}
+                          className="p-1 hover:bg-white/10 rounded text-zinc-400 hover:text-emerald-400"
+                          title="Salin"
+                        >
+                          {copiedAccount === e.number ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {bulkPaymentMethod === 'qris' && qrisImageUrl && (
+                <div className="bg-zinc-800/80 border border-purple-500/30 rounded-xl p-4 mb-4 text-center">
+                  <p className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-2">
+                    Scan QRIS Resmi DLBC
+                  </p>
+                  <div className="relative w-52 h-52 mx-auto rounded-xl overflow-hidden border-2 border-white/20 bg-white p-2 mb-2">
+                    <Image
+                      src={qrisImageUrl}
+                      alt="QRIS DLBC Cikupa"
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    Scan via mobile banking / e-wallet dan masukkan nominal tepat: <strong className="text-emerald-400 font-mono">Rp {selectedPayments.reduce((s, p) => s + p.amount, 0).toLocaleString('id-ID')}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* STEP 2: Proof Upload */}
+            <form onSubmit={handleSubmitBulkPayment} className="space-y-4 pt-2 border-t border-white/10">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center justify-center">2</span>
+                <h4 className="font-bold text-white text-xs">Upload Bukti Transfer Sekaligus</h4>
+              </div>
+              <p className="text-xs text-zinc-400 mb-2">
+                Setelah transfer/scan QRIS selesai, unggah 1 foto bukti transfer untuk seluruh {selectedPayments.length} tagihan:
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setBulkProofFile(e.target.files?.[0] || null)}
+                required
+                className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer text-xs"
+              />
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowBulkUploadModal(false)}
-                  className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold transition-colors"
+                  className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={bulkUploading || !bulkProofFile}
-                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors shadow-md shadow-emerald-600/20"
                 >
                   {bulkUploading ? 'Mengunggah...' : 'Upload Bukti Sekaligus'}
                 </button>
@@ -1939,15 +1725,7 @@ export default function CikupaPembayaranPage() {
                   </p>
                 </div>
 
-                <div className="bg-zinc-800/50 rounded-lg p-3 border border-white/5 flex items-center justify-between">
-                  <div>
-                    <span className="text-purple-400 font-semibold">GRATIS</span>
-                    <p className="text-xs text-zinc-400 mt-1">
-                      Anda memiliki Membership Bulanan DLBC aktif di bulan berjalan.
-                    </p>
-                  </div>
-                  <Award className="w-6 h-6 text-purple-400" />
-                </div>
+
               </div>
 
               <button

@@ -406,7 +406,7 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen text-zinc-900 dark:text-zinc-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
       <div>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-300">Pengaturan Admin</h1>
@@ -427,7 +427,7 @@ export default function AdminSettingsPage() {
         )}
 
         {/* Profile Picture Section */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-8 mb-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 sm:p-8 mb-6 shadow-sm transition-colors duration-300">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 transition-colors duration-300">Foto Profil</h2>
           
           <div className="flex items-center gap-6">
@@ -476,7 +476,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Personal Info Section */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-8 mb-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 sm:p-8 mb-6 shadow-sm transition-colors duration-300">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 transition-colors duration-300">Informasi Pribadi</h2>
           
           <form onSubmit={handleSaveName} className="space-y-6">
@@ -533,7 +533,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Change Password Section */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-8 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 sm:p-8 shadow-sm transition-colors duration-300">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 transition-colors duration-300">Ubah Password</h2>
           
           {isOAuthUser && (
@@ -612,7 +612,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* QRIS Section */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 mb-8 transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 mb-8 transition-colors duration-300">
           <div className="flex items-center gap-3 mb-2">
             <QrCode className="w-5 h-5 text-purple-500" />
             <h2 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Metode QRIS</h2>
@@ -678,7 +678,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* ── PRICING & TARIFF SETTINGS FOR DLOB PUSAT ── */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 mb-8 transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 mb-8 transition-colors duration-300">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
@@ -770,7 +770,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Bank Accounts Section */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 mb-8 transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 mb-8 transition-colors duration-300">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <CreditCard className="w-5 h-5 text-blue-500" />
@@ -862,7 +862,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* WA Notification Toggle */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 mb-8 transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 mb-8 transition-colors duration-300">
           <div className="flex items-center gap-3 mb-2">
             <MessageSquare className="w-5 h-5 text-green-500" />
             <h2 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Notifikasi WhatsApp</h2>
@@ -894,7 +894,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Email Notification Toggle */}
-        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 mb-8 transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 mb-8 transition-colors duration-300">
           <div className="flex items-center gap-3 mb-2">
             <AtSign className="w-5 h-5 text-blue-500" />
             <h2 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Notifikasi Email</h2>

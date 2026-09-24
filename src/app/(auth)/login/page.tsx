@@ -30,15 +30,15 @@ export default function LoginPage() {
     if (user) {
       const searchParams = new URLSearchParams(window.location.search);
       const redirectUrl = searchParams.get('redirect');
-      if (redirectUrl) {
-        router.push(redirectUrl);
+      if (redirectUrl && !redirectUrl.startsWith('/login')) {
+        router.replace(redirectUrl);
         return;
       }
       const userBranch = user.user_metadata?.branch_id;
       if (userBranch === 'dlob-cikupa') {
-        router.push('/cikupa/dashboard');
+        router.replace('/cikupa/dashboard');
       } else {
-        router.push('/dashboard');
+        router.replace('/dashboard');
       }
     }
   }, [user, router]);

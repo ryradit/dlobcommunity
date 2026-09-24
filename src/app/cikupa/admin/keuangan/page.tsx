@@ -72,18 +72,11 @@ export default function CikupaAdminKeuanganPage() {
       if (!rpcError && rpcData && rpcData.length > 0) {
         summaryResult = rpcData[0];
       } else {
-        // Fallback: Compute directly from tables for DLBC
-        const [matchRes, memRes, expRes] = await Promise.all([
+        // Fallback: Compute directly from tables for DLBC (Shuttlecock + Attendance fee)
+        const [matchRes, expRes] = await Promise.all([
           supabase
             .from('match_members')
             .select('total_amount, paid_at')
-            .eq('branch_id', BRANCH_ID)
-            .eq('payment_status', 'paid')
-            .gte('paid_at', `${monthStart}T00:00:00Z`)
-            .lte('paid_at', `${monthEnd}T23:59:59Z`),
-          supabase
-            .from('memberships')
-            .select('amount, paid_at')
             .eq('branch_id', BRANCH_ID)
             .eq('payment_status', 'paid')
             .gte('paid_at', `${monthStart}T00:00:00Z`)
@@ -96,9 +89,7 @@ export default function CikupaAdminKeuanganPage() {
             .lte('tanggal', monthEnd),
         ]);
 
-        const pendapatanMatches = (matchRes.data || []).reduce((s, r) => s + (r.total_amount || 0), 0);
-        const pendapatanMemberships = (memRes.data || []).reduce((s, r) => s + (r.amount || 0), 0);
-        const totalPendapatan = pendapatanMatches + pendapatanMemberships;
+        const totalPendapatan = (matchRes.data || []).reduce((s, r) => s + (r.total_amount || 0), 0);
 
         let sewa = 0;
         let kok = 0;
@@ -329,7 +320,8 @@ export default function CikupaAdminKeuanganPage() {
 
       {/* Primary Financial Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-gray-100 dark:border-white/10">
+        <div className="glass-premium stat-card-glow rounded-2xl p-5">
+          <div className="h-0.5 w-8 rounded-full bg-emerald-500 mb-3" />
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
@@ -342,7 +334,8 @@ export default function CikupaAdminKeuanganPage() {
           <p className="text-xs text-gray-400 mt-1">Sesi match & iuran member DLBC</p>
         </div>
 
-        <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-gray-100 dark:border-white/10">
+        <div className="glass-premium stat-card-glow rounded-2xl p-5">
+          <div className="h-0.5 w-8 rounded-full bg-red-500 mb-3" />
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center">
               <TrendingDown className="w-4 h-4 text-red-500" />
@@ -355,7 +348,8 @@ export default function CikupaAdminKeuanganPage() {
           <p className="text-xs text-gray-400 mt-1">Sewa lapangan, kok, dll</p>
         </div>
 
-        <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-gray-100 dark:border-white/10">
+        <div className="glass-premium stat-card-glow rounded-2xl p-5">
+          <div className="h-0.5 w-8 rounded-full bg-blue-500 mb-3" />
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
               <DollarSign className="w-4 h-4 text-blue-500" />
@@ -392,7 +386,7 @@ export default function CikupaAdminKeuanganPage() {
       </div>
 
       {/* List of Pengeluaran */}
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-white/10 p-5">
+      <div className="glass-premium rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-black text-gray-900 dark:text-white">Daftar Pengeluaran DLBC</h2>
           <span className="text-xs text-gray-400 font-semibold">{pengeluaranList.length} Catatan</span>

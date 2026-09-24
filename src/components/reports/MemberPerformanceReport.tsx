@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Member Performance Report PDF Component
  * Laporan analitik performa member DLOB Community
  */
@@ -410,7 +410,7 @@ export const MemberPerformanceReport: React.FC<{ data: MemberReportData }> = ({ 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Analisis AI — Wawasan Performa</Text>
             <Text style={[styles.statSub, { marginBottom: 10 }]}>
-              Dianalisis oleh Google Gemini AI berdasarkan data pertandingan Anda.
+              Dianalisis oleh DLOB AI Coach berdasarkan data pertandingan Anda.
             </Text>
             {data.insights.map((insight, index) => {
               const boxStyle = insight.type === 'strength'

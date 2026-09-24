@@ -104,7 +104,7 @@ export default function AdminVideoAnalysisPage() {
         });
       } else {
         const activeVideoPath = sourceType === 'youtube' ? youtubeUrl : localVideoPath;
-        setAnalysisStatus('Menjalankan analisis YOLOv8 & Gemini 2.5 AI Synthesis...');
+        setAnalysisStatus('Menjalankan analisis YOLOv8 & Tactical AI Synthesis...');
 
         res = await fetch('/api/ai/video-analysis', {
           method: 'POST',
@@ -596,7 +596,7 @@ export default function AdminVideoAnalysisPage() {
               {analyzing && (
                 <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3 text-xs text-emerald-700 dark:text-emerald-400 font-semibold animate-pulse">
                   <Sparkles className="w-4 h-4 text-emerald-500 animate-spin" />
-                  <span>{analysisStatus || 'Memproses Analisis Mendalam (YOLOv8 + Gemini 2.5)...'}</span>
+                  <span>{analysisStatus || 'Memproses Analisis Mendalam (YOLOv8 + AI Engine)...'}</span>
                 </div>
               )}
             </div>
@@ -820,7 +820,7 @@ export default function AdminVideoAnalysisPage() {
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-2xl p-4 shadow-sm space-y-3">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-2.5">
               <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              Evaluasi Taktik AI (Gemini + YOLO)
+              Evaluasi Taktik AI (YOLO + AI Engine)
             </h3>
 
             <div className="text-xs space-y-2.5 text-slate-700 dark:text-zinc-300">

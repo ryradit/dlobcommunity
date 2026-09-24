@@ -1875,7 +1875,7 @@ export default function AdminPembayaranPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-gray-900 dark:text-white py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen text-zinc-900 dark:text-white py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
       <div>
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex items-start justify-between gap-4">
@@ -1894,7 +1894,7 @@ export default function AdminPembayaranPage() {
         </div>
 
         {/* Monthly Recap - Claude Minimalist Glassmorphism */}
-        <div className="mb-6 bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <div className="mb-6 glass-premium rounded-2xl p-5 sm:p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
             <div>
               <h2 className="text-sm font-semibold text-white mb-2">
@@ -1960,27 +1960,31 @@ export default function AdminPembayaranPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
-              <p className="text-[11px] font-medium text-zinc-400 mb-1">Total Pendapatan Terkumpul</p>
-              <p className="text-xl font-bold text-emerald-400 tracking-tight">
+            <div className="glass-premium stat-card-glow rounded-xl p-3.5">
+              <div className="h-0.5 w-6 rounded-full bg-emerald-500 mb-2" />
+              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Total Pendapatan Terkumpul</p>
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
                 Rp {monthlyRecap.totalRevenue.toLocaleString('id-ID')}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
-              <p className="text-[11px] font-medium text-zinc-400 mb-1">Menunggu Konfirmasi</p>
-              <p className="text-xl font-bold text-amber-400 tracking-tight">
+            <div className="glass-premium stat-card-glow rounded-xl p-3.5">
+              <div className="h-0.5 w-6 rounded-full bg-amber-500 mb-2" />
+              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Menunggu Konfirmasi</p>
+              <p className="text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
                 Rp {monthlyRecap.totalPending.toLocaleString('id-ID')}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
-              <p className="text-[11px] font-medium text-zinc-400 mb-1">Total Diharapkan</p>
-              <p className="text-xl font-bold text-white tracking-tight">
+            <div className="glass-premium stat-card-glow rounded-xl p-3.5">
+              <div className="h-0.5 w-6 rounded-full bg-blue-500 mb-2" />
+              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Total Diharapkan</p>
+              <p className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
                 Rp {monthlyRecap.totalExpected.toLocaleString('id-ID')}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/5 rounded-xl p-3.5">
-              <p className="text-[11px] font-medium text-zinc-400 mb-1">Selisih Belum Masuk</p>
-              <p className={`text-xl font-bold tracking-tight ${monthlyRecap.totalPending > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+            <div className="glass-premium stat-card-glow rounded-xl p-3.5">
+              <div className={`h-0.5 w-6 rounded-full ${monthlyRecap.totalPending > 0 ? 'bg-rose-500' : 'bg-emerald-500'} mb-2`} />
+              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">Selisih Belum Masuk</p>
+              <p className={`text-xl font-bold tracking-tight ${monthlyRecap.totalPending > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 Rp {(monthlyRecap.totalExpected - monthlyRecap.totalRevenue).toLocaleString('id-ID')}
               </p>
             </div>

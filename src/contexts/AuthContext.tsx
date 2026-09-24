@@ -44,7 +44,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [canSwitchBranch, setCanSwitchBranch] = useState(false);
   const [userBranchId, setUserBranchId] = useState<string | null>(null);
   const [isNeutral, setIsNeutral] = useState(false);
-  const [viewAs, setViewAs] = useState<'admin' | 'member'>('member');
+  const [viewAs, setViewAs] = useState<'admin' | 'member'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
+      if (saved === 'admin' || saved === 'member') return saved;
+    }
+    return 'member';
+  });
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -192,19 +198,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
           
-          // Set loading to false immediately to show content fast
-          setLoading(false);
-          
-          // Fetch role and sync avatar in background (completely non-blocking)
           if (currentSession?.user) {
-            // Background tasks - don't await, let them complete later
             syncAvatarFromProfile(currentSession.user.id);
-            
-            fetchUserRole(currentSession.user.id).then((userRole) => {
+            try {
+              const userRole = await fetchUserRole(currentSession.user.id);
               if (mounted) {
                 setRole(userRole);
-                
-                // Restore view preference
                 if (userRole === 'admin' || userRole === 'branch_admin') {
                   const savedView = localStorage.getItem('viewAs') as 'admin' | 'member' | null;
                   setViewAs(savedView || 'admin');
@@ -212,7 +211,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   setViewAs('member');
                 }
               }
-            });
+            } catch (roleErr) {
+              console.warn('[AuthContext] Role fetch error:', roleErr);
+            }
+          }
+          
+          if (mounted) {
+            setLoading(false);
           }
         }
       } catch (error) {

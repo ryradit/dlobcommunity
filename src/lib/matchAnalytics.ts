@@ -85,6 +85,8 @@ export interface MatchAnalyticsResult {
     winRateInArea: number;
   }[];
   lastUpdated: string;
+  latestMatchDate?: string;
+  rawMatches?: MatchResult[];
 }
 
 // ─── Main Analytics Function ──────────────────────────────────────────────
@@ -93,39 +95,45 @@ export async function analyzeMatchHistory(memberName?: string, userId?: string):
     let actualMemberName = memberName;
     let possibleNames: string[] = [];
 
-    // If userId provided, try to get the actual name from profiles table
-    if (userId && !memberName) {
+    // Always try to get the real display name from profiles table when userId is provided
+    // This ensures we use the correct name even if a fallback memberName was passed
+    if (userId) {
       try {
         const { data: profile } = await supabase
           .from('profiles')
           .select('display_name, full_name, username')
-          .eq('id', userId)
+          .eq('user_id', userId)  // profiles table uses user_id (FK to auth.users)
           .single();
 
         if (profile) {
-          // Collect possible names (display, full, username, first name from full)
+          // Prioritize DB name over any passed memberName
+          const dbName = profile.display_name || profile.full_name || profile.username;
+          if (dbName) actualMemberName = dbName;
+
+          // Collect all possible name variations for match lookup
           if (profile.display_name) possibleNames.push(profile.display_name);
           if (profile.full_name) {
             possibleNames.push(profile.full_name);
-            // Also try first name from full_name
             const firstName = profile.full_name.split(' ')[0];
             if (firstName) possibleNames.push(firstName);
           }
           if (profile.username) possibleNames.push(profile.username);
-          
-          actualMemberName = profile.display_name || profile.full_name || profile.username;
-          console.log('[matchAnalytics] Looked up profile, possible names:', possibleNames);
+          // Also keep the originally passed memberName as a fallback search name
+          if (memberName && !possibleNames.includes(memberName)) possibleNames.push(memberName);
+
+          console.log('[matchAnalytics] Resolved name from DB:', actualMemberName, '| possible names:', possibleNames);
         }
       } catch (error) {
         console.error('[matchAnalytics] Error looking up profile:', error);
       }
-    } else if (memberName) {
-      // If memberName provided, also add first name variant
+    }
+
+    // If no userId or profile lookup failed, fall back to passed memberName
+    if (!actualMemberName && memberName) {
+      actualMemberName = memberName;
       possibleNames.push(memberName);
       const firstName = memberName.split(' ')[0];
-      if (firstName && firstName !== memberName) {
-        possibleNames.push(firstName);
-      }
+      if (firstName && firstName !== memberName) possibleNames.push(firstName);
     }
 
     if (!actualMemberName) {
@@ -239,6 +247,10 @@ export async function analyzeMatchHistory(memberName?: string, userId?: string):
     const weakAreas = identifyWeakAreas(sortedMatches);
     const strengths = identifyStrengths(sortedMatches);
 
+    const latestMatchDate = memberMatches.length > 0
+      ? memberMatches.reduce((latest, m) => new Date(m.matchDate) > new Date(latest) ? m.matchDate : latest, memberMatches[0].matchDate)
+      : undefined;
+
     return {
       memberName: normalizedMemberName,
       totalMatches: memberMatches.length,
@@ -253,6 +265,8 @@ export async function analyzeMatchHistory(memberName?: string, userId?: string):
       weakAreas,
       strengths,
       lastUpdated: new Date().toISOString(),
+      latestMatchDate,
+      rawMatches: memberMatches,
     };
   } catch (error) {
     console.error('[matchAnalytics] Error:', error);

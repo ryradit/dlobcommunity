@@ -249,7 +249,7 @@ export default function KeuanganPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen text-zinc-900 dark:text-zinc-100 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Header */}
@@ -342,7 +342,8 @@ export default function KeuanganPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Pendapatan */}
-          <div className="keuangan-card-pendapatan bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-sm">
+          <div className="keuangan-card-pendapatan glass-premium stat-card-glow rounded-2xl p-5 shadow-sm">
+            <div className="h-0.5 w-8 rounded-full bg-emerald-500 mb-3" />
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-zinc-400 mb-1">Total Pendapatan</p>
@@ -358,7 +359,8 @@ export default function KeuanganPage() {
           </div>
 
           {/* Pengeluaran */}
-          <div className="keuangan-card-pengeluaran bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-sm">
+          <div className="keuangan-card-pengeluaran glass-premium stat-card-glow rounded-2xl p-5 shadow-sm">
+            <div className="h-0.5 w-8 rounded-full bg-rose-500 mb-3" />
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-zinc-400 mb-1">Total Pengeluaran</p>
@@ -378,7 +380,8 @@ export default function KeuanganPage() {
           </div>
 
           {/* Keuntungan */}
-          <div className="keuangan-card-keuntungan bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-sm">
+          <div className="keuangan-card-keuntungan glass-premium stat-card-glow rounded-2xl p-5 shadow-sm">
+            <div className="h-0.5 w-8 rounded-full bg-blue-500 mb-3" />
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-zinc-400 mb-1">Margin / Laba Bersih</p>
@@ -403,7 +406,7 @@ export default function KeuanganPage() {
         </div>
 
         {/* Pengeluaran List Table */}
-        <div className="keuangan-expense-table bg-zinc-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-sm">
+        <div className="keuangan-expense-table glass-premium rounded-2xl overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white">Rincian Pengeluaran</h2>
             <span className="text-xs text-zinc-400">{pengeluaranList.length} transaksi</span>

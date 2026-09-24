@@ -608,7 +608,7 @@ export default function CikupaAnalitikPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
+    <div className="min-h-screen text-slate-900 dark:text-slate-100 py-4 lg:py-8 pr-4 lg:pr-8 pl-6 transition-colors duration-300">
       <ProfileCompletionWarning />
 
       {/* Top Header */}
@@ -876,7 +876,7 @@ export default function CikupaAnalitikPage() {
 
       {/* 4 Primary Stats Grid */}
       <div className="member-analitik-stats grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
           <div className="flex items-start justify-between mb-3 sm:mb-4">
             <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500 dark:text-emerald-400" />
           </div>
@@ -888,7 +888,7 @@ export default function CikupaAnalitikPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
           <div className="flex items-start justify-between mb-3 sm:mb-4">
             <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 dark:text-yellow-400" />
           </div>
@@ -900,7 +900,7 @@ export default function CikupaAnalitikPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
           <div className="flex items-start justify-between mb-3 sm:mb-4">
             <Target className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 dark:text-red-400" />
           </div>
@@ -912,7 +912,7 @@ export default function CikupaAnalitikPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-4 sm:p-5 lg:p-6 shadow-sm transition-colors duration-300">
           <div className="flex items-start justify-between mb-3 sm:mb-4">
             <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 dark:text-green-400" />
           </div>
@@ -928,7 +928,7 @@ export default function CikupaAnalitikPage() {
       {/* 3 Advanced Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Streak Card */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-2 mb-4">
             <Flame className="w-5 h-5 text-orange-500 dark:text-orange-400" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tren Kemenangan</h3>
@@ -974,7 +974,7 @@ export default function CikupaAnalitikPage() {
         </div>
 
         {/* Score Stats */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Statistik Skor</h3>
@@ -1008,7 +1008,7 @@ export default function CikupaAnalitikPage() {
         </div>
 
         {/* Recent Form */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-teal-500 dark:text-teal-400" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Form</h3>
@@ -1039,7 +1039,7 @@ export default function CikupaAnalitikPage() {
 
       {/* Monthly Performance Chart */}
       {monthlyData.length > 0 && (
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 mb-8 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 mb-8 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-emerald-500" />
             Performa Bulanan (DLBC Cikupa)
@@ -1082,7 +1082,7 @@ export default function CikupaAnalitikPage() {
       {allMatches.length > 0 && (
         <div className="member-analitik-charts grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {scoreProgression.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+            <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-emerald-500" />
                 Perkembangan Score
@@ -1132,7 +1132,7 @@ export default function CikupaAnalitikPage() {
           )}
 
           {formTrend.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+            <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                 <Flame className="w-5 h-5 text-orange-500" />
                 Tren Performa
@@ -1188,7 +1188,7 @@ export default function CikupaAnalitikPage() {
       {/* Partner & Opponent Stats */}
       <div className="member-analitik-partners grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Partner Terbaik */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <UserCheck className="w-5 h-5 text-emerald-500" />
             Partner Terbaik (DLBC)
@@ -1224,7 +1224,7 @@ export default function CikupaAnalitikPage() {
         </div>
 
         {/* Lawan Tersering */}
-        <div className="bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+        <div className="glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <Users className="w-5 h-5 text-red-500" />
             Lawan Tersering (DLBC)
@@ -1258,7 +1258,7 @@ export default function CikupaAnalitikPage() {
       </div>
 
       {/* Filters Section */}
-      <div className="member-analitik-filter bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 mb-6 shadow-sm transition-colors duration-300">
+      <div className="member-analitik-filter glass-premium rounded-2xl p-6 mb-6 shadow-sm transition-colors duration-300">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Filter className="w-5 h-5 text-emerald-500" />
@@ -1333,7 +1333,7 @@ export default function CikupaAnalitikPage() {
       </div>
 
       {/* Match History List */}
-      <div className="member-analitik-match-history bg-white dark:bg-zinc-900 border-2 border-gray-300 dark:border-white/10 rounded-xl p-6 shadow-sm transition-colors duration-300">
+      <div className="member-analitik-match-history glass-premium rounded-2xl p-6 shadow-sm transition-colors duration-300">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Award className="w-5 h-5 text-emerald-500" />
           Riwayat Pertandingan (DLBC Cikupa)

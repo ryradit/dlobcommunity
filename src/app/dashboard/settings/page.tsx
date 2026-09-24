@@ -611,7 +611,7 @@ export default function SettingsPage() {
   })();
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 py-6 lg:py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+    <div className="min-h-screen text-zinc-900 dark:text-zinc-100 py-6 lg:py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="max-w-5xl mx-auto space-y-6">
         
         <ProfileCompletionWarning />
@@ -666,7 +666,7 @@ export default function SettingsPage() {
         )}
 
         {/* Hero Identity Card (Claude Design style: clean hero with subtle stats) */}
-        <div className="member-settings-avatar bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+        <div className="member-settings-avatar glass-premium rounded-2xl p-6 transition-all">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
             
             {/* Avatar with Camera Trigger */}
@@ -772,7 +772,7 @@ export default function SettingsPage() {
           <div className="space-y-6">
 
             {/* Personal Information Card */}
-            <div className="member-settings-personal bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+            <div className="member-settings-personal glass-premium rounded-2xl p-6 transition-all">
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
@@ -821,7 +821,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Badminton Profile Card */}
-            <div className="member-settings-badminton bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+            <div className="member-settings-badminton glass-premium rounded-2xl p-6 transition-all">
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
@@ -870,7 +870,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Partner Preferences & Social Card */}
-            <div className="member-settings-partner bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+            <div className="member-settings-partner glass-premium rounded-2xl p-6 transition-all">
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
@@ -931,7 +931,7 @@ export default function SettingsPage() {
           <div className="space-y-6">
 
             {/* Tournament Achievements Card */}
-            <div className="member-settings-achievements bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+            <div className="member-settings-achievements glass-premium rounded-2xl p-6 transition-all">
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
@@ -991,7 +991,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Branch Settings Card */}
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs transition-all">
+            <div className="glass-premium rounded-2xl p-6 transition-all">
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800/60">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
@@ -1151,7 +1151,7 @@ export default function SettingsPage() {
             )}
 
             {/* Login Methods & Security Card */}
-            <div className="member-settings-security bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 shadow-2xs space-y-6 transition-all">
+            <div className="member-settings-security glass-premium rounded-2xl p-6 space-y-6 transition-all">
               <div className="pb-4 border-b border-zinc-100 dark:border-zinc-800/60">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300">

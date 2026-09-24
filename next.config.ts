@@ -40,6 +40,11 @@ const nextConfig: NextConfig = {
         hostname: 'i.ytimg.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
+        pathname: '/**',
+      },
     ],
     // Optimize images more aggressively
     formats: ['image/avif', 'image/webp'],

@@ -228,7 +228,8 @@ export default function CikupaAdminAnalitikPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 shadow-sm">
+        <div className="glass-premium stat-card-glow rounded-2xl p-4">
+          <div className="h-0.5 w-8 rounded-full bg-blue-500 mb-3" />
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-slate-500 dark:text-zinc-400">Total Pertandingan</span>
             <Award className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
@@ -237,7 +238,8 @@ export default function CikupaAdminAnalitikPage() {
           <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Bulan terpilih</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 shadow-sm">
+        <div className="glass-premium stat-card-glow rounded-2xl p-4">
+          <div className="h-0.5 w-8 rounded-full bg-emerald-500 mb-3" />
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-slate-500 dark:text-zinc-400">Ada Pemenang</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
@@ -246,7 +248,8 @@ export default function CikupaAdminAnalitikPage() {
           <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Skor lengkap</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 shadow-sm">
+        <div className="glass-premium stat-card-glow rounded-2xl p-4">
+          <div className="h-0.5 w-8 rounded-full bg-amber-500 mb-3" />
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-slate-500 dark:text-zinc-400">Belum Ada Skor</span>
             <Clock className="w-4 h-4 text-amber-500 dark:text-amber-400" />
@@ -255,7 +258,8 @@ export default function CikupaAdminAnalitikPage() {
           <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Menunggu input skor</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 shadow-sm">
+        <div className="glass-premium stat-card-glow rounded-2xl p-4">
+          <div className="h-0.5 w-8 rounded-full bg-purple-500 mb-3" />
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-slate-500 dark:text-zinc-400">Penyelesaian</span>
             <TrendingUp className="w-4 h-4 text-purple-500 dark:text-purple-400" />
@@ -268,7 +272,7 @@ export default function CikupaAdminAnalitikPage() {
       {/* Main 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left Column: Match Selector */}
-        <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="glass-premium rounded-2xl p-5 shadow-sm space-y-4">
           <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 border-b border-gray-200 dark:border-white/10 pb-3">
             <Award className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
             Daftar Pertandingan DLBC ({matches.length})
@@ -325,7 +329,7 @@ export default function CikupaAdminAnalitikPage() {
         </div>
 
         {/* Right Column: Score Editor & Detail */}
-        <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-5 shadow-sm lg:col-span-2 space-y-5">
+        <div className="glass-premium rounded-2xl p-5 shadow-sm lg:col-span-2 space-y-5">
           {!selectedMatch ? (
             <div className="py-24 text-center text-slate-500 dark:text-zinc-500 space-y-2">
               <BarChart3 className="w-12 h-12 mx-auto text-slate-400 dark:text-zinc-600 opacity-40" />
