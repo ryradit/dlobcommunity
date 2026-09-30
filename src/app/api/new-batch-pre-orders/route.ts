@@ -265,6 +265,24 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
+    // ── Check if Pre-Order batch is currently closed by Admin/Owner ──
+    const { data: statusSetting } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'jersey_new_batch_status')
+      .maybeSingle();
+
+    if (statusSetting?.value === 'closed') {
+      const { data: msgSetting } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'jersey_closed_message')
+        .maybeSingle();
+
+      const closedMsg = msgSetting?.value?.trim() || 'Mohon maaf, sesi Pre-Order Jersey DLOB untuk batch ini telah resmi ditutup.';
+      return NextResponse.json({ error: closedMsg, code: 'PRE_ORDER_CLOSED' }, { status: 403 });
+    }
+
     // Generate unique order number (dlbYYYYMMDD-NN)
     const orderNumber = await generateOrderNumber(supabase);
 

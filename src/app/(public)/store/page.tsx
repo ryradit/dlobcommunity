@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Heart, ArrowLeft, ChevronRight, Sparkles, ShieldCheck, Truck, Layers, CheckCircle2, Clock, Info, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SmartCropImage from '@/components/SmartCropImage';
@@ -32,6 +32,7 @@ interface ColorVariant {
   name: string;
   color: string;
   images: string[];
+  videoUrl?: string;
   bgColor: string;
 }
 
@@ -70,30 +71,18 @@ export const allSizeOptions: SizeOption[] = [
   { id: 'Balita XL', label: 'XL', category: 'balita', keterangan: '5 - 6 TAHUN', tinggi: 47, lebar: 38, pendekPrice: 100000, panjangPrice: 110000 },
 ];
 
-// --- Jersey DLOB Official ---
-const officialColorVariants: ColorVariant[] = [
-  { 
-    id: 'biru',   
-    name: 'Biru Navy', 
-    color: 'Biru Navy', 
-    images: ['model/biru3.png','model/biru4.png','model/biru5.png'].map(getMemberImageUrl), 
-    bgColor: '#0b244c',
-  },
-  { 
-    id: 'pink',   
-    name: 'Pink',      
-    color: 'Pink',      
-    images: ['model/pink8.png','model/pink6.png','model/pink7.png','model/pink9.png'].map(getMemberImageUrl), 
-    bgColor: '#c8a19c',
-  },
-  { 
-    id: 'kuning', 
-    name: 'Kuning', 
-    color: 'Kuning', 
-    images: ['model/kuning3.png','model/kuning4.png','model/kuning 5.png','model/kuning6.png'].map(getMemberImageUrl), 
-    bgColor: '#fecb00',
-  },
-];
+import { JerseyBatch, DEFAULT_JERSEY_BATCHES } from '@/lib/jerseyBatches';
+
+// --- Jersey DLOB Official (Using Supabase CDN) ---
+const defaultOfficialBatch = DEFAULT_JERSEY_BATCHES.find((b) => b.slug === 'official')!;
+const officialColorVariants: ColorVariant[] = defaultOfficialBatch.colorVariants.map((v) => ({
+  id: v.id === 'off-blue' ? 'biru' : v.id === 'off-yellow' ? 'kuning' : v.id === 'off-red' ? 'merah' : 'pink',
+  name: v.name,
+  color: v.name,
+  images: v.images,
+  videoUrl: v.videoUrl,
+  bgColor: v.bgColor || '#0b244c',
+}));
 
 // --- DLOB Jersey - Noir ---
 const circuitNoirColorVariants: ColorVariant[] = [
@@ -127,44 +116,9 @@ const circuitNoirColorVariants: ColorVariant[] = [
   },
 ];
 
-// --- New Batch Pre-Order Jersey ---
-const newBatchColorVariants: ColorVariant[] = [
-  {
-    id: 'nb-blue',
-    name: 'Blue',
-    color: 'Blue',
-    images: [
-      '/images/new jersey promotion/biru-photo1.jpeg',
-      '/images/new jersey promotion/biru-photo2.jpeg',
-    ],
-    bgColor: '#0b244c',
-  },
-  {
-    id: 'nb-yellow',
-    name: 'Yellow',
-    color: 'Yellow',
-    images: [
-      '/images/new jersey promotion/kuning-photo1.jpeg',
-      '/images/new jersey promotion/kuning-photo2.jpeg',
-    ],
-    bgColor: '#FFC000',
-  },
-  {
-    id: 'nb-red',
-    name: 'Red',
-    color: 'Red',
-    images: [
-      '/images/new jersey promotion/merah-photo1.jpeg',
-      '/images/new jersey promotion/merah-photo2.jpeg',
-      '/images/new jersey promotion/merah-photo3.jpeg',
-      '/images/new jersey promotion/merah-photo4.jpeg',
-    ],
-    bgColor: '#ff0000',
-  },
-];
-
 interface Product {
   id: string;
+  slug?: string;
   name: string;
   tagline: string;
   description: string;
@@ -187,20 +141,21 @@ interface Product {
 
 const products: Product[] = [
   {
-    id: 'nb-jersey',
-    name: 'Jersey DLOB New Batch',
-    tagline: 'Fresh Colors · Dewasa, Kids & Balita Edition',
-    description: 'Batch terbaru jersey resmi DLOB! Hadir dalam 3 pilihan warna cerah — Biru (#0b244c), Kuning (#FFC000), dan Merah (#ff0000). Tersedia dalam ukuran Dewasa (Rp 110k), Kids (Rp 100k), dan Balita 👶 (Rp 100k). Menggunakan material Milano Standard premium yang ringan, adem, dan menyerap keringat. Catatan: Logo di gambar dan video hanya contoh, aslinya sekarang sudah menggunakan logo official D\'LOB.',
+    id: 'official',
+    slug: 'official',
+    name: 'Jersey DLOB Official',
+    tagline: 'Edisi Resmi Komunitas · Dewasa, Kids & Balita Edition',
+    description: "Jersey resmi official DLOB dengan material Milano Standard Premium! Hadir dalam 4 pilihan warna — Biru Navy, Kuning, Merah, dan Pink. Tersedia dalam ukuran Dewasa (Rp 110k), Kids (Rp 100k), dan Balita 👶 (Rp 100k). Menggunakan material kain premium yang ringan, adem, dan menyerap keringat optimal.",
     badge: 'PRE-ORDER AKTIF',
     badgeType: 'active-preorder',
-    coverImage: null,
-    coverBg: '#0f172a',
-    colorVariants: newBatchColorVariants,
+    coverImage: 'https://qtdayzlrwmzdezkavjpd.supabase.co/storage/v1/object/public/jersey-assets/official/Gemini_Generated_Image_86vjkm86vjkm86vj.jpeg',
+    coverBg: '#0b244c',
+    colorVariants: officialColorVariants,
     material: 'Milano Standard Premium',
     care: 'Cuci dengan air dingin, jangan gunakan pemutih',
     origin: 'Indonesia',
     preOrder: true,
-    isNewBatch: true,
+    isNewBatch: false,
     isClosed: false,
     estimatedDelivery: 'Kuota 15 Order',
     comingSoon: false,
@@ -211,28 +166,6 @@ const products: Product[] = [
       SUPABASE_VIDEOS.nb_kuning1,
       SUPABASE_VIDEOS.nb_merah1,
       SUPABASE_VIDEOS.nb_merah2,
-    ],
-  },
-  {
-    id: 'official',
-    name: 'Jersey DLOB Official',
-    tagline: 'The Classic Edition · Batch Ditutup',
-    description: 'Jersey edisi reguler klasik DLOB dengan teknologi Milano Standard. Pemesanan untuk batch reguler ini saat ini telah resmi ditutup. Silakan ikuti Pre-Order New Batch 2026 yang sedang dibuka!',
-    badge: 'BATCH DITUTUP',
-    badgeType: 'closed',
-    coverImage: getMemberImageUrl('model/biru3.png'),
-    coverBg: '#0b244c',
-    colorVariants: officialColorVariants,
-    material: 'Milano Standard',
-    care: 'Cuci dengan air dingin',
-    origin: 'Indonesia',
-    preOrder: false,
-    isNewBatch: false,
-    isClosed: true,
-    estimatedDelivery: 'Batch Ditutup',
-    comingSoon: false,
-    startingPrice: 110000,
-    introductionVideos: [
       SUPABASE_VIDEOS.videomodel1,
       SUPABASE_VIDEOS.videomodel3,
       SUPABASE_VIDEOS.videomodel5,
@@ -240,12 +173,13 @@ const products: Product[] = [
   },
   {
     id: 'noir',
+    slug: 'noir',
     name: 'DLOB Jersey – Noir',
     tagline: 'The Dark Circuit Edition',
     description: 'Jersey edisi spesial DLOB Noir dengan desain eksklusif bertema gelap dan modern. Terinspirasi dari sirkuit elektronik, cocok untuk tampilan sporty dan elegan.',
     badge: 'SEGERA HADIR',
     badgeType: 'coming-soon',
-    coverImage: null,
+    coverImage: getMemberImageUrl('model/hitam1.jpeg'),
     coverBg: '#0d0d0d',
     colorVariants: circuitNoirColorVariants,
     material: 'Milano Standard',
@@ -275,19 +209,17 @@ function CatalogCard({
   onOpen: (p: Product) => void;
   formatPrice: (n: number) => string;
 }) {
-  const mediaItems = product.introductionVideos && product.introductionVideos.length > 0
-    ? product.introductionVideos
-    : Array.from(
-        new Set(
-          product.colorVariants
-            .map((v) => v.images[0])
-            .filter(Boolean) as string[],
-        ),
-      );
-  
-  if (product.coverImage && !mediaItems.includes(product.coverImage) && !product.introductionVideos) {
-    mediaItems.unshift(product.coverImage);
-  }
+  const photoImages = Array.from(
+    new Set(
+      [
+        product.coverImage,
+        ...product.colorVariants.flatMap((v) => v.images),
+      ].filter(Boolean) as string[],
+    ),
+  );
+  const mediaItems = photoImages.length > 0
+    ? photoImages
+    : (product.introductionVideos || []);
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [visible, setVisible]     = useState(true);
@@ -510,13 +442,125 @@ export default function StorePage() {
   const [filterCategory, setFilterCategory]         = useState<'all' | 'preorder' | 'closed' | 'coming-soon'>('all');
   const router = useRouter();
 
-  const allProducts = products;
+  const [batchSettings, setBatchSettings] = useState<{
+    status: 'open' | 'closed';
+    batchName: string;
+    closedMessage: string;
+  }>({
+    status: 'open',
+    batchName: 'Jersey DLOB Official',
+    closedMessage: '',
+  });
+
+  const [dynamicBatches, setDynamicBatches] = useState<JerseyBatch[]>([]);
+
+  useEffect(() => {
+    // 1. Fetch dynamic batches (including official batch and any added by owner)
+    fetch('/api/store/batches', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.batches)) {
+          setDynamicBatches(data.batches);
+          const off = data.batches.find((b: JerseyBatch) => b.slug === 'official' || b.id === 'official');
+          if (off) {
+            setBatchSettings({
+              status: off.status === 'closed' ? 'closed' : 'open',
+              batchName: off.name,
+              closedMessage: off.closedMessage || '',
+            });
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to load store batches:', err));
+  }, []);
+
+  const allProducts = useMemo(() => {
+    // 1. Map base products with dynamic status if present in dynamicBatches
+    const baseList = products.map((p) => {
+      const matchBatch = dynamicBatches.find(
+        (b) => b.slug === p.slug || b.id === p.id
+      );
+
+      if (matchBatch) {
+        const isClosed = matchBatch.status === 'closed';
+        const isComingSoon = matchBatch.status === 'coming-soon';
+        return {
+          ...p,
+          name: matchBatch.name,
+          tagline: matchBatch.tagline,
+          description: matchBatch.description,
+          isClosed,
+          comingSoon: isComingSoon,
+          preOrder: !isClosed && !isComingSoon,
+          badge: matchBatch.badge || (isClosed ? 'BATCH DITUTUP' : isComingSoon ? 'SEGERA HADIR' : 'PRE-ORDER AKTIF'),
+          badgeType: matchBatch.badgeType || (isClosed ? 'closed' : isComingSoon ? 'coming-soon' : 'active-preorder'),
+          startingPrice: matchBatch.startingPrice || p.startingPrice,
+        };
+      }
+
+      if (p.id === 'official') {
+        const isClosed = batchSettings.status === 'closed';
+        return {
+          ...p,
+          isClosed,
+          preOrder: !isClosed,
+          badge: isClosed ? 'BATCH DITUTUP' : 'PRE-ORDER AKTIF',
+          badgeType: (isClosed ? 'closed' : 'active-preorder') as any,
+        };
+      }
+      return p;
+    });
+
+    // 2. Append any extra batches created dynamically in admin dashboard
+    const extraBatches = dynamicBatches.filter(
+      (b) => !['new-batch-2026', 'official', 'noir'].includes(b.slug) && !['official', 'noir', 'official-classic', 'noir-concept', 'new-batch-2026'].includes(b.id)
+    );
+
+    const extraProducts: Product[] = extraBatches.map((b) => {
+      const isClosed = b.status === 'closed';
+      const isComingSoon = b.status === 'coming-soon';
+      return {
+        id: b.id || b.slug,
+        slug: b.slug,
+        name: b.name,
+        tagline: b.tagline,
+        description: b.description,
+        badge: b.badge || (isClosed ? 'BATCH DITUTUP' : isComingSoon ? 'SEGERA HADIR' : 'PRE-ORDER AKTIF'),
+        badgeType: b.badgeType || (isClosed ? 'closed' : isComingSoon ? 'coming-soon' : 'active-preorder'),
+        coverImage: b.colorVariants?.[0]?.images?.[0] || null,
+        coverBg: b.colorVariants?.[0]?.bgColor || '#0f172a',
+        colorVariants: (b.colorVariants || []).map((cv) => ({
+          id: cv.id,
+          name: cv.name,
+          color: cv.name,
+          images: cv.images,
+          bgColor: cv.bgColor || cv.color,
+        })),
+        material: b.material || 'Milano Standard Premium',
+        care: b.care || 'Cuci dengan air dingin',
+        origin: b.origin || 'Indonesia',
+        preOrder: b.status === 'open',
+        isClosed,
+        comingSoon: isComingSoon,
+        estimatedDelivery: b.estimatedDelivery || 'Kuota 15 Order',
+        startingPrice: b.startingPrice || 100000,
+        introductionVideos: b.introductionVideos,
+      };
+    });
+
+    return [...baseList, ...extraProducts];
+  }, [batchSettings, dynamicBatches]);
+
   const filteredProducts = allProducts.filter((p) => {
     if (filterCategory === 'preorder') return p.badgeType === 'active-preorder';
     if (filterCategory === 'closed') return p.badgeType === 'closed';
     if (filterCategory === 'coming-soon') return p.badgeType === 'coming-soon';
     return true;
   });
+
+  const preorderCount = useMemo(() => allProducts.filter((p) => p.badgeType === 'active-preorder').length, [allProducts]);
+  const closedCount = useMemo(() => allProducts.filter((p) => p.badgeType === 'closed').length, [allProducts]);
+  const comingSoonCount = useMemo(() => allProducts.filter((p) => p.badgeType === 'coming-soon').length, [allProducts]);
 
   const selectedProduct = allProducts.find((p) => p.id === selectedProductId) ?? null;
   const selectedVariant = selectedProduct
@@ -532,16 +576,15 @@ export default function StorePage() {
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
 
   const openProduct = (product: Product) => {
-    if (product.id === 'nb-jersey') {
-      router.push('/store/jersey-dlob-new-batch');
+    if (product.slug) {
+      router.push(`/store/${product.slug}`);
       return;
     }
-    setSelectedProductId(product.id);
-    setSelectedColor(product.colorVariants[0]?.id ?? '');
-    setSelectedSize('');
-    setSelectedSleeve('pendek');
-    setSelectedImageIndex(0);
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (product.id === 'nb-jersey') {
+      router.push('/store/official');
+      return;
+    }
+    router.push(`/store/${product.id}`);
   };
 
   const backToCatalog = () => setSelectedProductId(null);
@@ -562,7 +605,7 @@ export default function StorePage() {
               <p className="font-bold text-zinc-950">Informasi Batch &amp; Pemesanan Jersey DLOB</p>
             </div>
             <p className="text-zinc-600 leading-relaxed text-xs sm:text-sm">
-              Pemesanan jersey saat ini difokuskan pada <strong className="text-[#4382C8] font-semibold">Pre-Order New Batch 2026</strong> (tersedia size Dewasa, Kids &amp; Balita 👶). Edisi batch reguler sebelumnya telah resmi ditutup. Produksi batch baru berjalan setelah kuota minimum <strong className="text-zinc-950 font-mono font-bold">15 pesanan</strong> terkumpul.
+              Pemesanan jersey saat ini difokuskan pada <strong className="text-[#4382C8] font-semibold">Pre-Order Jersey DLOB Official</strong> (tersedia size Dewasa, Kids &amp; Balita 👶). Produksi batch berjalan setelah kuota minimum <strong className="text-zinc-950 font-mono font-bold">15 pesanan</strong> terkumpul.
             </p>
           </div>
         </div>
@@ -751,14 +794,30 @@ export default function StorePage() {
                   </div>
                 </button>
                 <button
-                  onClick={() => router.push('/store/new-batch-pre-order')}
-                  className="group inline-flex items-center gap-3 bg-zinc-900/90 backdrop-blur-md border border-[#4382C8]/50 text-blue-300 pl-6 pr-2 py-2 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-[#4382C8]/15 hover:border-[#4382C8] transition-all active:scale-[0.98] cursor-pointer shadow-lg"
+                  onClick={() => {
+                    if (batchSettings.status === 'closed') {
+                      router.push('/store/official');
+                    } else {
+                      router.push('/store/official/pre-order');
+                    }
+                  }}
+                  className={`group inline-flex items-center gap-3 backdrop-blur-md border pl-6 pr-2 py-2 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-lg ${
+                    batchSettings.status === 'closed'
+                      ? 'bg-zinc-900 border-red-500/40 text-red-300 hover:bg-red-500/10'
+                      : 'bg-zinc-900/90 border-[#4382C8]/50 text-blue-300 hover:bg-[#4382C8]/15 hover:border-[#4382C8]'
+                  }`}
                 >
                   <span className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#4382C8] animate-pulse" />
-                    Pre-Order New Batch
+                    {batchSettings.status === 'closed' ? (
+                      <Lock className="w-3.5 h-3.5 text-red-400" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full bg-[#4382C8] animate-pulse" />
+                    )}
+                    {batchSettings.status === 'closed' ? 'Batch Ditutup' : 'Pre-Order Jersey Official'}
                   </span>
-                  <div className="btn-nested-icon w-8 h-8 rounded-full bg-[#4382C8]/20 text-blue-300 flex items-center justify-center">
+                  <div className={`btn-nested-icon w-8 h-8 rounded-full flex items-center justify-center ${
+                    batchSettings.status === 'closed' ? 'bg-red-500/20 text-red-300' : 'bg-[#4382C8]/20 text-blue-300'
+                  }`}>
                     <ChevronRight className="w-4 h-4" />
                   </div>
                 </button>
@@ -818,7 +877,7 @@ export default function StorePage() {
                       : 'text-[#4382C8] hover:text-blue-700'
                   }`}
                 >
-                  Pre-Order Aktif (1)
+                  Pre-Order Aktif ({preorderCount})
                 </button>
                 <button
                   onClick={() => setFilterCategory('closed')}
@@ -828,7 +887,7 @@ export default function StorePage() {
                       : 'text-zinc-600 hover:text-zinc-950'
                   }`}
                 >
-                  Batch Ditutup (1)
+                  Batch Ditutup ({closedCount})
                 </button>
                 <button
                   onClick={() => setFilterCategory('coming-soon')}
@@ -838,7 +897,7 @@ export default function StorePage() {
                       : 'text-zinc-600 hover:text-zinc-950'
                   }`}
                 >
-                  Segera Hadir (1)
+                  Segera Hadir ({comingSoonCount})
                 </button>
               </div>
             </div>
@@ -858,105 +917,6 @@ export default function StorePage() {
             </div>
           </div>
 
-          {/* ── HIGH-TECH DOPPELRAND NEW BATCH HIGHLIGHT SECTION ── */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="p-1.5 rounded-[2.5rem] bg-zinc-100 border border-zinc-200/90 shadow-xl">
-              <div className="relative rounded-[calc(2.5rem-0.375rem)] overflow-hidden bg-white p-8 sm:p-12 border border-zinc-200/60 shadow-inner">
-                {/* Subtle ambient light glow */}
-                <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#4382C8]/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                  {/* Left Information Column */}
-                  <div className="lg:col-span-7 space-y-6">
-                    <div className="inline-flex items-center px-3.5 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-blue-50 text-[#4382C8] border border-blue-200">
-                      Batch Terbaru · Terbuka Untuk Pemesanan
-                    </div>
-
-                    <div>
-                      <h3 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-950">
-                        Jersey DLOB <span className="text-[#4382C8] italic">New Batch 2026</span>
-                      </h3>
-                      <p className="text-sm sm:text-base text-zinc-600 mt-3 leading-relaxed">
-                        Koleksi batch terbaru dengan 3 warna eksklusif (<span className="text-blue-600 font-semibold">Biru</span>, <span className="text-amber-600 font-semibold">Kuning</span>, dan <span className="text-red-600 font-semibold">Merah</span>). Kini tersedia dalam size <strong>Dewasa</strong>, <strong>Kids (7-13 Thn)</strong>, dan <strong>Balita 👶 (1-6 Thn)</strong>!
-                      </p>
-                      <div className="mt-3 p-3 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center gap-2.5 text-xs text-zinc-600">
-                        <Sparkles className="w-3.5 h-3.5 text-[#4382C8] shrink-0" />
-                        <span><strong>Catatan:</strong> Logo di visual representasi adalah mockup; versi jadi menggunakan patch logo official D&apos;LOB beresolusi tinggi.</span>
-                      </div>
-                    </div>
-
-                    {/* Highlights Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono font-semibold">Model Order</p>
-                        <p className="text-sm font-bold text-zinc-950 mt-1">Pre-Order</p>
-                        <p className="text-[11px] text-[#4382C8] font-mono font-bold mt-0.5">Min. 15 Kuota</p>
-                      </div>
-                      <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono font-semibold">Tipe Ukuran</p>
-                        <p className="text-sm font-bold text-zinc-950 mt-1">Dewasa, Kids &amp; Balita</p>
-                        <p className="text-[11px] text-zinc-500 mt-0.5">Milano Standard</p>
-                      </div>
-                      <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono font-semibold">Harga Mulai</p>
-                        <p className="text-sm font-bold text-[#4382C8] font-mono tabular-nums mt-1">Rp 100.000</p>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">Kids/Balita 100k · Dewasa 110k</p>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap gap-4 pt-2">
-                      <button
-                        onClick={() => router.push('/store/new-batch-pre-order')}
-                        className="group inline-flex items-center gap-3 bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs sm:text-sm uppercase tracking-wider pl-7 pr-2 py-2 rounded-full transition-all shadow-lg active:scale-[0.98] cursor-pointer"
-                      >
-                        <span>Form Pre-Order Online</span>
-                        <div className="btn-nested-icon w-8 h-8 rounded-full bg-white text-zinc-950 flex items-center justify-center">
-                          <ChevronRight className="w-4 h-4" />
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => router.push('/store/jersey-dlob-new-batch')}
-                        className="group inline-flex items-center gap-3 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200 text-zinc-800 font-semibold text-xs sm:text-sm pl-6 pr-2 py-2 rounded-full transition-all active:scale-[0.98] cursor-pointer"
-                      >
-                        <span>Lihat Foto &amp; Video Detail</span>
-                        <div className="btn-nested-icon w-8 h-8 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center">
-                          <ChevronRight className="w-4 h-4" />
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Right Visual Swatches Column */}
-                  <div className="lg:col-span-5 flex flex-col gap-3">
-                    {[
-                      { name: 'Biru (Blue Milano)', color: 'Blue Edition', hex: '#0b244c', photo: '/images/new jersey promotion/biru-photo1.jpeg' },
-                      { name: 'Kuning (Yellow Milano)', color: 'Yellow Edition', hex: '#FFC000', photo: '/images/new jersey promotion/kuning-photo1.jpeg' },
-                      { name: 'Merah (Red Milano)', color: 'Red Edition', hex: '#ff0000', photo: '/images/new jersey promotion/merah-photo1.jpeg' },
-                    ].map((c) => (
-                      <div
-                        key={c.name}
-                        onClick={() => router.push('/store/jersey-dlob-new-batch')}
-                        className="group/item flex items-center justify-between p-3.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100/90 border border-zinc-200/80 hover:border-[#4382C8]/50 transition-all cursor-pointer shadow-xs"
-                      >
-                        <div className="flex items-center gap-3.5">
-                          <div className="w-9 h-9 rounded-full border border-zinc-200 shadow-sm" style={{ backgroundColor: c.hex }} />
-                          <div>
-                            <p className="text-sm font-bold text-zinc-950 group-hover/item:text-[#4382C8] transition-colors">{c.name}</p>
-                            <p className="text-xs text-zinc-500">{c.color}</p>
-                          </div>
-                        </div>
-                        <div className="btn-nested-icon w-7 h-7 rounded-full bg-zinc-200/80 group-hover/item:bg-[#4382C8] group-hover/item:text-white flex items-center justify-center transition-colors">
-                          <ChevronRight className="w-3.5 h-3.5 text-zinc-600 group-hover/item:text-white" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </>
       )}
 
@@ -1092,7 +1052,7 @@ export default function StorePage() {
                       <span>Pemesanan Batch Reguler Telah Ditutup</span>
                     </p>
                     <p className="text-amber-800 text-xs mt-1.5 leading-relaxed">
-                      Pemesanan untuk edisi batch reguler klasik saat ini telah ditutup. Silakan memesan edisi terbaru melalui <strong>Pre-Order New Batch 2026</strong> yang saat ini aktif dibuka!
+                      Pemesanan untuk batch reguler saat ini ditutup. Silakan memesan melalui <strong>Pre-Order Jersey Official</strong> yang saat ini aktif dibuka!
                     </p>
                   </div>
                 )}
@@ -1216,15 +1176,25 @@ export default function StorePage() {
                 {/* Submit Pre-Order / Closed State Action */}
                 <div className="space-y-4">
                   {selectedProduct.isClosed ? (
-                    <button
-                      onClick={() => router.push('/store/new-batch-pre-order')}
-                      className="group w-full py-4 font-bold text-xs sm:text-sm uppercase tracking-widest transition-all bg-zinc-950 hover:bg-zinc-800 text-white active:scale-[0.98] rounded-full shadow-lg flex items-center justify-center gap-3 cursor-pointer"
-                    >
-                      <span>Beralih ke Pre-Order New Batch</span>
-                      <div className="btn-nested-icon w-7 h-7 rounded-full bg-white text-zinc-950 flex items-center justify-center">
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </button>
+                    batchSettings.status === 'closed' ? (
+                      <button
+                        disabled
+                        className="w-full py-4 font-bold text-xs uppercase tracking-widest bg-zinc-100 text-zinc-400 cursor-not-allowed rounded-full border border-zinc-200 flex items-center justify-center gap-2"
+                      >
+                        <Lock className="w-4 h-4 text-zinc-400" />
+                        <span>PEMESANAN BATCH TELAH DITUTUP</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => router.push('/store/official/pre-order')}
+                        className="group w-full py-4 font-bold text-xs sm:text-sm uppercase tracking-widest transition-all bg-zinc-950 hover:bg-zinc-800 text-white active:scale-[0.98] rounded-full shadow-lg flex items-center justify-center gap-3 cursor-pointer"
+                      >
+                        <span>Beralih ke Pre-Order Jersey Official</span>
+                        <div className="btn-nested-icon w-7 h-7 rounded-full bg-white text-zinc-950 flex items-center justify-center">
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </button>
+                    )
                   ) : selectedProduct.comingSoon ? (
                     <button
                       disabled
@@ -1236,9 +1206,9 @@ export default function StorePage() {
                     <button
                       onClick={() =>
                         router.push(
-                          selectedProduct.id === 'nb-jersey'
-                            ? '/store/new-batch-pre-order'
-                            : '/pre-order'
+                          selectedProduct.slug
+                            ? `/store/${selectedProduct.slug}/pre-order`
+                            : '/store/official/pre-order'
                         )
                       }
                       className="group w-full py-4 font-bold text-xs sm:text-sm uppercase tracking-widest transition-all bg-[#4382C8] hover:bg-[#356db0] text-white active:scale-[0.98] rounded-full shadow-xl shadow-[#4382C8]/25 flex items-center justify-center gap-3 cursor-pointer"

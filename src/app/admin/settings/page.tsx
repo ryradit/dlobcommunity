@@ -3,8 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { User, Mail, Camera, Save, Loader2, Lock, Eye, EyeOff, MessageSquare, AtSign, CreditCard, Plus, Trash2, Pencil, QrCode, Upload, Banknote } from 'lucide-react';
+import { User, Mail, Camera, Save, Loader2, Lock, Eye, EyeOff, MessageSquare, AtSign, CreditCard, Plus, Trash2, Pencil, QrCode, Upload, Banknote, ShoppingBag, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function AdminSettingsPage() {
   const { user, updateProfile, uploadAvatar, refreshUser, updatePassword } = useAuth();
@@ -59,6 +60,17 @@ export default function AdminSettingsPage() {
   const [attendanceFee, setAttendanceFee] = useState<number>(18000);
   const [pricingSaving, setPricingSaving] = useState(false);
 
+  // Jersey Pre-Order & Batch Command Center states (Owner: ryradit@gmail.com)
+  const [jerseyBatchStatus, setJerseyBatchStatus] = useState<'open' | 'closed'>('open');
+  const [jerseyRekapStatus, setJerseyRekapStatus] = useState<'open' | 'closed'>('open');
+  const [jerseyBatchName, setJerseyBatchName] = useState<string>('New Batch 2026');
+  const [jerseyClosedMessage, setJerseyClosedMessage] = useState<string>('Pemesanan Pre-Order Jersey DLOB New Batch saat ini telah resmi ditutup. Nantikan informasi pembukaan batch berikutnya!');
+  const [jerseySaving, setJerseySaving] = useState(false);
+
+  const userEmail = (user?.email || '').toLowerCase().trim();
+  const userFullName = (user?.user_metadata?.full_name || user?.user_metadata?.name || '').toLowerCase().trim();
+  const isOwner = userEmail === 'ryradit@gmail.com' || userEmail.includes('ryradit') || userFullName.includes('ryan radityatama') || userFullName === 'ryan';
+
   useEffect(() => {
     async function fetchSettings() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -87,6 +99,17 @@ export default function AdminSettingsPage() {
           setBankDraft(parsed);
         } catch { setBankInfo(null); setBankDraft(null); }
       }
+
+      // Load Jersey batch settings
+      const jStatus = settings.find(s => s.key === 'jersey_new_batch_status');
+      const jRekap = settings.find(s => s.key === 'jersey_rekap_new_batch_status');
+      const jBatchName = settings.find(s => s.key === 'jersey_active_batch_name');
+      const jClosedMsg = settings.find(s => s.key === 'jersey_closed_message');
+
+      if (jStatus?.value) setJerseyBatchStatus(jStatus.value === 'closed' ? 'closed' : 'open');
+      if (jRekap?.value) setJerseyRekapStatus(jRekap.value === 'closed' ? 'closed' : 'open');
+      if (jBatchName?.value) setJerseyBatchName(jBatchName.value);
+      if (jClosedMsg?.value) setJerseyClosedMessage(jClosedMsg.value);
     }
     fetchSettings();
   }, []);
@@ -189,6 +212,42 @@ export default function AdminSettingsPage() {
       setMessage({ type: 'error', text: err?.message || 'Gagal menyimpan tarif' });
     } finally {
       setPricingSaving(false);
+    }
+  };
+
+  const handleSaveJerseySettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setJerseySaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sesi telah berakhir');
+
+      const res = await fetch('/api/new-batch-pre-orders/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          status: jerseyBatchStatus,
+          rekapStatus: jerseyRekapStatus,
+          batchName: jerseyBatchName,
+          closedMessage: jerseyClosedMessage,
+        }),
+      });
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: '✅ Pengaturan Pre-Order Jersey & Rekap berhasil disimpan!' });
+        setTimeout(() => setMessage(null), 3500);
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Gagal menyimpan pengaturan');
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message || 'Terjadi kesalahan' });
+      setTimeout(() => setMessage(null), 4000);
+    } finally {
+      setJerseySaving(false);
     }
   };
 
@@ -764,6 +823,162 @@ export default function AdminSettingsPage() {
               >
                 {pricingSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 <span>Simpan Tarif DLOB Pusat</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* ── JERSEY PRE-ORDER & BATCH COMMAND CENTER (OWNER EXCLUSIVE) ── */}
+        <div className="glass-premium rounded-2xl p-6 mb-8 transition-colors duration-300 border-2 border-emerald-500/20 dark:border-emerald-500/30">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100 dark:border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                <ShoppingBag className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
+                    Pusat Komando Pre-Order Jersey DLOB
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    Owner Exclusive
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 mt-0.5">
+                  Atur pembukaan sesi pre-order jersey publik dan kunci (freeze) rekap pesanan konveksi
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Link
+                href="/admin/rekap-new-batch"
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-800 dark:text-zinc-200 transition-colors flex items-center gap-1.5"
+              >
+                <span>Lihat Rekap Data</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          <form onSubmit={handleSaveJerseySettings} className="space-y-6">
+            {/* 1. Nama Batch Aktif */}
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200/80 dark:border-white/10 space-y-2">
+              <label className="block text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wide">
+                Nama / Identitas Batch Aktif
+              </label>
+              <input
+                type="text"
+                value={jerseyBatchName}
+                onChange={(e) => setJerseyBatchName(e.target.value)}
+                placeholder="Contoh: New Batch 2026 atau Batch 2 (Maret 2026)"
+                required
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              />
+              <p className="text-xs text-gray-500 dark:text-zinc-400">
+                Nama batch ini otomatis tampil di formulir publik, judul rekap, dan kwitansi invoice.
+              </p>
+            </div>
+
+            {/* 2. Dua Toggle Kontrol (Pre-Order & Rekap) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Toggle A: Form Pre-Order Publik */}
+              <div className={`p-4 rounded-xl border transition-all ${
+                jerseyBatchStatus === 'open'
+                  ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/40'
+                  : 'bg-red-50/50 dark:bg-red-950/20 border-red-300 dark:border-red-800/40'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wide text-gray-700 dark:text-zinc-300">
+                    Sesi Pre-Order (Form Publik)
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    jerseyBatchStatus === 'open'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-red-500 text-white'
+                  }`}>
+                    {jerseyBatchStatus === 'open' ? 'DIBUKA' : 'DITUTUP'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-zinc-400 mb-4 leading-relaxed">
+                  {jerseyBatchStatus === 'open'
+                    ? 'Form di /store/new-batch-pre-order menerima pesanan baru secara publik.'
+                    : 'Pemesanan baru dinonaktifkan di store & API menolak pengiriman form.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setJerseyBatchStatus(jerseyBatchStatus === 'open' ? 'closed' : 'open')}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                    jerseyBatchStatus === 'open'
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>{jerseyBatchStatus === 'open' ? 'Tutup Sesi Pre-Order' : 'Buka Sesi Pre-Order'}</span>
+                </button>
+              </div>
+
+              {/* Toggle B: Status Rekapitulasi (Freeze Protection) */}
+              <div className={`p-4 rounded-xl border transition-all ${
+                jerseyRekapStatus === 'open'
+                  ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800/40'
+                  : 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/40'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wide text-gray-700 dark:text-zinc-300">
+                    Rekapitulasi New Batch
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    jerseyRekapStatus === 'open'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-amber-600 text-white'
+                  }`}>
+                    {jerseyRekapStatus === 'open' ? 'AKTIF / EDITABLE' : 'DIKUNCI / FREEZE'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-zinc-400 mb-4 leading-relaxed">
+                  {jerseyRekapStatus === 'open'
+                    ? 'Item jersey dan pesanan dapat dimodifikasi atau ditambah di halaman rekap.'
+                    : 'Rekap dikunci (freeze) agar data pesanan tidak berubah saat masuk antrian konveksi.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setJerseyRekapStatus(jerseyRekapStatus === 'open' ? 'closed' : 'open')}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                    jerseyRekapStatus === 'open'
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>{jerseyRekapStatus === 'open' ? 'Kunci / Freeze Rekap Batch' : 'Buka Kunci Rekap'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Pesan Penutupan Kustom */}
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200/80 dark:border-white/10 space-y-2">
+              <label className="block text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wide">
+                Pesan Khusus Ketika Pre-Order Ditutup
+              </label>
+              <textarea
+                rows={2}
+                value={jerseyClosedMessage}
+                onChange={(e) => setJerseyClosedMessage(e.target.value)}
+                placeholder="Pesan yang tampil di banner halaman pre-order saat status ditutup..."
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-zinc-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={jerseySaving}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+              >
+                {jerseySaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Simpan Pengaturan Batch Jersey</span>
               </button>
             </div>
           </form>

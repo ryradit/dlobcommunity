@@ -29,8 +29,13 @@ import {
   Check,
   FileSpreadsheet,
   Mail,
-  FileText
+  FileText,
+  Lock,
+  Unlock,
+  Settings
 } from 'lucide-react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 export type SizeCategory = 'dewasa' | 'kids' | 'balita';
 
@@ -135,6 +140,98 @@ export default function RekapNewBatchPage() {
 
   const isOwner = isSuperAdminOwner(user);
 
+  // ── Batch Command States ──
+  const [batchSettings, setBatchSettings] = useState<{
+    status: 'open' | 'closed';
+    rekapStatus: 'open' | 'closed';
+    batchName: string;
+    closedMessage: string;
+  }>({
+    status: 'open',
+    rekapStatus: 'open',
+    batchName: 'New Batch 2026',
+    closedMessage: '',
+  });
+  const [isUpdatingBatch, setIsUpdatingBatch] = useState(false);
+
+  const fetchBatchSettings = async () => {
+    try {
+      const res = await fetch('/api/new-batch-pre-orders/settings', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success && data.settings) {
+        setBatchSettings(data.settings);
+      }
+    } catch (err) {
+      console.error('Failed to load batch settings:', err);
+    }
+  };
+
+  const handleTogglePreOrder = async () => {
+    const nextStatus = batchSettings.status === 'open' ? 'closed' : 'open';
+    const confirmMsg = nextStatus === 'closed'
+      ? 'Tutup sesi Pre-Order Jersey New Batch?\n\nPengunjung tidak akan bisa mengisi formulir pemesanan baru di store.'
+      : 'Buka kembali sesi Pre-Order Jersey New Batch?\n\nFormulir pemesanan di store akan kembali menerima pesanan baru.';
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setIsUpdatingBatch(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/new-batch-pre-orders/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) {
+        setBatchSettings((prev) => ({ ...prev, status: nextStatus }));
+        alert(`Sesi Pre-Order berhasil ${nextStatus === 'closed' ? 'DITUTUP' : 'DIBUKA KEMBALI'}.`);
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(`Gagal mengubah status pre-order: ${errJson.error || 'Terjadi kesalahan'}`);
+      }
+    } catch (err: any) {
+      alert(`Terjadi kesalahan: ${err.message}`);
+    } finally {
+      setIsUpdatingBatch(false);
+    }
+  };
+
+  const handleToggleRekap = async () => {
+    const nextStatus = batchSettings.rekapStatus === 'open' ? 'closed' : 'open';
+    const confirmMsg = nextStatus === 'closed'
+      ? 'KUNCI (Freeze) Rekapitulasi Batch ini?\n\nData pesanan akan difinalisasi untuk pengiriman ke vendor konveksi dan penambahan item akan dikunci.'
+      : 'BUKA KEMBALI kunci rekapitulasi batch?\n\nItem pesanan akan dapat diedit/ditambah kembali.';
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setIsUpdatingBatch(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/new-batch-pre-orders/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ rekapStatus: nextStatus }),
+      });
+      if (res.ok) {
+        setBatchSettings((prev) => ({ ...prev, rekapStatus: nextStatus }));
+        alert(`Rekapitulasi batch berhasil ${nextStatus === 'closed' ? 'DIKUNCI / FREEZE' : 'DIBUKA KEMBALI'}.`);
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(`Gagal mengubah status rekap: ${errJson.error || 'Terjadi kesalahan'}`);
+      }
+    } catch (err: any) {
+      alert(`Terjadi kesalahan: ${err.message}`);
+    } finally {
+      setIsUpdatingBatch(false);
+    }
+  };
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -153,6 +250,7 @@ export default function RekapNewBatchPage() {
   useEffect(() => {
     if (isOwner) {
       fetchOrders();
+      fetchBatchSettings();
     }
   }, [isOwner]);
 
@@ -958,6 +1056,15 @@ export default function RekapNewBatchPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <Link
+            href="/admin/batches"
+            className="px-4 py-2.5 rounded-full text-xs font-bold bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 shadow-sm transition-all flex items-center gap-1.5"
+            title="Kelola & Tambah Batch Jersey"
+          >
+            <Layers className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
+            <span>Kelola Batch Jersey</span>
+          </Link>
+
           <button
             onClick={fetchOrders}
             disabled={loading}
@@ -976,6 +1083,107 @@ export default function RekapNewBatchPage() {
             <span>Export Excel (.xlsx)</span>
           </button>
         </div>
+      </div>
+
+      {/* ── BATCH & PRE-ORDER COMMAND BAR (QUICK TOGGLES FOR OWNER) ── */}
+      <div className="bg-gradient-to-r from-gray-950 via-zinc-900 to-black text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-white/10 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[11px] uppercase tracking-widest text-emerald-400 font-extrabold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Batch Command Center
+              </span>
+              <span className="text-xs text-zinc-600">•</span>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-zinc-200 font-mono font-semibold">
+                {batchSettings.batchName}
+              </span>
+            </div>
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              Kontrol Sesi Pre-Order &amp; Penguncian Rekapitulasi
+            </h3>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Buka atau tutup akses form pemesanan store, dan kunci (freeze) data rekap saat pesanan masuk produksi.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Quick Toggle: Pre-Order Status */}
+            <button
+              type="button"
+              disabled={isUpdatingBatch}
+              onClick={handleTogglePreOrder}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${
+                batchSettings.status === 'open'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                  : 'bg-red-500/20 text-red-300 border border-red-500/40 hover:bg-red-500/30'
+              }`}
+              title="Klik untuk membuka atau menutup sesi pre-order form di store"
+            >
+              <div className={`w-2 h-2 rounded-full ${batchSettings.status === 'open' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+              <span>Pre-Order: {batchSettings.status === 'open' ? 'DIBUKA' : 'DITUTUP'}</span>
+              <span className="text-[10px] opacity-75 underline ml-1">
+                ({batchSettings.status === 'open' ? 'Tutup' : 'Buka'})
+              </span>
+            </button>
+
+            {/* Quick Toggle: Rekap Status */}
+            <button
+              type="button"
+              disabled={isUpdatingBatch}
+              onClick={handleToggleRekap}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${
+                batchSettings.rekapStatus === 'open'
+                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 hover:bg-blue-500/30'
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+              }`}
+              title="Klik untuk mengunci (freeze) rekapitulasi data pesanan"
+            >
+              {batchSettings.rekapStatus === 'open' ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+              <span>Rekap: {batchSettings.rekapStatus === 'open' ? 'AKTIF' : 'DIKUNCI / FREEZE'}</span>
+              <span className="text-[10px] opacity-75 underline ml-1">
+                ({batchSettings.rekapStatus === 'open' ? 'Kunci' : 'Buka'})
+              </span>
+            </button>
+
+            <Link
+              href="/admin/batches"
+              className="px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-1.5 text-xs font-bold"
+              title="Buka Dasbor Kelola Semua Batch Jersey"
+            >
+              <Layers className="w-4 h-4 text-emerald-400" />
+              <span>Semua Batch</span>
+            </Link>
+
+            <Link
+              href="/admin/settings"
+              className="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition-all flex items-center gap-1.5 text-xs font-medium"
+              title="Buka Pengaturan Lengkap di Admin Settings"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Warning Banner if Rekap is Frozen */}
+        {batchSettings.rekapStatus === 'closed' && (
+          <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>
+                <strong>Rekapitulasi Sedang Dikunci (Freeze):</strong> Data pesanan dalam batch ini telah difinalisasi untuk pengiriman ke vendor konveksi.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleRekap}
+              className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl text-xs shrink-0 transition-all self-start sm:self-auto"
+            >
+              Buka Kunci Rekap
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Metric Cards Grid ── */}

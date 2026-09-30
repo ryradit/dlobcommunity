@@ -8,7 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import {
   Menu, X, LayoutDashboard, BarChart3, CreditCard, Settings, LogOut, Home,
   Users, Shield, Sparkles, Dumbbell, FileText, TrendingUp, Sun, Moon,
-  ChevronLeft, ChevronRight, MessageSquare, Trophy, ShoppingBag, Video
+  ChevronLeft, ChevronRight, MessageSquare, Trophy, ShoppingBag, Video, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
@@ -103,7 +103,11 @@ export default function DashboardSidebar({ isAdmin = false, branchSlug = 'pusat'
     { label: 'Analitik', href: `${prefix}/admin/analitik`, icon: BarChart3 },
     { label: 'Racik Tim Pintar', href: `${prefix}/admin/team-optimizer`, icon: Sparkles },
     { label: 'Statistik Member', href: `${prefix}/admin/member-statistik`, icon: Trophy },
-    ...(isOwner ? [{ label: 'Analisis Video AI', href: `${prefix}/admin/video-analysis`, icon: Video }] : []),
+    ...(isOwner ? [
+      { label: 'Kelola Batch Jersey', href: '/admin/batches', icon: Layers },
+      { label: 'Rekap New Batch', href: '/admin/rekap-new-batch', icon: ShoppingBag },
+      { label: 'Analisis Video AI', href: `${prefix}/admin/video-analysis`, icon: Video }
+    ] : []),
     { label: 'Pengaturan', href: `${prefix}/admin/settings`, icon: Settings },
   ];
 
@@ -112,7 +116,10 @@ export default function DashboardSidebar({ isAdmin = false, branchSlug = 'pusat'
     { label: 'Kelola Anggota', href: '/admin/members', icon: Users },
     { label: 'Pembayaran', href: '/admin/pembayaran', icon: CreditCard },
     { label: 'Keuangan', href: '/admin/keuangan', icon: TrendingUp },
-    ...(isOwner ? [{ label: 'Rekap New Batch', href: '/admin/rekap-new-batch', icon: ShoppingBag }] : []),
+    ...(isOwner ? [
+      { label: 'Kelola Batch Jersey', href: '/admin/batches', icon: Layers },
+      { label: 'Rekap New Batch', href: '/admin/rekap-new-batch', icon: ShoppingBag },
+    ] : []),
     { label: 'Analitik', href: '/admin/analitik', icon: BarChart3 },
     { label: 'Survey Member', href: '/admin/survey', icon: MessageSquare },
     { label: 'AI Artikel Generator', href: '/admin/artikel', icon: FileText },
