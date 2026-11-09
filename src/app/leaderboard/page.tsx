@@ -69,8 +69,8 @@ export const PERIOD_CONFIGS: PeriodConfig[] = [
     icon: '📁',
     startDate: '2026-02-01',
     endDate: '2026-04-30T23:59:59',
-    minMatches: 1,
-    minPartnerMatches: 1,
+    minMatches: 7,
+    minPartnerMatches: 3,
   },
   {
     id: 'p2-2026',
@@ -82,8 +82,8 @@ export const PERIOD_CONFIGS: PeriodConfig[] = [
     icon: '📁',
     startDate: '2026-05-01',
     endDate: '2026-08-31T23:59:59',
-    minMatches: 1,
-    minPartnerMatches: 1,
+    minMatches: 7,
+    minPartnerMatches: 3,
   },
   {
     id: 'p3-2026',
@@ -108,8 +108,8 @@ export const PERIOD_CONFIGS: PeriodConfig[] = [
     icon: '🌟',
     startDate: null,
     endDate: null,
-    minMatches: 1,
-    minPartnerMatches: 1,
+    minMatches: 10,
+    minPartnerMatches: 5,
   },
 ];
 
@@ -555,7 +555,7 @@ export default function LeaderboardPage() {
     });
 
     const qualifiedPartnerships = Array.from(partnershipMap.values())
-      .filter(entry => entry.data.totalMatches >= 1)
+      .filter(entry => entry.data.totalMatches >= (periodConfig.minPartnerMatches || 1))
       .map(entry => entry.data);
 
     setPartnerships(qualifiedPartnerships);
