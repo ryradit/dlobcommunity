@@ -13,8 +13,11 @@ interface MatchData {
   team1_player2: string;
   team2_player1: string;
   team2_player2: string;
-  court_number: string;
+  court_number?: string;
   shuttlecock_amount: string;
+  team1_score?: number | null;
+  team2_score?: number | null;
+  score?: string;
   confidence: number;
 }
 
@@ -206,13 +209,21 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
 
   const handleRestoreDraft = () => {
     if (!draftData) return;
-    setExtractedData(draftData.extractedData);
+    const sanitizedMatches = (draftData.extractedData.matches || []).map(m => {
+      let kok = String(m.shuttlecock_amount || '').trim();
+      const kokNum = parseInt(kok, 10);
+      if (kokNum >= 8 || kok.includes('-')) {
+        kok = '1';
+      }
+      return { ...m, shuttlecock_amount: kok || '1' };
+    });
+    setExtractedData({ ...draftData.extractedData, matches: sanitizedMatches });
     setMatchDate(draftData.matchDate || '');
     if (draftData.selectedImage) {
       setSelectedImage(draftData.selectedImage);
     }
     setHasDraft(false);
-    validateAllPlayers(draftData.extractedData.matches);
+    validateAllPlayers(sanitizedMatches);
   };
 
   const handleDiscardDraft = () => {
@@ -282,6 +293,16 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
 
     try {
       const structured = await processWithGemini(selectedImage);
+      if (structured?.matches) {
+        structured.matches = structured.matches.map((m: MatchData) => {
+          let kok = String(m.shuttlecock_amount || '').trim();
+          const kokNum = parseInt(kok, 10);
+          if (kokNum >= 8 || kok.includes('-')) {
+            kok = '1';
+          }
+          return { ...m, shuttlecock_amount: kok || '1' };
+        });
+      }
       setExtractedData(structured);
       setCurrentStep('Selesai!');
       
@@ -500,27 +521,45 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
     }
   };
 
-  const handleFieldChange = async (matchIndex: number, field: keyof MatchData, value: string | number) => {
-    if (extractedData && extractedData.matches[matchIndex]) {
-      const updatedMatches = [...extractedData.matches];
+  const handleFieldChange = async (matchIndex: number, field: keyof MatchData, value: any) => {
+    setExtractedData(prev => {
+      if (!prev || !prev.matches[matchIndex]) return prev;
+      const updatedMatches = [...prev.matches];
       updatedMatches[matchIndex] = { ...updatedMatches[matchIndex], [field]: value };
-      setExtractedData({ ...extractedData, matches: updatedMatches });
-      
-      // Re-validate player name if it's a player field
-      const playerFields: PlayerField[] = ['team1_player1', 'team1_player2', 'team2_player1', 'team2_player2'];
-      if (typeof value === 'string' && playerFields.includes(field as PlayerField)) {
-        const validation = await validatePlayerName(value);
-        if (validation) {
-          setPlayerValidation(prev => ({
-            ...prev,
-            [matchIndex]: {
-              ...prev[matchIndex],
-              [field as PlayerField]: validation,
-            },
-          }));
-        }
+      return { ...prev, matches: updatedMatches };
+    });
+
+    // Re-validate player name if it's a player field
+    const playerFields: PlayerField[] = ['team1_player1', 'team1_player2', 'team2_player1', 'team2_player2'];
+    if (typeof value === 'string' && playerFields.includes(field as PlayerField)) {
+      const validation = await validatePlayerName(value);
+      if (validation) {
+        setPlayerValidation(prev => ({
+          ...prev,
+          [matchIndex]: {
+            ...prev[matchIndex],
+            [field as PlayerField]: validation,
+          },
+        }));
       }
     }
+  };
+
+  const handleMatchScoreChange = (matchIndex: number, t1: number | null, t2: number | null) => {
+    setExtractedData(prev => {
+      if (!prev || !prev.matches[matchIndex]) return prev;
+      const updatedMatches = [...prev.matches];
+      const scoreStr = (t1 !== null && t2 !== null) 
+        ? `${t1}-${t2}` 
+        : (t1 !== null ? `${t1}` : (t2 !== null ? `${t2}` : ''));
+      updatedMatches[matchIndex] = {
+        ...updatedMatches[matchIndex],
+        team1_score: t1,
+        team2_score: t2,
+        score: scoreStr,
+      };
+      return { ...prev, matches: updatedMatches };
+    });
   };
 
   const handleDeleteMatch = (index: number) => {
@@ -1003,13 +1042,13 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
                 </div>
                 <div className="bg-purple-500/20 rounded px-3 py-2 text-center">
                   <div className="text-purple-200 font-semibold">Kolom 3</div>
-                  <div className="text-white">Lapangan #</div>
-                  <div className="text-xs text-purple-300">2</div>
+                  <div className="text-white">Skor</div>
+                  <div className="text-xs text-purple-300">21-19</div>
                 </div>
                 <div className="bg-green-500/20 rounded px-3 py-2 text-center">
                   <div className="text-green-200 font-semibold">Kolom 4</div>
                   <div className="text-white">Kok</div>
-                  <div className="text-xs text-green-300">4</div>
+                  <div className="text-xs text-green-300">1</div>
                 </div>
               </div>
               <p className="text-xs text-blue-200 mt-2">
@@ -1083,7 +1122,7 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
                         Seret gambar ke sini atau klik untuk mengunggah
                       </p>
                       <p className="text-sm text-purple-200">
-                        Mendukung: JPG, PNG dengan 4 kolom (Tim 1 | Tim 2 | Lapangan | Kok)
+                        Mendukung: JPG, PNG jadwal / papan skor (Tim 1 | Tim 2 | Skor | Kok)
                       </p>
                     </div>
                   </div>
@@ -1412,27 +1451,62 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
                           {renderPlayerInput(index, 'team2_player2', match.team2_player2, 'Pemain 2')}
                         </div>
 
-                        {/* Court & Shuttlecock */}
-                        <div className="col-span-2 grid grid-cols-2 gap-2">
+                        {/* Match Details: Editable Scores & Shuttlecock (Nomor Lapangan Removed) */}
+                        <div className="col-span-2 grid grid-cols-2 gap-3 bg-white/5 rounded-xl p-3 border border-white/10">
                           <div>
-                            <label className="block text-xs text-purple-200 mb-1">Lapangan #</label>
-                            <input
-                              type="text"
-                              value={match.court_number}
-                              onChange={(e) => handleFieldChange(index, 'court_number', e.target.value)}
-                              placeholder="Lapangan"
-                              className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white placeholder-purple-300"
-                            />
+                            <label className="block text-xs text-purple-200 mb-1.5 font-medium">Skor Pertandingan (Tim 1 - Tim 2)</label>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="50"
+                                  value={match.team1_score ?? ''}
+                                  onChange={(e) => {
+                                    const raw = e.target.value.trim();
+                                    const val = raw === '' ? null : parseInt(raw, 10);
+                                    handleMatchScoreChange(index, isNaN(val as number) ? null : val, match.team2_score ?? null);
+                                  }}
+                                  placeholder="0"
+                                  className="w-full bg-white/5 border border-blue-400/30 focus:border-blue-400 rounded-lg px-2.5 py-1.5 text-sm text-white text-center font-mono font-bold placeholder-purple-300 focus:outline-none"
+                                />
+                                <span className="block text-[10px] text-blue-300 text-center mt-0.5">Tim 1</span>
+                              </div>
+                              <span className="text-zinc-400 font-black text-base pb-3">-</span>
+                              <div className="flex-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="50"
+                                  value={match.team2_score ?? ''}
+                                  onChange={(e) => {
+                                    const raw = e.target.value.trim();
+                                    const val = raw === '' ? null : parseInt(raw, 10);
+                                    handleMatchScoreChange(index, match.team1_score ?? null, isNaN(val as number) ? null : val);
+                                  }}
+                                  placeholder="0"
+                                  className="w-full bg-white/5 border border-red-400/30 focus:border-red-400 rounded-lg px-2.5 py-1.5 text-sm text-white text-center font-mono font-bold placeholder-purple-300 focus:outline-none"
+                                />
+                                <span className="block text-[10px] text-red-300 text-center mt-0.5">Tim 2</span>
+                              </div>
+                            </div>
                           </div>
                           <div>
-                            <label className="block text-xs text-purple-200 mb-1">Jumlah Kok</label>
+                            <label className="block text-xs text-purple-200 mb-1.5 font-medium">Jumlah Kok</label>
                             <input
-                              type="text"
+                              type="number"
+                              min="1"
+                              max="10"
                               value={match.shuttlecock_amount}
                               onChange={(e) => handleFieldChange(index, 'shuttlecock_amount', e.target.value)}
-                              placeholder="Jumlah"
-                              className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white placeholder-purple-300"
+                              placeholder="1"
+                              className={`w-full bg-white/5 border ${parseInt(match.shuttlecock_amount) > 4 ? 'border-rose-500' : 'border-white/10 focus:border-purple-400'} rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-purple-300 focus:outline-none`}
                             />
+                            {parseInt(match.shuttlecock_amount) > 4 ? (
+                              <p className="text-[10px] text-rose-300 font-medium mt-0.5">⚠️ Kok &gt; 4 tidak lazim (skor?)</p>
+                            ) : (
+                              <p className="text-[10px] text-purple-300/60 mt-0.5">Standar: 1–2 kok per match</p>
+                            )}
                           </div>
                         </div>
                       </div>

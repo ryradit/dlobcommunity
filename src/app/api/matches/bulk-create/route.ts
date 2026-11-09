@@ -12,6 +12,9 @@ interface MatchInput {
   team2_player2: string;
   court_number: string;
   shuttlecock_amount: string;
+  team1_score?: number | string;
+  team2_score?: number | string;
+  score?: string;
 }
 
 async function getOrCreatePlayerProfile(supabase: any, name: string, targetBranchId: string) {
@@ -214,7 +217,27 @@ export async function POST(request: NextRequest) {
 
         // Dynamic pricing based on branch rules (configured by admin in app_settings)
         const pricing = await getBranchPricing(supabase, targetBranchId);
-        const shuttlecockAmountNum = parseInt(match.shuttlecock_amount) || 1;
+        
+        // Guard against match score mistakenly passed as shuttlecock amount
+        let parsedKok = parseInt(match.shuttlecock_amount) || 1;
+        let team1Score = match.team1_score !== undefined && match.team1_score !== null && match.team1_score !== '' 
+          ? parseInt(String(match.team1_score), 10) 
+          : null;
+        let team2Score = match.team2_score !== undefined && match.team2_score !== null && match.team2_score !== '' 
+          ? parseInt(String(match.team2_score), 10) 
+          : null;
+
+        // If cock amount is >= 8, it's almost certainly a match score (e.g. 21 or 30)
+        if (parsedKok >= 8) {
+          console.warn(`[bulk-create] Match #${i + 1}: shuttlecock_amount was ${parsedKok} (likely a match score!). Sanitizing to 1 kok.`);
+          if (team1Score === null) team1Score = parsedKok;
+          parsedKok = 1;
+        } else if (parsedKok > 4) {
+          console.warn(`[bulk-create] Match #${i + 1}: shuttlecock_amount ${parsedKok} is unusually high. Capping at 2 kok.`);
+          parsedKok = 2;
+        }
+
+        const shuttlecockAmountNum = parsedKok;
         const costPerMember = shuttlecockAmountNum * pricing.costPerMemberPerCock;
         const attendanceFeeRate = pricing.attendanceFee;
         const isDlbcBranch = targetBranchId === 'dlob-cikupa';
@@ -289,15 +312,36 @@ export async function POST(request: NextRequest) {
 
         console.log(`🔢 Creating match #${matchNumber} for ${matchDateString} (${targetBranchId})`);
 
-        // Create match with branch_id
+        // Create match with branch_id and team player assignments
+        const matchPayload: any = {
+          shuttlecock_count: shuttlecockAmountNum,
+          match_date: matchDateObj.toISOString(),
+          match_number: matchNumber,
+          branch_id: targetBranchId,
+          team1_player1: match.team1_player1?.trim() || null,
+          team1_player2: match.team1_player2?.trim() || null,
+          team2_player1: match.team2_player1?.trim() || null,
+          team2_player2: match.team2_player2?.trim() || null,
+        };
+        if (team1Score !== null && !isNaN(team1Score)) {
+          matchPayload.team1_score = team1Score;
+        }
+        if (team2Score !== null && !isNaN(team2Score)) {
+          matchPayload.team2_score = team2Score;
+        }
+        if (team1Score !== null && team2Score !== null && (team1Score > 0 || team2Score > 0)) {
+          if (team1Score > team2Score) {
+            matchPayload.winner = 'team1';
+            matchPayload.status = 'completed';
+          } else if (team2Score > team1Score) {
+            matchPayload.winner = 'team2';
+            matchPayload.status = 'completed';
+          }
+        }
+
         const { data: createdMatch, error: matchError } = await supabase
           .from('matches')
-          .insert({
-            shuttlecock_count: shuttlecockAmountNum,
-            match_date: matchDateObj.toISOString(),
-            match_number: matchNumber,
-            branch_id: targetBranchId,
-          })
+          .insert(matchPayload)
           .select()
           .single();
 

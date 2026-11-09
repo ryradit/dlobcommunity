@@ -112,6 +112,74 @@ export default function AdminAnalitikPage() {
         });
 
         setMatchMembers(membersMap);
+
+        // Auto-heal matches where team players are not yet assigned, using registered match_members
+        let hasHealed = false;
+        const healedMatches = matchesRes.data.map(match => {
+          const mList = membersMap[match.id] || [];
+          if ((!match.team1_player1 || !match.team2_player1) && mList.length >= 4) {
+            hasHealed = true;
+            const p1 = match.team1_player1 || mList[0].member_name;
+            const p2 = match.team1_player2 || mList[1].member_name;
+            const p3 = match.team2_player1 || mList[2].member_name;
+            const p4 = match.team2_player2 || mList[3].member_name;
+
+            const t1 = match.team1_score ?? 0;
+            const t2 = match.team2_score ?? 0;
+            let winner = match.winner;
+            if (!winner && (t1 > 0 || t2 > 0)) {
+              if (t1 > t2) winner = 'team1';
+              else if (t2 > t1) winner = 'team2';
+            }
+
+            // Persist to database so leaderboard and analytics get the updated data
+            supabase
+              .from('matches')
+              .update({
+                team1_player1: p1,
+                team1_player2: p2,
+                team2_player1: p3,
+                team2_player2: p4,
+                winner,
+                status: winner ? 'completed' : match.status,
+              })
+              .eq('id', match.id)
+              .then();
+
+            return {
+              ...match,
+              team1_player1: p1,
+              team1_player2: p2,
+              team2_player1: p3,
+              team2_player2: p4,
+              winner,
+              status: winner ? 'completed' : match.status,
+            };
+          }
+          return match;
+        });
+
+        if (hasHealed) {
+          queryCache.invalidatePattern('admin-analytics-matches');
+        }
+
+        setMatches(healedMatches);
+
+        if (selectedMatch) {
+          const updated = healedMatches.find(m => m.id === selectedMatch.id);
+          if (updated) {
+            setSelectedMatch(updated);
+            setFormData(prev => ({
+              ...prev,
+              team1_player1: updated.team1_player1 || prev.team1_player1,
+              team1_player2: updated.team1_player2 || prev.team1_player2,
+              team2_player1: updated.team2_player1 || prev.team2_player1,
+              team2_player2: updated.team2_player2 || prev.team2_player2,
+              team1_score: updated.team1_score || prev.team1_score,
+              team2_score: updated.team2_score || prev.team2_score,
+            }));
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching matches:', error);
@@ -122,11 +190,12 @@ export default function AdminAnalitikPage() {
 
   function selectMatch(match: Match) {
     setSelectedMatch(match);
+    const mList = matchMembers[match.id] || [];
     setFormData({
-      team1_player1: match.team1_player1 || '',
-      team1_player2: match.team1_player2 || '',
-      team2_player1: match.team2_player1 || '',
-      team2_player2: match.team2_player2 || '',
+      team1_player1: match.team1_player1 || mList[0]?.member_name || '',
+      team1_player2: match.team1_player2 || mList[1]?.member_name || '',
+      team2_player1: match.team2_player1 || mList[2]?.member_name || '',
+      team2_player2: match.team2_player2 || mList[3]?.member_name || '',
       team1_score: match.team1_score || 0,
       team2_score: match.team2_score || 0,
     });
@@ -162,6 +231,7 @@ export default function AdminAnalitikPage() {
 
       if (error) throw error;
 
+      queryCache.invalidatePattern('admin-analytics-matches');
       alert('Informasi pertandingan berhasil disimpan!');
       setEditMode(false);
       fetchMatches();

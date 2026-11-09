@@ -128,14 +128,16 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 3. Delete related data from other tables
-    // Delete memberships
-    const { error: membershipError } = await supabaseAdmin
-      .from('memberships')
-      .delete()
-      .eq('user_id', memberId);
+    // Delete memberships by member_name (memberships table uses member_name without user_id)
+    if (targetProfile?.full_name) {
+      const { error: membershipByNameError } = await supabaseAdmin
+        .from('memberships')
+        .delete()
+        .ilike('member_name', targetProfile.full_name.trim());
 
-    if (membershipError) {
-      console.error('Error deleting memberships:', membershipError);
+      if (membershipByNameError) {
+        console.error('Error deleting memberships by member_name:', membershipByNameError);
+      }
     }
 
     // Delete match members

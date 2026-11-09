@@ -27,6 +27,9 @@ interface Match {
   created_at: string;
   created_by: string;
   match_date?: string;
+  team1_score?: number | null;
+  team2_score?: number | null;
+  winner?: string | null;
 }
 
 interface MatchMember {
@@ -77,6 +80,8 @@ export default function AdminPembayaranPage() {
     matchId: string;
     match_date: string;
     shuttlecock_count: number;
+    team1_score?: number | null;
+    team2_score?: number | null;
     members: Record<string, { name: string; memberId: string }>;
   } | null>(null);
   const [waiveAttendanceFee, setWaiveAttendanceFee] = useState<Set<string>>(new Set());
@@ -103,6 +108,13 @@ export default function AdminPembayaranPage() {
     member_name: '',
     weeks_in_month: 4,
   });
+  const [editingMembership, setEditingMembership] = useState<{
+    id: string;
+    member_name: string;
+    weeks_in_month: number;
+    amount: number;
+  } | null>(null);
+  const [isSavingMembership, setIsSavingMembership] = useState(false);
   const [weeksAutoDetected, setWeeksAutoDetected] = useState(false);
   const [showProofModal, setShowProofModal] = useState(false);
   const [selectedProof, setSelectedProof] = useState<{
@@ -759,6 +771,10 @@ export default function AdminPembayaranPage() {
     } else {
       // Current month - proceed directly
       if (type === 'match') {
+        if (!newMatch.match_date) {
+          const defaultDate = formatDateForInput(matches[0]?.match_date || matches[0]?.created_at) || new Date().toISOString().split('T')[0];
+          setNewMatch(prev => ({ ...prev, match_date: defaultDate }));
+        }
         setShowCreateModal(true);
       } else {
         setShowMembershipModal(true);
@@ -769,6 +785,10 @@ export default function AdminPembayaranPage() {
   const confirmNextMonthCreation = () => {
     setShowNextMonthConfirm(false);
     if (pendingCreateAction === 'match') {
+      if (!newMatch.match_date) {
+        const defaultDate = formatDateForInput(matches[0]?.match_date || matches[0]?.created_at) || new Date().toISOString().split('T')[0];
+        setNewMatch(prev => ({ ...prev, match_date: defaultDate }));
+      }
       setShowCreateModal(true);
     } else if (pendingCreateAction === 'membership') {
       setShowMembershipModal(true);
@@ -902,6 +922,10 @@ export default function AdminPembayaranPage() {
           status: 'active',
           created_by: user?.id,
           match_date: new Date(newMatch.match_date).toISOString(),
+          team1_player1: newMatch.member1?.trim() || null,
+          team1_player2: newMatch.member2?.trim() || null,
+          team2_player1: newMatch.member3?.trim() || null,
+          team2_player2: newMatch.member4?.trim() || null,
         })
         .select()
         .single();
@@ -972,7 +996,7 @@ export default function AdminPembayaranPage() {
         member2: '',
         member3: '',
         member4: '',
-        match_date: '',
+        match_date: formatDateForInput(match.match_date),
       });
       setCreateMatchMembershipPayers(new Set());
       loadData();
@@ -1038,35 +1062,169 @@ export default function AdminPembayaranPage() {
       const targetMonth = selectedMonth.getMonth() + 1;
       const targetYear = selectedMonth.getFullYear();
       const amount = newMembership.weeks_in_month === 4 ? 40000 : 45000;
+      const trimmedName = newMembership.member_name.trim();
 
-      const { error } = await supabase
+      // Check if membership already exists for this member in this month/year
+      const { data: existingRows, error: checkError } = await supabase
         .from('memberships')
-        .insert({
-          member_name: newMembership.member_name,
-          month: targetMonth,
-          year: targetYear,
-          weeks_in_month: newMembership.weeks_in_month,
-          amount: amount,
-          payment_status: 'pending',
-        });
+        .select('id, payment_status, weeks_in_month, amount')
+        .ilike('member_name', trimmedName)
+        .eq('month', targetMonth)
+        .eq('year', targetYear)
+        .limit(1);
 
-      if (error) throw error;
+      if (checkError) {
+        console.warn('Error checking existing membership:', checkError);
+      }
+
+      const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
+
+      if (existing) {
+        const statusLabel = existing.payment_status === 'paid' ? 'Lunas' : existing.payment_status === 'cancelled' ? 'Dibatalkan' : 'Belum Bayar';
+        const confirmUpdate = confirm(
+          `Anggota "${trimmedName}" sudah memiliki data membership untuk bulan ini (Status: ${statusLabel}, ${existing.weeks_in_month} Minggu - Rp ${existing.amount.toLocaleString('id-ID')}).\n\nApakah Anda ingin memperbarui paketnya menjadi ${newMembership.weeks_in_month} Minggu (Rp ${amount.toLocaleString('id-ID')})?`
+        );
+        if (!confirmUpdate) return;
+
+        const { error: updateError } = await supabase
+          .from('memberships')
+          .update({
+            weeks_in_month: newMembership.weeks_in_month,
+            amount: amount,
+            ...(existing.payment_status === 'cancelled' ? { payment_status: 'pending' } : {}),
+          })
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
+        alert(`Berhasil memperbarui membership "${trimmedName}" menjadi ${newMembership.weeks_in_month} Minggu (Rp ${amount.toLocaleString('id-ID')})`);
+      } else {
+        const { error } = await supabase
+          .from('memberships')
+          .insert({
+            member_name: trimmedName,
+            month: targetMonth,
+            year: targetYear,
+            weeks_in_month: newMembership.weeks_in_month,
+            amount: amount,
+            payment_status: 'pending',
+          });
+
+        if (error) throw error;
+        alert(`Berhasil menambahkan membership untuk "${trimmedName}" (${newMembership.weeks_in_month} Minggu - Rp ${amount.toLocaleString('id-ID')})`);
+      }
 
       setShowMembershipModal(false);
       setNewMembership({
         member_name: '',
         weeks_in_month: 4,
       });
-      fetchMemberships();
+      queryCache.invalidatePattern('admin-memberships');
+      await loadData();
     } catch (error: any) {
-      console.error('Error creating membership:', error);
-      if (error.code === '23505') {
-        alert('Anggota sudah memiliki membership untuk bulan ini');
+      const errMsg = error?.message || error?.details || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+      console.error('Error creating membership:', errMsg, error);
+
+      // If duplicate key error occurs, automatically update the existing membership
+      if (error?.code === '23505') {
+        try {
+          const targetMonth = selectedMonth.getMonth() + 1;
+          const targetYear = selectedMonth.getFullYear();
+          const amount = newMembership.weeks_in_month === 4 ? 40000 : 45000;
+          const trimmedName = newMembership.member_name.trim();
+
+          const { error: fallbackUpdateError } = await supabase
+            .from('memberships')
+            .update({
+              weeks_in_month: newMembership.weeks_in_month,
+              amount: amount,
+            })
+            .ilike('member_name', trimmedName)
+            .eq('month', targetMonth)
+            .eq('year', targetYear);
+
+          if (!fallbackUpdateError) {
+            setShowMembershipModal(false);
+            setNewMembership({ member_name: '', weeks_in_month: 4 });
+            queryCache.invalidatePattern('admin-memberships');
+            await loadData();
+            alert(`Membership untuk "${trimmedName}" sudah ada dan berhasil diperbarui menjadi ${newMembership.weeks_in_month} Minggu (Rp ${amount.toLocaleString('id-ID')}).`);
+            return;
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback update error:', fallbackErr);
+        }
+        alert('Anggota sudah memiliki membership untuk bulan ini. Anda dapat mengubah paket 40k / 45k langsung pada daftar membership.');
       } else {
-        alert('Gagal membuat membership');
+        alert('Gagal membuat membership: ' + errMsg);
       }
     }
   }
+
+  async function handleUpdateMembership(id: string, weeks: number) {
+    try {
+      setIsSavingMembership(true);
+      const newAmount = weeks === 4 ? 40000 : 45000;
+      const { error } = await supabase
+        .from('memberships')
+        .update({
+          weeks_in_month: weeks,
+          amount: newAmount,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      queryCache.invalidatePattern('admin-memberships');
+      setEditingMembership(null);
+      await loadData();
+      alert(`Paket membership berhasil diperbarui menjadi ${weeks} Minggu (Rp ${newAmount.toLocaleString('id-ID')})`);
+    } catch (error: any) {
+      console.error('Error updating membership amount:', error);
+      alert('Gagal mengupdate membership: ' + (error?.message || 'Terjadi kesalahan'));
+    } finally {
+      setIsSavingMembership(false);
+    }
+  }
+
+  async function deleteMembership(membership: Membership) {
+    const isPaid = membership.payment_status === 'paid';
+    const confirmMessage = isPaid
+      ? `PERINGATAN: Membership "${membership.member_name}" sudah berstatus LUNAS.\n\nMenghapus data ini akan menghilangkan catatan membership bulan ini. Apakah Anda yakin ingin menghapusnya?`
+      : `Apakah Anda yakin ingin menghapus data membership "${membership.member_name}" (${membership.weeks_in_month} Minggu - Rp ${membership.amount.toLocaleString('id-ID')})?`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      const { error } = await supabase
+        .from('memberships')
+        .delete()
+        .eq('id', membership.id);
+
+      if (error) throw error;
+
+      queryCache.invalidatePattern('admin-memberships');
+      await loadData();
+      alert(`Membership untuk "${membership.member_name}" berhasil dihapus.`);
+    } catch (error: any) {
+      console.error('Error deleting membership:', error);
+      alert('Gagal menghapus membership: ' + (error?.message || 'Terjadi kesalahan'));
+    }
+  }
+
+  const formatDateForInput = (dateStr?: string | null): string => {
+    if (!dateStr) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch {
+      return '';
+    }
+  };
 
   function startEditingMatch(match: Match) {
     const members: Record<string, { name: string; memberId: string }> = {};
@@ -1074,10 +1232,15 @@ export default function AdminPembayaranPage() {
       members[member.id] = { name: member.member_name, memberId: member.id };
     });
 
+    // Follow previous match date (or created_at if match_date is missing) formatted as YYYY-MM-DD
+    const previousDate = formatDateForInput(match.match_date || match.created_at) || new Date().toISOString().split('T')[0];
+
     setEditingMatch({
       matchId: match.id,
-      match_date: match.match_date || '',
+      match_date: previousDate,
       shuttlecock_count: match.shuttlecock_count,
+      team1_score: match.team1_score ?? null,
+      team2_score: match.team2_score ?? null,
       members,
     });
     setExpandedMatches(prev => ({ ...prev, [match.id]: true }));
@@ -1091,13 +1254,40 @@ export default function AdminPembayaranPage() {
       const originalMatch = matches.find(m => m.id === editingMatch.matchId);
       const shuttlecockIncreased = originalMatch && editingMatch.shuttlecock_count > originalMatch.shuttlecock_count;
 
+      const matchUpdatePayload: any = {
+        shuttlecock_count: editingMatch.shuttlecock_count,
+        match_date: editingMatch.match_date ? new Date(editingMatch.match_date).toISOString() : null,
+      };
+      if (editingMatch.team1_score !== undefined) {
+        matchUpdatePayload.team1_score = editingMatch.team1_score;
+      }
+      if (editingMatch.team2_score !== undefined) {
+        matchUpdatePayload.team2_score = editingMatch.team2_score;
+      }
+      const t1 = editingMatch.team1_score;
+      const t2 = editingMatch.team2_score;
+      if (typeof t1 === 'number' && typeof t2 === 'number' && (t1 > 0 || t2 > 0)) {
+        if (t1 > t2) {
+          matchUpdatePayload.winner = 'team1';
+          matchUpdatePayload.status = 'completed';
+        } else if (t2 > t1) {
+          matchUpdatePayload.winner = 'team2';
+          matchUpdatePayload.status = 'completed';
+        }
+      }
+
+      const memberNames = Object.values(editingMatch.members).map(m => m.name.trim()).filter(Boolean);
+      if (memberNames.length >= 4) {
+        matchUpdatePayload.team1_player1 = memberNames[0];
+        matchUpdatePayload.team1_player2 = memberNames[1];
+        matchUpdatePayload.team2_player1 = memberNames[2];
+        matchUpdatePayload.team2_player2 = memberNames[3];
+      }
+
       // Update match
       const { error: matchError } = await supabase
         .from('matches')
-        .update({
-          shuttlecock_count: editingMatch.shuttlecock_count,
-          match_date: editingMatch.match_date ? new Date(editingMatch.match_date).toISOString() : null,
-        })
+        .update(matchUpdatePayload)
         .eq('id', editingMatch.matchId);
 
       if (matchError) {
@@ -1140,7 +1330,6 @@ export default function AdminPembayaranPage() {
       }
 
       // Fetch member profiles to check payment_exempt status (VIP members)
-      const memberNames = Object.values(editingMatch.members).map(m => m.name);
       const { data: memberProfiles, error: profilesError } = await supabase
         .from('profiles')
         .select('full_name, is_payment_exempt')
@@ -1724,6 +1913,7 @@ export default function AdminPembayaranPage() {
       }
 
       // Refresh both lists
+      queryCache.invalidatePattern('admin-memberships');
       await loadData();
       setShowProofModal(false);
       setSelectedProof(null);
@@ -2376,7 +2566,7 @@ export default function AdminPembayaranPage() {
                               <label className="text-xs text-gray-600 dark:text-zinc-400 transition-colors duration-300">Tanggal (Sabtu)</label>
                               <input
                                 type="date"
-                                value={editingMatch.match_date}
+                                value={formatDateForInput(editingMatch.match_date)}
                                 onChange={(e) => {
                                   setEditingMatch({ ...editingMatch, match_date: e.target.value });
                                 }}
@@ -2392,6 +2582,36 @@ export default function AdminPembayaranPage() {
                                 onChange={(e) => setEditingMatch({ ...editingMatch, shuttlecock_count: parseInt(e.target.value) || 1 })}
                                 className="w-full px-3 py-1 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-white/10 rounded text-gray-900 dark:text-white text-sm mt-1 transition-colors duration-300"
                               />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-600 dark:text-zinc-400 transition-colors duration-300">Skor Pertandingan (Tim 1 - Tim 2)</label>
+                              <div className="flex items-center gap-2 mt-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="50"
+                                  value={editingMatch.team1_score ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                    setEditingMatch({ ...editingMatch, team1_score: val });
+                                  }}
+                                  placeholder="0"
+                                  className="w-16 px-2 py-1 bg-white dark:bg-zinc-800 border border-blue-400/40 rounded text-gray-900 dark:text-white text-sm text-center font-mono"
+                                />
+                                <span className="text-gray-400 font-bold">-</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="50"
+                                  value={editingMatch.team2_score ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                    setEditingMatch({ ...editingMatch, team2_score: val });
+                                  }}
+                                  placeholder="0"
+                                  className="w-16 px-2 py-1 bg-white dark:bg-zinc-800 border border-red-400/40 rounded text-gray-900 dark:text-white text-sm text-center font-mono"
+                                />
+                              </div>
                             </div>
                           </div>
                         ) : (
@@ -2413,6 +2633,11 @@ export default function AdminPembayaranPage() {
                           year: 'numeric',
                         })}
                       </p>
+                    )}
+                    {match.team1_score !== null && match.team1_score !== undefined && match.team2_score !== null && match.team2_score !== undefined && (
+                      <span className="inline-block px-2 py-0.5 mt-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-md text-xs font-mono font-bold">
+                        Skor: {match.team1_score} - {match.team2_score}
+                      </span>
                     )}
                           </>
                         )}
@@ -2824,8 +3049,38 @@ export default function AdminPembayaranPage() {
                       </td>
                       <td className="py-3 sm:py-4 px-3 sm:px-6 font-medium text-sm sm:text-base whitespace-nowrap text-gray-900 dark:text-white transition-colors duration-300">{membership.member_name}</td>
                       <td className="py-3 sm:py-4 px-3 sm:px-6 text-center text-xs sm:text-sm text-gray-600 dark:text-zinc-300 whitespace-nowrap transition-colors duration-300">{monthName} {membership.year}</td>
-                      <td className="py-3 sm:py-4 px-3 sm:px-6 text-center text-sm whitespace-nowrap text-gray-900 dark:text-white transition-colors duration-300">{membership.weeks_in_month} minggu</td>
-                      <td className="py-3 sm:py-4 px-3 sm:px-6 text-right font-semibold text-sm sm:text-base whitespace-nowrap text-gray-900 dark:text-white transition-colors duration-300">Rp {membership.amount.toLocaleString('id-ID')}</td>
+                      <td className="py-3 sm:py-4 px-3 sm:px-6 text-center text-sm whitespace-nowrap text-gray-900 dark:text-white transition-colors duration-300">
+                        <button
+                          type="button"
+                          onClick={() => setEditingMembership({
+                            id: membership.id,
+                            member_name: membership.member_name,
+                            weeks_in_month: membership.weeks_in_month,
+                            amount: membership.amount,
+                          })}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-medium transition-colors cursor-pointer group"
+                          title="Klik untuk mengubah paket (40k / 45k)"
+                        >
+                          <span>{membership.weeks_in_month} minggu</span>
+                          <Edit className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      </td>
+                      <td className="py-3 sm:py-4 px-3 sm:px-6 text-right font-semibold text-sm sm:text-base whitespace-nowrap text-gray-900 dark:text-white transition-colors duration-300">
+                        <button
+                          type="button"
+                          onClick={() => setEditingMembership({
+                            id: membership.id,
+                            member_name: membership.member_name,
+                            weeks_in_month: membership.weeks_in_month,
+                            amount: membership.amount,
+                          })}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 text-gray-900 dark:text-white font-semibold transition-colors cursor-pointer group"
+                          title="Klik untuk mengubah paket (40k / 45k)"
+                        >
+                          <span>Rp {membership.amount.toLocaleString('id-ID')}</span>
+                          <Edit className="w-3 h-3 text-purple-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      </td>
                       <td className="py-3 sm:py-4 px-3 sm:px-6 text-center">
                         <span
                           className={`inline-flex px-2 sm:px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors duration-300 ${
@@ -2869,63 +3124,83 @@ export default function AdminPembayaranPage() {
                         )}
                       </td>
                       <td className="py-4 px-6">
-                        {membership.payment_status === 'pending' && (
-                          <div className="flex gap-2 justify-end">
-                            {membership.payment_proof ? (
-                              <button
-                                onClick={() => {
-                                  if (membership.payment_proof !== 'CASH_PAYMENT') {
-                                    setSelectedProof({
-                                      type: 'membership',
-                                      id: membership.id,
-                                      memberName: membership.member_name,
-                                      amount: membership.amount,
-                                      proofUrl: membership.payment_proof || '',
-                                    });
-                                    setShowProofModal(true);
-                                  } else {
-                                    if (confirm(`Konfirmasi pembayaran cash membership dari ${membership.member_name}?`)) {
+                        <div className="flex gap-2 justify-end items-center">
+                          {/* Edit Package button (40k / 45k) */}
+                          <button
+                            type="button"
+                            onClick={() => setEditingMembership({
+                              id: membership.id,
+                              member_name: membership.member_name,
+                              weeks_in_month: membership.weeks_in_month,
+                              amount: membership.amount,
+                            })}
+                            className="p-1 bg-blue-600 hover:bg-blue-700 rounded text-white transition-colors"
+                            title="Ubah Paket Membership (40k / 45k)"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
+                          {membership.payment_status === 'pending' && (
+                            <>
+                              {membership.payment_proof ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (membership.payment_proof !== 'CASH_PAYMENT') {
+                                      setSelectedProof({
+                                        type: 'membership',
+                                        id: membership.id,
+                                        memberName: membership.member_name,
+                                        amount: membership.amount,
+                                        proofUrl: membership.payment_proof || '',
+                                      });
+                                      setShowProofModal(true);
+                                    } else {
+                                      if (confirm(`Konfirmasi pembayaran cash membership dari ${membership.member_name}?`)) {
+                                        updateMembershipStatus(membership.id, 'paid');
+                                      }
+                                    }
+                                  }}
+                                  className="p-1 bg-green-600 hover:bg-green-700 rounded text-white transition-colors flex items-center gap-1"
+                                  title={membership.payment_proof === 'CASH_PAYMENT' ? 'Tandai Lunas (Cash)' : 'Lihat & Konfirmasi'}
+                                >
+                                  {membership.payment_proof === 'CASH_PAYMENT' ? (
+                                    <Check className="w-4 h-4" />
+                                  ) : (
+                                    <>
+                                      <Eye className="w-4 h-4" />
+                                      <Check className="w-4 h-4" />
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (confirm(`Tandai pembayaran membership dari ${membership.member_name} sebagai lunas?`)) {
                                       updateMembershipStatus(membership.id, 'paid');
                                     }
-                                  }
-                                }}
-                                className="p-1 bg-green-600 hover:bg-green-700 rounded text-white transition-colors flex items-center gap-1"
-                                title={membership.payment_proof === 'CASH_PAYMENT' ? 'Tandai Lunas (Cash)' : 'Lihat & Konfirmasi'}
-                              >
-                                {membership.payment_proof === 'CASH_PAYMENT' ? (
+                                  }}
+                                  className="p-1 bg-green-600 hover:bg-green-700 rounded text-white transition-colors"
+                                  title="Tandai Lunas"
+                                >
                                   <Check className="w-4 h-4" />
-                                ) : (
-                                  <>
-                                    <Eye className="w-4 h-4" />
-                                    <Check className="w-4 h-4" />
-                                  </>
-                                )}
-                              </button>
-                            ) : (
+                                </button>
+                              )}
                               <button
-                                onClick={() => {
-                                  if (confirm(`Tandai pembayaran membership dari ${membership.member_name} sebagai lunas?`)) {
-                                    updateMembershipStatus(membership.id, 'paid');
-                                  }
-                                }}
-                                className="p-1 bg-green-600 hover:bg-green-700 rounded text-white transition-colors"
-                                title="Tandai Lunas"
+                                type="button"
+                                onClick={() => updateMembershipStatus(membership.id, 'cancelled')}
+                                className="p-1 bg-amber-600 hover:bg-amber-700 rounded text-white transition-colors"
+                                title="Batalkan Membership"
                               >
-                                <Check className="w-4 h-4" />
+                                <Ban className="w-4 h-4" />
                               </button>
-                            )}
+                            </>
+                          )}
+
+                          {membership.payment_status === 'paid' && (
                             <button
-                              onClick={() => updateMembershipStatus(membership.id, 'cancelled')}
-                              className="p-1 bg-red-600 hover:bg-red-700 rounded text-white transition-colors"
-                              title="Batalkan"
-                            >
-                              <Ban className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                        {membership.payment_status === 'paid' && (
-                          <div className="flex gap-2 justify-end">
-                            <button
+                              type="button"
                               onClick={() => openRollbackModal(membership)}
                               className="p-1 bg-orange-600 hover:bg-orange-700 rounded text-white transition-colors flex items-center gap-1"
                               title="Rollback Membership (Kembalikan ke Non-Member)"
@@ -2934,8 +3209,18 @@ export default function AdminPembayaranPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                               </svg>
                             </button>
-                          </div>
-                        )}
+                          )}
+
+                          {/* Delete membership button */}
+                          <button
+                            type="button"
+                            onClick={() => deleteMembership(membership)}
+                            className="p-1 bg-red-600 hover:bg-red-700 rounded text-white transition-colors"
+                            title="Hapus Membership"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     );
@@ -3349,6 +3634,96 @@ export default function AdminPembayaranPage() {
                     <strong>Smart Detection:</strong> Sistem otomatis menghitung jumlah Sabtu dalam bulan untuk menentukan jumlah minggu (4 atau 5 minggu). Setiap sesi badminton adalah Sabtu pukul 20:00.
                   </span>
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Membership Modal */}
+      {editingMembership && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl max-w-md w-full p-6 transition-colors duration-300">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Paket Membership</h2>
+                <p className="text-sm text-gray-600 dark:text-zinc-400 mt-1">
+                  Anggota: <span className="font-semibold text-gray-900 dark:text-white">{editingMembership.member_name}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingMembership(null)}
+                className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">
+                  Pilih Paket Membership:
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditingMembership({
+                      ...editingMembership,
+                      weeks_in_month: 4,
+                      amount: 40000,
+                    })}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      editingMembership.weeks_in_month === 4
+                        ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30 ring-2 ring-purple-500'
+                        : 'border-gray-200 dark:border-white/10 hover:border-purple-400 bg-white dark:bg-zinc-800'
+                    }`}
+                  >
+                    <div className="font-semibold text-sm text-gray-900 dark:text-white">4 Minggu</div>
+                    <div className="text-purple-600 dark:text-purple-400 font-bold text-lg mt-1">Rp 40.000</div>
+                    <div className="text-xs text-gray-500 dark:text-zinc-400 mt-1">Rp 10.000 / minggu</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingMembership({
+                      ...editingMembership,
+                      weeks_in_month: 5,
+                      amount: 45000,
+                    })}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      editingMembership.weeks_in_month === 5
+                        ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30 ring-2 ring-purple-500'
+                        : 'border-gray-200 dark:border-white/10 hover:border-purple-400 bg-white dark:bg-zinc-800'
+                    }`}
+                  >
+                    <div className="font-semibold text-sm text-gray-900 dark:text-white">5 Minggu</div>
+                    <div className="text-purple-600 dark:text-purple-400 font-bold text-lg mt-1">Rp 45.000</div>
+                    <div className="text-xs text-gray-500 dark:text-zinc-400 mt-1">Rp 9.000 / minggu</div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-3 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-lg text-xs text-purple-700 dark:text-purple-300">
+                Pilihan saat ini: <strong>{editingMembership.weeks_in_month} Minggu (Rp {editingMembership.amount.toLocaleString('id-ID')})</strong>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingMembership(null)}
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-900 dark:text-white rounded-lg font-medium transition-colors text-sm"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingMembership}
+                  onClick={() => handleUpdateMembership(editingMembership.id, editingMembership.weeks_in_month)}
+                  className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors text-sm disabled:opacity-50"
+                >
+                  {isSavingMembership ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
               </div>
             </div>
           </div>

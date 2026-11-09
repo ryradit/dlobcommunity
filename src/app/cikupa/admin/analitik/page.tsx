@@ -97,8 +97,53 @@ export default function CikupaAdminAnalitikPage() {
         });
         setMatchMembers(membersMap);
 
+        // Auto-heal matches where team players are not yet assigned, using registered match_members
+        const healedMatches = fetchedMatches.map(match => {
+          const mList = membersMap[match.id] || [];
+          if ((!match.team1_player1 || !match.team2_player1) && mList.length >= 4) {
+            const p1 = match.team1_player1 || mList[0].member_name;
+            const p2 = match.team1_player2 || mList[1].member_name;
+            const p3 = match.team2_player1 || mList[2].member_name;
+            const p4 = match.team2_player2 || mList[3].member_name;
+
+            const t1 = match.team1_score ?? 0;
+            const t2 = match.team2_score ?? 0;
+            let winner = match.winner;
+            if (!winner && (t1 > 0 || t2 > 0)) {
+              if (t1 > t2) winner = 'team1';
+              else if (t2 > t1) winner = 'team2';
+            }
+
+            // Persist to database
+            supabase
+              .from('matches')
+              .update({
+                team1_player1: p1,
+                team1_player2: p2,
+                team2_player1: p3,
+                team2_player2: p4,
+                winner,
+                status: winner ? 'completed' : match.status,
+              })
+              .eq('id', match.id)
+              .then();
+
+            return {
+              ...match,
+              team1_player1: p1,
+              team1_player2: p2,
+              team2_player1: p3,
+              team2_player2: p4,
+              winner,
+              status: winner ? 'completed' : match.status,
+            };
+          }
+          return match;
+        });
+        setMatches(healedMatches);
+
         if (selectedMatch) {
-          const updated = fetchedMatches.find(m => m.id === selectedMatch.id);
+          const updated = healedMatches.find(m => m.id === selectedMatch.id);
           if (updated) setSelectedMatch(updated);
         }
       } else {
@@ -114,11 +159,12 @@ export default function CikupaAdminAnalitikPage() {
 
   function selectMatch(match: Match) {
     setSelectedMatch(match);
+    const mList = matchMembers[match.id] || [];
     setFormData({
-      team1_player1: match.team1_player1 || '',
-      team1_player2: match.team1_player2 || '',
-      team2_player1: match.team2_player1 || '',
-      team2_player2: match.team2_player2 || '',
+      team1_player1: match.team1_player1 || mList[0]?.member_name || '',
+      team1_player2: match.team1_player2 || mList[1]?.member_name || '',
+      team2_player1: match.team2_player1 || mList[2]?.member_name || '',
+      team2_player2: match.team2_player2 || mList[3]?.member_name || '',
       team1_score: match.team1_score || 0,
       team2_score: match.team2_score || 0,
     });

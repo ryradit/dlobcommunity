@@ -69,34 +69,34 @@ export const PERIOD_CONFIGS: PeriodConfig[] = [
     icon: '📁',
     startDate: '2026-02-01',
     endDate: '2026-04-30T23:59:59',
-    minMatches: 7,
-    minPartnerMatches: 3,
+    minMatches: 1,
+    minPartnerMatches: 1,
   },
   {
     id: 'p2-2026',
     title: 'Periode 2 (Mei – Agu 2026)',
     shortTitle: 'Periode 2',
     subtitle: '1 Mei – 31 Agu 2026',
-    badgeText: 'Musim Berjalan',
-    badgeColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-    icon: '🟢',
+    badgeText: 'Arsip Musim 2',
+    badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    icon: '📁',
     startDate: '2026-05-01',
     endDate: '2026-08-31T23:59:59',
-    minMatches: 7,
-    minPartnerMatches: 3,
+    minMatches: 1,
+    minPartnerMatches: 1,
   },
   {
     id: 'p3-2026',
     title: 'Periode 3 (Sep – Des 2026)',
     shortTitle: 'Periode 3',
     subtitle: '1 Sep – 31 Des 2026',
-    badgeText: 'Mulai 1 Sep',
-    badgeColor: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
-    icon: '⏳',
+    badgeText: 'Musim Berjalan',
+    badgeColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    icon: '🟢',
     startDate: '2026-09-01',
     endDate: '2026-12-31T23:59:59',
-    minMatches: 7,
-    minPartnerMatches: 3,
+    minMatches: 1,
+    minPartnerMatches: 1,
   },
   {
     id: 'all-time',
@@ -108,10 +108,17 @@ export const PERIOD_CONFIGS: PeriodConfig[] = [
     icon: '🌟',
     startDate: null,
     endDate: null,
-    minMatches: 10,
-    minPartnerMatches: 5,
+    minMatches: 1,
+    minPartnerMatches: 1,
   },
 ];
+
+export function getDefaultPeriod(): LeaderboardPeriod {
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10);
+  const found = PERIOD_CONFIGS.find(p => p.startDate && p.endDate && dateStr >= p.startDate && dateStr <= p.endDate);
+  return found?.id || 'p3-2026';
+}
 
 export const MIN_MATCHES_PODIUM = 10;
 export const MIN_PARTNER_MATCHES_PODIUM = 5;
@@ -237,7 +244,7 @@ export default function LeaderboardPage() {
   const [liveRefreshing, setLiveRefreshing] = useState(false);
   const [firstMatchDate, setFirstMatchDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pemain-terbaik' | 'pemain-tak-terkalahkan' | 'streak-terpanjang' | 'paling-rajin' | 'pasangan-terbaik'>('pemain-terbaik');
-  const [activePeriod, setActivePeriod] = useState<LeaderboardPeriod>('p2-2026');
+  const [activePeriod, setActivePeriod] = useState<LeaderboardPeriod>(getDefaultPeriod());
   const [rawMatches, setRawMatches] = useState<any[]>([]);
   const [rawMatchMembers, setRawMatchMembers] = useState<any[]>([]);
   const [rawRealNames, setRawRealNames] = useState<Set<string>>(new Set());
@@ -310,6 +317,15 @@ export default function LeaderboardPage() {
       attendanceMap.get(mm.member_name)!.add(date);
     }
 
+    // match_id -> array of member names for fallback when match player columns are missing
+    const matchMembersMap = new Map<string, string[]>();
+    for (const mm of allMatchMembers) {
+      if (!matchMembersMap.has(mm.match_id)) {
+        matchMembersMap.set(mm.match_id, []);
+      }
+      matchMembersMap.get(mm.match_id)!.push(mm.member_name);
+    }
+
     const statMap = new Map<string, MemberStat>();
     for (const name of realNames) {
       statMap.set(name, {
@@ -331,19 +347,44 @@ export default function LeaderboardPage() {
     const playerWeightedStats = new Map<string, { weightedWins: number; weightedMatches: number }>();
 
     for (const match of filteredMatches) {
+      let p1 = match.team1_player1?.trim();
+      let p2 = match.team1_player2?.trim();
+      let p3 = match.team2_player1?.trim();
+      let p4 = match.team2_player2?.trim();
+
+      // Fallback: If players are not assigned in match columns, use registered match_members
+      if (!p1 && !p2 && !p3 && !p4) {
+        const mmList = matchMembersMap.get(match.id);
+        if (mmList && mmList.length >= 4) {
+          p1 = mmList[0]?.trim();
+          p2 = mmList[1]?.trim();
+          p3 = mmList[2]?.trim();
+          p4 = mmList[3]?.trim();
+        }
+      }
+
+      // Determine winner if not explicitly set but scores exist
+      let winner = match.winner;
+      const t1 = match.team1_score ?? 0;
+      const t2 = match.team2_score ?? 0;
+      if (!winner && (t1 > 0 || t2 > 0)) {
+        if (t1 > t2) winner = 'team1';
+        else if (t2 > t1) winner = 'team2';
+      }
+
       const players = [
-        { name: match.team1_player1, team: 'team1' },
-        { name: match.team1_player2, team: 'team1' },
-        { name: match.team2_player1, team: 'team2' },
-        { name: match.team2_player2, team: 'team2' },
-      ].filter(p => p.name && realNames.has(p.name));
+        { name: p1, team: 'team1' },
+        { name: p2, team: 'team1' },
+        { name: p3, team: 'team2' },
+        { name: p4, team: 'team2' },
+      ].filter((p): p is { name: string; team: string } => Boolean(p.name && realNames.has(p.name)));
 
       for (const { name, team } of players) {
         const s = statMap.get(name);
         if (!s) continue;
-        const won = match.winner === team;
-        const lost = match.winner && match.winner !== team;
-        const score = team === 'team1' ? (match.team1_score ?? 0) : (match.team2_score ?? 0);
+        const won = winner === team;
+        const lost = winner && winner !== team;
+        const score = team === 'team1' ? t1 : t2;
         
         s.totalMatches++;
         s.totalScore += score;
@@ -421,8 +462,29 @@ export default function LeaderboardPage() {
     }>();
 
     for (const match of filteredMatches) {
-      const team1_p1 = match.team1_player1?.trim();
-      const team1_p2 = match.team1_player2?.trim();
+      let team1_p1 = match.team1_player1?.trim();
+      let team1_p2 = match.team1_player2?.trim();
+      let team2_p1 = match.team2_player1?.trim();
+      let team2_p2 = match.team2_player2?.trim();
+
+      if (!team1_p1 && !team1_p2 && !team2_p1 && !team2_p2) {
+        const mmList = matchMembersMap.get(match.id);
+        if (mmList && mmList.length >= 4) {
+          team1_p1 = mmList[0]?.trim();
+          team1_p2 = mmList[1]?.trim();
+          team2_p1 = mmList[2]?.trim();
+          team2_p2 = mmList[3]?.trim();
+        }
+      }
+
+      let winner = match.winner;
+      const t1 = match.team1_score ?? 0;
+      const t2 = match.team2_score ?? 0;
+      if (!winner && (t1 > 0 || t2 > 0)) {
+        if (t1 > t2) winner = 'team1';
+        else if (t2 > t1) winner = 'team2';
+      }
+
       if (team1_p1 && team1_p2 && realNames.has(team1_p1) && realNames.has(team1_p2)) {
         const key = [team1_p1, team1_p2].sort().join('|');
         if (!partnershipMap.has(key)) {
@@ -443,16 +505,13 @@ export default function LeaderboardPage() {
         const entry = partnershipMap.get(key)!;
         const p = entry.data;
         p.totalMatches++;
-        const score1 = match.team1_score ?? 0;
-        p.combinedScore += score1;
-        const won = match.winner === 'team1';
+        p.combinedScore += t1;
+        const won = winner === 'team1';
         entry.history.push(won);
         if (won) p.wins++;
-        else if (match.winner === 'team2') p.losses++;
+        else if (winner === 'team2') p.losses++;
       }
 
-      const team2_p1 = match.team2_player1?.trim();
-      const team2_p2 = match.team2_player2?.trim();
       if (team2_p1 && team2_p2 && realNames.has(team2_p1) && realNames.has(team2_p2)) {
         const key = [team2_p1, team2_p2].sort().join('|');
         if (!partnershipMap.has(key)) {
@@ -473,12 +532,11 @@ export default function LeaderboardPage() {
         const entry = partnershipMap.get(key)!;
         const p = entry.data;
         p.totalMatches++;
-        const score2 = match.team2_score ?? 0;
-        p.combinedScore += score2;
-        const won = match.winner === 'team2';
+        p.combinedScore += t2;
+        const won = winner === 'team2';
         entry.history.push(won);
         if (won) p.wins++;
-        else if (match.winner === 'team1') p.losses++;
+        else if (winner === 'team1') p.losses++;
       }
     }
 
@@ -497,7 +555,7 @@ export default function LeaderboardPage() {
     });
 
     const qualifiedPartnerships = Array.from(partnershipMap.values())
-      .filter(entry => entry.data.totalMatches >= 2)
+      .filter(entry => entry.data.totalMatches >= 1)
       .map(entry => entry.data);
 
     setPartnerships(qualifiedPartnerships);
@@ -1039,7 +1097,11 @@ export default function LeaderboardPage() {
                     <div className="flex justify-center">
                       <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-xs font-semibold backdrop-blur-sm">
                         <span>🏆</span>
-                        <span>Kualifikasi Podium: Minimal {currentMinPartnerMatches} Pertandingan Bersama</span>
+                        <span>
+                          {currentMinPartnerMatches <= 1
+                            ? 'Kualifikasi Podium: Min. 1 Pertandingan Bersama'
+                            : `Kualifikasi Podium: Minimal ${currentMinPartnerMatches} Pertandingan Bersama`}
+                        </span>
                       </div>
                     </div>
                   {/* Add animations */}
@@ -1248,8 +1310,12 @@ export default function LeaderboardPage() {
                     <span>🏆</span>
                     <span>
                       {activeTab === 'pemain-tak-terkalahkan'
-                        ? `Kualifikasi: Minimal ${currentMinMatches} Pertandingan (Kekalahan Paling Sedikit)`
-                        : `Kualifikasi Podium: Minimal ${currentMinMatches} Pertandingan`}
+                        ? (currentMinMatches <= 1
+                            ? 'Kualifikasi: Kekalahan Paling Sedikit (Min. 1 Pertandingan)'
+                            : `Kualifikasi: Minimal ${currentMinMatches} Pertandingan (Kekalahan Paling Sedikit)`)
+                        : (currentMinMatches <= 1
+                            ? 'Kualifikasi Podium: Min. 1 Pertandingan'
+                            : `Kualifikasi Podium: Minimal ${currentMinMatches} Pertandingan`)}
                     </span>
                   </div>
                 </div>
@@ -1275,10 +1341,12 @@ export default function LeaderboardPage() {
                   <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 bg-gray-50/50 dark:bg-zinc-800/30 rounded-2xl border border-dashed border-gray-300 dark:border-zinc-700 text-center max-w-lg mx-auto my-4 sm:my-6">
                     <div className="text-5xl mb-3">🛡️</div>
                     <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
-                      Belum Ada Pemain Tak Terkalahkan
+                      Belum Ada Data {tabTitle || 'Podium'}
                     </h3>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 mb-4 max-w-sm">
-                      Kualifikasi podium membutuhkan minimal <strong>{currentMinMatches} pertandingan</strong>.
+                      {currentMinMatches <= 1
+                        ? 'Belum ada data pertandingan yang tercatat pada periode ini.'
+                        : `Kualifikasi podium membutuhkan minimal ${currentMinMatches} pertandingan.`}
                     </p>
                     <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
                       <span>🔥</span>

@@ -54,7 +54,7 @@ EXTRACTION GOALS:
      team1_player2 = Player 2
      team2_player1 = Player 3
      team2_player2 = Player 4
-   - If shuttlecock amount for the match is marked or implied, use it (default "4" if 4 players played).
+   - Shuttlecock amount: In recreational doubles, 4 players share 1 or 2 shuttlecocks per match. Set "shuttlecock_amount" to "1" by default (or "2" if marked). DO NOT set to "4" just because 4 players played!
    - Set court_number to "1" (or court indicated).
 2. ALSO extract each player's row summary from the matrix table:
    - "no": row number
@@ -75,7 +75,7 @@ Return ONLY a valid JSON object matching this exact structure:
       "team2_player1": "Player C",
       "team2_player2": "Player D",
       "court_number": "1",
-      "shuttlecock_amount": "4"
+      "shuttlecock_amount": "1"
     }
   ],
   "matrix_players": [
@@ -96,21 +96,34 @@ Return ONLY a valid JSON object matching this exact structure:
 
 CRITICAL RULES:
 - Read handwritten names carefully and keep capitalization clean.
+- Shuttlecock count per match is ALWAYS 1 or 2 (at most 3). NEVER confuse with total rows or players.
 - Ignore blank/empty rows.
 - Return ONLY the JSON object, no other text.`;
 
-    // Standard prompt for DLOB Pusat 4-column whiteboard/sheet
-    const pusatPrompt = `You are a badminton match data extraction assistant. Extract structured match information from this image.
+    // Standard prompt for DLOB Pusat whiteboard/sheet
+    const pusatPrompt = `You are a badminton match data extraction assistant. Extract structured match information from this DLOB whiteboard/sheet image.
 
-IMPORTANT: This image contains MULTIPLE MATCH ROWS (typically 15-20 matches). Extract ALL matches, not just one!
+IMPORTANT: This image contains MULTIPLE MATCH ROWS (typically 10-25 matches). Extract ALL matches visible, not just one!
 
-The image has 4 columns per row:
-- Column 1: Team 1 players (ALWAYS separated by "/" e.g., "Kevin/Solaso" means Kevin AND Solaso)
-- Column 2: Team 2 players (ALWAYS separated by "/" e.g., "Khai/William" means Khai AND William)
-- Column 3: Court number
-- Column 4: Shuttlecock amount
+TYPICAL DLOB WHITEBOARD STRUCTURE:
+Rows correspond to matches. The columns or entries per row typically include:
+- Team 1 players: Two player names separated by "/" (e.g., "Kevin/Solaso")
+- Team 2 players: Two player names separated by "/" (e.g., "Khai/William")
+- Court number: e.g. "1", "2", "3" (often labeled "Lap" or "Lapangan")
+- Match Score (Skor): e.g. "21-19", "30-28", "21/18", "30-22", or points like 21, 30
+- Shuttlecock amount (Kok): Usually 1 or 2 (or tallies "|" or "||"). If not written, standard is 1.
 
-Extract and return ONLY a valid JSON array with ALL matches:
+CRITICAL RULES - DO NOT CONFUSE MATCH SCORE WITH SHUTTLECOCK AMOUNT:
+- In badminton, MATCH SCORES are points (e.g., 21, 30, 21-19, 30-28, 15, 25).
+- SHUTTLECOCK AMOUNT (Jumlah Kok) is the number of physical shuttlecocks consumed. In recreational matches, this is ALWAYS a small number: 1, 2, or at most 3-4!
+- ABSOLUTELY NEVER put a match score (such as 21, 30, 25, 15, 21-19, 30-28) into "shuttlecock_amount"!
+- If a column or cell contains scores (numbers >= 8 or with '-' or '/'):
+  * Put them into "team1_score" and "team2_score", or "score" (e.g. "21-19").
+  * Do NOT put them into "shuttlecock_amount"!
+- If shuttlecock count is not explicitly marked as 1, 2, or 3, ALWAYS default "shuttlecock_amount" to "1".
+- "court_number" is usually 1, 2, 3, etc. If not clear, default to "1".
+
+Extract and return ONLY a valid JSON object with ALL matches:
 {
   "matches": [
     {
@@ -118,13 +131,15 @@ Extract and return ONLY a valid JSON array with ALL matches:
       "team1_player2": "Second player name",
       "team2_player1": "First player name",
       "team2_player2": "Second player name",
-      "court_number": "Court number",
-      "shuttlecock_amount": "Number of shuttlecocks"
-    },
-    ... (repeat for ALL matches found)
+      "court_number": "1",
+      "shuttlecock_amount": "1",
+      "team1_score": 21,
+      "team2_score": 19,
+      "score": "21-19"
+    }
   ],
-  "total_matches": number,
-  "confidence": 0-100
+  "total_matches": 1,
+  "confidence": 85
 }
 
 CRITICAL PARSING RULES:
@@ -133,7 +148,8 @@ CRITICAL PARSING RULES:
 - Example: "Kevin/Solaso" → team1_player1="Kevin", team1_player2="Solaso"
 - Example: "Khai/William" → team2_player1="Khai", team2_player2="William"
 - Split team names by "/" character to get individual players
-- Extract ALL matches visible in the image, typically 15-20 matches
+- Extract ALL matches visible in the image, typically 10-25 matches
+- "shuttlecock_amount" MUST NEVER BE GREATER THAN 4. If you see numbers like 15-30, that is the MATCH SCORE, NOT the shuttlecock count!
 - If data is unclear for a field, use empty string
 - Confidence indicates overall extraction quality
 - Return ONLY the JSON object, no other text`;
@@ -168,6 +184,45 @@ CRITICAL PARSING RULES:
     }
 
     const extractedData = JSON.parse(jsonMatch[0]);
+
+    // Sanitize matches to prevent match scores from leaking into shuttlecock_amount
+    if (extractedData && Array.isArray(extractedData.matches)) {
+      extractedData.matches = extractedData.matches.map((m: any) => {
+        let rawKok = String(m.shuttlecock_amount || '').trim();
+        let team1Score = m.team1_score ? parseInt(m.team1_score, 10) : undefined;
+        let team2Score = m.team2_score ? parseInt(m.team2_score, 10) : undefined;
+        let scoreStr = m.score ? String(m.score).trim() : '';
+
+        // Check if rawKok is formatted like a score e.g. "21-19", "30-28", "21/18"
+        const scorePatternMatch = rawKok.match(/^(\d{1,2})\s*[-/vs:]\s*(\d{1,2})$/i);
+        if (scorePatternMatch) {
+          team1Score = parseInt(scorePatternMatch[1], 10);
+          team2Score = parseInt(scorePatternMatch[2], 10);
+          scoreStr = `${team1Score}-${team2Score}`;
+          rawKok = '1'; // Default shuttlecock to 1
+        } else {
+          const parsedKok = parseInt(rawKok, 10);
+          // If rawKok is >= 8 (e.g. 15, 21, 25, 30), it's a match score, NOT shuttlecocks!
+          if (!isNaN(parsedKok) && parsedKok >= 8) {
+            if (team1Score === undefined) team1Score = parsedKok;
+            rawKok = '1'; // Reset shuttlecock to 1
+          } else if (isNaN(parsedKok) || parsedKok <= 0) {
+            rawKok = '1';
+          } else if (parsedKok > 4) {
+            // Unusually high shuttlecock count in recreational game
+            rawKok = '2';
+          }
+        }
+
+        return {
+          ...m,
+          shuttlecock_amount: rawKok,
+          team1_score: !isNaN(team1Score as number) ? team1Score : null,
+          team2_score: !isNaN(team2Score as number) ? team2Score : null,
+          score: scoreStr || (team1Score && team2Score ? `${team1Score}-${team2Score}` : undefined),
+        };
+      });
+    }
 
     return NextResponse.json({
       success: true,
