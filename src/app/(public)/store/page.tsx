@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import SmartCropImage from '@/components/SmartCropImage';
 import ZoomableImage from '@/components/ZoomableImage';
 import { getMemberImageUrl } from '@/lib/membersStorage';
+import ClothingRailHero, { RailGarment } from '@/components/ui/clothing-rail-hero';
 
 export type SizeCategory = 'dewasa' | 'kids' | 'balita';
 
@@ -589,6 +590,262 @@ export default function StorePage() {
 
   const backToCatalog = () => setSelectedProductId(null);
 
+  const railGarments: RailGarment[] = useMemo(() => [
+    {
+      id: 'rail-blue',
+      name: 'Jersey DLOB Official · Biru Navy',
+      description: 'Warna signature DLOB Navy dengan aksen strip emas khas dan grafis dinamis. Menggunakan material Milano Standard Premium yang adem, lentur, dan menyerap keringat optimal.',
+      kind: 'tee',
+      color: '#0b244c',
+      trim: '#d4af37',
+      tag: 'Rp 100k - 110k',
+      details: [
+        'Milano Standard Premium',
+        'Signature Navy & Gold',
+        'Quick-Dry & Breathable',
+        'Dewasa, Kids & Balita 👶',
+        'Free Custom Nama & Nomor',
+        'Sablon High-Density Anti-Retak'
+      ],
+      action: (
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (batchSettings.status === 'closed') {
+                router.push('/store/official');
+              } else {
+                router.push('/store/official/pre-order');
+              }
+            }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#4382C8] hover:bg-[#356db0] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Pre-Order Sekarang</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/store/official')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold tracking-wider transition-all cursor-pointer"
+          >
+            <span>Lihat Galeri &amp; Video</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
+    },
+    {
+      id: 'rail-yellow',
+      name: 'Jersey DLOB Official · Kuning Energik',
+      description: 'Edisi kuning cerah berpadu aksen kerah hitam pekat. Memberikan visibilitas tinggi dan aura kompetitif ceria di setiap rally lapangan.',
+      kind: 'tee',
+      color: '#FFC000',
+      trim: '#18181b',
+      tag: 'Rp 100k - 110k',
+      details: [
+        'Milano Standard Premium',
+        'High-Visibility Bright Yellow',
+        'Dewasa, Kids & Balita 👶',
+        'Bahan Ringan & Cepat Kering',
+        'Custom Nama & Nomor',
+        'Kerah V-Neck Ergonomis'
+      ],
+      action: (
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (batchSettings.status === 'closed') {
+                router.push('/store/official');
+              } else {
+                router.push('/store/official/pre-order');
+              }
+            }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#4382C8] hover:bg-[#356db0] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Pre-Order Sekarang</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/store/official')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold tracking-wider transition-all cursor-pointer"
+          >
+            <span>Lihat Galeri &amp; Video</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
+    },
+    {
+      id: 'rail-red',
+      name: 'Jersey DLOB Official · Merah Bold',
+      description: 'Karakter warna merah menyala dengan aksen strip putih tegas. Melambangkan determinasi tinggi dan semangat bertarung tanpa henti.',
+      kind: 'tee',
+      color: '#c8102e',
+      trim: '#ffffff',
+      tag: 'Rp 100k - 110k',
+      details: [
+        'Milano Standard Premium',
+        'Bold Crimson Red',
+        'Dewasa, Kids & Balita 👶',
+        'Sirkulasi Udara Maksimal',
+        'Jahitan Rantai Kuat Standar Olahraga',
+        'Custom Nama Punggung'
+      ],
+      action: (
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (batchSettings.status === 'closed') {
+                router.push('/store/official');
+              } else {
+                router.push('/store/official/pre-order');
+              }
+            }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#4382C8] hover:bg-[#356db0] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Pre-Order Sekarang</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/store/official')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold tracking-wider transition-all cursor-pointer"
+          >
+            <span>Lihat Galeri &amp; Video</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
+    },
+    {
+      id: 'rail-pink',
+      name: 'Jersey DLOB Official · Pink Pastel',
+      description: 'Gradasi warna pink pastel lembut dengan estetika sporty modern. Menjadi pilihan terpopuler pemain ganda campuran dan putri DLOB.',
+      kind: 'tee',
+      color: '#d8a2a7',
+      trim: '#ffffff',
+      tag: 'Rp 100k - 110k',
+      details: [
+        'Pastel Blossom Edition',
+        'Milano Breathable',
+        'Dewasa, Kids & Balita 👶',
+        'Lembut di Kulit & Anti-Iritasi',
+        'Custom Nama & Nomor',
+        'Potongan Athletic Fit'
+      ],
+      action: (
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (batchSettings.status === 'closed') {
+                router.push('/store/official');
+              } else {
+                router.push('/store/official/pre-order');
+              }
+            }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#4382C8] hover:bg-[#356db0] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Pre-Order Sekarang</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/store/official')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold tracking-wider transition-all cursor-pointer"
+          >
+            <span>Lihat Galeri &amp; Video</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
+    },
+    {
+      id: 'rail-noir',
+      name: 'DLOB Jersey · Noir (The Dark Circuit)',
+      description: 'Edisi konsep masa depan dengan tema sirkuit elektronik gelap. Sentuhan stealth monokrom modern untuk performa elit di lapangan.',
+      kind: 'tee',
+      color: '#18181b',
+      trim: '#38bdf8',
+      tag: 'Concept · Segera Hadir',
+      details: [
+        'Concept Edition Preview',
+        'Milano Ultra-Vent (R&D)',
+        'Stealth Circuit Typography',
+        'Segera Hadir'
+      ],
+      action: (
+        <button
+          type="button"
+          disabled
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 text-zinc-400 text-xs font-bold uppercase tracking-wider cursor-not-allowed"
+        >
+          <Lock className="w-3.5 h-3.5" />
+          <span>Konsep Segera Hadir</span>
+        </button>
+      ),
+    },
+    {
+      id: 'rail-hoodie',
+      name: 'DLOB Warmup Hoodie · Court Edition',
+      description: 'Hoodie pemanasan resmi komunitas DLOB berbahan cotton fleece tebal dengan tudung ganda dan kantong kangguru luas untuk kenyamanan pra dan pasca tanding.',
+      kind: 'hoodie',
+      color: '#27272a',
+      trim: '#e4e4e7',
+      tag: 'Outerwear Komunitas',
+      details: [
+        'Heavyweight Cotton Fleece 330gsm',
+        'Double-Lined Hood',
+        'Kangaroo Pouch Pocket',
+        'Ribbed Cuffs & Hem',
+        'DLOB Community Emblem'
+      ],
+      action: (
+        <button
+          type="button"
+          onClick={() => {
+            document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+        >
+          <span>Lihat di Katalog</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      ),
+    },
+    {
+      id: 'rail-jacket',
+      name: 'DLOB Technical Windbreaker',
+      description: 'Jaket parasut teknikal dengan resleting penuh dan aksen emas DLOB. Tahan angin dan percikan air untuk mobilitas optimal menuju venue.',
+      kind: 'jacket',
+      color: '#0b244c',
+      trim: '#d4af37',
+      tag: 'Outerwear Komunitas',
+      details: [
+        'Water-Repellent & Windproof',
+        'Full-Zip Athletic Cut',
+        'Gold Hardware Trim',
+        'Zipper Side Pockets',
+        'Community Gear'
+      ],
+      action: (
+        <button
+          type="button"
+          onClick={() => {
+            document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+        >
+          <span>Lihat di Katalog</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      ),
+    },
+  ], [batchSettings, router]);
+
   // Futuristic Disclaimer Block with Doppelrand Architecture
   const Disclaimer = () => (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
@@ -718,129 +975,101 @@ export default function StorePage() {
       {/* ── CATALOG VIEW ────────────────────────────────────────────── */}
       {!selectedProductId && (
         <>
-          {/* Hero with Video on Hover */}
-          <div 
-            className="relative w-full overflow-hidden group" 
-            style={{ minHeight: '85vh' }}
-            onMouseEnter={() => {
-              const video = document.getElementById('hero-video') as HTMLVideoElement;
-              if (video) {
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                  playPromise.catch(() => {
-                    // Play was interrupted (e.g. quick hover-out) — safe to ignore
-                  });
+          {/* ── Interactive Clothing Rail Hero ── */}
+          <div className="relative w-full bg-zinc-950 text-white overflow-hidden border-b border-zinc-800">
+            {/* Ambient lighting backdrop */}
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(67,130,200,0.18)_0%,transparent_65%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/40 to-zinc-950" />
+
+            <div className="relative z-10 max-w-7xl mx-auto pt-8 sm:pt-12 pb-6">
+              <ClothingRailHero
+                items={railGarments}
+                eyebrow="DLOB OFFICIAL STORE · INTERACTIVE ATELIER"
+                heading="Performa & Presisi. Koleksi Jersey DLOB."
+                caption="Arahkan kursor atau geser gantungan baju untuk melihat gerak 3D, putar depan & belakang, atau klik untuk spesifikasi lengkap setiap pakaian."
+                autoplay={true}
+                interval={3200}
+                hanger="wood"
+                className="bg-transparent text-white pt-2 pb-6"
+                labels={{
+                  front: "Tampak Depan",
+                  back: "Tampak Belakang",
+                  close: "Tutup",
+                  show: "Tampilkan",
+                }}
+                action={
+                  <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (batchSettings.status === 'closed') {
+                          router.push('/store/official');
+                        } else {
+                          router.push('/store/official/pre-order');
+                        }
+                      }}
+                      className={`group inline-flex items-center gap-2.5 px-6 py-3 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wider transition-all shadow-xl active:scale-95 cursor-pointer ${
+                        batchSettings.status === 'closed'
+                          ? 'bg-zinc-800 text-red-300 border border-red-500/30 hover:bg-zinc-700'
+                          : 'bg-[#4382C8] hover:bg-[#356db0] text-white shadow-[#4382C8]/25'
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>{batchSettings.status === 'closed' ? 'Batch Saat Ini Ditutup' : 'Pre-Order Jersey Official'}</span>
+                      <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowAIModal(true)}
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700 text-white text-xs sm:text-sm font-bold uppercase tracking-wider transition-all backdrop-blur-md active:scale-95 cursor-pointer shadow-lg"
+                    >
+                      <Sparkles className="w-4 h-4 text-[#4382C8]" />
+                      <span>Rekomendasi Ukuran AI</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowSizeGuideModal(true)}
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-xs sm:text-sm font-bold uppercase tracking-wider transition-all backdrop-blur-md active:scale-95 cursor-pointer shadow-lg"
+                    >
+                      <span>Tabel Ukuran</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white text-zinc-950 hover:bg-zinc-200 text-xs sm:text-sm font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-lg"
+                    >
+                      <span>Lihat Katalog Lengkap</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 }
-              }
-            }}
-            onMouseLeave={() => {
-              const video = document.getElementById('hero-video') as HTMLVideoElement;
-              if (video && !video.paused) video.pause();
-            }}
-          >
-            {/* Background image (default) */}
-            <img
-              src={getMemberImageUrl('model/storeheroimage4.jpeg')}
-              alt="DLOB Store Hero"
-              className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500 group-hover:opacity-0"
-              style={{ imageRendering: 'auto' }}
-              loading="eager"
-              draggable={false}
-            />
-            
-            {/* Video (on hover) */}
-            <video
-              id="hero-video"
-              src={SUPABASE_VIDEOS.videopromotionnoirblossom}
-              className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-              muted
-              loop
-              preload="auto"
-              playsInline
-              crossOrigin="anonymous"
-            />
-            
-            {/* Ambient Transition Gradients: dark at top for text readability, seamlessly blending to pure white at bottom */}
-            <div className="absolute inset-0 bg-linear-to-b from-black/75 via-black/30 via-50% to-white" />
-            <div className="absolute inset-y-0 left-0 w-full md:w-3/5 bg-gradient-to-r from-black/60 via-black/25 to-transparent pointer-events-none" />
-            <div className="absolute inset-x-0 bottom-0 h-72 sm:h-96 bg-linear-to-t from-white via-white/85 via-35% to-transparent pointer-events-none" />
+              />
 
-            {/* Content */}
-            <div className="relative z-10 flex flex-col justify-end h-full min-h-[85vh] max-w-7xl mx-auto px-6 sm:px-10 pb-16 pt-32">
-              <div className="inline-flex items-center px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-wider uppercase text-zinc-300 bg-white/10 backdrop-blur-md border border-white/15 mb-5 w-fit shadow-xs">
-                DLOB Official Merchandise &amp; Gear
-              </div>
-
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.05] mb-4">
-                Performa &amp; Presisi.<br />
-                <span className="text-sky-300 italic drop-shadow-[0_2px_12px_rgba(0,0,0,0.4)]">Official DLOB Gear.</span>
-              </h1>
-
-              <p className="text-sm sm:text-base text-zinc-300 max-w-md leading-relaxed mb-8">
-                Jersey resmi komunitas bulutangkis DLOB. Material Milano Standard premium, ringan, bernapas optimal, dan dirancang untuk durabilitas pertandingan.
-              </p>
-
-              {/* CTAs */}
-              <div className="flex flex-wrap gap-4 items-center">
-                <button
-                  onClick={() => {
-                    document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="group inline-flex items-center gap-3 bg-white text-zinc-950 pl-7 pr-2 py-2 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-xl active:scale-[0.98] cursor-pointer"
-                >
-                  <span>Lihat Katalog</span>
-                  <div className="btn-nested-icon w-8 h-8 rounded-full bg-zinc-950 text-white flex items-center justify-center">
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                </button>
-                <button
-                  onClick={() => {
-                    if (batchSettings.status === 'closed') {
-                      router.push('/store/official');
-                    } else {
-                      router.push('/store/official/pre-order');
-                    }
-                  }}
-                  className={`group inline-flex items-center gap-3 backdrop-blur-md border pl-6 pr-2 py-2 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer shadow-lg ${
-                    batchSettings.status === 'closed'
-                      ? 'bg-zinc-900 border-red-500/40 text-red-300 hover:bg-red-500/10'
-                      : 'bg-zinc-900/90 border-[#4382C8]/50 text-blue-300 hover:bg-[#4382C8]/15 hover:border-[#4382C8]'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    {batchSettings.status === 'closed' ? (
-                      <Lock className="w-3.5 h-3.5 text-red-400" />
-                    ) : (
-                      <span className="w-2 h-2 rounded-full bg-[#4382C8] animate-pulse" />
-                    )}
-                    {batchSettings.status === 'closed' ? 'Batch Ditutup' : 'Pre-Order Jersey Official'}
-                  </span>
-                  <div className={`btn-nested-icon w-8 h-8 rounded-full flex items-center justify-center ${
-                    batchSettings.status === 'closed' ? 'bg-red-500/20 text-red-300' : 'bg-[#4382C8]/20 text-blue-300'
-                  }`}>
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                </button>
-              </div>
-
-              {/* Stats strip in Doppelrand shell with elevated shadow over white blend */}
-              <div className="p-1 rounded-2xl bg-zinc-900/90 border border-white/20 max-w-2xl mt-12 backdrop-blur-xl shadow-2xl shadow-zinc-950/20">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 rounded-[calc(1rem-0.125rem)] bg-zinc-950/85">
-                  <div>
-                    <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">3</p>
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Model Jersey</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">3 Tipe</p>
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Dewasa, Kids &amp; Balita</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">Milano</p>
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Standard Premium</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">16</p>
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Pilihan Ukuran</p>
+              {/* Stats strip in Doppelrand shell */}
+              <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-2 pb-4">
+                <div className="p-1 rounded-2xl bg-zinc-900/90 border border-white/10 backdrop-blur-xl shadow-2xl shadow-black/40">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 rounded-[calc(1rem-0.125rem)] bg-zinc-950/85">
+                    <div className="text-center sm:text-left">
+                      <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">4 Edisi</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Warna Jersey</p>
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">3 Tipe</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Dewasa, Kids & Balita</p>
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">Milano</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Standard Premium</p>
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">16</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Pilihan Ukuran</p>
+                    </div>
                   </div>
                 </div>
               </div>

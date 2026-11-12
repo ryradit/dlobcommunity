@@ -7,23 +7,43 @@
 html.light {
   --background: #ffffff;
   --foreground: #171717;
+  --muted-foreground: #71717a;
+  --border: #e4e4e7;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --ring: #4382C8;
 }
 
 /* Dark theme */
 html.dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --muted-foreground: #a1a1aa;
+  --border: #27272a;
+  --card: #18181b;
+  --card-foreground: #ededed;
+  --ring: #4382C8;
 }
 
 /* Default to dark theme */
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --muted-foreground: #a1a1aa;
+  --border: #27272a;
+  --card: #18181b;
+  --card-foreground: #ededed;
+  --ring: #4382C8;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
