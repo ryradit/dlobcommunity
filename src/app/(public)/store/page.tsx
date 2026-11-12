@@ -598,7 +598,7 @@ export default function StorePage() {
       kind: 'tee',
       color: '#0b244c',
       trim: '#d4af37',
-      tag: 'Rp 100k - 110k',
+      tag: 'Jersey DLOB Official',
       details: [
         'Milano Standard Premium',
         'Signature Navy & Gold',
@@ -641,7 +641,7 @@ export default function StorePage() {
       kind: 'tee',
       color: '#FFC000',
       trim: '#18181b',
-      tag: 'Rp 100k - 110k',
+      tag: 'Jersey DLOB Official',
       details: [
         'Milano Standard Premium',
         'High-Visibility Bright Yellow',
@@ -684,7 +684,7 @@ export default function StorePage() {
       kind: 'tee',
       color: '#c8102e',
       trim: '#ffffff',
-      tag: 'Rp 100k - 110k',
+      tag: 'Jersey DLOB Official',
       details: [
         'Milano Standard Premium',
         'Bold Crimson Red',
@@ -727,7 +727,7 @@ export default function StorePage() {
       kind: 'tee',
       color: '#d8a2a7',
       trim: '#ffffff',
-      tag: 'Rp 100k - 110k',
+      tag: 'Jersey DLOB Official',
       details: [
         'Pastel Blossom Edition',
         'Milano Breathable',
@@ -765,26 +765,27 @@ export default function StorePage() {
     },
     {
       id: 'rail-noir',
-      name: 'DLOB Jersey · Noir (The Dark Circuit)',
-      description: 'Edisi konsep masa depan dengan tema sirkuit elektronik gelap. Sentuhan stealth monokrom modern untuk performa elit di lapangan.',
+      name: 'DLOB Jersey Noir',
+      description: 'Jersey edisi spesial DLOB bertema sirkuit elektronik gelap. Desain modern monokrom berdaya tahan tinggi untuk tampilan sporty dan elegan.',
       kind: 'tee',
       color: '#18181b',
       trim: '#38bdf8',
-      tag: 'Concept · Segera Hadir',
+      tag: 'DLOB Jersey Noir',
       details: [
-        'Concept Edition Preview',
-        'Milano Ultra-Vent (R&D)',
+        'DLOB Jersey Noir',
+        'The Dark Circuit Edition',
+        'Milano Standard Premium',
         'Stealth Circuit Typography',
-        'Segera Hadir'
+        'Unisex Athletic Fit'
       ],
       action: (
         <button
           type="button"
-          disabled
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 text-zinc-400 text-xs font-bold uppercase tracking-wider cursor-not-allowed"
+          onClick={() => router.push('/store/noir')}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95"
         >
-          <Lock className="w-3.5 h-3.5" />
-          <span>Konsep Segera Hadir</span>
+          <span>Lihat DLOB Jersey Noir</span>
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       ),
     },
