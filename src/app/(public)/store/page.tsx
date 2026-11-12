@@ -769,16 +769,16 @@ export default function StorePage() {
     },
     {
       id: 'rail-noir',
-      name: 'DLOB Jersey Noir',
+      name: 'DLOB Jersey Noir · Midnight Black',
       description: 'Jersey edisi spesial DLOB bertema sirkuit elektronik gelap. Desain modern monokrom berdaya tahan tinggi untuk tampilan sporty dan elegan.',
       image: '/images/rail/jersey-noir-front.png',
       backImage: '/images/rail/jersey-noir-back.png',
       tag: 'DLOB Jersey Noir',
-      color: '#18181b',
+      color: '#0d0d0d',
       trim: '#38bdf8',
       details: [
         'DLOB Jersey Noir',
-        'The Dark Circuit Edition',
+        'Midnight Black Edition',
         'Milano Standard Premium',
         'Stealth Circuit Typography',
         'Unisex Athletic Fit'
@@ -795,57 +795,28 @@ export default function StorePage() {
       ),
     },
     {
-      id: 'rail-hoodie',
-      name: 'DLOB Warmup Hoodie · Court Edition',
-      description: 'Hoodie pemanasan resmi komunitas DLOB berbahan cotton fleece tebal dengan tudung ganda dan kantong kangguru luas untuk kenyamanan pra dan pasca tanding.',
-      kind: 'hoodie',
-      color: '#27272a',
-      trim: '#e4e4e7',
-      tag: 'Outerwear Komunitas',
+      id: 'rail-noir-steel-blue',
+      name: 'DLOB Jersey Noir · Steel Blue Night',
+      description: 'Edisi spesial DLOB Noir dalam balutan warna Steel Blue Night bertema sirkuit futuristik dengan aksen garis neon dan tipografi modern.',
+      image: '/images/rail/jersey-noir-steel-blue-front.png',
+      backImage: '/images/rail/jersey-noir-steel-blue-back.png',
+      tag: 'DLOB Jersey Noir',
+      color: '#1e2d40',
+      trim: '#60a5fa',
       details: [
-        'Heavyweight Cotton Fleece 330gsm',
-        'Double-Lined Hood',
-        'Kangaroo Pouch Pocket',
-        'Ribbed Cuffs & Hem',
-        'DLOB Community Emblem'
+        'DLOB Jersey Noir',
+        'Steel Blue Night Edition',
+        'Milano Standard Premium',
+        'Dark Circuit Aesthetics',
+        'Unisex Athletic Fit'
       ],
       action: (
         <button
           type="button"
-          onClick={() => {
-            document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+          onClick={() => router.push('/store/noir')}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95"
         >
-          <span>Lihat di Katalog</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
-      ),
-    },
-    {
-      id: 'rail-jacket',
-      name: 'DLOB Technical Windbreaker',
-      description: 'Jaket parasut teknikal dengan resleting penuh dan aksen emas DLOB. Tahan angin dan percikan air untuk mobilitas optimal menuju venue.',
-      kind: 'jacket',
-      color: '#0b244c',
-      trim: '#d4af37',
-      tag: 'Outerwear Komunitas',
-      details: [
-        'Water-Repellent & Windproof',
-        'Full-Zip Athletic Cut',
-        'Gold Hardware Trim',
-        'Zipper Side Pockets',
-        'Community Gear'
-      ],
-      action: (
-        <button
-          type="button"
-          onClick={() => {
-            document.getElementById('catalog-grid')?.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
-        >
-          <span>Lihat di Katalog</span>
+          <span>Lihat DLOB Jersey Noir</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       ),
@@ -1061,8 +1032,8 @@ export default function StorePage() {
                 <div className="p-1 rounded-2xl bg-zinc-900/90 border border-white/10 backdrop-blur-xl shadow-2xl shadow-black/40">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 rounded-[calc(1rem-0.125rem)] bg-zinc-950/85">
                     <div className="text-center sm:text-left">
-                      <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">4 Edisi</p>
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Warna Jersey</p>
+                      <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">6 Pilihan</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono mt-1">Edisi Jersey</p>
                     </div>
                     <div className="text-center sm:text-left">
                       <p className="text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">3 Tipe</p>

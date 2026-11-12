@@ -9,6 +9,7 @@ interface AISizeResponse {
   success: boolean;
   recommendedCategory: SizeCategory;
   recommendedSize: string;
+  usualSize?: string;
   measurements?: {
     category: SizeCategory;
     label: string;
@@ -139,6 +140,25 @@ export default function AISizeRecommenderModal({
 
         {/* Modal Body */}
         <div className="p-6 max-h-[75vh] overflow-y-auto space-y-6">
+          {/* DLOB Fit Notice: Downsize 1 Level Rule */}
+          <div
+            className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 transition-all ${
+              isDark
+                ? 'bg-amber-500/10 border-amber-500/25 text-amber-200/90'
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}
+          >
+            <span className="text-base leading-none">💡</span>
+            <div className="space-y-0.5">
+              <p className="font-bold text-[11px] uppercase tracking-wider text-amber-400 dark:text-amber-300">
+                Aturan Fitting Jersey DLOB
+              </p>
+              <p className="text-[11px] leading-relaxed opacity-90">
+                Pola jersey DLOB memiliki potongan dada &amp; badan yang cukup lega (oversized athletic cut). Sistem AI akan otomatis merekomendasikan <strong>turun 1 size (down size 1 level)</strong> dari ukuran kaos biasa Anda agar pas dan nyaman saat smash.
+              </p>
+            </div>
+          </div>
+
           <form onSubmit={handleAnalyze} className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
               {/* Age */}
@@ -293,9 +313,54 @@ export default function AISizeRecommenderModal({
                 </div>
               </div>
 
+              {/* Downsize 1 Level Indicator Badge */}
+              {result.usualSize && (
+                <div
+                  className={`p-3 rounded-2xl border text-xs flex flex-wrap items-center justify-between gap-2 ${
+                    isDark
+                      ? 'bg-zinc-900/90 border-[#4382C8]/30 text-zinc-200'
+                      : 'bg-blue-100/70 border-blue-200 text-blue-950'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-zinc-400 text-[11px]">Ukuran Biasa:</span>
+                    <span className="font-bold font-mono text-zinc-400 dark:text-zinc-500 line-through">
+                      {result.usualSize}
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5 text-[#4382C8]" />
+                    <span className="text-[11px] text-gray-500 dark:text-zinc-400">Rekomendasi DLOB:</span>
+                    <span className="font-extrabold text-[#4382C8] font-mono text-sm">
+                      {result.recommendedSize}
+                    </span>
+                  </div>
+                  {result.usualSize !== result.recommendedSize ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#4382C8] text-white shadow-sm">
+                      Turun 1 Size ✨
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                      Sesuai Preferensi
+                    </span>
+                  )}
+                </div>
+              )}
+
               <p className={`text-xs leading-relaxed ${isDark ? 'text-zinc-300' : 'text-gray-700'}`}>
                 {result.reasoning}
               </p>
+
+              {result.tips && (
+                <div
+                  className={`p-3 rounded-2xl text-[11px] flex items-start gap-2 ${
+                    isDark
+                      ? 'bg-white/5 border border-white/5 text-zinc-300'
+                      : 'bg-white border border-blue-100 text-gray-600'
+                  }`}
+                >
+                  <span className="text-sm leading-none">💡</span>
+                  <span className="leading-relaxed">{result.tips}</span>
+                </div>
+              )}
 
               {/* ── Table Size Grounding Breakdown ── */}
               {result.measurements && (

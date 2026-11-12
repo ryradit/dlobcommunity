@@ -70,7 +70,7 @@ TABEL UKURAN RESMI JERSEY BADMINTON DLOB:
 | 3XL | Dewasa | 83 cm | 65 cm |
 `;
 
-// Deterministic fallback strictly based on table size specifications
+// Deterministic fallback strictly based on table size specifications with DLOB Downsize rule
 function calculateStrictTableRecommendation(
   age: number,
   height: number,
@@ -79,74 +79,92 @@ function calculateStrictTableRecommendation(
 ) {
   // ── Balita (1 - 6 Tahun)
   if (age <= 6) {
-    let sizeKey = 'Balita M';
-    if (age <= 2 || height < 90 || weight < 13) sizeKey = 'Balita XS';
-    else if (age <= 3 || height < 100 || weight < 16) sizeKey = 'Balita S';
-    else if (age <= 4 || height < 110 || weight < 19) sizeKey = 'Balita M';
-    else if (age <= 5 || height < 118 || weight < 23) sizeKey = 'Balita L';
-    else sizeKey = 'Balita XL';
+    const balitaOrder = ['Balita XS', 'Balita S', 'Balita M', 'Balita L', 'Balita XL'];
+    let usualSize = 'Balita M';
+    if (age <= 2 || height < 90 || weight < 13) usualSize = 'Balita XS';
+    else if (age <= 3 || height < 100 || weight < 16) usualSize = 'Balita S';
+    else if (age <= 4 || height < 110 || weight < 19) usualSize = 'Balita M';
+    else if (age <= 5 || height < 118 || weight < 23) usualSize = 'Balita L';
+    else usualSize = 'Balita XL';
 
+    const curIdx = balitaOrder.indexOf(usualSize);
+    // Downsize 1 level unless loose preference
+    const sizeKey = fitPreference === 'loose' ? usualSize : (curIdx > 0 ? balitaOrder[curIdx - 1] : usualSize);
     const spec = SIZE_TABLE_DATA[sizeKey];
+
     return {
       recommendedCategory: 'balita',
       recommendedSize: sizeKey,
+      usualSize,
       measurements: spec,
-      alternativeSize: fitPreference === 'loose' ? 'Balita XL' : 'Balita M',
-      fitType: fitPreference === 'loose' ? 'Comfort / Loose Fit' : 'Standard Fit',
-      reasoning: `Berdasarkan Tabel Size Balita (${spec.keterangan}), untuk usia ${age} tahun (TB ${height} cm, BB ${weight} kg), ukuran ${sizeKey} memiliki spesifikasi Tinggi ${spec.tinggi} cm & Lebar ${spec.lebar} cm yang pas untuk ruang gerak anak.`,
+      alternativeSize: usualSize,
+      fitType: fitPreference === 'loose' ? 'Comfort / Loose Fit' : 'Athletic Fit (Downsize 1 Level)',
+      reasoning: `Ukuran standar anak diperkirakan ${usualSize}. Karena cutting jersey DLOB cukup lega, disarankan turun 1 size (downsize 1 level) ke ${sizeKey} (${spec.keterangan}, Tinggi ${spec.tinggi} cm & Lebar ${spec.lebar} cm) agar pas dan nyaman.`,
       tips: 'Toleransi jahitan ±2cm. Bahan Milano Standard adem dan lembut untuk kulit anak.',
     };
   }
 
   // ── Kids (7 - 13 Tahun)
   if (age <= 13) {
-    let sizeKey = 'Kids M';
-    if (age <= 8 || height < 125 || weight < 28) sizeKey = 'Kids S';
-    else if (age <= 9 || height < 135 || weight < 34) sizeKey = 'Kids M';
-    else if (age <= 11 || height < 145 || weight < 42) sizeKey = 'Kids L';
-    else sizeKey = 'Kids XL';
+    const kidsOrder = ['Kids S', 'Kids M', 'Kids L', 'Kids XL'];
+    let usualSize = 'Kids M';
+    if (age <= 8 || height < 125 || weight < 28) usualSize = 'Kids S';
+    else if (age <= 9 || height < 135 || weight < 34) usualSize = 'Kids M';
+    else if (age <= 11 || height < 145 || weight < 42) usualSize = 'Kids L';
+    else usualSize = 'Kids XL';
 
+    const curIdx = kidsOrder.indexOf(usualSize);
+    // Downsize 1 level unless loose preference
+    const sizeKey = fitPreference === 'loose' ? usualSize : (curIdx > 0 ? kidsOrder[curIdx - 1] : usualSize);
     const spec = SIZE_TABLE_DATA[sizeKey];
+
     return {
       recommendedCategory: 'kids',
       recommendedSize: sizeKey,
+      usualSize,
       measurements: spec,
-      alternativeSize: fitPreference === 'loose' ? 'Kids XL' : 'Kids L',
-      fitType: fitPreference === 'loose' ? 'Comfort Fit' : 'Regular Fit',
-      reasoning: `Berdasarkan Tabel Size Kids (${spec.keterangan}), untuk usia ${age} tahun (TB ${height} cm, BB ${weight} kg), ukuran ${sizeKey} dengan Tinggi ${spec.tinggi} cm & Lebar ${spec.lebar} cm sangat tepat untuk kelincahan bermain badminton.`,
-      tips: 'Jika menginginkan jersey lebih longgar untuk pertumbuhan, bisa memilih 1 size di atasnya.',
+      alternativeSize: usualSize,
+      fitType: fitPreference === 'loose' ? 'Comfort Fit' : 'Athletic Fit (Downsize 1 Level)',
+      reasoning: `Ukuran biasa diperkirakan ${usualSize}. Karena pola jersey DLOB berpotongan atletik yang cukup longgar, disarankan turun 1 size (downsize 1 level) ke ukuran ${sizeKey} (Tinggi ${spec.tinggi} cm & Lebar ${spec.lebar} cm) agar lincah di lapangan.`,
+      tips: 'Jika ingin jersey lebih longgar untuk masa pertumbuhan, bisa memilih ukuran biasa Anda.',
     };
   }
 
   // ── Dewasa (Adult)
-  let sizeKey = 'M';
+  let usualSize = 'M';
   const bmi = weight / Math.pow(height / 100, 2);
 
-  if (height < 158 || (weight < 50 && bmi < 19)) sizeKey = 'XS';
-  else if (height < 166 && weight <= 58) sizeKey = 'S';
-  else if (height < 174 && weight <= 68) sizeKey = 'M';
-  else if (height < 181 && weight <= 78) sizeKey = 'L';
-  else if (height < 187 && weight <= 88) sizeKey = 'XL';
-  else if (weight <= 100) sizeKey = 'XXL';
-  else sizeKey = '3XL';
+  if (height < 158 || (weight < 50 && bmi < 19)) usualSize = 'XS';
+  else if (height < 166 && weight <= 58) usualSize = 'S';
+  else if (height < 174 && weight <= 68) usualSize = 'M';
+  else if (height < 181 && weight <= 78) usualSize = 'L';
+  else if (height < 187 && weight <= 88) usualSize = 'XL';
+  else if (weight <= 100) usualSize = 'XXL';
+  else usualSize = '3XL';
 
+  const adultOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+  const curIdx = adultOrder.indexOf(usualSize);
+
+  // DLOB Mandatory Downsize Rule: recommend down size 1 level from usual size
+  let sizeKey = usualSize;
   if (fitPreference === 'loose') {
-    const adultOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
-    const curIdx = adultOrder.indexOf(sizeKey);
-    if (curIdx !== -1 && curIdx < adultOrder.length - 1) {
-      sizeKey = adultOrder[curIdx + 1];
-    }
+    // If loose preference, usual size is already comfortably loose
+    sizeKey = usualSize;
+  } else {
+    // Regular / slim: down size 1 level
+    sizeKey = curIdx > 0 ? adultOrder[curIdx - 1] : usualSize;
   }
 
   const spec = SIZE_TABLE_DATA[sizeKey] || SIZE_TABLE_DATA['M'];
   return {
     recommendedCategory: 'dewasa',
     recommendedSize: sizeKey,
+    usualSize,
     measurements: spec,
-    alternativeSize: sizeKey === '3XL' ? 'XXL' : sizeKey === 'M' ? 'L' : 'M',
-    fitType: fitPreference === 'loose' ? 'Comfort Fit (Longgar)' : 'Athletic Regular Fit',
-    reasoning: `Berdasarkan Tabel Size Dewasa, untuk TB ${height} cm dan BB ${weight} kg, ukuran ${sizeKey} (Tinggi ${spec.tinggi} cm, Lebar ${spec.lebar} cm) memberikan proporsi dada dan panjang badan yang pas saat smash dan footwork.`,
-    tips: 'Jersey berteknologi Milano Standard tidak membatasi ayunan raket dan cepat kering.',
+    alternativeSize: usualSize,
+    fitType: fitPreference === 'loose' ? 'Comfort Fit (Longgar)' : 'Athletic Fit (Downsize 1 Level)',
+    reasoning: `Ukuran jersey biasa Anda diperkirakan ${usualSize}. Namun karena cutting pola jersey DLOB memiliki potongan dada dan badan yang cukup lega (oversized athletic fit), kami sangat merekomendasikan untuk turun 1 size (downsize 1 level) ke ukuran ${sizeKey} (Tinggi ${spec.tinggi} cm, Lebar ${spec.lebar} cm) agar pas proporsional saat smash dan footwork.`,
+    tips: '💡 Tips DLOB Fitting: Pola jersey DLOB relatif longgar/lebar dibanding kaos biasa. Rekomendasi di atas sudah diturunkan 1 tingkat dari ukuran biasa Anda.',
   };
 }
 
@@ -197,19 +215,36 @@ DATA PEMESAN:
 - Preferensi Fitting: ${fitPreference === 'loose' ? 'Lebih Longgar / Nyaman' : fitPreference === 'slim' ? 'Pas Badan / Slim Fit' : 'Standar Pas'}
 
 ATURAN REKOMENDASI BERDASARKAN TABEL:
-1. Usia 1 - 6 Tahun -> WAJIB kategori "balita" (Pilih salah satu dari: "Balita XS", "Balita S", "Balita M", "Balita L", "Balita XL" sesuai tabel).
-2. Usia 7 - 13 Tahun -> WAJIB kategori "kids" (Pilih salah satu dari: "Kids S", "Kids M", "Kids L", "Kids XL" sesuai tabel).
-3. Usia 14+ Tahun / Postur Dewasa -> WAJIB kategori "dewasa" (Pilih salah satu dari: "XS", "S", "M", "L", "XL", "XXL", "3XL").
-4. Di bagian "reasoning", sebutkan secara EKSPLISIT dimensi ukuran tabel (Tinggi X cm dan Lebar Y cm) yang direkomendasikan dan hubungkan dengan TB/BB pemesan.
+1. Usia 1 - 6 Tahun -> Kategori "balita" (Pilih dari: "Balita XS", "Balita S", "Balita M", "Balita L", "Balita XL").
+2. Usia 7 - 13 Tahun -> Kategori "kids" (Pilih dari: "Kids S", "Kids M", "Kids L", "Kids XL").
+3. Usia 14+ Tahun / Dewasa -> Kategori "dewasa" (Pilih dari: "XS", "S", "M", "L", "XL", "XXL", "3XL").
+
+ATURAN KHUSUS DLOB (DOWNSIZE 1 LEVEL):
+Pola potong jersey DLOB dirancang berpotongan atletik yang cukup lega/oversized dibanding kaos harian biasa.
+Oleh karena itu, sistem WAJIB MEREKOMENDASIKAN TURUN 1 UKURAN (DOWNSIZE 1 LEVEL) dari ukuran jersey/kaos biasa pemesan:
+- Biasa L -> Rekomendasikan M (Turun 1 size)
+- Biasa XL -> Rekomendasikan L (Turun 1 size)
+- Biasa XXL -> Rekomendasikan XL (Turun 1 size)
+- Biasa 3XL -> Rekomendasikan XXL (Turun 1 size)
+- Biasa M -> Rekomendasikan S (Turun 1 size)
+- Biasa S -> Rekomendasikan XS (Turun 1 size)
+- Biasa XS -> Tetap XS (Ukuran minimum)
+*CATATAN: Jika preferensi fitting pemesan adalah "Lebih Longgar / Nyaman", berikan ukuran biasanya tanpa diturunkan.
+
+4. Di bagian "reasoning", sebutkan secara EKSPLISIT:
+   - Perkiraan ukuran biasa pemesan (usualSize)
+   - Ukuran rekomendasi DLOB (recommendedSize) beserta alasan downsize 1 level karena pola DLOB yang lega
+   - Dimensi spesifik tabel (Tinggi X cm dan Lebar Y cm) yang direkomendasikan.
 
 Format Output WAJIB JSON:
 {
   "recommendedCategory": "dewasa" | "kids" | "balita",
+  "usualSize": "L",
   "recommendedSize": "M",
   "alternativeSize": "L",
-  "fitType": "Athletic Regular Fit",
-  "reasoning": "Berdasarkan Tabel Size Dewasa, untuk tinggi 172 cm dan berat 68 kg, ukuran M (Tinggi 71 cm, Lebar 51 cm) memberikan proporsi dada dan kenyamanan terbaik saat berolahraga badminton.",
-  "tips": "Tips kenyamanan bahan Milano Standard..."
+  "fitType": "Athletic Fit (Downsize 1 Level)",
+  "reasoning": "Ukuran jersey biasa Anda diperkirakan L. Mengingat pola jersey DLOB berpotongan atletik yang cukup lega di dada dan badan, kami merekomendasikan untuk turun 1 size (downsize 1 level) ke ukuran M (Tinggi 71 cm, Lebar 51 cm) agar proporsional dan lincah saat bergerak di lapangan.",
+  "tips": "Pola DLOB lebih lebar dibanding kaos biasa. Rekomendasi sudah disesuaikan turun 1 tingkat."
 }
 `;
 
@@ -217,18 +252,21 @@ Format Output WAJIB JSON:
       const responseText = result.response.text();
       const parsed = JSON.parse(responseText);
 
-      const sizeKey = parsed.recommendedSize || 'M';
-      const spec = SIZE_TABLE_DATA[sizeKey] || calculateStrictTableRecommendation(age, height, weight, fitPreference).measurements;
+      const tableBaseline = calculateStrictTableRecommendation(age, height, weight, fitPreference);
+      const sizeKey = parsed.recommendedSize || tableBaseline.recommendedSize;
+      const usualSize = parsed.usualSize || tableBaseline.usualSize;
+      const spec = SIZE_TABLE_DATA[sizeKey] || tableBaseline.measurements;
 
       return NextResponse.json({
         success: true,
         recommendedCategory: parsed.recommendedCategory || spec.category || 'dewasa',
         recommendedSize: sizeKey,
+        usualSize: usualSize,
         measurements: spec,
-        alternativeSize: parsed.alternativeSize || (spec.category === 'dewasa' ? 'L' : 'Kids L'),
-        fitType: parsed.fitType || 'Regular Fit',
-        reasoning: parsed.reasoning || `Berdasarkan tabel ukuran, size ${sizeKey} (Tinggi ${spec.tinggi} cm, Lebar ${spec.lebar} cm) adalah ukuran paling ideal.`,
-        tips: parsed.tips || 'Material Milano Standard premium yang jatuh pas di badan dan sangat menyerap keringat.',
+        alternativeSize: parsed.alternativeSize || usualSize || (spec.category === 'dewasa' ? 'L' : 'Kids L'),
+        fitType: parsed.fitType || (sizeKey !== usualSize ? 'Athletic Fit (Downsize 1 Level)' : 'Comfort Fit'),
+        reasoning: parsed.reasoning || tableBaseline.reasoning,
+        tips: parsed.tips || 'Tips DLOB: Pola jersey DLOB cukup lega, rekomendasi telah disesuaikan turun 1 level dari ukuran biasa Anda.',
         source: 'gemini_ai_table_grounded',
       });
     } catch (aiErr) {
