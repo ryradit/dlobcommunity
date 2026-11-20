@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
     const mailOptions: any = {
       from: `D'LOB Community <${process.env.SMTP_USER || 'support@dlobcommunity.com'}>`,
       to: email,
-      subject: 'Verifikasi Email Anda — D\'LOB Badminton Community',
+      subject: '[No-Reply] Verifikasi Email Anda — D\'LOB Badminton Community',
       html: emailHtml,
     };
 
