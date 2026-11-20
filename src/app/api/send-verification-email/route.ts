@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
+import path from 'path';
+import fs from 'fs';
 
 // Create SMTP transporter using DreamHost email
 const transporter = nodemailer.createTransport({
@@ -35,6 +37,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch user's full name for personalization
+    let recipientName = 'Member DLOB';
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userId)
+        .maybeSingle();
+      if (profile?.full_name?.trim()) {
+        recipientName = profile.full_name.trim();
+      }
+    } catch (err) {
+      console.warn('[Send Verification] Could not fetch profile name:', err);
+    }
+
     // Generate verification token (valid for 24 hours)
     const verificationToken = await generateVerificationToken(userId);
     
@@ -50,91 +67,136 @@ export async function POST(request: NextRequest) {
     console.log('[Send Verification] Sending email to:', email);
     console.log('[Send Verification] Verification link:', verificationLink);
 
+    // Prepare logo attachment via CID so it renders without being blocked
+    const attachments: any[] = [];
+    const logoFile = path.join(process.cwd(), 'public/dlob.png');
+    let hasCidLogo = false;
+    if (fs.existsSync(logoFile)) {
+      attachments.push({
+        filename: 'dlob-logo.png',
+        path: logoFile,
+        cid: 'dloblogo',
+      });
+      hasCidLogo = true;
+    }
+
+    const logoSrc = hasCidLogo ? 'cid:dloblogo' : 'https://dlobcommunity.com/dlob.png';
+
+    // Minimal, authentic DLOB styling: clean white card, deep obsidian type, signature DLOB blue
+    const emailHtml = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verifikasi Email - DLOB Badminton Community</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;color:#18181b;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px -2px rgba(0,0,0,0.05);">
+          
+          <!-- Top Header Bar with DLOB Logo -->
+          <tr>
+            <td style="padding:28px 36px 20px;border-bottom:1px solid #f4f4f5;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img src="${logoSrc}" alt="D'LOB Badminton" width="130" style="display:block;border:0;outline:none;" />
+                  </td>
+                  <td style="vertical-align:middle;text-align:right;">
+                    <span style="display:inline-block;padding:4px 10px;font-size:11px;font-weight:600;letter-spacing:0.5px;color:#2563eb;background-color:#eff6ff;border:1px solid #dbeafe;border-radius:20px;text-transform:uppercase;">
+                      Official Verification
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Email Body Content -->
+          <tr>
+            <td style="padding:32px 36px 28px;">
+              <h1 style="margin:0 0 16px;font-size:20px;font-weight:700;color:#09090b;line-height:1.3;">
+                Verifikasi Alamat Email Anda
+              </h1>
+              
+              <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#27272a;">
+                Halo <strong>${recipientName}</strong>,
+              </p>
+              
+              <p style="margin:0 0 28px;font-size:14px;line-height:1.6;color:#52525b;">
+                Terima kasih telah bergabung di <strong>D'LOB Badminton Community</strong>. Untuk mengaktifkan akun Anda secara penuh dan mengamankan akses ke platform, silakan konfirmasi alamat email Anda dengan menekan tombol di bawah ini:
+              </p>
+
+              <!-- Primary Action Button (DLOB Signature Blue) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 30px;width:100%;">
+                <tr>
+                  <td align="center">
+                    <a href="${verificationLink}" 
+                       target="_blank"
+                       style="display:inline-block;padding:14px 36px;background-color:#2563eb;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:10px;text-align:center;box-shadow:0 2px 8px rgba(37,99,235,0.25);">
+                      Verifikasi Email Saya
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Expiry & Security Notice -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;">
+                <tr>
+                  <td style="font-size:12px;line-height:1.5;color:#64748b;">
+                    ⏰ <strong>Masa Berlaku:</strong> Tautan ini berlaku selama <strong>24 jam</strong>. Jika Anda tidak merasa membuat atau memperbarui akun di DLOB, abaikan email ini dengan aman.
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Fallback Direct URL -->
+              <p style="margin:0 0 8px;font-size:12px;color:#71717a;line-height:1.5;">
+                Jika tombol di atas tidak dapat diklik, salin dan tempel tautan berikut ke browser Anda:
+              </p>
+              <div style="background-color:#f4f4f5;border:1px solid #e4e4e7;border-radius:8px;padding:12px 14px;word-break:break-all;">
+                <a href="${verificationLink}" style="font-size:12px;color:#2563eb;text-decoration:none;font-family:monospace;">
+                  ${verificationLink}
+                </a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Clean Minimal Footer -->
+          <tr>
+            <td style="padding:24px 36px;background-color:#fafafa;border-top:1px solid #f4f4f5;text-align:center;">
+              <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#27272a;">
+                D'LOB Badminton Community
+              </p>
+              <p style="margin:0 0 8px;font-size:11px;color:#71717a;">
+                Main Bareng, Tumbuh Bareng, Juara Bareng.
+              </p>
+              <p style="margin:0;font-size:11px;color:#a1a1aa;">
+                © ${new Date().getFullYear()} D'LOB. Email ini dikirim secara otomatis oleh sistem, mohon tidak membalas.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
     // Send email using DreamHost SMTP
-    const mailOptions = {
-      from: `DLOB System <${process.env.SMTP_USER || 'support@dlobcommunity.com'}>`,
+    const mailOptions: any = {
+      from: `D'LOB Community <${process.env.SMTP_USER || 'support@dlobcommunity.com'}>`,
       to: email,
-      subject: 'Verifikasi Email Anda - DLOB',
-      html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Verifikasi Email - DLOB</title>
-          </head>
-          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-            <table role="presentation" style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td align="center" style="padding: 40px 0;">
-                  <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <!-- Header -->
-                    <tr>
-                      <td style="padding: 40px 40px 20px 40px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
-                        <img src="https://dlobcommunity.com/dlob.png" alt="DLOB Logo" style="width: 80px; height: auto; margin-bottom: 20px;" />
-                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">DLOB</h1>
-                        <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 14px;">Badminton Community</p>
-                      </td>
-                    </tr>
-                    
-                    <!-- Content -->
-                    <tr>
-                      <td style="padding: 40px;">
-                        <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">Verifikasi Email Anda</h2>
-                        
-                        <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.5;">
-                          Terima kasih telah melengkapi profil Anda di DLOB! Untuk mengaktifkan akun Anda sepenuhnya, silakan verifikasi alamat email Anda dengan mengklik tombol di bawah ini:
-                        </p>
-                        
-                        <!-- CTA Button -->
-                        <table role="presentation" style="margin: 30px 0; width: 100%;">
-                          <tr>
-                            <td align="center">
-                              <a href="${verificationLink}" 
-                                 style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.4);">
-                                ✅ Verifikasi Email Saya
-                              </a>
-                            </td>
-                          </tr>
-                        </table>
-                        
-                        <p style="margin: 20px 0; color: #999999; font-size: 14px; line-height: 1.5;">
-                          Atau, salin dan tempel link berikut di browser Anda:
-                        </p>
-                        
-                        <div style="padding: 15px; background-color: #f8f9fa; border-radius: 4px; border-left: 4px solid #667eea; word-break: break-all;">
-                          <code style="color: #667eea; font-size: 12px;">${verificationLink}</code>
-                        </div>
-                        
-                        <p style="margin: 30px 0 0 0; color: #999999; font-size: 14px; line-height: 1.5;">
-                          <strong>⏰ Link verifikasi ini berlaku selama 24 jam.</strong>
-                        </p>
-                        
-                        <p style="margin: 20px 0 0 0; color: #999999; font-size: 14px; line-height: 1.5;">
-                          Jika Anda tidak melakukan pendaftaran di DLOB, abaikan email ini.
-                        </p>
-                      </td>
-                    </tr>
-                    
-                    <!-- Footer -->
-                    <tr>
-                      <td style="padding: 30px 40px; background-color: #f8f9fa; border-radius: 0 0 8px 8px; text-align: center;">
-                        <p style="margin: 0; color: #999999; font-size: 12px;">
-                          © ${new Date().getFullYear()} DLOB Badminton Community. All rights reserved.
-                        </p>
-                        <p style="margin: 10px 0 0 0; color: #999999; font-size: 12px;">
-                          Email ini dikirim secara otomatis, mohon  tidak membalas.
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </body>
-        </html>
-      `,
+      subject: 'Verifikasi Email Anda — D\'LOB Badminton Community',
+      html: emailHtml,
     };
+
+    if (attachments.length > 0) {
+      mailOptions.attachments = attachments;
+    }
 
     try {
       const info = await transporter.sendMail(mailOptions);
