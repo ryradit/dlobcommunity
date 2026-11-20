@@ -386,7 +386,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Send custom verification email using our DreamHost SMTP
     if (data?.user?.id) {
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/send-verification-email`, {
+        await fetch('/api/send-verification-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

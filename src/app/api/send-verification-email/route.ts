@@ -38,8 +38,13 @@ export async function POST(request: NextRequest) {
     // Generate verification token (valid for 24 hours)
     const verificationToken = await generateVerificationToken(userId);
     
-    // Create verification link
-    const siteUrl = request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || 'https://dlobcommunity.com';
+    // Create verification link with robust domain detection
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+    const proto = request.headers.get('x-forwarded-proto') || 'https';
+    let siteUrl = host ? `${proto}://${host}` : (request.nextUrl.origin || 'https://dlobcommunity.com');
+    if (siteUrl.includes('localhost') && process.env.NODE_ENV === 'production') {
+      siteUrl = 'https://dlobcommunity.com';
+    }
     const verificationLink = `${siteUrl}/api/verify-email?token=${verificationToken}&userId=${userId}`;
     
     console.log('[Send Verification] Sending email to:', email);
