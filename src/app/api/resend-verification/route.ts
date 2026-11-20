@@ -25,25 +25,42 @@ export async function POST(request: NextRequest) {
 
     console.log('[Resend Verification] Resending confirmation email to:', email);
 
-    // Find the user by email
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-    const user = users?.users.find(u => u.email === email);
+    const cleanEmail = email.trim();
 
-    if (!user) {
+    // 1. Try finding user in profiles table first (indexed, fast, no 50-item limit)
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, email')
+      .ilike('email', cleanEmail)
+      .maybeSingle();
+
+    let userId = profile?.id;
+
+    // 2. Fallback to auth.admin.listUsers with large perPage if not found in profiles
+    if (!userId) {
+      const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const user = users?.users.find(u => u.email?.toLowerCase() === cleanEmail.toLowerCase());
+      userId = user?.id;
+    }
+
+    if (!userId) {
       return NextResponse.json(
         { error: 'User tidak ditemukan' },
         { status: 404 }
       );
     }
 
-    // Send verification email using our Resend API
+    // Determine site URL dynamically from request or env
+    const siteUrl = request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || 'https://dlobcommunity.com';
+
+    // Send verification email using our internal API
     try {
-      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-verification-email`, {
+      const emailResponse = await fetch(`${siteUrl}/api/send-verification-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          userId: user.id, 
-          email: email 
+          userId, 
+          email: cleanEmail 
         })
       });
 

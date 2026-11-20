@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
 
     // Send verification email using Resend
     try {
-      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-verification-email`, {
+      const siteUrl = request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || 'https://dlobcommunity.com';
+      const emailResponse = await fetch(`${siteUrl}/api/send-verification-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, email: newEmail })

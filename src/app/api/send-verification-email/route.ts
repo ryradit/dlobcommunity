@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
     const verificationToken = await generateVerificationToken(userId);
     
     // Create verification link
-    const verificationLink = `${process.env.NEXT_PUBLIC_SITE_URL}/api/verify-email?token=${verificationToken}&userId=${userId}`;
+    const siteUrl = request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || 'https://dlobcommunity.com';
+    const verificationLink = `${siteUrl}/api/verify-email?token=${verificationToken}&userId=${userId}`;
     
     console.log('[Send Verification] Sending email to:', email);
     console.log('[Send Verification] Verification link:', verificationLink);

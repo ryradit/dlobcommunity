@@ -22,6 +22,8 @@ export default function LoginPage() {
   const [bgImage, setBgImage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
   const { signIn, signInWithGoogle, user } = useAuth();
   const router = useRouter();
 
@@ -135,6 +137,26 @@ export default function LoginPage() {
       setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email || resendingEmail) return;
+    setResendingEmail(true);
+    setResendStatus(null);
+    try {
+      const res = await fetch('/api/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal mengirim ulang email');
+      setResendStatus('✅ Link verifikasi baru telah dikirim! Silakan periksa Inbox dan folder Spam/Junk email Anda.');
+    } catch (err: any) {
+      setResendStatus(`❌ ${err.message || 'Gagal mengirim email verifikasi'}`);
+    } finally {
+      setResendingEmail(false);
     }
   };
 
@@ -281,8 +303,28 @@ export default function LoginPage() {
             )}
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg text-sm">
-                {error}
+              <div className="bg-red-500/10 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl text-sm space-y-2">
+                <p>{error}</p>
+                {error.toLowerCase().includes('verifikasi') && (
+                  <div className="pt-2 border-t border-red-500/30 flex flex-col gap-2">
+                    <p className="text-xs text-gray-300">
+                      💡 Tidak menemukan email di Inbox? Periksa juga folder <strong>Spam / Junk</strong> Anda, atau minta sistem mengirim ulang:
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resendingEmail || !email}
+                      className="self-start text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-white border border-red-500/40 transition-colors disabled:opacity-50"
+                    >
+                      {resendingEmail ? 'Mengirim...' : 'Kirim Ulang Link Verifikasi'}
+                    </button>
+                    {resendStatus && (
+                      <p className={`text-xs ${resendStatus.startsWith('✅') ? 'text-green-300' : 'text-red-300'}`}>
+                        {resendStatus}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
