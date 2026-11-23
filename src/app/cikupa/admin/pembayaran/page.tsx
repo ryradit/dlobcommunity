@@ -259,81 +259,23 @@ export default function CikupaAdminPembayaranPage() {
       setCreatingMatch(true);
       const matchDateObj = new Date(newMatch.match_date);
 
-      // Insert match
-      const { data: match, error: matchError } = await supabase
-        .from('matches')
-        .insert({
-          shuttlecock_count: newMatch.shuttlecock_count,
-          status: 'active',
-          created_by: user?.id,
+      // Create match via server API to bypass client RLS restrictions safely
+      const response = await fetch('/api/matches/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          branch_id: BRANCH_ID,
           match_date: matchDateObj.toISOString(),
-          branch_id: BRANCH_ID,
-          team1_player1: newMatch.member1?.trim() || null,
-          team1_player2: newMatch.member2?.trim() || null,
-          team2_player1: newMatch.member3?.trim() || null,
-          team2_player2: newMatch.member4?.trim() || null,
-        })
-        .select()
-        .single();
-
-      if (matchError) throw matchError;
-
-      // Dynamic pricing for DLBC from branch settings
-      const currentPricing = await getBranchPricing(supabase, BRANCH_ID);
-      const costPerCockPerMember = currentPricing.costPerMemberPerCock;
-      const costPerMember = newMatch.shuttlecock_count * costPerCockPerMember;
-
-      // Check same-day attendance fee
-      const dayStart = new Date(newMatch.match_date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(newMatch.match_date);
-      dayEnd.setHours(23, 59, 59, 999);
-
-      const { data: sameDayMatches } = await supabase
-        .from('matches')
-        .select('id')
-        .eq('branch_id', BRANCH_ID)
-        .gte('match_date', dayStart.toISOString())
-        .lte('match_date', dayEnd.toISOString());
-
-      const sameDayMatchIds = (sameDayMatches || []).map(m => m.id);
-      const sameDayFeeCharged = new Set<string>();
-
-      if (sameDayMatchIds.length > 0) {
-        const { data: sameDayMm } = await supabase
-          .from('match_members')
-          .select('member_name')
-          .in('match_id', sameDayMatchIds)
-          .gt('attendance_fee', 0);
-        (sameDayMm || []).forEach(mm => sameDayFeeCharged.add(mm.member_name.toLowerCase()));
-      }
-
-      const membersData = players.map(name => {
-        const isExempt = paymentExemptMembers.has(name.toLowerCase());
-        const alreadyChargedToday = sameDayFeeCharged.has(name.toLowerCase());
-        const shouldChargeAttendance = !alreadyChargedToday && !isExempt;
-
-        if (shouldChargeAttendance) {
-          sameDayFeeCharged.add(name.toLowerCase());
-        }
-
-        return {
-          match_id: match.id,
-          member_name: name,
-          amount_due: isExempt ? 0 : costPerMember,
-          attendance_fee: shouldChargeAttendance ? currentPricing.attendanceFee : 0,
-          has_membership: false,
-          payment_status: isExempt ? 'paid' : 'pending',
-          paid_at: isExempt ? new Date().toISOString() : null,
-          branch_id: BRANCH_ID,
-        };
+          shuttlecock_count: newMatch.shuttlecock_count,
+          players,
+          created_by: user?.id,
+        }),
       });
 
-      const { error: mmError } = await supabase
-        .from('match_members')
-        .insert(membersData);
-
-      if (mmError) throw mmError;
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.details || resData.error || 'Gagal membuat pertandingan');
+      }
 
       setShowCreateModal(false);
       setNewMatch({
@@ -468,15 +410,7 @@ export default function CikupaAdminPembayaranPage() {
         matchUpdatePayload.team2_player2 = memberNames[3];
       }
 
-      // 1. Update match record
-      const { error: matchError } = await supabase
-        .from('matches')
-        .update(matchUpdatePayload)
-        .eq('id', editingMatch.matchId);
-
-      if (matchError) throw matchError;
-
-      // 2. Check attendance fee paid on this day in other matches
+      // 1. Check attendance fee paid on this day in other matches
       const dayStart = new Date(matchDateObj);
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(matchDateObj);
@@ -501,7 +435,8 @@ export default function CikupaAdminPembayaranPage() {
         sameDayPaidAttendance = new Set((sameDayMM || []).map(m => m.member_name.toLowerCase()));
       }
 
-      // 3. Update match members
+      // 2. Prepare member updates
+      const membersUpdates = [];
       for (const [memberId, memberData] of Object.entries(editingMatch.members)) {
         const cleanName = memberData.name.trim();
         const isExempt = paymentExemptMembers.has(cleanName.toLowerCase());
@@ -509,15 +444,29 @@ export default function CikupaAdminPembayaranPage() {
         const attendanceFee = isExempt || alreadyPaidAttendance ? 0 : (branchPricing?.attendanceFee || 18000);
         const amountDue = isExempt ? 0 : newCostPerMember;
 
-        await supabase
-          .from('match_members')
-          .update({
-            member_name: cleanName,
-            amount_due: amountDue,
-            attendance_fee: attendanceFee,
-            total_amount: amountDue + attendanceFee,
-          })
-          .eq('id', memberId);
+        membersUpdates.push({
+          id: memberId,
+          member_name: cleanName,
+          amount_due: amountDue,
+          attendance_fee: attendanceFee,
+          total_amount: amountDue + attendanceFee,
+        });
+      }
+
+      // 3. Update match and members via server API
+      const res = await fetch('/api/matches/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matchId: editingMatch.matchId,
+          matchUpdatePayload,
+          membersUpdates,
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.details || resData.error || 'Gagal memperbarui pertandingan');
       }
 
       alert('Pertandingan berhasil diperbarui!');
@@ -535,9 +484,13 @@ export default function CikupaAdminPembayaranPage() {
   async function handleDeleteMatch(matchId: string) {
     if (!confirm('Yakin ingin menghapus pertandingan ini beserta seluruh catatan pembayarannya?')) return;
     try {
-      await supabase.from('match_members').delete().eq('match_id', matchId);
-      const { error } = await supabase.from('matches').delete().eq('id', matchId);
-      if (error) throw error;
+      const res = await fetch('/api/matches/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.details || data.error || 'Gagal menghapus pertandingan');
       await loadData();
     } catch (e: any) {
       alert('Gagal menghapus pertandingan: ' + (e?.message || ''));
