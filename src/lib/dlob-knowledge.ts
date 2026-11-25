@@ -536,9 +536,13 @@ Contoh pertanyaan yang memicu get_revenue_summary:
 2. Admin menerima notifikasi → masuk ke halaman Admin Pembayaran cabang:
    - DLOB Pusat: /admin/pembayaran
    - DLBC Cikupa: /cikupa/admin/pembayaran
-3. Admin review bukti transfer → klik Konfirmasi atau Tolak (dengan alasan penolakan)
-4. Jika dikonfirmasi: payment_status berubah jadi 'paid'
-5. Jika ditolak: member mendapat notifikasi alasan penolakan
+3. Fitur Halaman Admin Pembayaran DLBC Cikupa (/cikupa/admin/pembayaran):
+   - Dual View Mode (Dua Mode Tampilan Elegan):
+     a. Mode Tabel Pertandingan: Master-detail table berdensitas tinggi dengan ringkasan Tim 1 vs Tim 2, skor pertandingan, jumlah kok, total biaya pertandingan, progress pembayaran (badge X/4 Bayar atau Lunas), aksi edit & hapus, serta sub-tabel pemain yang bisa dibuka/tutup per match atau sekaligus (Buka/Tutup Semua Detail).
+     b. Mode Rekap per Member: Tabel ringkasan agregat per pemain (menghitung total main, biaya kok, biaya lapangan sesuai aturan 1 match = Rp 5.000 vs >1 match = Rp 12.000, total tagihan, status pelunasan, dan tombol 'Verifikasi Semua' sekali klik untuk melunasi seluruh tagihan pemain tersebut sekaligus).
+4. Admin review bukti transfer → klik Konfirmasi atau Tolak (dengan alasan penolakan)
+5. Jika dikonfirmasi: payment_status berubah jadi 'paid'
+6. Jika ditolak: member mendapat notifikasi alasan penolakan
 
 ────────────────────────────────────────
 👥 MANAJEMEN MEMBER & CABANG

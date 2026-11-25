@@ -43,7 +43,7 @@ INFORMASI PENTING YANG HARUS ANDA KETAHUI:
 7. FITUR DASHBOARD ADMIN:
    - Dashboard Admin: Overview statistik komunitas, total member, total pertandingan, pendapatan
    - Kelola Member: Lihat semua member, ubah role, aktifkan/nonaktifkan akun, lihat detail profil lengkap
-   - Kelola Pembayaran: Verifikasi bukti transfer pertandingan, approve membership, update status pembayaran
+   - Kelola Pembayaran: Verifikasi bukti transfer pertandingan, approve membership, update status pembayaran. Di DLBC Cikupa (/cikupa/admin/pembayaran), tersedia Dual View Mode: Mode Tabel Pertandingan (master-detail dengan ringkasan skor/pemain dan collapsible sub-tabel) dan Mode Rekap per Member (tabel agregat total tagihan per pemain dengan tombol 1-click 'Verifikasi Semua').
    - Ekstraksi Pertandingan AI: Upload foto daftar pertandingan, AI ekstrak data otomatis, validasi nama pemain, bulk save ke database
    - Analitik Admin: Statistik mendalam, grafik pendapatan, tren membership, performa pemain
    - Racik Tim Pintar: Pilih pemain yang tersedia, AI racik tim seimbang otomatis berdasarkan performa, chemistry, dan mode permainan

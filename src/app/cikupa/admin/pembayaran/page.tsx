@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, queryCache } from '@/lib/queryCache';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +11,7 @@ import {
   Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, 
   CheckSquare, Square, Sparkles, Send, Zap, HelpCircle, ChevronLeft, ChevronRight,
   Printer, ZoomIn, ZoomOut, RotateCw, RefreshCw, RotateCcw, Download, UserPlus,
-  Clock, CheckCircle2, XCircle, UserCheck
+  Clock, CheckCircle2, XCircle, UserCheck, LayoutList, Layers, FileText, CheckCheck
 } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import BranchBadge from '@/components/BranchBadge';
@@ -51,6 +51,33 @@ interface MatchMember {
   additional_amount?: number;
   rejection_reason?: string | null;
   branch_id?: string;
+}
+
+interface MemberMatchDetail {
+  matchId: string;
+  matchNumber: number;
+  matchDate?: string;
+  memberId: string;
+  amountDue: number;
+  attendanceFee: number;
+  totalAmount: number;
+  paymentStatus: string;
+  paymentProof: string | null;
+}
+
+interface MemberSummaryItem {
+  name: string;
+  isExempt: boolean;
+  matchCount: number;
+  amountDue: number;
+  attendanceFee: number;
+  totalAmount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  pendingCount: number;
+  paidCount: number;
+  pendingMemberIds: string[];
+  matches: MemberMatchDetail[];
 }
 
 export default function CikupaAdminPembayaranPage() {
@@ -135,6 +162,31 @@ export default function CikupaAdminPembayaranPage() {
   const [selectedPayments, setSelectedPayments] = useState<Array<{ id: string; memberName: string; amount: number; matchId?: string }>>([]);
   const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
   const [bulkConfirming, setBulkConfirming] = useState(false);
+
+  // View Mode: 'matches' (Tabel Pertandingan) or 'members' (Rekap per Member)
+  const [viewMode, setViewMode] = useState<'matches' | 'members'>('matches');
+  const [expandedMemberRows, setExpandedMemberRows] = useState<Record<string, boolean>>({});
+
+  // Fast verify all matches for a member
+  async function handleVerifyAllForMember(memberIdList: string[], memberName: string) {
+    if (memberIdList.length === 0) return;
+    if (!confirm(`Konfirmasi pelunasan untuk ${memberIdList.length} pertandingan member "${memberName}"?`)) return;
+    try {
+      const { error } = await supabase
+        .from('match_members')
+        .update({
+          payment_status: 'paid',
+          paid_at: new Date().toISOString(),
+        })
+        .in('id', memberIdList);
+
+      if (error) throw error;
+      alert(`Berhasil memverifikasi ${memberIdList.length} tagihan untuk ${memberName}!`);
+      await loadData();
+    } catch (e: any) {
+      alert('Gagal memverifikasi: ' + (e?.message || ''));
+    }
+  }
 
   // Load Data
   const loadData = useCallback(async () => {
@@ -540,6 +592,83 @@ export default function CikupaAdminPembayaranPage() {
     return true;
   });
 
+  // Member Summary Aggregation (Rekap per Member)
+  const memberSummaryList: MemberSummaryItem[] = useMemo(() => {
+    const map = new Map<string, MemberSummaryItem>();
+
+    matches.forEach(m => {
+      const mMembers = matchMembers[m.id] || [];
+      mMembers.forEach(mm => {
+        const key = (mm.member_name || '').toLowerCase().trim();
+        if (!key) return;
+        if (!map.has(key)) {
+          map.set(key, {
+            name: mm.member_name,
+            isExempt: paymentExemptMembers.has(key),
+            matchCount: 0,
+            amountDue: 0,
+            attendanceFee: 0,
+            totalAmount: 0,
+            paidAmount: 0,
+            pendingAmount: 0,
+            pendingCount: 0,
+            paidCount: 0,
+            pendingMemberIds: [],
+            matches: [],
+          });
+        }
+        const entry = map.get(key)!;
+        entry.matchCount++;
+        const itemTotal = mm.total_amount || (mm.amount_due + mm.attendance_fee);
+        entry.amountDue += mm.amount_due || 0;
+        entry.attendanceFee += mm.attendance_fee || 0;
+        entry.totalAmount += itemTotal;
+        if (mm.payment_status === 'paid') {
+          entry.paidAmount += itemTotal;
+          entry.paidCount++;
+        } else {
+          entry.pendingAmount += itemTotal;
+          entry.pendingCount++;
+          entry.pendingMemberIds.push(mm.id);
+        }
+        entry.matches.push({
+          matchId: m.id,
+          matchNumber: m.match_number,
+          matchDate: m.match_date,
+          memberId: mm.id,
+          amountDue: mm.amount_due || 0,
+          attendanceFee: mm.attendance_fee || 0,
+          totalAmount: itemTotal,
+          paymentStatus: mm.payment_status,
+          paymentProof: mm.payment_proof,
+        });
+      });
+    });
+
+    let list = Array.from(map.values());
+    if (searchTerm) {
+      list = list.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+    if (filterStatus === 'pending') {
+      list = list.filter(m => m.pendingCount > 0);
+    } else if (filterStatus === 'paid') {
+      list = list.filter(m => m.pendingCount === 0 && m.paidCount > 0);
+    } else if (filterStatus === 'proof') {
+      list = list.filter(m => m.matches.some(match => !!match.paymentProof));
+    }
+    return list.sort((a, b) => b.totalAmount - a.totalAmount);
+  }, [matches, matchMembers, paymentExemptMembers, searchTerm, filterStatus]);
+
+  // Toggle expand all matches
+  const allAreExpanded = filteredMatches.length > 0 && filteredMatches.every(m => expandedMatches[m.id] !== false);
+  const toggleAllExpanded = () => {
+    const nextState: Record<string, boolean> = {};
+    filteredMatches.forEach(m => {
+      nextState[m.id] = !allAreExpanded;
+    });
+    setExpandedMatches(nextState);
+  };
+
   // Calculate Stat Cards
   const totalRevenue = allMatchMemberList
     .filter(mm => mm.payment_status === 'paid')
@@ -696,11 +825,32 @@ export default function CikupaAdminPembayaranPage() {
       </div>
 
       {/* Action Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-zinc-800/80 border border-gray-200 dark:border-white/10 rounded-xl text-xs font-bold text-slate-700 dark:text-zinc-200">
-            <Award className="w-4 h-4 text-emerald-500" />
-            Daftar Pertandingan ({matches.length})
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* View Mode Switcher */}
+          <div className="flex items-center p-1 bg-slate-100 dark:bg-zinc-800/80 border border-gray-200 dark:border-white/10 rounded-xl">
+            <button
+              onClick={() => setViewMode('matches')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'matches'
+                  ? 'bg-emerald-500 text-black shadow-sm'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              Tabel Pertandingan ({matches.length})
+            </button>
+            <button
+              onClick={() => setViewMode('members')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'members'
+                  ? 'bg-emerald-500 text-black shadow-sm'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Rekap per Member ({memberSummaryList.length})
+            </button>
           </div>
         </div>
 
@@ -746,13 +896,13 @@ export default function CikupaAdminPembayaranPage() {
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Cari no match atau nama pemain..."
+            placeholder={viewMode === 'matches' ? "Cari no match atau nama pemain..." : "Cari nama member..."}
             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
 
-        {/* Filter Status Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+        {/* Filter Status Pills & Action */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
           {(['all', 'pending', 'paid', 'proof'] as const).map(status => (
             <button
               key={status}
@@ -769,6 +919,17 @@ export default function CikupaAdminPembayaranPage() {
               {status === 'proof' && 'Ada Bukti'}
             </button>
           ))}
+
+          {viewMode === 'matches' && filteredMatches.length > 0 && (
+            <button
+              onClick={toggleAllExpanded}
+              className="px-2.5 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 border border-white/5 whitespace-nowrap transition-colors flex items-center gap-1"
+              title={allAreExpanded ? "Tutup Semua Detail" : "Buka Semua Detail"}
+            >
+              {allAreExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              <span>{allAreExpanded ? 'Ringkas' : 'Detail'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -808,7 +969,200 @@ export default function CikupaAdminPembayaranPage() {
           <MatchCardSkeleton />
           <MatchCardSkeleton />
         </div>
+      ) : viewMode === 'members' ? (
+        /* ========================================================================= */
+        /* VIEW MODE 2: REKAP TAGIHAN PER MEMBER (High-Density Member Summary Table) */
+        /* ========================================================================= */
+        <div className="bg-white dark:bg-zinc-900/70 border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-zinc-800/70 border-b border-gray-200 dark:border-white/10 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold">
+                  <th className="py-3 px-4">Member</th>
+                  <th className="py-3 px-3 text-center">Main</th>
+                  <th className="py-3 px-3 text-right">Biaya Kok</th>
+                  <th className="py-3 px-3 text-right">Lapangan</th>
+                  <th className="py-3 px-4 text-right">Total Tagihan</th>
+                  <th className="py-3 px-3 text-center">Status</th>
+                  <th className="py-3 px-4 text-right">Aksi Cepat</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                {memberSummaryList.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12 text-slate-400 dark:text-zinc-500">
+                      Tidak ada data member yang cocok dengan filter.
+                    </td>
+                  </tr>
+                ) : (
+                  memberSummaryList.map((mem: MemberSummaryItem) => {
+                    const isAllPaid = mem.pendingCount === 0 && mem.paidCount > 0;
+                    const hasProof = mem.matches.some((m: MemberMatchDetail) => !!m.paymentProof);
+                    const isExpanded = !!expandedMemberRows[mem.name];
+
+                    return (
+                      <React.Fragment key={mem.name}>
+                        <tr className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 font-bold flex items-center justify-center text-xs border border-emerald-500/20 shrink-0">
+                                {mem.name.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
+                                  <span>{mem.name}</span>
+                                  {mem.isExempt && (
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                                      VIP
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-slate-400 dark:text-zinc-500">
+                                  {mem.paidCount} lunas / {mem.matchCount} pertandingan
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-gray-200 dark:border-white/5">
+                              {mem.matchCount}x
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-slate-700 dark:text-zinc-300">
+                            Rp {mem.amountDue.toLocaleString('id-ID')}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono">
+                            <span className="text-slate-700 dark:text-zinc-300">
+                              Rp {mem.attendanceFee.toLocaleString('id-ID')}
+                            </span>
+                            <span className="block text-[9px] text-slate-400 dark:text-zinc-500">
+                              {mem.matchCount === 1 ? '1x main (5k)' : '>1x main (12k)'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                            Rp {mem.totalAmount.toLocaleString('id-ID')}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            {isAllPaid ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                                <CheckCircle2 className="w-3 h-3" /> Lunas
+                              </span>
+                            ) : (
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                                  <Clock className="w-3 h-3" /> {mem.pendingCount} Pending
+                                </span>
+                                {hasProof && (
+                                  <span className="text-[9px] text-emerald-400 flex items-center gap-0.5">
+                                    <Eye className="w-2.5 h-2.5" /> Bukti ada
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {!isAllPaid && mem.pendingMemberIds.length > 0 && (
+                                <button
+                                  onClick={() => handleVerifyAllForMember(mem.pendingMemberIds, mem.name)}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-black text-[11px] font-bold rounded-lg border border-emerald-500/30 transition-all shadow-sm"
+                                  title="Verifikasi semua tagihan member ini"
+                                >
+                                  <CheckCheck className="w-3.5 h-3.5" />
+                                  <span>Verifikasi</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setExpandedMemberRows(prev => ({ ...prev, [mem.name]: !isExpanded }))}
+                                className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                title="Lihat rincian pertandingan member"
+                              >
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Inset Sub-Row: Matches for this member */}
+                        {isExpanded && (
+                          <tr className="bg-slate-50/70 dark:bg-zinc-950/40 border-b border-gray-100 dark:border-white/5">
+                            <td colSpan={7} className="p-3 pl-8">
+                              <div className="space-y-1.5">
+                                <p className="text-[11px] font-bold text-slate-600 dark:text-zinc-400 mb-1">
+                                  Rincian Pertandingan {mem.name}:
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                  {mem.matches.map((item: MemberMatchDetail, idx: number) => (
+                                    <div
+                                      key={`${item.matchId}-${idx}`}
+                                      className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 text-xs shadow-xs"
+                                    >
+                                      <div>
+                                        <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                                          <span>Match #{item.matchNumber}</span>
+                                          <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-normal">
+                                            ({item.matchDate ? formatDateForInput(item.matchDate) : '-'})
+                                          </span>
+                                        </div>
+                                        <div className="text-[10px] text-slate-500 dark:text-zinc-400">
+                                          Kok: Rp {item.amountDue.toLocaleString('id-ID')}
+                                          {item.attendanceFee > 0 && ` + Lap: Rp ${item.attendanceFee.toLocaleString('id-ID')}`}
+                                          <span className="font-bold text-slate-900 dark:text-white ml-1">
+                                            = Rp {item.totalAmount.toLocaleString('id-ID')}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        {item.paymentProof && (
+                                          <button
+                                            onClick={() => {
+                                              setSelectedProof({
+                                                id: item.memberId,
+                                                matchId: item.matchId,
+                                                memberName: mem.name,
+                                                amount: item.totalAmount,
+                                                proofUrl: item.paymentProof,
+                                              });
+                                              setShowProofModal(true);
+                                            }}
+                                            className="p-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                                            title="Lihat Bukti Bayar"
+                                          >
+                                            <Eye className="w-3 h-3" />
+                                          </button>
+                                        )}
+                                        {item.paymentStatus === 'paid' ? (
+                                          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                                            Lunas
+                                          </span>
+                                        ) : (
+                                          <button
+                                            onClick={() => handleVerifyPayment(item.memberId)}
+                                            className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-black font-bold border border-emerald-500/30 transition-colors"
+                                          >
+                                            Verifikasi
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
+        /* ========================================================================= */
+        /* VIEW MODE 1: TABEL PERTANDINGAN (Master-Detail Table Layout)              */
+        /* ========================================================================= */
         <div className="space-y-3">
           {filteredMatches.length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-zinc-900/40 border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm">
@@ -817,288 +1171,311 @@ export default function CikupaAdminPembayaranPage() {
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">Klik &quot;Input Match&quot; untuk menambahkan sesi pertandingan DLBC baru.</p>
             </div>
           ) : (
-            filteredMatches.map(match => {
-              const members = matchMembers[match.id] || [];
-              const isExpanded = expandedMatches[match.id] ?? true;
-              const isEditing = editingMatch?.matchId === match.id;
-              const allPaid = members.length > 0 && members.every(m => m.payment_status === 'paid');
-              const hasPending = members.some(m => m.payment_status === 'pending');
+            <div className="bg-white dark:bg-zinc-900/70 border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+              <div className="divide-y divide-gray-100 dark:divide-white/5">
+                {filteredMatches.map(match => {
+                  const members = matchMembers[match.id] || [];
+                  const isExpanded = expandedMatches[match.id] ?? true;
+                  const isEditing = editingMatch?.matchId === match.id;
+                  const paidCount = members.filter(m => m.payment_status === 'paid').length;
+                  const allPaid = members.length > 0 && paidCount === members.length;
+                  const hasPending = members.some(m => m.payment_status === 'pending');
+                  const matchTotalCost = match.total_cost || (match.shuttlecock_count * (branchPricing?.costPerMemberPerCock || 3000) * 4);
 
-              return (
-                <div
-                  key={match.id}
-                  className="bg-white dark:bg-zinc-900/70 border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden transition-all shadow-sm"
-                >
-                  {/* Match Header */}
-                  <div className="flex flex-wrap items-center justify-between p-4 bg-slate-50 dark:bg-zinc-800/40 border-b border-gray-200 dark:border-white/5 gap-2">
-                    <div className="flex items-center gap-3 flex-1 min-w-[280px]">
-                      <button
-                        onClick={() => setExpandedMatches(prev => ({ ...prev, [match.id]: !isExpanded }))}
-                        className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors"
-                      >
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </button>
-                      {isEditing ? (
-                        <div className="flex flex-wrap items-center gap-2.5 py-1">
-                          <span className="text-sm font-black text-white mr-1">
-                            Match #{match.match_number}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            <label className="text-[11px] text-zinc-400">Tgl:</label>
-                            <input
-                              type="date"
-                              value={formatDateForInput(editingMatch.match_date)}
-                              onChange={(e) => setEditingMatch({ ...editingMatch, match_date: e.target.value })}
-                              className="px-2 py-1 bg-zinc-800 border border-white/20 rounded-lg text-white text-xs focus:outline-none focus:border-emerald-500"
-                            />
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <label className="text-[11px] text-zinc-400">Kok:</label>
-                            <input
-                              type="number"
-                              min="1"
-                              max="10"
-                              value={editingMatch.shuttlecock_count}
-                              onChange={(e) => setEditingMatch({ ...editingMatch, shuttlecock_count: parseInt(e.target.value) || 1 })}
-                              className="w-16 px-2 py-1 bg-zinc-800 border border-white/20 rounded-lg text-white text-xs text-center focus:outline-none focus:border-emerald-500"
-                            />
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <label className="text-[11px] text-zinc-400">Skor:</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={editingMatch.team1_score ?? ''}
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                                setEditingMatch({ ...editingMatch, team1_score: val });
-                              }}
-                              placeholder="0"
-                              className="w-14 px-1.5 py-1 bg-zinc-800 border border-blue-400/40 rounded-lg text-white text-xs text-center font-mono focus:outline-none focus:border-blue-400"
-                            />
-                            <span className="text-zinc-500 font-bold text-xs">-</span>
-                            <input
-                              type="number"
-                              min="0"
-                              value={editingMatch.team2_score ?? ''}
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                                setEditingMatch({ ...editingMatch, team2_score: val });
-                              }}
-                              placeholder="0"
-                              className="w-14 px-1.5 py-1 bg-zinc-800 border border-red-400/40 rounded-lg text-white text-xs text-center font-mono focus:outline-none focus:border-red-400"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-slate-900 dark:text-white">
-                              Match #{match.match_number}
-                            </span>
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
-                              {match.shuttlecock_count} Kock
-                            </span>
-                            {match.team1_score !== null && match.team1_score !== undefined && match.team2_score !== null && match.team2_score !== undefined && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono font-bold">
-                                Skor: {match.team1_score} - {match.team2_score}
+                  // Extract Team 1 & Team 2 player names for high-density overview
+                  const team1Members = members.slice(0, 2);
+                  const team2Members = members.slice(2, 4);
+
+                  return (
+                    <div key={match.id} className="transition-colors hover:bg-slate-50/30 dark:hover:bg-zinc-800/20">
+                      {/* Master Row Header */}
+                      <div className="flex flex-wrap items-center justify-between p-3.5 gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-[280px]">
+                          <button
+                            onClick={() => setExpandedMatches(prev => ({ ...prev, [match.id]: !isExpanded }))}
+                            className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors"
+                            title={isExpanded ? "Ringkas pertandingan" : "Lihat detail pemain"}
+                          >
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+
+                          {isEditing ? (
+                            <div className="flex flex-wrap items-center gap-2.5 py-1">
+                              <span className="text-sm font-black text-slate-900 dark:text-white mr-1">
+                                Match #{match.match_number}
                               </span>
-                            )}
-                            {allPaid ? (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" /> Lunas
-                              </span>
-                            ) : hasPending ? (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> Ada Pending
-                              </span>
-                            ) : null}
-                          </div>
-                          <p className="text-[11px] text-zinc-400 mt-0.5">
-                            {match.match_date ? new Date(match.match_date).toLocaleDateString('id-ID', {
-                              weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-                            }) : '-'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isEditing ? (
-                        <>
-                          <button
-                            onClick={saveMatchChanges}
-                            disabled={isSavingMatch}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-black text-xs font-bold rounded-lg transition-colors shadow-sm"
-                            title="Simpan Perubahan"
-                          >
-                            <Save className="w-3.5 h-3.5" />
-                            {isSavingMatch ? 'Menyimpan...' : 'Simpan'}
-                          </button>
-                          <button
-                            onClick={() => setEditingMatch(null)}
-                            disabled={isSavingMatch}
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-                            title="Batal"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-xs font-bold text-zinc-300 mr-2">
-                            Total: Rp {(match.total_cost || (match.shuttlecock_count * (branchPricing?.costPerMemberPerCock || 3000) * 4)).toLocaleString('id-ID')}
-                          </span>
-                          <button
-                            onClick={() => startEditingMatch(match)}
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                            title="Edit Pertandingan"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMatch(match.id)}
-                            className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                            title="Hapus Pertandingan"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Match Members List */}
-                  {isExpanded && (
-                    <div className="p-3 divide-y divide-white/5">
-                      {members.map(member => {
-                        const isPaid = member.payment_status === 'paid';
-                        const isRejected = member.payment_status === 'rejected';
-                        const isRevision = member.payment_status === 'revision';
-                        const totalFee = member.total_amount || (member.amount_due + member.attendance_fee);
-
-                        return (
-                          <div
-                            key={member.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 gap-2 hover:bg-white/[0.02] rounded-xl transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              {/* Bulk select checkbox */}
-                              {!isPaid && (
+                              <div className="flex items-center gap-1.5">
+                                <label className="text-[11px] text-slate-500 dark:text-zinc-400">Tgl:</label>
                                 <input
-                                  type="checkbox"
-                                  checked={selectedPayments.some(p => p.id === member.id)}
-                                  onChange={e => {
-                                    if (e.target.checked) {
-                                      setSelectedPayments(prev => [...prev, {
-                                        id: member.id,
-                                        memberName: member.member_name,
-                                        amount: totalFee,
-                                        matchId: match.id,
-                                      }]);
-                                    } else {
-                                      setSelectedPayments(prev => prev.filter(p => p.id !== member.id));
-                                    }
-                                  }}
-                                  className="w-4 h-4 rounded bg-zinc-800 border-white/20 text-emerald-500 focus:ring-emerald-500"
+                                  type="date"
+                                  value={formatDateForInput(editingMatch.match_date)}
+                                  onChange={(e) => setEditingMatch({ ...editingMatch, match_date: e.target.value })}
+                                  className="px-2 py-1 bg-slate-100 dark:bg-zinc-800 border border-gray-300 dark:border-white/20 rounded-lg text-slate-900 dark:text-white text-xs focus:outline-none focus:border-emerald-500"
                                 />
-                              )}
-
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  {isEditing ? (
-                                    <input
-                                      type="text"
-                                      value={editingMatch.members[member.id]?.name ?? member.member_name}
-                                      onChange={(e) => setEditingMatch({
-                                        ...editingMatch,
-                                        members: {
-                                          ...editingMatch.members,
-                                          [member.id]: {
-                                            ...editingMatch.members[member.id],
-                                            name: e.target.value,
-                                          }
-                                        }
-                                      })}
-                                      className="px-2 py-0.5 bg-zinc-800 border border-white/20 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
-                                    />
-                                  ) : (
-                                    <span className="text-xs font-bold text-white">
-                                      {member.member_name}
-                                    </span>
-                                  )}
-                                  {paymentExemptMembers.has(member.member_name.toLowerCase()) && (
-                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-semibold">
-                                      VIP
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-[11px] text-zinc-400 mt-0.5">
-                                  Kock: Rp {(member.amount_due || 0).toLocaleString('id-ID')}
-                                  {member.attendance_fee > 0 && ` + Lapangan: Rp ${member.attendance_fee.toLocaleString('id-ID')}`}
-                                  <span className="font-bold text-zinc-200 ml-1">
-                                    = Rp {totalFee.toLocaleString('id-ID')}
-                                  </span>
-                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <label className="text-[11px] text-slate-500 dark:text-zinc-400">Kok:</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="10"
+                                  value={editingMatch.shuttlecock_count}
+                                  onChange={(e) => setEditingMatch({ ...editingMatch, shuttlecock_count: parseInt(e.target.value) || 1 })}
+                                  className="w-16 px-2 py-1 bg-slate-100 dark:bg-zinc-800 border border-gray-300 dark:border-white/20 rounded-lg text-slate-900 dark:text-white text-xs text-center focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <label className="text-[11px] text-slate-500 dark:text-zinc-400">Skor:</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={editingMatch.team1_score ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                    setEditingMatch({ ...editingMatch, team1_score: val });
+                                  }}
+                                  placeholder="0"
+                                  className="w-14 px-1.5 py-1 bg-slate-100 dark:bg-zinc-800 border border-blue-400/40 rounded-lg text-slate-900 dark:text-white text-xs text-center font-mono focus:outline-none focus:border-blue-400"
+                                />
+                                <span className="text-zinc-500 font-bold text-xs">-</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={editingMatch.team2_score ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                    setEditingMatch({ ...editingMatch, team2_score: val });
+                                  }}
+                                  placeholder="0"
+                                  className="w-14 px-1.5 py-1 bg-slate-100 dark:bg-zinc-800 border border-red-400/40 rounded-lg text-slate-900 dark:text-white text-xs text-center font-mono focus:outline-none focus:border-red-400"
+                                />
                               </div>
                             </div>
+                          ) : (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-slate-900 dark:text-white whitespace-nowrap">
+                                  Match #{match.match_number}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold whitespace-nowrap">
+                                  {match.shuttlecock_count} Kock
+                                </span>
+                              </div>
 
-                            {/* Status & Actions */}
-                            <div className="flex items-center gap-2 self-end sm:self-auto">
-                              {/* Proof preview button */}
-                              {member.payment_proof ? (
-                                <button
-                                  onClick={() => {
-                                    setSelectedProof({
-                                      id: member.id,
-                                      matchId: match.id,
-                                      memberName: member.member_name,
-                                      amount: totalFee,
-                                      proofUrl: member.payment_proof,
-                                    });
-                                    setShowProofModal(true);
-                                  }}
-                                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
-                                >
-                                  <Eye className="w-3 h-3" />
-                                  Bukti Bayar
-                                </button>
-                              ) : (
-                                <span className="text-[10px] text-zinc-500 italic">
-                                  Belum upload bukti
+                              {/* Compact Teams & Score Display */}
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-slate-700 dark:text-zinc-300 font-medium">
+                                  {team1Members.map(m => m.member_name).join(' / ') || 'Tim 1'}
                                 </span>
-                              )}
+                                {match.team1_score !== null && match.team1_score !== undefined && match.team2_score !== null && match.team2_score !== undefined ? (
+                                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-mono font-bold text-[11px]">
+                                    {match.team1_score} - {match.team2_score}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 dark:text-zinc-500 font-bold text-[10px]">vs</span>
+                                )}
+                                <span className="text-slate-700 dark:text-zinc-300 font-medium">
+                                  {team2Members.map(m => m.member_name).join(' / ') || 'Tim 2'}
+                                </span>
+                              </div>
 
-                              {/* Status badge */}
-                              {isPaid ? (
-                                <span className="text-xs font-bold text-emerald-400 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
-                                  <Check className="w-3 h-3" /> Lunas
-                                </span>
-                              ) : isRejected ? (
-                                <span className="text-xs font-bold text-rose-400 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center gap-1">
-                                  <X className="w-3 h-3" /> Ditolak
-                                </span>
-                              ) : isRevision ? (
-                                <span className="text-xs font-bold text-amber-400 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-1">
-                                  <AlertCircle className="w-3 h-3" /> Revisi
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => handleVerifyPayment(member.id)}
-                                  className="flex items-center gap-1 px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-black text-xs font-bold rounded-lg border border-emerald-500/30 transition-all"
-                                >
-                                  <Check className="w-3 h-3" /> Verifikasi
-                                </button>
-                              )}
+                              <span className="text-[10px] text-slate-400 dark:text-zinc-500 hidden md:inline">
+                                {match.match_date ? new Date(match.match_date).toLocaleDateString('id-ID', {
+                                  day: 'numeric', month: 'short'
+                                }) : '-'}
+                              </span>
                             </div>
+                          )}
+                        </div>
+
+                        {/* Right Summary & Actions */}
+                        <div className="flex items-center gap-3">
+                          {isEditing ? (
+                            <>
+                              <button
+                                onClick={saveMatchChanges}
+                                disabled={isSavingMatch}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-black text-xs font-bold rounded-lg transition-colors shadow-sm"
+                                title="Simpan Perubahan"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                                {isSavingMatch ? 'Menyimpan...' : 'Simpan'}
+                              </button>
+                              <button
+                                onClick={() => setEditingMatch(null)}
+                                disabled={isSavingMatch}
+                                className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                title="Batal"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {/* Settlement progress pill */}
+                              {allPaid ? (
+                                <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Lunas
+                                </span>
+                              ) : (
+                                <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5" /> {paidCount}/{members.length} Bayar
+                                </span>
+                              )}
+
+                              <span className="text-xs font-mono font-bold text-slate-900 dark:text-zinc-200">
+                                Rp {matchTotalCost.toLocaleString('id-ID')}
+                              </span>
+
+                              <div className="flex items-center gap-1 border-l border-gray-200 dark:border-white/10 pl-2">
+                                <button
+                                  onClick={() => startEditingMatch(match)}
+                                  className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                                  title="Edit Pertandingan"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMatch(match.id)}
+                                  className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                                  title="Hapus Pertandingan"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Detail Sub-Table for 4 Players */}
+                      {isExpanded && (
+                        <div className="bg-slate-50/60 dark:bg-zinc-950/40 border-t border-gray-100 dark:border-white/5 p-3 sm:px-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {members.map(member => {
+                              const isPaid = member.payment_status === 'paid';
+                              const isRejected = member.payment_status === 'rejected';
+                              const isRevision = member.payment_status === 'revision';
+                              const totalFee = member.total_amount || (member.amount_due + member.attendance_fee);
+
+                              return (
+                                <div
+                                  key={member.id}
+                                  className="flex items-center justify-between p-2.5 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl text-xs shadow-xs"
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    {/* Bulk checkbox if not paid */}
+                                    {!isPaid && (
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedPayments.some(p => p.id === member.id)}
+                                        onChange={e => {
+                                          if (e.target.checked) {
+                                            setSelectedPayments(prev => [...prev, {
+                                              id: member.id,
+                                              memberName: member.member_name,
+                                              amount: totalFee,
+                                              matchId: match.id,
+                                            }]);
+                                          } else {
+                                            setSelectedPayments(prev => prev.filter(p => p.id !== member.id));
+                                          }
+                                        }}
+                                        className="w-4 h-4 rounded bg-slate-100 dark:bg-zinc-800 border-gray-300 dark:border-white/20 text-emerald-500 focus:ring-emerald-500 shrink-0"
+                                      />
+                                    )}
+
+                                    <div className="truncate">
+                                      <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white truncate">
+                                        {isEditing ? (
+                                          <input
+                                            type="text"
+                                            value={editingMatch.members[member.id]?.name ?? member.member_name}
+                                            onChange={(e) => setEditingMatch({
+                                              ...editingMatch,
+                                              members: {
+                                                ...editingMatch.members,
+                                                [member.id]: {
+                                                  ...editingMatch.members[member.id],
+                                                  name: e.target.value,
+                                                }
+                                              }
+                                            })}
+                                            className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 border border-gray-300 dark:border-white/20 rounded text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                                          />
+                                        ) : (
+                                          <span className="truncate">{member.member_name}</span>
+                                        )}
+                                        {paymentExemptMembers.has(member.member_name.toLowerCase()) && (
+                                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold shrink-0">
+                                            VIP
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                                        Kok: Rp {(member.amount_due || 0).toLocaleString('id-ID')}
+                                        {member.attendance_fee > 0 && ` + Lap: Rp ${member.attendance_fee.toLocaleString('id-ID')}`}
+                                        <span className="font-bold text-slate-900 dark:text-zinc-200 ml-1">
+                                          = Rp {totalFee.toLocaleString('id-ID')}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Right Proof & Verification */}
+                                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                    {member.payment_proof ? (
+                                      <button
+                                        onClick={() => {
+                                          setSelectedProof({
+                                            id: member.id,
+                                            matchId: match.id,
+                                            memberName: member.member_name,
+                                            amount: totalFee,
+                                            proofUrl: member.payment_proof,
+                                          });
+                                          setShowProofModal(true);
+                                        }}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                                        title="Lihat Bukti Bayar"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        <span className="hidden sm:inline">Bukti</span>
+                                      </button>
+                                    ) : null}
+
+                                    {isPaid ? (
+                                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
+                                        <Check className="w-3 h-3" /> Lunas
+                                      </span>
+                                    ) : isRejected ? (
+                                      <span className="text-[11px] font-bold text-rose-500 dark:text-rose-400 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center gap-1">
+                                        <X className="w-3 h-3" /> Ditolak
+                                      </span>
+                                    ) : isRevision ? (
+                                      <span className="text-[11px] font-bold text-amber-500 dark:text-amber-400 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" /> Revisi
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleVerifyPayment(member.id)}
+                                        className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-black text-[11px] font-bold rounded-lg border border-emerald-500/30 transition-all shadow-sm"
+                                      >
+                                        <Check className="w-3 h-3" /> Verifikasi
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
       )}
