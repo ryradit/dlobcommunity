@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getBranchPricing } from '@/lib/pricingSettings';
+import { recalcDailyAttendanceFees } from '@/lib/attendanceFee';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -439,6 +440,21 @@ export async function POST(request: NextRequest) {
         errors.push(`Pertandingan #${i + 1}: ${err instanceof Error ? err.message : 'unknown error'}`);
         errorCount++;
       }
+    }
+
+    // Recalculate daily attendance fees for all processed match dates to enforce branch rules
+    try {
+      const uniqueDates = new Set<string>();
+      for (const m of matches) {
+        if (m.match_date) {
+          uniqueDates.add(new Date(m.match_date).toISOString().split('T')[0]);
+        }
+      }
+      for (const dateStr of uniqueDates) {
+        await recalcDailyAttendanceFees(supabase, targetBranchId, dateStr);
+      }
+    } catch (recalcErr) {
+      console.warn('[Bulk Create] Attendance fee recalc warning:', recalcErr);
     }
 
     return NextResponse.json({

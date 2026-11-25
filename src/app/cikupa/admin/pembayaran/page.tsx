@@ -690,7 +690,7 @@ export default function CikupaAdminPembayaranPage() {
             Rp {totalAttendancePaid.toLocaleString('id-ID')}
           </div>
           <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">
-            Tarif Rp {(branchPricing.attendanceFee || 12000).toLocaleString('id-ID')} / kehadiran
+            Tarif: Rp {(branchPricing.singleMatchAttendanceFee || 5000).toLocaleString('id-ID')} (1x main) / Rp {(branchPricing.attendanceFee || 12000).toLocaleString('id-ID')} (&gt;1x)
           </p>
         </div>
       </div>
@@ -1229,7 +1229,7 @@ export default function CikupaAdminPembayaranPage() {
                   <span className="font-bold text-emerald-400 text-xs">Rp {(newMatch.shuttlecock_count * branchPricing.costPerMemberPerCock).toLocaleString('id-ID')}</span>
                 </div>
                 <div className="text-[10px] text-zinc-500 pt-1 border-t border-white/5">
-                  *Biaya kehadiran (lapangan) Rp {branchPricing.attendanceFee.toLocaleString('id-ID')} per pemain dikenakan 1x per hari kehadiran.
+                  *Biaya kehadiran (lapangan): Rp {(branchPricing.singleMatchAttendanceFee || 5000).toLocaleString('id-ID')} jika main 1 kali, Rp {branchPricing.attendanceFee.toLocaleString('id-ID')} jika main lebih dari 1 kali.
                 </div>
               </div>
 

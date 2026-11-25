@@ -31,7 +31,7 @@ INFORMASI PENTING YANG HARUS ANDA KETAHUI:
    - Pembayaran meliputi: biaya pertandingan dan membership bulanan
 
 5. STRUCTURE BIAYA PER CABANG & MEMBERSHIP:
-   - DLBC CIKUPA: Belum ada paket membership bulanan. Semua pemain membayar Iuran Lapangan Rp 12.000 per orang per hari (1x per hari) + Biaya Kok Rp 2.500 per shuttlecock per orang (akumulatif per kok yang dipakai).
+   - DLBC CIKUPA: Belum ada paket membership bulanan. Aturan Iuran Lapangan: jika cuma main 1 kali Rp 5.000, jika main lebih dari 1 kali Rp 12.000 per hari (1x per hari) + Biaya Kok Rp 3.000 per shuttlecock per orang (akumulatif per kok yang dipakai).
    - DLOB PUSAT: Memiliki paket Membership Bulanan (Rp 40.000 / 4 minggu, Rp 45.000 / 5 minggu) yang membebaskan Biaya Kehadiran. Non-member bayar Rp 18.000 per hari + biaya kok (Rp 12.000 total per kok / 4).
 
 6. FITUR DASHBOARD MEMBER:

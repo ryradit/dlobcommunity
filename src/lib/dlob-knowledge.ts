@@ -39,8 +39,10 @@ Komponen biaya pertandingan disesuaikan per cabang:
 
 1. DLBC CIKUPA (DLOB BADMINTON CLUB CIKUPA):
    - BELUM ADA MEMBERSHIP BULANAN untuk cabang DLBC Cikupa.
-   - Semua pemain dikenakan Biaya Hadir / Iuran Lapangan (Attendance Fee) Rp 12.000 per orang per hari (dikenakan 1x per hari main).
-   - Biaya Kok (Shuttlecock Fee): Rp 2.500 per kok per orang (akumulatif tergantung total kok yang dipakai pemain tersebut dalam sesi pertandingan).
+   - Aturan Biaya Hadir / Iuran Lapangan (Attendance Fee):
+     • Jika pemain CUMA MAIN 1 KALI dalam satu hari: Rp 5.000 per orang.
+     • Jika pemain MAIN LEBIH DARI 1 KALI (2 kali atau lebih): Tarif normal Rp 12.000 per orang per hari (dikenakan 1x per hari main).
+   - Biaya Kok (Shuttlecock Fee): Rp 3.000 per kok per orang (akumulatif tergantung total kok yang dipakai pemain tersebut dalam sesi pertandingan).
    - Pemain VIP / Payment Exempt: Bebas seluruh biaya (Rp 0).
 
 2. DLOB PUSAT (TANGERANG KOTA):
@@ -59,7 +61,7 @@ Komponen biaya pertandingan disesuaikan per cabang:
     • Biaya Hadir dibebaskan (Rp 0 / Gratis)
     • Cukup bayar biaya kok saja setiap main (Rp 3.000/kok per orang)
 - Tanpa membership:
-    • DLBC Cikupa: kena Iuran Lapangan Rp 12.000 per hari + biaya kok (Rp 2.500/kok per orang)
+    • DLBC Cikupa: kena Iuran Lapangan Rp 5.000 jika main 1x saja, atau Rp 12.000 jika main >1x per hari + biaya kok (Rp 3.000/kok per orang)
     • DLOB Pusat: kena Attendance Fee Rp 18.000 per hari + biaya kok
 - Masa berlaku: per bulan kalender (tidak bisa dipindah ke bulan lain)
 - Pembayaran membership: tunai ke admin atau transfer, upload bukti di dashboard

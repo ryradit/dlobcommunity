@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { recalcDailyAttendanceFees } from '@/lib/attendanceFee';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -22,6 +23,13 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Fetch match info before deleting to recalculate fees afterwards
+    const { data: targetMatch } = await supabase
+      .from('matches')
+      .select('branch_id, match_date')
+      .eq('id', matchId)
+      .single();
 
     // Delete all match_members first
     const { error: membersError } = await supabase
@@ -49,6 +57,15 @@ export async function DELETE(request: NextRequest) {
         { error: 'Gagal menghapus pertandingan', details: matchError.message },
         { status: 500 }
       );
+    }
+
+    // Recalculate daily attendance fees for remaining matches on this date
+    if (targetMatch?.branch_id && targetMatch?.match_date) {
+      try {
+        await recalcDailyAttendanceFees(supabase, targetMatch.branch_id, targetMatch.match_date);
+      } catch (recalcErr) {
+        console.warn('[API Matches Delete] Recalc attendance fee warning:', recalcErr);
+      }
     }
 
     return NextResponse.json({

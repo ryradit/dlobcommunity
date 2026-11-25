@@ -56,6 +56,7 @@ export default function CikupaAdminSettingsPage() {
   // Pricing states for DLBC Cikupa (defaults to 3000 matching database)
   const [shuttlecockFee, setShuttlecockFee] = useState<number>(3000);
   const [attendanceFee, setAttendanceFee] = useState<number>(12000);
+  const [singleMatchAttendanceFee, setSingleMatchAttendanceFee] = useState<number>(5000);
   const [pricingSaving, setPricingSaving] = useState(false);
 
   // Password states
@@ -87,6 +88,7 @@ export default function CikupaAdminSettingsPage() {
 
       const shuttlecockSetting = settings.find(s => s.key === `shuttlecock_fee_${BRANCH_ID}`);
       const attendanceSetting = settings.find(s => s.key === `attendance_fee_${BRANCH_ID}`);
+      const singleAttendanceSetting = settings.find(s => s.key === `attendance_fee_single_${BRANCH_ID}`);
       if (shuttlecockSetting?.value) {
         const parsed = parseInt(shuttlecockSetting.value, 10);
         if (!isNaN(parsed) && parsed > 0) {
@@ -102,6 +104,15 @@ export default function CikupaAdminSettingsPage() {
           setAttendanceFee(parsed);
           if (typeof window !== 'undefined') {
             localStorage.setItem(`attendance_fee_${BRANCH_ID}`, String(parsed));
+          }
+        }
+      }
+      if (singleAttendanceSetting?.value) {
+        const parsed = parseInt(singleAttendanceSetting.value, 10);
+        if (!isNaN(parsed) && parsed >= 0) {
+          setSingleMatchAttendanceFee(parsed);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(`attendance_fee_single_${BRANCH_ID}`, String(parsed));
           }
         }
       }
@@ -294,11 +305,17 @@ export default function CikupaAdminSettingsPage() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ key: `attendance_fee_${BRANCH_ID}`, value: String(attendanceFee) }),
         }),
+        fetch('/api/admin/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ key: `attendance_fee_single_${BRANCH_ID}`, value: String(singleMatchAttendanceFee) }),
+        }),
       ]);
 
       if (typeof window !== 'undefined') {
         localStorage.setItem(`shuttlecock_fee_${BRANCH_ID}`, String(shuttlecockFee));
         localStorage.setItem(`attendance_fee_${BRANCH_ID}`, String(attendanceFee));
+        localStorage.setItem(`attendance_fee_single_${BRANCH_ID}`, String(singleMatchAttendanceFee));
       }
 
       setMessage({ type: 'success', text: 'Tarif pertandingan DLBC Cikupa berhasil disimpan!' });
@@ -787,10 +804,10 @@ export default function CikupaAdminSettingsPage() {
               </div>
             </div>
 
-            {/* Attendance Fee */}
+            {/* Normal Attendance Fee */}
             <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2">
               <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
-                Biaya Kehadiran / Lapangan (Per Hari)
+                Biaya Kehadiran Normal (&gt; 1 Pertandingan)
               </label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
@@ -807,11 +824,35 @@ export default function CikupaAdminSettingsPage() {
                 />
               </div>
               <p className="text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
-                Dikenakan <strong>sekali per hari kehadiran</strong> pada match pertama member. Match berikutnya di hari yang sama gratis.
+                Dikenakan jika member bermain <strong>lebih dari 1 pertandingan</strong> (2x atau lebih) dalam satu hari sesi.
               </p>
               <div className="pt-2 border-t border-gray-200/60 dark:border-white/5 text-[11px] text-gray-600 dark:text-zinc-400 font-mono">
-                Total tarif awal hadir: <strong className="text-gray-900 dark:text-white">Rp {attendanceFee.toLocaleString('id-ID')}</strong>
+                Tarif &gt; 1 match: <strong className="text-gray-900 dark:text-white">Rp {attendanceFee.toLocaleString('id-ID')}</strong>
               </div>
+            </div>
+
+            {/* Single Match Attendance Fee */}
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2 md:col-span-2">
+              <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                Biaya Kehadiran Khusus (Cuma Main 1 Kali)
+              </label>
+              <div className="relative max-w-sm">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
+                  Rp
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={singleMatchAttendanceFee}
+                  onChange={(e) => setSingleMatchAttendanceFee(Math.max(0, parseInt(e.target.value) || 0))}
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
+                Jika member hanya bermain <strong>tepat 1 pertandingan</strong> dalam satu hari, biaya kehadiran otomatis diskon menjadi Rp {singleMatchAttendanceFee.toLocaleString('id-ID')}. Begitu member bermain match ke-2, sistem otomatis meng-upgrade biaya kehadiran ke tarif normal (Rp {attendanceFee.toLocaleString('id-ID')}).
+              </p>
             </div>
           </div>
 

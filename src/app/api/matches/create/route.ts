@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getBranchPricing } from '@/lib/pricingSettings';
+import { recalcDailyAttendanceFees } from '@/lib/attendanceFee';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -139,6 +140,13 @@ export async function POST(request: NextRequest) {
       console.error('[API Matches Create] Match members insert error:', mmError);
       await supabaseAdmin.from('matches').delete().eq('id', match.id);
       return NextResponse.json({ error: 'Gagal menambahkan anggota pertandingan', details: mmError.message }, { status: 500 });
+    }
+
+    // Recalculate daily attendance fees to enforce Cikupa attendance rules (1 match = 5.000, >1 match = 12.000)
+    try {
+      await recalcDailyAttendanceFees(supabaseAdmin, targetBranch, matchDateObj);
+    } catch (recalcErr) {
+      console.warn('[API Matches Create] Warning: failed to recalculate attendance fees:', recalcErr);
     }
 
     return NextResponse.json({
