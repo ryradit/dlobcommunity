@@ -381,8 +381,6 @@ export default function CikupaAdminPembayaranPage() {
         shuttlecock_count: newShuttlecockCount,
         match_date: matchDateObj.toISOString(),
         cost_per_shuttlecock: branchPricing.shuttlecockFee,
-        total_cost: newShuttlecockCount * costPerCockPerMember * 4,
-        cost_per_member: newCostPerMember,
       };
       if (editingMatch.team1_score !== undefined) {
         matchUpdatePayload.team1_score = editingMatch.team1_score;
@@ -449,7 +447,6 @@ export default function CikupaAdminPembayaranPage() {
           member_name: cleanName,
           amount_due: amountDue,
           attendance_fee: attendanceFee,
-          total_amount: amountDue + attendanceFee,
         });
       }
 

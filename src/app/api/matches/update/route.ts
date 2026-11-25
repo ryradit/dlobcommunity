@@ -20,9 +20,10 @@ export async function POST(request: NextRequest) {
 
     // 1. Update match record
     if (matchUpdatePayload && Object.keys(matchUpdatePayload).length > 0) {
-      // Remove total_cost if present as it is a generated column in postgres
+      // Remove generated columns in postgres (total_cost, cost_per_member)
       const safePayload = { ...matchUpdatePayload };
       delete safePayload.total_cost;
+      delete safePayload.cost_per_member;
 
       const { error: matchError } = await supabaseAdmin
         .from('matches')
