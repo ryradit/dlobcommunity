@@ -1293,9 +1293,9 @@ export default function CikupaAdminPembayaranPage() {
 
                             {/* Badminton Matchup Display */}
                             <div className="flex items-center gap-2 text-xs">
-                              {/* Team 1 */}
+                              {/* Pair 1 */}
                               <div className="flex items-center gap-1 font-semibold text-white tracking-tight">
-                                <span>{team1Members.map(m => m.member_name).join(' / ') || 'Tim 1'}</span>
+                                <span>{team1Members.map(m => m.member_name).join(' / ') || '-'}</span>
                               </div>
 
                               {/* Score Capsule */}
@@ -1313,9 +1313,9 @@ export default function CikupaAdminPembayaranPage() {
                                 <span className="text-zinc-600 font-mono text-[10px] mx-1">vs</span>
                               )}
 
-                              {/* Team 2 */}
+                              {/* Pair 2 */}
                               <div className="flex items-center gap-1 font-semibold text-white tracking-tight">
-                                <span>{team2Members.map(m => m.member_name).join(' / ') || 'Tim 2'}</span>
+                                <span>{team2Members.map(m => m.member_name).join(' / ') || '-'}</span>
                               </div>
                             </div>
                           </div>
@@ -1394,7 +1394,6 @@ export default function CikupaAdminPembayaranPage() {
                             <tr className="border-b border-white/[0.04] text-[10px] uppercase font-mono tracking-wider text-zinc-500 bg-white/[0.01]">
                               <th className="py-2.5 px-4 font-normal w-8 text-center"></th>
                               <th className="py-2.5 px-3 font-normal">Pemain</th>
-                              <th className="py-2.5 px-3 font-normal">Tim</th>
                               <th className="py-2.5 px-3 font-normal text-right font-mono">Biaya Kok</th>
                               <th className="py-2.5 px-3 font-normal text-right font-mono">Biaya Lapangan</th>
                               <th className="py-2.5 px-4 font-normal text-right font-mono">Total Tagihan</th>
@@ -1465,17 +1464,6 @@ export default function CikupaAdminPembayaranPage() {
                                         </span>
                                       )}
                                     </div>
-                                  </td>
-
-                                  {/* Team Indicator */}
-                                  <td className="py-2.5 px-3">
-                                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
-                                      mIdx < 2 
-                                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                                        : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                                    }`}>
-                                      {mIdx < 2 ? 'Tim 1' : 'Tim 2'}
-                                    </span>
                                   </td>
 
                                   {/* Shuttlecock Fee */}
