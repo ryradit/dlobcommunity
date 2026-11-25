@@ -11,7 +11,8 @@ import {
   Ban, Eye, Trash2, ChevronDown, ChevronUp, Edit, Save, Image as ImageIcon, 
   CheckSquare, Square, Sparkles, Send, Zap, HelpCircle, ChevronLeft, ChevronRight,
   Printer, ZoomIn, ZoomOut, RotateCw, RefreshCw, RotateCcw, Download, UserPlus,
-  Clock, CheckCircle2, XCircle, UserCheck, LayoutList, Layers, FileText, CheckCheck
+  Clock, CheckCircle2, XCircle, UserCheck, LayoutList, Layers, FileText, CheckCheck,
+  Calendar
 } from 'lucide-react';
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import BranchBadge from '@/components/BranchBadge';
@@ -1223,31 +1224,80 @@ export default function CikupaAdminPembayaranPage() {
 
                         {isEditing ? (
                           <div className="flex flex-wrap items-center gap-2.5 py-1">
-                            <span className="text-xs font-mono font-bold text-white mr-1 px-2 py-0.5 rounded bg-white/[0.06] border border-white/[0.1]">
+                            {/* Match Number Badge */}
+                            <span className="text-xs font-mono font-bold text-emerald-400 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 tracking-tight shadow-sm">
                               #{match.match_number}
                             </span>
-                            <div className="flex items-center gap-1.5">
-                              <label className="text-[10px] uppercase font-mono text-zinc-400">Tgl:</label>
+
+                            {/* Calendar Date Picker Trigger Button */}
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const el = document.getElementById(`edit-match-date-${match.id}`) as HTMLInputElement;
+                                  if (el && typeof el.showPicker === 'function') {
+                                    el.showPicker();
+                                  } else {
+                                    el?.focus();
+                                  }
+                                }}
+                                className="flex items-center gap-2 px-3 py-1 bg-black/60 hover:bg-black/90 border border-white/20 hover:border-emerald-500/50 rounded-lg text-xs font-mono text-white transition-all shadow-inner group cursor-pointer"
+                                title="Klik untuk membuka kalender"
+                              >
+                                <Calendar className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                                <span>
+                                  {editingMatch.match_date
+                                    ? new Date(editingMatch.match_date).toLocaleDateString('id-ID', {
+                                        weekday: 'short',
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric',
+                                      })
+                                    : 'Pilih Tanggal'}
+                                </span>
+                              </button>
                               <input
+                                id={`edit-match-date-${match.id}`}
                                 type="date"
                                 value={formatDateForInput(editingMatch.match_date)}
                                 onChange={(e) => setEditingMatch({ ...editingMatch, match_date: e.target.value })}
-                                className="px-2 py-1 bg-black/50 border border-white/20 rounded-lg text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                                className="sr-only"
+                                tabIndex={-1}
                               />
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              <label className="text-[10px] uppercase font-mono text-zinc-400">Kok:</label>
-                              <input
-                                type="number"
-                                min="1"
-                                max="10"
-                                value={editingMatch.shuttlecock_count}
-                                onChange={(e) => setEditingMatch({ ...editingMatch, shuttlecock_count: parseInt(e.target.value) || 1 })}
-                                className="w-14 px-2 py-1 bg-black/50 border border-white/20 rounded-lg text-white text-xs font-mono text-center focus:outline-none focus:border-emerald-500"
-                              />
+
+                            {/* Shuttlecock Stepper Control */}
+                            <div className="flex items-center bg-black/60 border border-white/20 rounded-lg p-0.5 shadow-inner">
+                              <button
+                                type="button"
+                                onClick={() => setEditingMatch({
+                                  ...editingMatch,
+                                  shuttlecock_count: Math.max(1, (editingMatch.shuttlecock_count || 1) - 1),
+                                })}
+                                className="w-5 h-5 flex items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors text-xs font-mono font-bold"
+                                title="Kurangi 1 Kok"
+                              >
+                                -
+                              </button>
+                              <span className="px-2 text-xs font-mono font-bold text-emerald-400 select-none">
+                                {editingMatch.shuttlecock_count} Kok
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setEditingMatch({
+                                  ...editingMatch,
+                                  shuttlecock_count: Math.min(10, (editingMatch.shuttlecock_count || 1) + 1),
+                                })}
+                                className="w-5 h-5 flex items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors text-xs font-mono font-bold"
+                                title="Tambah 1 Kok"
+                              >
+                                +
+                              </button>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              <label className="text-[10px] uppercase font-mono text-zinc-400">Skor:</label>
+
+                            {/* Badminton Scoreboard Inputs */}
+                            <div className="flex items-center gap-1.5 bg-black/70 border border-white/20 px-2 py-0.5 rounded-lg shadow-inner">
+                              <span className="text-[10px] uppercase font-mono text-zinc-500">Skor</span>
                               <input
                                 type="number"
                                 min="0"
@@ -1257,9 +1307,9 @@ export default function CikupaAdminPembayaranPage() {
                                   setEditingMatch({ ...editingMatch, team1_score: val });
                                 }}
                                 placeholder="0"
-                                className="w-12 px-1 py-1 bg-black/50 border border-blue-400/40 rounded-lg text-white text-xs text-center font-mono focus:outline-none focus:border-blue-400"
+                                className="w-10 px-1 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded text-center text-xs font-mono font-bold text-blue-300 focus:outline-none focus:border-blue-400"
                               />
-                              <span className="text-zinc-500 font-bold text-xs">-</span>
+                              <span className="text-zinc-600 font-mono font-bold text-xs">:</span>
                               <input
                                 type="number"
                                 min="0"
@@ -1269,7 +1319,7 @@ export default function CikupaAdminPembayaranPage() {
                                   setEditingMatch({ ...editingMatch, team2_score: val });
                                 }}
                                 placeholder="0"
-                                className="w-12 px-1 py-1 bg-black/50 border border-red-400/40 rounded-lg text-white text-xs text-center font-mono focus:outline-none focus:border-red-400"
+                                className="w-10 px-1 py-0.5 bg-rose-500/10 border border-rose-500/30 rounded text-center text-xs font-mono font-bold text-rose-300 focus:outline-none focus:border-rose-400"
                               />
                             </div>
                           </div>
