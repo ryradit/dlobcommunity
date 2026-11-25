@@ -757,69 +757,67 @@ export default function CikupaAdminPembayaranPage() {
         </div>
       </div>
 
-      {/* 4 Glassmorphism Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-premium stat-card-glow rounded-2xl p-4.5 relative overflow-hidden">
-          <div className="h-0.5 w-8 rounded-full bg-emerald-500 mb-3" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total Pendapatan</span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <TrendingUp className="w-4 h-4" />
+      {/* 4 Linear / 21st.dev Precision Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="bg-[#0B0D0E] border border-white/[0.08] hover:border-emerald-500/30 rounded-2xl p-4 relative overflow-hidden transition-all duration-200 shadow-[0_4px_20px_rgba(0,0,0,0.3)] group">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Total Pendapatan</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+              <TrendingUp className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-xl font-black text-slate-900 dark:text-white">
+          <div className="text-xl font-bold font-mono tracking-tight text-white group-hover:text-emerald-400 transition-colors">
             Rp {totalRevenue.toLocaleString('id-ID')}
           </div>
-          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">
-            Biaya Kock + Kehadiran
+          <p className="text-[10px] font-mono text-zinc-500 mt-1">
+            Biaya Kok + Kehadiran
           </p>
         </div>
 
-        <div className="glass-premium stat-card-glow rounded-2xl p-4.5 relative overflow-hidden">
-          <div className="h-0.5 w-8 rounded-full bg-amber-500 mb-3" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Menunggu Konfirmasi</span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <Clock className="w-4 h-4" />
+        <div className="bg-[#0B0D0E] border border-white/[0.08] hover:border-amber-500/30 rounded-2xl p-4 relative overflow-hidden transition-all duration-200 shadow-[0_4px_20px_rgba(0,0,0,0.3)] group">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Menunggu Konfirmasi</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
+              <Clock className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-xl font-black text-amber-600 dark:text-amber-400">
-            {totalPendingCount} Transaksi
+          <div className="text-xl font-bold font-mono tracking-tight text-amber-400">
+            {totalPendingCount} Slot
           </div>
-          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">
-            {totalPendingCount} slot match menunggu konfirmasi
+          <p className="text-[10px] font-mono text-zinc-500 mt-1">
+            Menunggu verifikasi admin
           </p>
         </div>
 
-        <div className="glass-premium stat-card-glow rounded-2xl p-4.5 relative overflow-hidden">
-          <div className="h-0.5 w-8 rounded-full bg-blue-500 mb-3" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Pertandingan Selesai</span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <Award className="w-4 h-4" />
+        <div className="bg-[#0B0D0E] border border-white/[0.08] hover:border-blue-500/30 rounded-2xl p-4 relative overflow-hidden transition-all duration-200 shadow-[0_4px_20px_rgba(0,0,0,0.3)] group">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Pertandingan</span>
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center">
+              <Award className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-xl font-black text-slate-900 dark:text-white">
+          <div className="text-xl font-bold font-mono tracking-tight text-white group-hover:text-blue-400 transition-colors">
             {matches.length} Match
           </div>
-          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">
-            {allMatchMemberList.filter(mm => mm.payment_status === 'paid').length} slot lunas
+          <p className="text-[10px] font-mono text-zinc-500 mt-1">
+            {allMatchMemberList.filter(mm => mm.payment_status === 'paid').length} slot telah lunas
           </p>
         </div>
 
-        <div className="glass-premium stat-card-glow rounded-2xl p-4.5 relative overflow-hidden">
-          <div className="h-0.5 w-8 rounded-full bg-purple-500 mb-3" />
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total {branchPricing.attendanceLabel || 'Biaya Hadir'}</span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
-              <Users className="w-4 h-4" />
+        <div className="bg-[#0B0D0E] border border-white/[0.08] hover:border-purple-500/30 rounded-2xl p-4 relative overflow-hidden transition-all duration-200 shadow-[0_4px_20px_rgba(0,0,0,0.3)] group">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 truncate pr-1">
+              {branchPricing.attendanceLabel || 'Biaya Hadir'}
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0">
+              <Users className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-xl font-black text-slate-900 dark:text-white">
+          <div className="text-xl font-bold font-mono tracking-tight text-white group-hover:text-purple-400 transition-colors">
             Rp {totalAttendancePaid.toLocaleString('id-ID')}
           </div>
-          <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">
-            Tarif: Rp {(branchPricing.singleMatchAttendanceFee || 5000).toLocaleString('id-ID')} (1x main) / Rp {(branchPricing.attendanceFee || 12000).toLocaleString('id-ID')} (&gt;1x)
+          <p className="text-[10px] font-mono text-zinc-500 mt-1">
+            Tarif: Rp {(branchPricing.singleMatchAttendanceFee || 5000).toLocaleString('id-ID')} (1x) / Rp {(branchPricing.attendanceFee || 12000).toLocaleString('id-ID')} (&gt;1x)
           </p>
         </div>
       </div>
@@ -827,29 +825,35 @@ export default function CikupaAdminPembayaranPage() {
       {/* Action Toolbar */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {/* View Mode Switcher */}
-          <div className="flex items-center p-1 bg-slate-100 dark:bg-zinc-800/80 border border-gray-200 dark:border-white/10 rounded-xl">
+          {/* Segmented View Mode Switcher (Linear / 21st.dev Style) */}
+          <div className="flex items-center p-1 bg-zinc-900/90 border border-white/[0.08] rounded-xl shadow-inner backdrop-blur-md">
             <button
               onClick={() => setViewMode('matches')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all duration-200 ${
                 viewMode === 'matches'
-                  ? 'bg-emerald-500 text-black shadow-sm'
-                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)] font-bold'
+                  : 'text-zinc-400 hover:text-white border border-transparent'
               }`}
             >
               <LayoutList className="w-3.5 h-3.5" />
-              Tabel Pertandingan ({matches.length})
+              <span>Tabel Pertandingan</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/[0.06] text-zinc-300">
+                {matches.length}
+              </span>
             </button>
             <button
               onClick={() => setViewMode('members')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all duration-200 ${
                 viewMode === 'members'
-                  ? 'bg-emerald-500 text-black shadow-sm'
-                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)] font-bold'
+                  : 'text-zinc-400 hover:text-white border border-transparent'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              Rekap per Member ({memberSummaryList.length})
+              <span>Rekap per Member</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/[0.06] text-zinc-300">
+                {memberSummaryList.length}
+              </span>
             </button>
           </div>
         </div>
@@ -858,11 +862,11 @@ export default function CikupaAdminPembayaranPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/cikupa/admin/match-image-extraction"
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-xl border border-emerald-500/30 hover:border-emerald-500/50 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-xl border border-emerald-500/30 hover:border-emerald-500/50 transition-all shadow-sm"
             title="Ekstraksi data pertandingan dari foto jadwal AI"
           >
             <ImageIcon className="w-3.5 h-3.5" />
-            Ekstraksi Foto AI
+            <span>Ekstraksi AI</span>
           </Link>
 
           <button
@@ -872,45 +876,45 @@ export default function CikupaAdminPembayaranPage() {
               }
               setShowCreateModal(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-black text-xs font-bold rounded-xl transition-colors shadow-md shadow-emerald-600/20"
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-xl transition-all shadow-[0_0_16px_rgba(16,185,129,0.25)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Input Match
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Input Match</span>
           </button>
 
           <button
             onClick={() => setShowPrintModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs font-bold rounded-xl border border-emerald-500/30 hover:border-emerald-500/60 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold rounded-xl border border-white/[0.08] hover:border-white/20 transition-all shadow-sm"
           >
             <Printer className="w-3.5 h-3.5" />
-            Cetak Lembar Sesi
+            <span>Cetak Sesi</span>
           </button>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-white/10 p-3 rounded-xl shadow-sm">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[#0B0D0E] border border-white/[0.08] p-2.5 rounded-2xl shadow-sm">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder={viewMode === 'matches' ? "Cari no match atau nama pemain..." : "Cari nama member..."}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-white/10 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
+            className="w-full pl-9 pr-4 py-1.5 bg-black/40 border border-white/[0.06] rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 transition-colors"
           />
         </div>
 
         {/* Filter Status Pills & Action */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
           {(['all', 'pending', 'paid', 'proof'] as const).map(status => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                 filterStatus === status
-                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/40'
-                  : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-gray-200 dark:border-white/5'
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold'
+                  : 'bg-white/[0.02] text-zinc-400 hover:text-white hover:bg-white/[0.05] border border-transparent'
               }`}
             >
               {status === 'all' && 'Semua'}
@@ -923,10 +927,10 @@ export default function CikupaAdminPembayaranPage() {
           {viewMode === 'matches' && filteredMatches.length > 0 && (
             <button
               onClick={toggleAllExpanded}
-              className="px-2.5 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 border border-white/5 whitespace-nowrap transition-colors flex items-center gap-1"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-mono text-zinc-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] whitespace-nowrap transition-colors flex items-center gap-1"
               title={allAreExpanded ? "Tutup Semua Detail" : "Buka Semua Detail"}
             >
-              {allAreExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {allAreExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               <span>{allAreExpanded ? 'Ringkas' : 'Detail'}</span>
             </button>
           )}
@@ -935,26 +939,26 @@ export default function CikupaAdminPembayaranPage() {
 
       {/* Bulk Action Bar (when selected) */}
       {selectedPayments.length > 0 && (
-        <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/40 p-3.5 rounded-xl animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-xs font-bold text-slate-900 dark:text-white">
-              {selectedPayments.length} pembayaran terpilih
+        <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-500/30 p-3.5 rounded-2xl animate-in fade-in backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            <CheckSquare className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-semibold text-white">
+              {selectedPayments.length} tagihan terpilih
             </span>
-            <span className="text-xs text-slate-500 dark:text-zinc-400">
+            <span className="text-xs font-mono text-emerald-400 font-bold">
               (Total: Rp {selectedPayments.reduce((s, p) => s + p.amount, 0).toLocaleString('id-ID')})
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSelectedPayments([])}
-              className="px-2.5 py-1 text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="px-3 py-1 text-xs text-zinc-400 hover:text-white transition-colors"
             >
               Batal
             </button>
             <button
               onClick={() => setShowBulkConfirmModal(true)}
-              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-lg transition-colors shadow-md shadow-emerald-500/20"
+              className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold rounded-lg transition-colors shadow-sm"
             >
               Konfirmasi Terpilih
             </button>
@@ -971,26 +975,26 @@ export default function CikupaAdminPembayaranPage() {
         </div>
       ) : viewMode === 'members' ? (
         /* ========================================================================= */
-        /* VIEW MODE 2: REKAP TAGIHAN PER MEMBER (High-Density Member Summary Table) */
+        /* VIEW MODE 2: REKAP TAGIHAN PER MEMBER (Elite Tabular Ledger)               */
         /* ========================================================================= */
-        <div className="bg-white dark:bg-zinc-900/70 border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-[#0B0D0E] border border-white/[0.08] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.4)]">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 dark:bg-zinc-800/70 border-b border-gray-200 dark:border-white/10 text-slate-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider font-semibold">
-                  <th className="py-3 px-4">Member</th>
-                  <th className="py-3 px-3 text-center">Main</th>
-                  <th className="py-3 px-3 text-right">Biaya Kok</th>
-                  <th className="py-3 px-3 text-right">Lapangan</th>
-                  <th className="py-3 px-4 text-right">Total Tagihan</th>
-                  <th className="py-3 px-3 text-center">Status</th>
-                  <th className="py-3 px-4 text-right">Aksi Cepat</th>
+                <tr className="border-b border-white/[0.06] bg-white/[0.02] text-[10px] tracking-wider uppercase font-mono text-zinc-500">
+                  <th className="py-3 px-4 font-normal">Member</th>
+                  <th className="py-3 px-3 font-normal text-center">Main</th>
+                  <th className="py-3 px-3 font-normal text-right font-mono">Biaya Kok</th>
+                  <th className="py-3 px-3 font-normal text-right font-mono">Lapangan</th>
+                  <th className="py-3 px-4 font-normal text-right font-mono">Total Tagihan</th>
+                  <th className="py-3 px-3 font-normal text-center">Status</th>
+                  <th className="py-3 px-4 font-normal text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+              <tbody className="divide-y divide-white/[0.04]">
                 {memberSummaryList.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-slate-400 dark:text-zinc-500">
+                    <td colSpan={7} className="text-center py-16 text-zinc-500 font-mono text-xs">
                       Tidak ada data member yang cocok dengan filter.
                     </td>
                   </tr>
@@ -1002,59 +1006,61 @@ export default function CikupaAdminPembayaranPage() {
 
                     return (
                       <React.Fragment key={mem.name}>
-                        <tr className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                        <tr className="hover:bg-white/[0.02] transition-colors group">
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 font-bold flex items-center justify-center text-xs border border-emerald-500/20 shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-white/[0.05] border border-white/[0.1] text-zinc-300 font-bold flex items-center justify-center text-[10px] font-mono shrink-0">
                                 {mem.name.substring(0, 2).toUpperCase()}
                               </div>
                               <div>
-                                <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
+                                <div className="flex items-center gap-1.5 font-semibold text-white tracking-tight">
                                   <span>{mem.name}</span>
                                   {mem.isExempt && (
-                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300 font-mono font-medium border border-amber-500/20">
                                       VIP
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-[10px] text-slate-400 dark:text-zinc-500">
-                                  {mem.paidCount} lunas / {mem.matchCount} pertandingan
+                                <div className="text-[10px] font-mono text-zinc-500 mt-0.5">
+                                  {mem.paidCount}/{mem.matchCount} match lunas
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td className="py-3 px-3 text-center">
-                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-gray-200 dark:border-white/5">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-white/[0.04] text-zinc-300 border border-white/[0.06]">
                               {mem.matchCount}x
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-slate-700 dark:text-zinc-300">
+                          <td className="py-3 px-3 text-right font-mono text-zinc-400">
                             Rp {mem.amountDue.toLocaleString('id-ID')}
                           </td>
                           <td className="py-3 px-3 text-right font-mono">
-                            <span className="text-slate-700 dark:text-zinc-300">
+                            <span className="text-zinc-300">
                               Rp {mem.attendanceFee.toLocaleString('id-ID')}
                             </span>
-                            <span className="block text-[9px] text-slate-400 dark:text-zinc-500">
+                            <span className="block text-[9px] text-zinc-500 font-mono">
                               {mem.matchCount === 1 ? '1x main (5k)' : '>1x main (12k)'}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                          <td className="py-3 px-4 text-right font-mono font-bold text-emerald-400 text-sm">
                             Rp {mem.totalAmount.toLocaleString('id-ID')}
                           </td>
                           <td className="py-3 px-3 text-center">
                             {isAllPaid ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                                <CheckCircle2 className="w-3 h-3" /> Lunas
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                <span>Lunas</span>
                               </span>
                             ) : (
                               <div className="flex flex-col items-center gap-0.5">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                                  <Clock className="w-3 h-3" /> {mem.pendingCount} Pending
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                  <span>{mem.pendingCount} Pending</span>
                                 </span>
                                 {hasProof && (
-                                  <span className="text-[9px] text-emerald-400 flex items-center gap-0.5">
-                                    <Eye className="w-2.5 h-2.5" /> Bukti ada
+                                  <span className="text-[9px] text-emerald-400 font-mono flex items-center gap-0.5 mt-0.5">
+                                    <Eye className="w-2.5 h-2.5" /> Ada Bukti
                                   </span>
                                 )}
                               </div>
@@ -1065,7 +1071,7 @@ export default function CikupaAdminPembayaranPage() {
                               {!isAllPaid && mem.pendingMemberIds.length > 0 && (
                                 <button
                                   onClick={() => handleVerifyAllForMember(mem.pendingMemberIds, mem.name)}
-                                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-black text-[11px] font-bold rounded-lg border border-emerald-500/30 transition-all shadow-sm"
+                                  className="flex items-center gap-1 px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-black text-[11px] font-bold rounded-lg transition-all shadow-sm"
                                   title="Verifikasi semua tagihan member ini"
                                 >
                                   <CheckCheck className="w-3.5 h-3.5" />
@@ -1074,7 +1080,7 @@ export default function CikupaAdminPembayaranPage() {
                               )}
                               <button
                                 onClick={() => setExpandedMemberRows(prev => ({ ...prev, [mem.name]: !isExpanded }))}
-                                className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.06] transition-colors"
                                 title="Lihat rincian pertandingan member"
                               >
                                 {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -1083,70 +1089,84 @@ export default function CikupaAdminPembayaranPage() {
                           </td>
                         </tr>
 
-                        {/* Inset Sub-Row: Matches for this member */}
+                        {/* Inset Sub-Row: Matches for this member (Tabular Ledger, NOT cards!) */}
                         {isExpanded && (
-                          <tr className="bg-slate-50/70 dark:bg-zinc-950/40 border-b border-gray-100 dark:border-white/5">
-                            <td colSpan={7} className="p-3 pl-8">
-                              <div className="space-y-1.5">
-                                <p className="text-[11px] font-bold text-slate-600 dark:text-zinc-400 mb-1">
-                                  Rincian Pertandingan {mem.name}:
-                                </p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                  {mem.matches.map((item: MemberMatchDetail, idx: number) => (
-                                    <div
-                                      key={`${item.matchId}-${idx}`}
-                                      className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 text-xs shadow-xs"
-                                    >
-                                      <div>
-                                        <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                                          <span>Match #{item.matchNumber}</span>
-                                          <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-normal">
-                                            ({item.matchDate ? formatDateForInput(item.matchDate) : '-'})
+                          <tr className="bg-black/40 border-b border-white/[0.05]">
+                            <td colSpan={7} className="p-0">
+                              <div className="px-6 py-3 border-t border-white/[0.04]">
+                                <table className="w-full text-left border-collapse text-xs">
+                                  <thead>
+                                    <tr className="border-b border-white/[0.04] text-[9px] uppercase font-mono tracking-wider text-zinc-500">
+                                      <th className="py-2 px-3 font-normal">Pertandingan</th>
+                                      <th className="py-2 px-3 font-normal text-right font-mono">Biaya Kok</th>
+                                      <th className="py-2 px-3 font-normal text-right font-mono">Lapangan</th>
+                                      <th className="py-2 px-3 font-normal text-right font-mono">Total Tagihan</th>
+                                      <th className="py-2 px-3 font-normal text-center">Bukti Bayar</th>
+                                      <th className="py-2 px-3 font-normal text-right">Status / Aksi</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-white/[0.03]">
+                                    {mem.matches.map((item: MemberMatchDetail, idx: number) => (
+                                      <tr key={`${item.matchId}-${idx}`} className="hover:bg-white/[0.02]">
+                                        <td className="py-2 px-3">
+                                          <div className="flex items-center gap-1.5 font-mono text-xs">
+                                            <span className="font-bold text-white">Match #{item.matchNumber}</span>
+                                            <span className="text-[10px] text-zinc-500">
+                                              ({item.matchDate ? formatDateForInput(item.matchDate) : '-'})
+                                            </span>
+                                          </div>
+                                        </td>
+                                        <td className="py-2 px-3 text-right font-mono text-zinc-400">
+                                          Rp {item.amountDue.toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="py-2 px-3 text-right font-mono">
+                                          <span className={item.attendanceFee > 0 ? "text-zinc-300" : "text-zinc-600"}>
+                                            Rp {item.attendanceFee.toLocaleString('id-ID')}
                                           </span>
-                                        </div>
-                                        <div className="text-[10px] text-slate-500 dark:text-zinc-400">
-                                          Kok: Rp {item.amountDue.toLocaleString('id-ID')}
-                                          {item.attendanceFee > 0 && ` + Lap: Rp ${item.attendanceFee.toLocaleString('id-ID')}`}
-                                          <span className="font-bold text-slate-900 dark:text-white ml-1">
-                                            = Rp {item.totalAmount.toLocaleString('id-ID')}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        {item.paymentProof && (
-                                          <button
-                                            onClick={() => {
-                                              setSelectedProof({
-                                                id: item.memberId,
-                                                matchId: item.matchId,
-                                                memberName: mem.name,
-                                                amount: item.totalAmount,
-                                                proofUrl: item.paymentProof,
-                                              });
-                                              setShowProofModal(true);
-                                            }}
-                                            className="p-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
-                                            title="Lihat Bukti Bayar"
-                                          >
-                                            <Eye className="w-3 h-3" />
-                                          </button>
-                                        )}
-                                        {item.paymentStatus === 'paid' ? (
-                                          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
-                                            Lunas
-                                          </span>
-                                        ) : (
-                                          <button
-                                            onClick={() => handleVerifyPayment(item.memberId)}
-                                            className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-black font-bold border border-emerald-500/30 transition-colors"
-                                          >
-                                            Verifikasi
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
+                                        </td>
+                                        <td className="py-2 px-3 text-right font-mono font-bold text-emerald-400">
+                                          Rp {item.totalAmount.toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="py-2 px-3 text-center">
+                                          {item.paymentProof ? (
+                                            <button
+                                              onClick={() => {
+                                                setSelectedProof({
+                                                  id: item.memberId,
+                                                  matchId: item.matchId,
+                                                  memberName: mem.name,
+                                                  amount: item.totalAmount,
+                                                  proofUrl: item.paymentProof,
+                                                });
+                                                setShowProofModal(true);
+                                              }}
+                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-colors"
+                                            >
+                                              <Eye className="w-2.5 h-2.5" />
+                                              <span>Lihat Bukti</span>
+                                            </button>
+                                          ) : (
+                                            <span className="text-[10px] text-zinc-600 font-mono">-</span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-3 text-right">
+                                          {item.paymentStatus === 'paid' ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                              <Check className="w-2.5 h-2.5" /> Lunas
+                                            </span>
+                                          ) : (
+                                            <button
+                                              onClick={() => handleVerifyPayment(item.memberId)}
+                                              className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500 hover:bg-emerald-400 text-black text-[10px] font-bold rounded transition-colors"
+                                            >
+                                              <Check className="w-2.5 h-2.5" /> Verifikasi
+                                            </button>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
                             </td>
                           </tr>
@@ -1161,210 +1181,238 @@ export default function CikupaAdminPembayaranPage() {
         </div>
       ) : (
         /* ========================================================================= */
-        /* VIEW MODE 1: TABEL PERTANDINGAN (Master-Detail Table Layout)              */
+        /* VIEW MODE 1: TABEL PERTANDINGAN (Linear / 21st.dev Fixture Ledger)         */
         /* ========================================================================= */
         <div className="space-y-3">
           {filteredMatches.length === 0 ? (
-            <div className="text-center py-16 bg-white dark:bg-zinc-900/40 border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm">
-              <Award className="w-12 h-12 text-slate-400 dark:text-zinc-600 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">Belum ada pertandingan di bulan ini</p>
-              <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">Klik &quot;Input Match&quot; untuk menambahkan sesi pertandingan DLBC baru.</p>
+            <div className="text-center py-20 bg-[#0B0D0E] border border-white/[0.08] rounded-2xl shadow-sm">
+              <Award className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-zinc-300">Belum ada pertandingan di bulan ini</p>
+              <p className="text-xs text-zinc-500 mt-1">Klik &quot;Input Match&quot; untuk menambahkan sesi pertandingan DLBC baru.</p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-zinc-900/70 border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
-              <div className="divide-y divide-gray-100 dark:divide-white/5">
-                {filteredMatches.map(match => {
-                  const members = matchMembers[match.id] || [];
-                  const isExpanded = expandedMatches[match.id] ?? true;
-                  const isEditing = editingMatch?.matchId === match.id;
-                  const paidCount = members.filter(m => m.payment_status === 'paid').length;
-                  const allPaid = members.length > 0 && paidCount === members.length;
-                  const hasPending = members.some(m => m.payment_status === 'pending');
-                  const matchTotalCost = match.total_cost || (match.shuttlecock_count * (branchPricing?.costPerMemberPerCock || 3000) * 4);
+            <div className="bg-[#0B0D0E] border border-white/[0.08] rounded-2xl overflow-hidden divide-y divide-white/[0.06] shadow-[0_8px_30px_rgb(0,0,0,0.4)]">
+              {filteredMatches.map(match => {
+                const members = matchMembers[match.id] || [];
+                const isExpanded = expandedMatches[match.id] ?? true;
+                const isEditing = editingMatch?.matchId === match.id;
+                const paidCount = members.filter(m => m.payment_status === 'paid').length;
+                const allPaid = members.length > 0 && paidCount === members.length;
+                const matchTotalCost = match.total_cost || (match.shuttlecock_count * (branchPricing?.costPerMemberPerCock || 3000) * 4);
 
-                  // Extract Team 1 & Team 2 player names for high-density overview
-                  const team1Members = members.slice(0, 2);
-                  const team2Members = members.slice(2, 4);
+                const team1Members = members.slice(0, 2);
+                const team2Members = members.slice(2, 4);
 
-                  return (
-                    <div key={match.id} className="transition-colors hover:bg-slate-50/30 dark:hover:bg-zinc-800/20">
-                      {/* Master Row Header */}
-                      <div className="flex flex-wrap items-center justify-between p-3.5 gap-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-[280px]">
-                          <button
-                            onClick={() => setExpandedMatches(prev => ({ ...prev, [match.id]: !isExpanded }))}
-                            className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-zinc-400 transition-colors"
-                            title={isExpanded ? "Ringkas pertandingan" : "Lihat detail pemain"}
-                          >
-                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </button>
+                const hasScores = match.team1_score !== null && match.team1_score !== undefined && match.team2_score !== null && match.team2_score !== undefined;
+                const team1Won = hasScores && (match.team1_score! > match.team2_score!);
+                const team2Won = hasScores && (match.team2_score! > match.team1_score!);
 
-                          {isEditing ? (
-                            <div className="flex flex-wrap items-center gap-2.5 py-1">
-                              <span className="text-sm font-black text-slate-900 dark:text-white mr-1">
-                                Match #{match.match_number}
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                <label className="text-[11px] text-slate-500 dark:text-zinc-400">Tgl:</label>
-                                <input
-                                  type="date"
-                                  value={formatDateForInput(editingMatch.match_date)}
-                                  onChange={(e) => setEditingMatch({ ...editingMatch, match_date: e.target.value })}
-                                  className="px-2 py-1 bg-slate-100 dark:bg-zinc-800 border border-gray-300 dark:border-white/20 rounded-lg text-slate-900 dark:text-white text-xs focus:outline-none focus:border-emerald-500"
-                                />
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <label className="text-[11px] text-slate-500 dark:text-zinc-400">Kok:</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="10"
-                                  value={editingMatch.shuttlecock_count}
-                                  onChange={(e) => setEditingMatch({ ...editingMatch, shuttlecock_count: parseInt(e.target.value) || 1 })}
-                                  className="w-16 px-2 py-1 bg-slate-100 dark:bg-zinc-800 border border-gray-300 dark:border-white/20 rounded-lg text-slate-900 dark:text-white text-xs text-center focus:outline-none focus:border-emerald-500"
-                                />
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <label className="text-[11px] text-slate-500 dark:text-zinc-400">Skor:</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={editingMatch.team1_score ?? ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                                    setEditingMatch({ ...editingMatch, team1_score: val });
-                                  }}
-                                  placeholder="0"
-                                  className="w-14 px-1.5 py-1 bg-slate-100 dark:bg-zinc-800 border border-blue-400/40 rounded-lg text-slate-900 dark:text-white text-xs text-center font-mono focus:outline-none focus:border-blue-400"
-                                />
-                                <span className="text-zinc-500 font-bold text-xs">-</span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={editingMatch.team2_score ?? ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                                    setEditingMatch({ ...editingMatch, team2_score: val });
-                                  }}
-                                  placeholder="0"
-                                  className="w-14 px-1.5 py-1 bg-slate-100 dark:bg-zinc-800 border border-red-400/40 rounded-lg text-slate-900 dark:text-white text-xs text-center font-mono focus:outline-none focus:border-red-400"
-                                />
-                              </div>
+                return (
+                  <div key={match.id} className="transition-colors group/match">
+                    {/* Fixture Master Header Bar */}
+                    <div className="flex flex-wrap items-center justify-between p-3.5 sm:px-5 gap-3 hover:bg-white/[0.02] transition-colors">
+                      <div className="flex items-center gap-3 flex-1 min-w-[280px]">
+                        {/* Expand toggle */}
+                        <button
+                          onClick={() => setExpandedMatches(prev => ({ ...prev, [match.id]: !isExpanded }))}
+                          className="p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.08] transition-colors"
+                          title={isExpanded ? "Ringkas pertandingan" : "Lihat detail pemain"}
+                        >
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+
+                        {isEditing ? (
+                          <div className="flex flex-wrap items-center gap-2.5 py-1">
+                            <span className="text-xs font-mono font-bold text-white mr-1 px-2 py-0.5 rounded bg-white/[0.06] border border-white/[0.1]">
+                              #{match.match_number}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-[10px] uppercase font-mono text-zinc-400">Tgl:</label>
+                              <input
+                                type="date"
+                                value={formatDateForInput(editingMatch.match_date)}
+                                onChange={(e) => setEditingMatch({ ...editingMatch, match_date: e.target.value })}
+                                className="px-2 py-1 bg-black/50 border border-white/20 rounded-lg text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                              />
                             </div>
-                          ) : (
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-black text-slate-900 dark:text-white whitespace-nowrap">
-                                  Match #{match.match_number}
-                                </span>
-                                <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold whitespace-nowrap">
-                                  {match.shuttlecock_count} Kock
-                                </span>
-                              </div>
-
-                              {/* Compact Teams & Score Display */}
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className="text-slate-700 dark:text-zinc-300 font-medium">
-                                  {team1Members.map(m => m.member_name).join(' / ') || 'Tim 1'}
-                                </span>
-                                {match.team1_score !== null && match.team1_score !== undefined && match.team2_score !== null && match.team2_score !== undefined ? (
-                                  <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-mono font-bold text-[11px]">
-                                    {match.team1_score} - {match.team2_score}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400 dark:text-zinc-500 font-bold text-[10px]">vs</span>
-                                )}
-                                <span className="text-slate-700 dark:text-zinc-300 font-medium">
-                                  {team2Members.map(m => m.member_name).join(' / ') || 'Tim 2'}
-                                </span>
-                              </div>
-
-                              <span className="text-[10px] text-slate-400 dark:text-zinc-500 hidden md:inline">
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-[10px] uppercase font-mono text-zinc-400">Kok:</label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="10"
+                                value={editingMatch.shuttlecock_count}
+                                onChange={(e) => setEditingMatch({ ...editingMatch, shuttlecock_count: parseInt(e.target.value) || 1 })}
+                                className="w-14 px-2 py-1 bg-black/50 border border-white/20 rounded-lg text-white text-xs font-mono text-center focus:outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-[10px] uppercase font-mono text-zinc-400">Skor:</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editingMatch.team1_score ?? ''}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                  setEditingMatch({ ...editingMatch, team1_score: val });
+                                }}
+                                placeholder="0"
+                                className="w-12 px-1 py-1 bg-black/50 border border-blue-400/40 rounded-lg text-white text-xs text-center font-mono focus:outline-none focus:border-blue-400"
+                              />
+                              <span className="text-zinc-500 font-bold text-xs">-</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editingMatch.team2_score ?? ''}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                  setEditingMatch({ ...editingMatch, team2_score: val });
+                                }}
+                                placeholder="0"
+                                className="w-12 px-1 py-1 bg-black/50 border border-red-400/40 rounded-lg text-white text-xs text-center font-mono focus:outline-none focus:border-red-400"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          /* Modern Fixture Matchup Line */
+                          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                            {/* Match & Cock tags */}
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-white px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08] tracking-tight">
+                                #{match.match_number}
+                              </span>
+                              <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                                {match.shuttlecock_count} Kok
+                              </span>
+                              <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
                                 {match.match_date ? new Date(match.match_date).toLocaleDateString('id-ID', {
                                   day: 'numeric', month: 'short'
                                 }) : '-'}
                               </span>
                             </div>
-                          )}
-                        </div>
 
-                        {/* Right Summary & Actions */}
-                        <div className="flex items-center gap-3">
-                          {isEditing ? (
-                            <>
-                              <button
-                                onClick={saveMatchChanges}
-                                disabled={isSavingMatch}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-black text-xs font-bold rounded-lg transition-colors shadow-sm"
-                                title="Simpan Perubahan"
-                              >
-                                <Save className="w-3.5 h-3.5" />
-                                {isSavingMatch ? 'Menyimpan...' : 'Simpan'}
-                              </button>
-                              <button
-                                onClick={() => setEditingMatch(null)}
-                                disabled={isSavingMatch}
-                                className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
-                                title="Batal"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              {/* Settlement progress pill */}
-                              {allPaid ? (
-                                <span className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1">
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> Lunas
-                                </span>
+                            {/* Badminton Matchup Display */}
+                            <div className="flex items-center gap-2 text-xs">
+                              {/* Team 1 */}
+                              <div className="flex items-center gap-1 font-semibold text-white tracking-tight">
+                                <span>{team1Members.map(m => m.member_name).join(' / ') || 'Tim 1'}</span>
+                              </div>
+
+                              {/* Score Capsule */}
+                              {hasScores ? (
+                                <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black/70 border border-white/[0.1] font-mono text-xs shadow-inner mx-1">
+                                  <span className={team1Won ? "text-emerald-400 font-bold" : "text-zinc-400 font-medium"}>
+                                    {match.team1_score}
+                                  </span>
+                                  <span className="text-zinc-600 text-[10px]">:</span>
+                                  <span className={team2Won ? "text-emerald-400 font-bold" : "text-zinc-400 font-medium"}>
+                                    {match.team2_score}
+                                  </span>
+                                </div>
                               ) : (
-                                <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold flex items-center gap-1">
-                                  <Clock className="w-3.5 h-3.5" /> {paidCount}/{members.length} Bayar
-                                </span>
+                                <span className="text-zinc-600 font-mono text-[10px] mx-1">vs</span>
                               )}
 
-                              <span className="text-xs font-mono font-bold text-slate-900 dark:text-zinc-200">
-                                Rp {matchTotalCost.toLocaleString('id-ID')}
-                              </span>
-
-                              <div className="flex items-center gap-1 border-l border-gray-200 dark:border-white/10 pl-2">
-                                <button
-                                  onClick={() => startEditingMatch(match)}
-                                  className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
-                                  title="Edit Pertandingan"
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteMatch(match.id)}
-                                  className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                                  title="Hapus Pertandingan"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                              {/* Team 2 */}
+                              <div className="flex items-center gap-1 font-semibold text-white tracking-tight">
+                                <span>{team2Members.map(m => m.member_name).join(' / ') || 'Tim 2'}</span>
                               </div>
-                            </>
-                          )}
-                        </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Detail Sub-Table for 4 Players */}
-                      {isExpanded && (
-                        <div className="bg-slate-50/60 dark:bg-zinc-950/40 border-t border-gray-100 dark:border-white/5 p-3 sm:px-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {members.map(member => {
+                      {/* Right Meta & Actions */}
+                      <div className="flex items-center gap-3">
+                        {isEditing ? (
+                          <>
+                            <button
+                              onClick={saveMatchChanges}
+                              disabled={isSavingMatch}
+                              className="flex items-center gap-1 px-3 py-1 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-xs font-bold rounded-lg transition-colors shadow-sm"
+                              title="Simpan Perubahan"
+                            >
+                              <Save className="w-3.5 h-3.5" />
+                              <span>{isSavingMatch ? 'Menyimpan...' : 'Simpan'}</span>
+                            </button>
+                            <button
+                              onClick={() => setEditingMatch(null)}
+                              disabled={isSavingMatch}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
+                              title="Batal"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            {/* Settlement Progress */}
+                            {allPaid ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                <span>Lunas</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                <span>{paidCount}/{members.length} Bayar</span>
+                              </span>
+                            )}
+
+                            {/* Total Match Cost */}
+                            <span className="font-mono text-xs font-bold text-white tracking-tight">
+                              Rp {matchTotalCost.toLocaleString('id-ID')}
+                            </span>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1 border-l border-white/[0.08] pl-2">
+                              <button
+                                onClick={() => startEditingMatch(match)}
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                                title="Edit Pertandingan"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMatch(match.id)}
+                                className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                title="Hapus Pertandingan"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Master-Detail Tabular Ledger (ZERO nested cards!) */}
+                    {isExpanded && (
+                      <div className="border-t border-white/[0.05] bg-black/40 overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="border-b border-white/[0.04] text-[10px] uppercase font-mono tracking-wider text-zinc-500 bg-white/[0.01]">
+                              <th className="py-2.5 px-4 font-normal w-8 text-center"></th>
+                              <th className="py-2.5 px-3 font-normal">Pemain</th>
+                              <th className="py-2.5 px-3 font-normal">Tim</th>
+                              <th className="py-2.5 px-3 font-normal text-right font-mono">Biaya Kok</th>
+                              <th className="py-2.5 px-3 font-normal text-right font-mono">Biaya Lapangan</th>
+                              <th className="py-2.5 px-4 font-normal text-right font-mono">Total Tagihan</th>
+                              <th className="py-2.5 px-3 font-normal text-center">Bukti Bayar</th>
+                              <th className="py-2.5 px-4 font-normal text-right">Status / Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/[0.03]">
+                            {members.map((member, mIdx) => {
                               const isPaid = member.payment_status === 'paid';
                               const isRejected = member.payment_status === 'rejected';
                               const isRevision = member.payment_status === 'revision';
                               const totalFee = member.total_amount || (member.amount_due + member.attendance_fee);
 
                               return (
-                                <div
-                                  key={member.id}
-                                  className="flex items-center justify-between p-2.5 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl text-xs shadow-xs"
-                                >
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    {/* Bulk checkbox if not paid */}
+                                <tr key={member.id} className="hover:bg-white/[0.02] transition-colors group/row">
+                                  {/* Checkbox for bulk select */}
+                                  <td className="py-2.5 px-4 text-center">
                                     {!isPaid && (
                                       <input
                                         type="checkbox"
@@ -1381,49 +1429,74 @@ export default function CikupaAdminPembayaranPage() {
                                             setSelectedPayments(prev => prev.filter(p => p.id !== member.id));
                                           }
                                         }}
-                                        className="w-4 h-4 rounded bg-slate-100 dark:bg-zinc-800 border-gray-300 dark:border-white/20 text-emerald-500 focus:ring-emerald-500 shrink-0"
+                                        className="w-3.5 h-3.5 rounded bg-zinc-800 border-white/20 text-emerald-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
                                       />
                                     )}
+                                  </td>
 
-                                    <div className="truncate">
-                                      <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white truncate">
-                                        {isEditing ? (
-                                          <input
-                                            type="text"
-                                            value={editingMatch.members[member.id]?.name ?? member.member_name}
-                                            onChange={(e) => setEditingMatch({
-                                              ...editingMatch,
-                                              members: {
-                                                ...editingMatch.members,
-                                                [member.id]: {
-                                                  ...editingMatch.members[member.id],
-                                                  name: e.target.value,
-                                                }
+                                  {/* Player Name & VIP Badge */}
+                                  <td className="py-2.5 px-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-white/[0.05] border border-white/[0.1] text-zinc-300 font-bold flex items-center justify-center text-[10px] font-mono shrink-0">
+                                        {member.member_name.substring(0, 2).toUpperCase()}
+                                      </div>
+                                      {isEditing ? (
+                                        <input
+                                          type="text"
+                                          value={editingMatch.members[member.id]?.name ?? member.member_name}
+                                          onChange={(e) => setEditingMatch({
+                                            ...editingMatch,
+                                            members: {
+                                              ...editingMatch.members,
+                                              [member.id]: {
+                                                ...editingMatch.members[member.id],
+                                                name: e.target.value,
                                               }
-                                            })}
-                                            className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 border border-gray-300 dark:border-white/20 rounded text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                                          />
-                                        ) : (
-                                          <span className="truncate">{member.member_name}</span>
-                                        )}
-                                        {paymentExemptMembers.has(member.member_name.toLowerCase()) && (
-                                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold shrink-0">
-                                            VIP
-                                          </span>
-                                        )}
-                                      </div>
-                                      <div className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                                        Kok: Rp {(member.amount_due || 0).toLocaleString('id-ID')}
-                                        {member.attendance_fee > 0 && ` + Lap: Rp ${member.attendance_fee.toLocaleString('id-ID')}`}
-                                        <span className="font-bold text-slate-900 dark:text-zinc-200 ml-1">
-                                          = Rp {totalFee.toLocaleString('id-ID')}
+                                            }
+                                          })}
+                                          className="px-2 py-0.5 bg-black/50 border border-white/20 rounded text-xs text-white font-medium focus:outline-none focus:border-emerald-500"
+                                        />
+                                      ) : (
+                                        <span className="font-semibold text-white tracking-tight">{member.member_name}</span>
+                                      )}
+                                      {paymentExemptMembers.has(member.member_name.toLowerCase()) && (
+                                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300 font-mono font-medium border border-amber-500/20">
+                                          VIP
                                         </span>
-                                      </div>
+                                      )}
                                     </div>
-                                  </div>
+                                  </td>
 
-                                  {/* Right Proof & Verification */}
-                                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                  {/* Team Indicator */}
+                                  <td className="py-2.5 px-3">
+                                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                                      mIdx < 2 
+                                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                                        : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                                    }`}>
+                                      {mIdx < 2 ? 'Tim 1' : 'Tim 2'}
+                                    </span>
+                                  </td>
+
+                                  {/* Shuttlecock Fee */}
+                                  <td className="py-2.5 px-3 text-right font-mono text-zinc-400">
+                                    Rp {(member.amount_due || 0).toLocaleString('id-ID')}
+                                  </td>
+
+                                  {/* Attendance / Court Fee */}
+                                  <td className="py-2.5 px-3 text-right font-mono">
+                                    <span className={member.attendance_fee > 0 ? "text-zinc-300" : "text-zinc-600"}>
+                                      Rp {(member.attendance_fee || 0).toLocaleString('id-ID')}
+                                    </span>
+                                  </td>
+
+                                  {/* Total Bill */}
+                                  <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-400 text-xs">
+                                    Rp {totalFee.toLocaleString('id-ID')}
+                                  </td>
+
+                                  {/* Payment Proof Button */}
+                                  <td className="py-2.5 px-3 text-center">
                                     {member.payment_proof ? (
                                       <button
                                         onClick={() => {
@@ -1436,45 +1509,51 @@ export default function CikupaAdminPembayaranPage() {
                                           });
                                           setShowProofModal(true);
                                         }}
-                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-colors"
                                         title="Lihat Bukti Bayar"
                                       >
                                         <Eye className="w-3 h-3" />
-                                        <span className="hidden sm:inline">Bukti</span>
+                                        <span>Lihat Bukti</span>
                                       </button>
-                                    ) : null}
+                                    ) : (
+                                      <span className="text-[11px] text-zinc-600 font-mono">-</span>
+                                    )}
+                                  </td>
 
+                                  {/* Status & Verification Action */}
+                                  <td className="py-2.5 px-4 text-right">
                                     {isPaid ? (
-                                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                         <Check className="w-3 h-3" /> Lunas
                                       </span>
                                     ) : isRejected ? (
-                                      <span className="text-[11px] font-bold text-rose-500 dark:text-rose-400 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center gap-1">
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
                                         <X className="w-3 h-3" /> Ditolak
                                       </span>
                                     ) : isRevision ? (
-                                      <span className="text-[11px] font-bold text-amber-500 dark:text-amber-400 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-1">
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                                         <AlertCircle className="w-3 h-3" /> Revisi
                                       </span>
                                     ) : (
                                       <button
                                         onClick={() => handleVerifyPayment(member.id)}
-                                        className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-black text-[11px] font-bold rounded-lg border border-emerald-500/30 transition-all shadow-sm"
+                                        className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-black text-[11px] font-bold rounded-md transition-all shadow-sm"
                                       >
-                                        <Check className="w-3 h-3" /> Verifikasi
+                                        <Check className="w-3 h-3 stroke-[2.5]" />
+                                        <span>Verifikasi</span>
                                       </button>
                                     )}
-                                  </div>
-                                </div>
+                                  </td>
+                                </tr>
                               );
                             })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
