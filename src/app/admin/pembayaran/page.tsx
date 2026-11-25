@@ -2589,7 +2589,6 @@ export default function AdminPembayaranPage() {
                                 <input
                                   type="number"
                                   min="0"
-                                  max="50"
                                   value={editingMatch.team1_score ?? ''}
                                   onChange={(e) => {
                                     const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
@@ -2602,7 +2601,6 @@ export default function AdminPembayaranPage() {
                                 <input
                                   type="number"
                                   min="0"
-                                  max="50"
                                   value={editingMatch.team2_score ?? ''}
                                   onChange={(e) => {
                                     const val = e.target.value === '' ? null : parseInt(e.target.value, 10);

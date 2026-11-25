@@ -183,21 +183,28 @@ export default function CikupaAdminAnalitikPage() {
         winner = 'team2';
       }
 
-      const { error } = await supabase
-        .from('matches')
-        .update({
-          team1_player1: formData.team1_player1,
-          team1_player2: formData.team1_player2,
-          team2_player1: formData.team2_player1,
-          team2_player2: formData.team2_player2,
-          team1_score: formData.team1_score,
-          team2_score: formData.team2_score,
-          winner,
-          status: winner ? 'completed' : 'active',
-        })
-        .eq('id', selectedMatch.id);
+      const res = await fetch('/api/matches/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matchId: selectedMatch.id,
+          matchUpdatePayload: {
+            team1_player1: formData.team1_player1,
+            team1_player2: formData.team1_player2,
+            team2_player1: formData.team2_player1,
+            team2_player2: formData.team2_player2,
+            team1_score: formData.team1_score,
+            team2_score: formData.team2_score,
+            winner,
+            status: winner ? 'completed' : 'active',
+          },
+        }),
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || 'Gagal menyimpan skor pertandingan');
+      }
 
       alert('Skor pertandingan DLBC berhasil disimpan!');
       setEditMode(false);
@@ -455,7 +462,6 @@ export default function CikupaAdminAnalitikPage() {
                         <input
                           type="number"
                           min="0"
-                          max="40"
                           value={formData.team1_score}
                           onChange={e => setFormData({ ...formData, team1_score: parseInt(e.target.value) || 0 })}
                           className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white font-black text-lg focus:border-emerald-500"
@@ -502,7 +508,6 @@ export default function CikupaAdminAnalitikPage() {
                         <input
                           type="number"
                           min="0"
-                          max="40"
                           value={formData.team2_score}
                           onChange={e => setFormData({ ...formData, team2_score: parseInt(e.target.value) || 0 })}
                           className="w-full px-3 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-white font-black text-lg focus:border-blue-500"

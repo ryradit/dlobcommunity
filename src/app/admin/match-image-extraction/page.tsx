@@ -1460,7 +1460,6 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
                                 <input
                                   type="number"
                                   min="0"
-                                  max="50"
                                   value={match.team1_score ?? ''}
                                   onChange={(e) => {
                                     const raw = e.target.value.trim();
@@ -1477,7 +1476,6 @@ export default function MatchImageExtractionPage({ initialBranchId = 'dlob-pusat
                                 <input
                                   type="number"
                                   min="0"
-                                  max="50"
                                   value={match.team2_score ?? ''}
                                   onChange={(e) => {
                                     const raw = e.target.value.trim();

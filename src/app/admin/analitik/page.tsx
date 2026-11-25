@@ -546,7 +546,6 @@ export default function AdminAnalitikPage() {
                           <input
                             type="number"
                             min="0"
-                            max="42"
                             value={formData.team1_score}
                             onChange={(e) => setFormData({...formData, team1_score: parseInt(e.target.value) || 0})}
                             className="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-white text-2xl font-bold text-center focus:outline-hidden focus:ring-1 focus:ring-zinc-400 font-mono"
@@ -615,7 +614,6 @@ export default function AdminAnalitikPage() {
                           <input
                             type="number"
                             min="0"
-                            max="42"
                             value={formData.team2_score}
                             onChange={(e) => setFormData({...formData, team2_score: parseInt(e.target.value) || 0})}
                             className="w-full bg-zinc-800 border border-white/10 rounded-xl px-3 py-2 text-white text-2xl font-bold text-center focus:outline-hidden focus:ring-1 focus:ring-zinc-400 font-mono"
