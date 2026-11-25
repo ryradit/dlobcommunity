@@ -515,54 +515,68 @@ Contoh pertanyaan yang memicu get_revenue_summary:
 ────────────────────────────────────────
 📋 ALUR KERJA ADMIN — PERTANDINGAN
 ────────────────────────────────────────
-1. Admin foto hasil papan skor setelah sesi selesai
-2. Upload ke halaman "Ekstrak dari Gambar" di admin panel
-3. AI akan otomatis membaca skor, nama pemain, jumlah kok
+1. Admin foto hasil papan skor setelah sesi selesai (atau input manual lewat form)
+2. Upload ke halaman "Ekstraksi Foto AI" di admin panel masing-masing cabang:
+   - DLOB Pusat: /admin/match-image-extraction
+   - DLBC Cikupa: /cikupa/admin/match-image-extraction
+3. AI akan otomatis membaca skor, nama pemain, jumlah kok (tanpa batasan skor maksimal)
 4. Admin review → klik Simpan
 5. Sistem otomatis:
-   - Hitung biaya kok per orang (dibagi rata)
-   - Hitung attendance fee (Rp 18.000 untuk non-member, Rp 0 untuk member)
+   - Hitung biaya kok per orang (dibagi rata pemain yang bermain)
+   - Hitung attendance fee sesuai cabang:
+     • DLOB PUSAT: Rp 18.000 untuk non-member, Rp 0 untuk member aktif bulanan & VIP
+     • DLBC CIKUPA: Rp 5.000 jika pemain cuma main 1 match hari itu; Rp 12.000 jika main lebih dari 1 match (>1 match)
    - Buat record di match_members dengan payment_status = 'pending'
-   - Kirim notifikasi WA + email ke semua pemain
+   - Kirim notifikasi WA + email ke semua pemain yang terlibat
 
 ────────────────────────────────────────
 💳 ALUR KERJA ADMIN — KONFIRMASI PEMBAYARAN
 ────────────────────────────────────────
 1. Member transfer → upload bukti di dashboard mereka
-2. Admin menerima notifikasi → masuk ke halaman Admin Pembayaran
-3. Admin review bukti transfer → klik Konfirmasi atau Tolak
+2. Admin menerima notifikasi → masuk ke halaman Admin Pembayaran cabang:
+   - DLOB Pusat: /admin/pembayaran
+   - DLBC Cikupa: /cikupa/admin/pembayaran
+3. Admin review bukti transfer → klik Konfirmasi atau Tolak (dengan alasan penolakan)
 4. Jika dikonfirmasi: payment_status berubah jadi 'paid'
 5. Jika ditolak: member mendapat notifikasi alasan penolakan
 
 ────────────────────────────────────────
-👥 MANAJEMEN MEMBER
+👥 MANAJEMEN MEMBER & CABANG
 ────────────────────────────────────────
+- Cabang terdaftar:
+  1. DLOB Pusat (GOR Badminton Wisma Harapan, Tangerang Kota — Sabtu malam)
+  2. DLBC Cikupa (GOR Galaxi Cikupa — Jumat malam)
 - Buat akun member baru: Admin Panel → Manajemen Akun → Buat Akun
 - Akun temp (sementara): bisa dibuat langsung dari halaman input pertandingan
   untuk pemain tamu/belum punya akun (email: nama@temp.dlob.local)
 - Ubah status VIP/Gratis: edit profil member → toggle is_payment_exempt
-- Rollback membership: batalkan membership bulan ini → member kembali kena attendance fee
+- Rollback membership: batalkan membership bulan ini → member kembali kena attendance fee normal
 - Export kredensial member: tersedia di halaman admin untuk export bulk
 
 ────────────────────────────────────────
-📊 LAPORAN & KEUANGAN
+📊 LAPORAN & KEUANGAN PER CABANG
 ────────────────────────────────────────
 
 SUMBER PENDAPATAN KOMUNITAS:
 1. Shuttlecock fee — biaya kok per pertandingan, dibagi rata semua pemain hadir
-2. Attendance fee — Rp 18.000/hari untuk non-member (Rp 0 untuk member aktif & VIP)
-3. Membership fee — iuran bulanan anggota (Rp 40.000 atau Rp 45.000/bulan)
+2. Attendance fee / Biaya Lapangan:
+   - DLOB Pusat: Rp 18.000/hari untuk non-member (Rp 0 untuk member aktif bulanan & VIP)
+   - DLBC Cikupa: Rp 5.000 jika main 1 kali saja, Rp 12.000 jika main >1 kali (Rp 0 untuk VIP)
+3. Membership fee — iuran bulanan anggota khusus DLOB Pusat (Rp 40.000 atau Rp 45.000/bulan)
 
-CARA HITUNG REVENUE PER PERTANDINGAN:
-- Total kok cost = harga kok × jumlah kok
-- Biaya kok per orang = total kok cost ÷ jumlah pemain
-- Attendance fee per orang = Rp 18.000 jika tidak punya membership aktif, Rp 0 jika punya
+CARA HITUNG REVENUE PER CABANG:
+- DLOB PUSAT:
+  • Biaya kok per orang = (harga kok × jumlah kok) ÷ jumlah pemain
+  • Attendance fee per orang = Rp 18.000 jika non-member, Rp 0 jika member aktif bulanan
+- DLBC CIKUPA:
+  • Biaya kok per orang = Rp 3.000 × jumlah kok di match tersebut
+  • Attendance fee per orang = Rp 5.000 jika hanya main 1 kali, Rp 12.000 jika main 2 kali atau lebih (dikenakan 1x per hari kehadiran)
 - Tagihan per orang = biaya kok + attendance fee
 
 REVENUE CHART DI DASHBOARD:
 - Grafik pendapatan dikelompokkan berdasarkan match_date (bukan paid_at)
 - Hanya menghitung pembayaran dengan status "paid"
-- Ditampilkan per bulan di halaman admin dashboard utama
+- Ditampilkan per bulan di halaman admin dashboard masing-masing cabang
 
 CARA MELIHAT TOTAL PENDAPATAN:
 - Dashboard admin → grafik revenue → pilih filter bulan
@@ -666,18 +680,40 @@ PANDUAN KHUSUS UNTUK MEMBER DLOB
 5. Tagihan lama (bulan sebelumnya) tetap bisa dibayar kapan saja
 
 ────────────────────────────────────────
-📊 MEMAHAMI TAGIHANMU
+📊 MEMAHAMI TAGIHANMU BERDASARKAN CABANG
 ────────────────────────────────────────
 Tagihanmu terdiri dari 2 bagian per pertandingan:
-• Biaya kok (shuttlecock fee): dibagi rata semua pemain yang hadir hari itu
-• Biaya hadir (attendance fee): Rp 18.000/hari — hanya jika TIDAK punya membership
+• Biaya kok (shuttlecock fee):
+  - DLOB Pusat: total biaya kok dibagi rata pemain yang main
+  - DLBC Cikupa: Rp 3.000 per kok per orang yang bermain
+• Biaya hadir (attendance fee / iuran lapangan):
+  - DLOB PUSAT: Rp 18.000/hari — dibebaskan (Rp 0) jika punya membership bulanan aktif atau status VIP
+  - DLBC CIKUPA:
+    • Jika hanya main 1 kali dalam hari itu: Rp 5.000
+    • Jika main lebih dari 1 kali (>1 kali): Rp 12.000 (hanya dikenakan 1x per hari kehadiran)
+    • Jika status VIP: Rp 0
 
-Contoh: 8 pemain, pakai 6 kok @ Rp 30.000 = Rp 180.000 total
+Contoh DLBC Cikupa:
+- Pemain A main 1 match (pakai 1 kok):
+  Kok Rp 3.000 + Biaya lapangan Rp 5.000 = Rp 8.000
+- Pemain A lanjut main match ke-2 (pakai 1 kok):
+  Biaya lapangan otomatis upgrade ke tarif normal Rp 12.000 (match pertama Rp 12.000 + match kedua Rp 0 attendance fee)
+  Total tagihan hari itu: Kok (Rp 3.000 + Rp 3.000) + Lapangan Rp 12.000 = Rp 18.000
+
+Contoh DLOB Pusat:
+- 8 pemain, pakai 6 kok @ Rp 30.000 = Rp 180.000 total
 → Biaya kok per orang = Rp 180.000 ÷ 8 = Rp 22.500
 → Jika tidak punya membership: + Rp 18.000 attendance = total Rp 40.500
+→ Jika punya membership aktif: cukup bayar kok saja (Rp 22.500)
+→ Jika VIP/Gratis: semua Rp 0
 
-Jika punya membership aktif: cukup bayar kok saja (Rp 22.500)
-Jika VIP/Gratis: semua Rp 0
+────────────────────────────────────────
+🎽 STORE & JERSEY OFFICIAL DLOB
+────────────────────────────────────────
+- Komunitas menyediakan official jersey DLOB melalui Store & Pre-Order.
+- Rekomendasi Ukuran Jersey AI:
+  • Sistem AI merekomendasikan untuk DOWN SIZE 1 LEVEL dari ukuran kaos harian biasa Anda (misal: jika biasa pakai L, disarankan pesan M) karena pola cutting jersey DLOB dirancang proporsional, atletis, dan leluasa untuk kenyamanan mobilitas bulutangkis.
+  • Panduan ukuran (size chart) lengkap tersedia di halaman Store / Pre-Order.
 
 ────────────────────────────────────────
 🎫 CARA DAFTAR MEMBERSHIP

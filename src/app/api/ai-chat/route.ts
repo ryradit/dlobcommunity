@@ -50,34 +50,36 @@ INFORMASI PENTING YANG HARUS ANDA KETAHUI:
    - Pengaturan: Konfigurasi sistem, manage storage
 
 8. CARA MENGGUNAKAN FITUR EKSTRAKSI PERTANDINGAN (ADMIN):
-   - Masuk ke menu Kelola Pembayaran
-   - Klik tombol "Ekstraksi dari Gambar" atau langsung ke halaman Match Image Extraction
+   - Masuk ke menu Kelola Pembayaran cabang (DLOB Pusat: /admin/pembayaran, DLBC Cikupa: /cikupa/admin/pembayaran)
+   - Klik tombol "Ekstraksi Foto AI"
    - Upload foto daftar pertandingan (format: Team 1 / Team 2 / Lapangan / Jumlah Kok)
-   - Pilih tanggal pertandingan (harus hari Sabtu)
-   - AI akan ekstrak semua pertandingan (biasanya 15-20 match)
+   - Pilih tanggal pertandingan (Sabtu untuk DLOB Pusat, Jumat untuk DLBC Cikupa)
+   - AI akan ekstrak semua pertandingan
    - Sistem validasi nama pemain otomatis, berikan saran jika ada nama tidak dikenali
    - Edit manual jika perlu, lalu klik Simpan Semua
-   - Biaya dan membership dihitung otomatis untuk setiap pemain
+   - Biaya kok dan biaya kehadiran otomatis dihitung sesuai aturan masing-masing cabang
 
 9. CARA UPLOAD BUKTI PEMBAYARAN (MEMBER):
-   - Login ke dashboard member
+   - Login ke dashboard member (/dashboard/pembayaran atau /cikupa/dashboard/pembayaran)
    - Klik menu Pembayaran
-   - Lihat daftar tagihan yang statusnya "Unpaid"
-   - Klik icon kamera/upload pada tagihan yang ingin dibayar
-   - Pilih foto bukti transfer dari galeri
-   - Tunggu verifikasi dari admin
+   - Lihat daftar tagihan yang statusnya "Unpaid" / "Pending"
+   - Klik icon upload/bayar pada tagihan yang ingin dibayar
+   - Pilih foto bukti transfer / QRIS dari galeri
+   - Tunggu verifikasi dari admin cabang
    - Status akan berubah menjadi "Paid" setelah diverifikasi
 
-10. CARA BAYAR MEMBERSHIP (MEMBER):
-    - Masuk ke menu Pembayaran
+10. CARA BAYAR MEMBERSHIP (KHUSUS DLOB PUSAT):
+    - Masuk ke menu Pembayaran di DLOB Pusat (DLBC Cikupa belum ada sistem membership bulanan)
     - Scroll ke bagian "Membership Bulanan"
     - Pilih durasi: 4 minggu (Rp 40.000) atau 5 minggu (Rp 45.000)
-    - Klik Bayar Membership
-    - Upload bukti transfer
-    - Tunggu verifikasi admin
-    - Setelah verified, Anda bebas biaya kehadiran Rp 18.000 untuk bulan tersebut
+    - Klik Bayar Membership & upload bukti transfer
+    - Setelah verified oleh admin, Anda bebas biaya kehadiran Rp 18.000 untuk bulan tersebut
 
-11. TIPS BERMAIN BADMINTON:
+11. STORE & JERSEY RESMI DLOB:
+    - Pembelian jersey resmi DLOB Community melalui menu Store / Pre-Order.
+    - REKOMENDASI UKURAN JERSEY AI: Disarankan DOWN SIZE 1 LEVEL dari ukuran kaos harian biasa Anda (contoh: jika biasa pakai L, pilih size M) karena pola potongan jersey DLOB didesain leluasa dan proporsional untuk fleksibilitas gerak di lapangan.
+
+12. TIPS BERMAIN BADMINTON:
     - Pemanasan 10-15 menit sebelum main
     - Fokus pada footwork dan positioning
     - Latihan servis rutin untuk konsistensi
@@ -86,7 +88,7 @@ INFORMASI PENTING YANG HARUS ANDA KETAHUI:
     - Istirahat cukup antara game
     - Minum air putih untuk hidrasi
 
-12. KONTAK ADMIN:
+13. KONTAK ADMIN:
     - Admin DLOB Pusat: +62 812-7073-7272
     - Admin DLBC Cikupa: Edi (+62 821-1345-5696 / wa.me/6282113455696)
     - Jika user menanyakan kontak/WhatsApp DLBC Cikupa, berikan nomor Mas Edi: +62 821-1345-5696
