@@ -597,6 +597,26 @@ EXPORT & REKAP:
 - Rekap tagihan per member bisa diminta via Dlob Agent: "tagihan [nama member]"
 - Rekap bulan tertentu: "tagihan [nama] bulan [bulan] [tahun]"
 
+────────────────────────────────────────
+⚙️ PENGATURAN & KUSTOMISASI FIELD PEMBAYARAN DLBC
+────────────────────────────────────────
+Admin DLBC dapat mengelola kustomisasi field pembayaran secara mandiri melalui menu Pengaturan Cabang (/cikupa/admin/settings):
+1. Nominal Tarif:
+   - Tarif kok per pemain (default Rp 3.000 / kok)
+   - Tarif kehadiran normal >1 match (default Rp 12.000)
+   - Tarif kehadiran khusus 1 match saja (default Rp 5.000)
+2. Kustomisasi Nama Field (Custom Labels):
+   - Label custom untuk shuttlecock (default: "Biaya Shuttlecock")
+   - Label custom untuk kehadiran normal (default: "Biaya Lapangan")
+   - Label custom untuk kehadiran 1x main (default: "Biaya Lapangan (1x Main)")
+3. Toggle Status Biaya:
+   - Mengaktifkan / menonaktifkan pembebanan biaya lapangan (attendance fee)
+   - Mengaktifkan / menonaktifkan pembebanan biaya shuttlecock
+4. Catatan & Petunjuk Pembayaran:
+   - Teks instruksi kustom yang tampil langsung di struk dan dashboard pembayaran member DLBC
+5. Live Preview:
+   - Pratinjau interaktif real-time di admin panel untuk melihat hasil perubahan label & tarif sebelum disimpan
+
 CATATAN PENTING:
 - Pendapatan hanya dihitung dari tagihan yang sudah PAID, bukan pending
 - Jika member belum bayar → tidak masuk ke revenue bulan itu

@@ -28,6 +28,7 @@ import {
 import { StatCardSkeleton, MatchCardSkeleton } from '@/components/LoadingSkeletons';
 import BranchBadge from '@/components/BranchBadge';
 import { generateBulkPaymentPDF, generatePaymentPDF } from '@/lib/pdfGenerator';
+import { getBranchPricing, DEFAULT_DLBC_PRICING, BranchPricing } from '@/lib/pricingSettings';
 
 const BRANCH_ID = 'dlob-cikupa';
 
@@ -72,6 +73,7 @@ export default function CikupaPembayaranPage() {
   const [allMatches, setAllMatches] = useState<MatchMember[]>([]);
   const [memberName, setMemberName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [branchPricing, setBranchPricing] = useState<BranchPricing>(DEFAULT_DLBC_PRICING);
 
   // DLBC payment destination info
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
@@ -158,6 +160,10 @@ export default function CikupaPembayaranPage() {
         setLoading(false);
         return;
       }
+
+      // Fetch pricing & custom payment field settings for DLBC
+      const pricing = await getBranchPricing(supabase, BRANCH_ID);
+      setBranchPricing(pricing);
 
       // Fetch Matches scoped to DLBC
       const { data: matchesData, error: matchesError } = await supabase
@@ -856,6 +862,16 @@ export default function CikupaPembayaranPage() {
             </div>
           </div>
 
+          {branchPricing.paymentNotes && (
+            <div className="mx-6 mb-4 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="font-bold block">Petunjuk Pembayaran DLBC:</span>
+                <p className="leading-relaxed opacity-90">{branchPricing.paymentNotes}</p>
+              </div>
+            </div>
+          )}
+
           {filteredMatches.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="w-16 h-16 text-gray-400 dark:text-zinc-600 mx-auto mb-4 transition-colors duration-300" />
@@ -883,11 +899,11 @@ export default function CikupaPembayaranPage() {
                       Tanggal
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wider transition-colors duration-300">
-                      Shuttlecock
+                      {branchPricing.shuttlecockLabel || 'Shuttlecock'}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wider transition-colors duration-300">
                       <div className="flex items-center gap-1">
-                        Kehadiran
+                        {branchPricing.attendanceLabel || 'Kehadiran'}
                         <button
                           onClick={() => setShowAttendanceInfoModal(true)}
                           className="p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded transition-colors duration-300"

@@ -681,7 +681,7 @@ export default function CikupaAdminPembayaranPage() {
         <div className="glass-premium stat-card-glow rounded-2xl p-4.5 relative overflow-hidden">
           <div className="h-0.5 w-8 rounded-full bg-purple-500 mb-3" />
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total Biaya Hadir</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total {branchPricing.attendanceLabel || 'Biaya Hadir'}</span>
             <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
               <Users className="w-4 h-4" />
             </div>

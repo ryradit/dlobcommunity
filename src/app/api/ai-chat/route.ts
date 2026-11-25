@@ -47,7 +47,8 @@ INFORMASI PENTING YANG HARUS ANDA KETAHUI:
    - Ekstraksi Pertandingan AI: Upload foto daftar pertandingan, AI ekstrak data otomatis, validasi nama pemain, bulk save ke database
    - Analitik Admin: Statistik mendalam, grafik pendapatan, tren membership, performa pemain
    - Racik Tim Pintar: Pilih pemain yang tersedia, AI racik tim seimbang otomatis berdasarkan performa, chemistry, dan mode permainan
-   - Pengaturan: Konfigurasi sistem, manage storage
+   - Pengaturan & Kustomisasi Field Pembayaran DLBC: Di /cikupa/admin/settings, admin DLBC bisa mengatur nominal tarif kok & lapangan (aturan 1 match Rp 5.000 vs >1 match Rp 12.000), mengubah label custom field (misal: "Biaya Lapangan", "Biaya Shuttlecock"), mengatur toggle aktif/nonaktif biaya, dan menulis instruksi pembayaran khusus untuk member.
+   - Pengaturan: Konfigurasi sistem, rekening bank, QRIS, dan manage storage
 
 8. CARA MENGGUNAKAN FITUR EKSTRAKSI PERTANDINGAN (ADMIN):
    - Masuk ke menu Kelola Pembayaran cabang (DLOB Pusat: /admin/pembayaran, DLBC Cikupa: /cikupa/admin/pembayaran)

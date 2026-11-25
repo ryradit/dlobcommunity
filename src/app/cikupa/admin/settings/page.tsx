@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   User, Mail, Camera, Save, Loader2, Lock, Eye, EyeOff, MessageSquare, 
   CreditCard, Plus, Trash2, Pencil, QrCode, Upload, Shield, CheckCircle,
-  AlertTriangle, Info, Banknote
+  AlertTriangle, Info, Banknote, FileText, Sliders, Tag, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import Image from 'next/image';
 import BranchBadge from '@/components/BranchBadge';
@@ -57,6 +57,15 @@ export default function CikupaAdminSettingsPage() {
   const [shuttlecockFee, setShuttlecockFee] = useState<number>(3000);
   const [attendanceFee, setAttendanceFee] = useState<number>(12000);
   const [singleMatchAttendanceFee, setSingleMatchAttendanceFee] = useState<number>(5000);
+
+  // Custom Payment Fields & Labels for DLBC
+  const [shuttlecockLabel, setShuttlecockLabel] = useState<string>('Biaya Shuttlecock');
+  const [attendanceLabel, setAttendanceLabel] = useState<string>('Biaya Lapangan');
+  const [attendanceSingleLabel, setAttendanceSingleLabel] = useState<string>('Biaya Lapangan (1x Main)');
+  const [paymentNotes, setPaymentNotes] = useState<string>('Biaya lapangan Rp 5.000 jika main 1 kali, Rp 12.000 jika main > 1 kali. Biaya kok Rp 3.000 per orang per kok. Harap upload bukti transfer setelah pembayaran.');
+  const [attendanceFeeEnabled, setAttendanceFeeEnabled] = useState<boolean>(true);
+  const [shuttlecockFeeEnabled, setShuttlecockFeeEnabled] = useState<boolean>(true);
+
   const [pricingSaving, setPricingSaving] = useState(false);
 
   // Password states
@@ -89,6 +98,13 @@ export default function CikupaAdminSettingsPage() {
       const shuttlecockSetting = settings.find(s => s.key === `shuttlecock_fee_${BRANCH_ID}`);
       const attendanceSetting = settings.find(s => s.key === `attendance_fee_${BRANCH_ID}`);
       const singleAttendanceSetting = settings.find(s => s.key === `attendance_fee_single_${BRANCH_ID}`);
+      const sLabel = settings.find(s => s.key === `shuttlecock_label_${BRANCH_ID}`);
+      const aLabel = settings.find(s => s.key === `attendance_label_${BRANCH_ID}`);
+      const asLabel = settings.find(s => s.key === `attendance_single_label_${BRANCH_ID}`);
+      const notes = settings.find(s => s.key === `payment_notes_${BRANCH_ID}`);
+      const aEnabled = settings.find(s => s.key === `attendance_fee_enabled_${BRANCH_ID}`);
+      const sEnabled = settings.find(s => s.key === `shuttlecock_fee_enabled_${BRANCH_ID}`);
+
       if (shuttlecockSetting?.value) {
         const parsed = parseInt(shuttlecockSetting.value, 10);
         if (!isNaN(parsed) && parsed > 0) {
@@ -116,6 +132,13 @@ export default function CikupaAdminSettingsPage() {
           }
         }
       }
+
+      if (sLabel?.value) setShuttlecockLabel(sLabel.value);
+      if (aLabel?.value) setAttendanceLabel(aLabel.value);
+      if (asLabel?.value) setAttendanceSingleLabel(asLabel.value);
+      if (notes?.value) setPaymentNotes(notes.value);
+      if (aEnabled?.value) setAttendanceFeeEnabled(aEnabled.value !== 'false');
+      if (sEnabled?.value) setShuttlecockFeeEnabled(sEnabled.value !== 'false');
 
       if (bank?.value) {
         try {
@@ -310,15 +333,49 @@ export default function CikupaAdminSettingsPage() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ key: `attendance_fee_single_${BRANCH_ID}`, value: String(singleMatchAttendanceFee) }),
         }),
+        fetch('/api/admin/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ key: `shuttlecock_label_${BRANCH_ID}`, value: shuttlecockLabel.trim() || 'Biaya Shuttlecock' }),
+        }),
+        fetch('/api/admin/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ key: `attendance_label_${BRANCH_ID}`, value: attendanceLabel.trim() || 'Biaya Lapangan' }),
+        }),
+        fetch('/api/admin/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ key: `attendance_single_label_${BRANCH_ID}`, value: attendanceSingleLabel.trim() || 'Biaya Lapangan (1x Main)' }),
+        }),
+        fetch('/api/admin/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ key: `payment_notes_${BRANCH_ID}`, value: paymentNotes.trim() }),
+        }),
+        fetch('/api/admin/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ key: `attendance_fee_enabled_${BRANCH_ID}`, value: String(attendanceFeeEnabled) }),
+        }),
+        fetch('/api/admin/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ key: `shuttlecock_fee_enabled_${BRANCH_ID}`, value: String(shuttlecockFeeEnabled) }),
+        }),
       ]);
 
       if (typeof window !== 'undefined') {
         localStorage.setItem(`shuttlecock_fee_${BRANCH_ID}`, String(shuttlecockFee));
         localStorage.setItem(`attendance_fee_${BRANCH_ID}`, String(attendanceFee));
         localStorage.setItem(`attendance_fee_single_${BRANCH_ID}`, String(singleMatchAttendanceFee));
+        localStorage.setItem(`shuttlecock_label_${BRANCH_ID}`, shuttlecockLabel);
+        localStorage.setItem(`attendance_label_${BRANCH_ID}`, attendanceLabel);
+        localStorage.setItem(`attendance_single_label_${BRANCH_ID}`, attendanceSingleLabel);
+        localStorage.setItem(`payment_notes_${BRANCH_ID}`, paymentNotes);
       }
 
-      setMessage({ type: 'success', text: 'Tarif pertandingan DLBC Cikupa berhasil disimpan!' });
+      setMessage({ type: 'success', text: 'Pengaturan custom field & tarif pembayaran DLBC berhasil disimpan!' });
       setTimeout(() => setMessage(null), 3500);
     } catch (err: any) {
       setMessage({ type: 'error', text: err?.message || 'Gagal menyimpan tarif' });
@@ -754,117 +811,315 @@ export default function CikupaAdminSettingsPage() {
         </div>
       </div>
 
-      {/* ── PRICING & TARIFF SETTINGS FOR DLBC CIKUPA ── */}
-      <div className="glass-premium rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
+      {/* ── PRICING & CUSTOM PAYMENT FIELDS FOR DLBC CIKUPA ── */}
+      <div className="glass-premium rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-gray-100 dark:border-white/5">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
               <Banknote className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-black text-gray-900 dark:text-white">Tarif & Biaya Match (DLBC Cikupa)</h2>
+              <h2 className="text-base font-black text-gray-900 dark:text-white">
+                Kustomisasi Field & Tarif Pembayaran (DLBC Cikupa)
+              </h2>
               <p className="text-xs text-gray-500 dark:text-zinc-400">
-                Atur nominal biaya shuttlecock dan kehadiran lapangan untuk sesi mabar di GOR Galaxi Cikupa
+                Atur nominal tarif, kustomisasi nama/label field (attendance fee & shuttlecock), status komponen biaya, serta catatan pembayaran member.
               </p>
             </div>
           </div>
-          <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
+          <span className="self-start sm:self-auto px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
             dlob-cikupa
           </span>
         </div>
 
-        <form onSubmit={handleSavePricing} className="mt-5 space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Shuttlecock Fee per player per cock */}
-            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2">
-              <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
-                Biaya Kock (Per Pemain / Kock)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
-                  Rp
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="500"
-                  value={shuttlecockFee}
-                  onChange={(e) => setShuttlecockFee(Math.max(0, parseInt(e.target.value) || 0))}
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+        <form onSubmit={handleSavePricing} className="space-y-6">
+          {/* SECTION 1: NOMINAL TARIF */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Banknote className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-zinc-300">
+                1. Nominal Tarif Pertandingan
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Shuttlecock Fee per player per cock */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2">
+                <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                  Tarif Kock (Per Pemain / Kock)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
+                    Rp
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="500"
+                    value={shuttlecockFee}
+                    onChange={(e) => setShuttlecockFee(Math.max(0, parseInt(e.target.value) || 0))}
+                    required
+                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-500 dark:text-zinc-400">
+                  Dikalikan jumlah kok terpakai di match.
+                </p>
+                <div className="pt-2 border-t border-gray-200/60 dark:border-white/5 text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
+                  1 kok = Rp {shuttlecockFee.toLocaleString('id-ID')}
+                </div>
               </div>
-              <p className="text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
-                Biaya per pemain untuk setiap 1 kock yang terpakai dalam match.
-              </p>
-              <div className="pt-2 border-t border-gray-200/60 dark:border-white/5 flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
-                <span>1 kok = Rp {shuttlecockFee.toLocaleString('id-ID')}</span>
-                <span>2 kok = Rp {(shuttlecockFee * 2).toLocaleString('id-ID')}</span>
-                <span>3 kok = Rp {(shuttlecockFee * 3).toLocaleString('id-ID')}</span>
+
+              {/* Normal Attendance Fee */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2">
+                <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                  Kehadiran Normal (&gt; 1 Match)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
+                    Rp
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={attendanceFee}
+                    onChange={(e) => setAttendanceFee(Math.max(0, parseInt(e.target.value) || 0))}
+                    required
+                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-500 dark:text-zinc-400">
+                  Jika main 2 pertandingan atau lebih per hari.
+                </p>
+                <div className="pt-2 border-t border-gray-200/60 dark:border-white/5 text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                  Tarif: <strong className="text-gray-900 dark:text-white">Rp {attendanceFee.toLocaleString('id-ID')}</strong>
+                </div>
+              </div>
+
+              {/* Single Match Attendance Fee */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2">
+                <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                  Kehadiran Khusus (Cuma 1 Match)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
+                    Rp
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={singleMatchAttendanceFee}
+                    onChange={(e) => setSingleMatchAttendanceFee(Math.max(0, parseInt(e.target.value) || 0))}
+                    required
+                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-500 dark:text-zinc-400">
+                  Diskon jika pemain hanya bermain 1 match.
+                </p>
+                <div className="pt-2 border-t border-gray-200/60 dark:border-white/5 text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                  Tarif: <strong className="text-gray-900 dark:text-white">Rp {singleMatchAttendanceFee.toLocaleString('id-ID')}</strong>
+                </div>
               </div>
             </div>
+          </div>
 
-            {/* Normal Attendance Fee */}
-            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2">
-              <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
-                Biaya Kehadiran Normal (&gt; 1 Pertandingan)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
-                  Rp
-                </span>
+          {/* SECTION 2: KUSTOMISASI LABEL FIELD PEMBAYARAN */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Tag className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-zinc-300">
+                2. Kustomisasi Nama Field (Label Tampilan di Pembayaran & Struk)
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Shuttlecock Label */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-1.5">
+                <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                  Label Field Shuttlecock
+                </label>
                 <input
-                  type="number"
-                  min="0"
-                  step="1000"
-                  value={attendanceFee}
-                  onChange={(e) => setAttendanceFee(Math.max(0, parseInt(e.target.value) || 0))}
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  type="text"
+                  value={shuttlecockLabel}
+                  onChange={(e) => setShuttlecockLabel(e.target.value)}
+                  placeholder="Contoh: Biaya Shuttlecock"
+                  className="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+                <p className="text-[10px] text-gray-400 dark:text-zinc-500">
+                  Tampil pada kolom kok di tagihan & struk PDF.
+                </p>
               </div>
-              <p className="text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
-                Dikenakan jika member bermain <strong>lebih dari 1 pertandingan</strong> (2x atau lebih) dalam satu hari sesi.
-              </p>
-              <div className="pt-2 border-t border-gray-200/60 dark:border-white/5 text-[11px] text-gray-600 dark:text-zinc-400 font-mono">
-                Tarif &gt; 1 match: <strong className="text-gray-900 dark:text-white">Rp {attendanceFee.toLocaleString('id-ID')}</strong>
+
+              {/* Attendance Normal Label */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-1.5">
+                <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                  Label Field Kehadiran Normal
+                </label>
+                <input
+                  type="text"
+                  value={attendanceLabel}
+                  onChange={(e) => setAttendanceLabel(e.target.value)}
+                  placeholder="Contoh: Biaya Lapangan"
+                  className="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <p className="text-[10px] text-gray-400 dark:text-zinc-500">
+                  Tampil pada kolom kehadiran (&gt;1 match).
+                </p>
+              </div>
+
+              {/* Attendance Single Label */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-1.5">
+                <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                  Label Field Kehadiran (1x Main)
+                </label>
+                <input
+                  type="text"
+                  value={attendanceSingleLabel}
+                  onChange={(e) => setAttendanceSingleLabel(e.target.value)}
+                  placeholder="Contoh: Biaya Lapangan (1x Main)"
+                  className="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <p className="text-[10px] text-gray-400 dark:text-zinc-500">
+                  Tampil jika pemain hanya bermain 1 match.
+                </p>
               </div>
             </div>
+          </div>
 
-            {/* Single Match Attendance Fee */}
-            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2 md:col-span-2">
-              <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
-                Biaya Kehadiran Khusus (Cuma Main 1 Kali)
-              </label>
-              <div className="relative max-w-sm">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-400">
-                  Rp
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1000"
-                  value={singleMatchAttendanceFee}
-                  onChange={(e) => setSingleMatchAttendanceFee(Math.max(0, parseInt(e.target.value) || 0))}
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+          {/* SECTION 3: TOGGLES KOMPONEN BIAYA */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Sliders className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-zinc-300">
+                3. Status Komponen Biaya (Aktif / Nonaktif)
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5">
+                <div>
+                  <span className="text-xs font-bold text-gray-800 dark:text-zinc-200 block">
+                    Bebankan Biaya Kehadiran / Lapangan
+                  </span>
+                  <span className="text-[11px] text-gray-500 dark:text-zinc-400">
+                    Jika nonaktif, biaya lapangan otomatis Rp 0 untuk seluruh pemain.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttendanceFeeEnabled(!attendanceFeeEnabled)}
+                  className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                    attendanceFeeEnabled ? 'text-emerald-500' : 'text-gray-400 dark:text-zinc-600'
+                  }`}
+                  title={attendanceFeeEnabled ? 'Aktif' : 'Nonaktif'}
+                >
+                  {attendanceFeeEnabled ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                </button>
               </div>
-              <p className="text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
-                Jika member hanya bermain <strong>tepat 1 pertandingan</strong> dalam satu hari, biaya kehadiran otomatis diskon menjadi Rp {singleMatchAttendanceFee.toLocaleString('id-ID')}. Begitu member bermain match ke-2, sistem otomatis meng-upgrade biaya kehadiran ke tarif normal (Rp {attendanceFee.toLocaleString('id-ID')}).
+
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5">
+                <div>
+                  <span className="text-xs font-bold text-gray-800 dark:text-zinc-200 block">
+                    Bebankan Biaya Shuttlecock
+                  </span>
+                  <span className="text-[11px] text-gray-500 dark:text-zinc-400">
+                    Jika nonaktif, biaya kok otomatis Rp 0 per pertandingan.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShuttlecockFeeEnabled(!shuttlecockFeeEnabled)}
+                  className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                    shuttlecockFeeEnabled ? 'text-emerald-500' : 'text-gray-400 dark:text-zinc-600'
+                  }`}
+                  title={shuttlecockFeeEnabled ? 'Aktif' : 'Nonaktif'}
+                >
+                  {shuttlecockFeeEnabled ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 4: CATATAN & INSTRUKSI PEMBAYARAN MEMBER */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-zinc-300">
+                4. Catatan & Petunjuk Pembayaran Member
+              </h3>
+            </div>
+            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 space-y-2">
+              <label className="block text-xs font-bold text-gray-800 dark:text-zinc-200">
+                Instruksi Khusus untuk Member DLBC
+              </label>
+              <textarea
+                rows={3}
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                placeholder="Tulis instruksi atau keterangan pembayaran..."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <p className="text-[11px] text-gray-500 dark:text-zinc-400">
+                Catatan ini akan tampil di bagian atas halaman pembayaran member DLBC Cikupa untuk memandu proses transfer dan konfirmasi.
               </p>
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
+          {/* SECTION 5: LIVE PREVIEW */}
+          <div className="p-4.5 rounded-2xl bg-zinc-900 border border-emerald-500/20 text-white space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-emerald-400 border-b border-white/10 pb-2">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4" /> Live Pratinjau Tampilan Struk / Tagihan Member
+              </span>
+              <span className="text-[10px] text-zinc-400 font-normal">Real-Time Preview</span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span className="text-zinc-400">{shuttlecockLabel || 'Biaya Shuttlecock'} (1 Kok)</span>
+                <span className="font-mono font-bold">
+                  {shuttlecockFeeEnabled ? `Rp ${shuttlecockFee.toLocaleString('id-ID')}` : 'Rp 0 (Nonaktif)'}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <div>
+                  <span className="text-zinc-400 block">{attendanceSingleLabel || 'Biaya Lapangan (1x Main)'}</span>
+                  <span className="text-[10px] text-zinc-500">Jika pemain hanya main 1 game</span>
+                </div>
+                <span className="font-mono font-bold text-emerald-400">
+                  {attendanceFeeEnabled ? `Rp ${singleMatchAttendanceFee.toLocaleString('id-ID')}` : 'Rp 0'}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <div>
+                  <span className="text-zinc-400 block">{attendanceLabel || 'Biaya Lapangan'} (&gt;1 Match)</span>
+                  <span className="text-[10px] text-zinc-500">Jika pemain main 2 game atau lebih</span>
+                </div>
+                <span className="font-mono font-bold text-emerald-400">
+                  {attendanceFeeEnabled ? `Rp ${attendanceFee.toLocaleString('id-ID')}` : 'Rp 0'}
+                </span>
+              </div>
+
+              {paymentNotes && (
+                <div className="pt-2 text-[11px] text-zinc-400 bg-white/5 p-2.5 rounded-xl border border-white/5">
+                  <span className="font-bold text-zinc-300 block mb-0.5">Catatan Pembayaran:</span>
+                  {paymentNotes}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="submit"
               disabled={pricingSaving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               style={{ backgroundColor: ACCENT }}
             >
               {pricingSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span>Simpan Tarif DLBC</span>
+              <span>Simpan Pengaturan Pembayaran DLBC</span>
             </button>
           </div>
         </form>
